@@ -1,0 +1,15 @@
+# Build output
+bin/
+obj/
+*.user
+.vs/
+.vscode/
+TestResults/
+
+# BASS is not redistributed: scripts/fetch-bass.ps1 downloads it here
+native/
+
+# Local media, rendered breaks and caches
+media/
+data/
+appsettings.Local.json

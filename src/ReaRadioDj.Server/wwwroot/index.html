@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="nl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>REA-Radio-DJ Studio</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <span class="logo" aria-hidden="true">●</span>
+      <div>
+        <div id="station" class="station">REA-Radio-DJ</div>
+        <div class="sub">Studio · live-assist</div>
+      </div>
+    </div>
+    <div id="onair" class="onair" title="Automation">OFF AIR</div>
+    <div class="meters" aria-label="Uitgangsniveau">
+      <div class="meter"><div id="vuL" class="bar"></div></div>
+      <div class="meter"><div id="vuR" class="bar"></div></div>
+    </div>
+    <div id="clock" class="clock">--:--:--</div>
+  </header>
+
+  <main class="grid">
+    <section class="card now">
+      <h2>Nu op de radio</h2>
+      <div id="nowType" class="badge">—</div>
+      <div id="nowTitle" class="now-title">Niets</div>
+      <div id="nowArtist" class="now-artist"></div>
+      <div id="nowScript" class="script" hidden></div>
+      <div class="progress" aria-hidden="true">
+        <div id="progRamp" class="ramp"></div>
+        <div id="progFill" class="fill"></div>
+        <div id="progMix" class="mixmark" title="Mixpunt"></div>
+      </div>
+      <div class="times">
+        <span id="nowPos">0:00</span>
+        <span>mix over <b id="nowToMix">—</b></span>
+        <span id="nowLen">0:00</span>
+      </div>
+      <div class="controls">
+        <button id="btnPlay" class="primary">▶ Automatisch</button>
+        <button id="btnStop">■ Stop</button>
+        <button id="btnSkip">⏭ Volgende</button>
+        <button id="btnBreak" class="ai">🎙 AI-break nu</button>
+      </div>
+    </section>
+
+    <section class="card log">
+      <h2>Straks <span id="logCount" class="count"></span></h2>
+      <ol id="upcoming" class="items"></ol>
+    </section>
+
+    <section class="card side">
+      <h2>Bibliotheek <span id="libStatus" class="count"></span></h2>
+      <div class="search">
+        <input id="q" type="search" placeholder="Zoek artiest of titel…" autocomplete="off">
+        <button id="btnScan" title="Map opnieuw inlezen">⟳</button>
+      </div>
+      <ul id="library" class="items compact"></ul>
+
+      <h2 class="mt">Stream</h2>
+      <div class="stream">
+        <span id="streamDot" class="dot"></span>
+        <span id="streamText">uit</span>
+        <button id="btnStreamStart">Start</button>
+        <button id="btnStreamStop">Stop</button>
+      </div>
+
+      <h2 class="mt">Gespeeld</h2>
+      <ol id="history" class="items compact"></ol>
+    </section>
+  </main>
+
+  <footer>REA-Radio-DJ · vrije software (GPL-3.0) · audio-engine BASS © un4seen</footer>
+  <script src="app.js"></script>
+</body>
+</html>

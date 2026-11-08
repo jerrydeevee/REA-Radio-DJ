@@ -1,0 +1,9 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+  <PropertyGroup>
+    <RootNamespace>ReaRadioDj.Server</RootNamespace>
+    <AssemblyName>REA-Radio-DJ</AssemblyName>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\ReaRadioDj.Core\ReaRadioDj.Core.csproj" />
+  </ItemGroup>
+</Project>
