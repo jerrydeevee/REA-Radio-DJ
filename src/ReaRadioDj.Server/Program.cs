@@ -19,7 +19,7 @@ using ReaRadioDj.Server;
 // working directory. "--demo" is our own switch and is kept away from the configuration parser.
 var builder = WebApplication.CreateBuilder(new WebApplicationOptions
 {
-    Args = args.Where(a => a != "--demo").ToArray(),
+    Args = args.Where(a => a is not "--demo" and not "--no-tray").ToArray(),
     ContentRootPath = AppContext.BaseDirectory,
 });
 var options = builder.Configuration.GetSection("ReaRadioDj").Get<ReaRadioDjOptions>() ?? new ReaRadioDjOptions();
@@ -68,6 +68,9 @@ builder.Services.AddSingleton(sp =>
 });
 builder.Services.AddSingleton<AutomationService>();
 builder.Services.AddHostedService(sp => sp.GetRequiredService<AutomationService>());
+// Icon next to the clock, so a running engine can always be found back (not when running as a service).
+if (Environment.UserInteractive && !args.Contains("--no-tray") && builder.Configuration.GetValue("ReaRadioDj:Tray", true))
+    builder.Services.AddHostedService<TrayIcon>();
 builder.Services.ConfigureHttpJsonOptions(o =>
 {
     o.SerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;

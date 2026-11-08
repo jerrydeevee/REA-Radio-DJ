@@ -9,6 +9,10 @@ namespace ReaRadioDj.Studio.ViewModels;
 /// <summary>All studio windows and the default arrangement.</summary>
 public sealed class DockFactory : Factory
 {
+    /// <summary>The program icon, also for floating windows (each is a window of its own in the taskbar).</summary>
+    public static readonly Lazy<Avalonia.Controls.WindowIcon> AppIcon =
+        new(() => new Avalonia.Controls.WindowIcon(Avalonia.Platform.AssetLoader.Open(new Uri("avares://REA-Radio-DJ-Studio/Assets/rea.ico"))));
+
     /// <summary>Every window the studio has: id, menu name, constructor.</summary>
     public static readonly IReadOnlyList<(string Id, string Name, Func<StudioTool> Create)> Windows =
     [
@@ -83,7 +87,7 @@ public sealed class DockFactory : Factory
     {
         HostWindowLocator = new Dictionary<string, Func<IHostWindow?>>
         {
-            [nameof(IDockWindow)] = () => new HostWindow(),
+            [nameof(IDockWindow)] = () => new HostWindow { Icon = AppIcon.Value },
         };
         base.InitLayout(layout);
     }

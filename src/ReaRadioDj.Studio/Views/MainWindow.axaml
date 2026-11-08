@@ -5,6 +5,7 @@
         x:DataType="vm:MainWindowViewModel"
         Title="{Binding Station, StringFormat='{}{0} · Studio'}"
         Width="1600" Height="950" MinWidth="900" MinHeight="600"
+        Icon="/Assets/rea.ico"
         WindowStartupLocation="CenterScreen">
   <Window.KeyBindings>
     <KeyBinding Gesture="F5" Command="{Binding NextCommand}" />
@@ -24,7 +25,7 @@
         <MenuItem Header="AI-break als volgende   Ctrl+B" Command="{Binding AddBreakCommand}" />
         <MenuItem Header="Alle carts stoppen   F10" Command="{Binding StopCartsCommand}" />
       </MenuItem>
-      <MenuItem Header="_Vensters" ItemsSource="{Binding WindowMenu}">
+      <MenuItem Header="_Vensters" ItemsSource="{Binding WindowMenu}" Command="{x:Null}" CommandParameter="{x:Null}">
         <MenuItem.Styles>
           <Style Selector="MenuItem" x:DataType="vm:WindowEntry">
             <Setter Property="Header" Value="{Binding Name}" />
@@ -33,7 +34,7 @@
           </Style>
         </MenuItem.Styles>
       </MenuItem>
-      <MenuItem Header="_Zwevend" ItemsSource="{Binding WindowMenu}">
+      <MenuItem Header="_Zwevend" ItemsSource="{Binding WindowMenu}" Command="{x:Null}" CommandParameter="{x:Null}">
         <MenuItem.Styles>
           <Style Selector="MenuItem" x:DataType="vm:WindowEntry">
             <Setter Property="Header" Value="{Binding Name}" />
@@ -43,7 +44,7 @@
         </MenuItem.Styles>
       </MenuItem>
       <MenuItem Header="_Indeling">
-        <MenuItem Header="Laden" ItemsSource="{Binding LayoutNames}">
+        <MenuItem Header="Laden" ItemsSource="{Binding LayoutNames}" Command="{x:Null}" CommandParameter="{x:Null}">
           <MenuItem.Styles>
             <Style Selector="MenuItem" x:DataType="x:String">
               <Setter Property="Header" Value="{Binding}" />

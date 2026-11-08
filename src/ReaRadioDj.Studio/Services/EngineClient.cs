@@ -114,7 +114,7 @@ public sealed class EngineClient : IDisposable
         if (string.IsNullOrWhiteSpace(exe) || !File.Exists(exe)) exe = FindEngine();
         if (exe is null) return "REA-Radio-DJ.exe niet gevonden; stel het pad in bij Instellingen.";
         var dir = string.IsNullOrWhiteSpace(settings.EngineWorkingDirectory) ? Path.GetDirectoryName(exe)! : settings.EngineWorkingDirectory;
-        Process.Start(new ProcessStartInfo(exe, $"--urls {settings.EffectiveEngineUrl}") { WorkingDirectory = dir, UseShellExecute = true, WindowStyle = ProcessWindowStyle.Minimized });
+        Process.Start(new ProcessStartInfo(exe, $"--urls {settings.EffectiveEngineUrl}") { WorkingDirectory = dir, UseShellExecute = true, WindowStyle = ProcessWindowStyle.Hidden });
         return null;
     }
 

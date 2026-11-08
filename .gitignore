@@ -12,4 +12,5 @@ native/
 # Local media, rendered breaks and caches
 media/
 data/
+data-*/
 appsettings.Local.json
