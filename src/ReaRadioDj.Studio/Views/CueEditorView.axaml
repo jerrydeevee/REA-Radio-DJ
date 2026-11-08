@@ -1,0 +1,53 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:ReaRadioDj.Studio.ViewModels"
+             xmlns:ctl="using:ReaRadioDj.Studio.Controls"
+             x:Class="ReaRadioDj.Studio.Views.CueEditorView"
+             x:DataType="vm:CueEditorTool">
+  <DockPanel Margin="6">
+    <StackPanel DockPanel.Dock="Top" Margin="0,0,0,4">
+      <TextBlock Classes="h" Text="{Binding Heading}" TextTrimming="CharacterEllipsis" />
+      <TextBlock Classes="muted" Text="{Binding Info}" TextTrimming="CharacterEllipsis" />
+      <WrapPanel Margin="0,4,0,0">
+        <Button Classes="small" Margin="0,0,4,4" Content="Laad selectie" Command="{Binding LoadSelectedCommand}" />
+        <Button Classes="small" Margin="0,0,4,4" Content="▶ vanaf cursor" Command="{Binding PlayFromCursorCommand}" ToolTip.Tip="Op de PFL" />
+        <Button Classes="small" Margin="0,0,4,4" Content="❚❚" Command="{Binding StopPflCommand}" />
+        <Button Classes="small" Margin="0,0,4,4" Content="Automatisch" Command="{Binding ResetCommand}" ToolTip.Tip="Handmatige punten weggooien en opnieuw bepalen" />
+        <Button Classes="small" Margin="0,0,4,4" Content="Ongedaan" Command="{Binding RevertCommand}" IsEnabled="{Binding Dirty}" />
+        <Button Classes="small" Margin="0,0,4,4" Content="Opslaan" Command="{Binding SaveCommand}" IsEnabled="{Binding Dirty}" Background="#2F9E6A" />
+      </WrapPanel>
+    </StackPanel>
+    <Grid RowDefinitions="*,Auto,Auto">
+      <Border Grid.Row="0" Classes="card" Padding="0" MinHeight="140">
+        <ctl:WaveformView x:Name="Wave" Peaks="{Binding Peaks}" BlockSeconds="{Binding BlockSeconds}" Markers="{Binding Markers}"
+                          CursorSeconds="{Binding Cursor, Mode=TwoWay}" Playhead="{Binding Playhead}"
+                          CueIn="{Binding CueInValue}" CueOut="{Binding CueOutValue}" />
+      </Border>
+      <TextBlock Grid.Row="1" Classes="muted" Margin="0,3"
+                 Text="{Binding CursorText, StringFormat='Cursor {0} · sleep de markers · scrollwiel = zoom, Shift+scroll = schuiven, dubbelklik = volledig'}" />
+      <ScrollViewer Grid.Row="2" MaxHeight="260">
+        <ItemsControl ItemsSource="{Binding Rows}">
+          <ItemsControl.ItemsPanel>
+            <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
+          </ItemsControl.ItemsPanel>
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="vm:CueRow">
+              <Border Classes="card" Margin="0,0,4,4" Padding="6,4" Width="250" ToolTip.Tip="{Binding Help}">
+                <DockPanel>
+                  <Border DockPanel.Dock="Left" Width="4" Background="{Binding Brush}" CornerRadius="2" Margin="0,0,6,0" />
+                  <TextBlock DockPanel.Dock="Left" Text="{Binding Label}" Width="56" VerticalAlignment="Center" />
+                  <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="2">
+                    <Button Classes="small" Content="⌖" ToolTip.Tip="Zet op de cursor" Command="{Binding SetHereCommand}" />
+                    <Button Classes="small" Content="▶" ToolTip.Tip="Beluister (PFL)" Command="{Binding ListenCommand}" />
+                    <Button Classes="small" Content="✕" ToolTip.Tip="Wissen" Command="{Binding ClearCommand}" IsVisible="{Binding Optional}" />
+                  </StackPanel>
+                  <TextBox Text="{Binding Text}" FontFamily="Consolas, monospace" MinHeight="26" Padding="4,2" Margin="0,0,4,0" />
+                </DockPanel>
+              </Border>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+      </ScrollViewer>
+    </Grid>
+  </DockPanel>
+</UserControl>

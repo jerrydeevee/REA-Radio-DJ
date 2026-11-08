@@ -29,6 +29,10 @@ public static class CuePointCalculator
         return new CuePoints(Round(cueIn), Round(mix), Round(cueOut));
     }
 
+    /// <summary>Same detection from stored waveform peaks (linear, 0..65535 per block).</summary>
+    public static CuePoints FromPeaks(IReadOnlyList<ushort> peaks, double blockSeconds, MixOptions options) =>
+        Compute(peaks.Select(p => ToDb(p / 65535f)).ToList(), blockSeconds, options);
+
     private static int FirstIndex(IReadOnlyList<double> db, double threshold)
     {
         for (int i = 0; i < db.Count; i++) if (db[i] >= threshold) return i;

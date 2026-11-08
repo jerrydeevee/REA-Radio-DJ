@@ -1,0 +1,38 @@
+<Styles xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <Style Selector="Border.card">
+    <Setter Property="Background" Value="{DynamicResource CardBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource CardBorderBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="6" />
+    <Setter Property="Padding" Value="8" />
+  </Style>
+  <Style Selector="TextBlock.muted">
+    <Setter Property="Foreground" Value="{DynamicResource MutedTextBrush}" />
+    <Setter Property="FontSize" Value="12" />
+  </Style>
+  <Style Selector="TextBlock.h">
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="FontSize" Value="15" />
+  </Style>
+  <Style Selector="TextBlock.mono">
+    <Setter Property="FontFamily" Value="Consolas, Cascadia Mono, monospace" />
+  </Style>
+  <Style Selector="Button.small">
+    <Setter Property="Padding" Value="8,3" />
+    <Setter Property="MinWidth" Value="28" />
+    <Setter Property="FontSize" Value="12" />
+  </Style>
+  <Style Selector="Button.onair">
+    <Setter Property="Background" Value="{DynamicResource OnAirBrush}" />
+    <Setter Property="Foreground" Value="White" />
+  </Style>
+  <Style Selector="ToggleButton.mic:checked /template/ ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource OnAirBrush}" />
+    <Setter Property="Foreground" Value="White" />
+  </Style>
+  <Style Selector="TabControl.compact > TabItem">
+    <Setter Property="FontSize" Value="14" />
+    <Setter Property="MinHeight" Value="30" />
+    <Setter Property="Padding" Value="8,2" />
+  </Style>
+</Styles>

@@ -1,0 +1,90 @@
+using Dock.Avalonia.Controls;
+using Dock.Model.Controls;
+using Dock.Model.Core;
+using Dock.Model.Mvvm;
+using Dock.Model.Mvvm.Controls;
+
+namespace ReaRadioDj.Studio.ViewModels;
+
+/// <summary>All studio windows and the default arrangement.</summary>
+public sealed class DockFactory : Factory
+{
+    /// <summary>Every window the studio has: id, menu name, constructor.</summary>
+    public static readonly IReadOnlyList<(string Id, string Name, Func<StudioTool> Create)> Windows =
+    [
+        ("log", "Programmalog", () => new LogTool()),
+        ("standby", "Standby-spelers", () => new StandbyTool()),
+        ("pfl", "PFL / voorbeluisteren", () => new PflTool()),
+        ("cart1", "Cartwall 1", () => new CartwallTool { Id = "cart1", Title = "Cartwall 1" }),
+        ("cart2", "Cartwall 2", () => new CartwallTool { Id = "cart2", Title = "Cartwall 2" }),
+        ("library", "Bibliotheek", () => new LibraryTool()),
+        ("cues", "Cue-editor", () => new CueEditorTool()),
+        ("mixer", "Mixer en routing", () => new MixerTool()),
+        ("planner", "Planner", () => new PlannerTool()),
+        ("asrun", "As-run", () => new AsRunTool()),
+        ("clock", "Tijd", () => new ClockTool()),
+        ("presenter", "AI-presentator", () => new PresenterTool()),
+        ("overlays", "Overlays", () => new OverlaysTool()),
+        ("stream", "Stream", () => new StreamTool()),
+        ("messages", "Berichten", () => new MessagesTool()),
+    ];
+
+    public static StudioTool Create(string id) => Windows.First(w => w.Id == id).Create();
+
+    public override IRootDock CreateLayout()
+    {
+        ToolDock Tools(string id, params string[] ids)
+        {
+            var tools = ids.Select(i => (IDockable)Create(i)).ToArray();
+            var dock = new ToolDock { Id = id, Title = id, VisibleDockables = CreateList(tools), ActiveDockable = tools[0], Alignment = Alignment.Unset };
+            return dock;
+        }
+
+        var left = new ProportionalDock
+        {
+            Id = "left", Proportion = 0.27, Orientation = Orientation.Vertical,
+            VisibleDockables = CreateList<IDockable>(
+                Tools("dock-library", "library", "planner"),
+                new ProportionalDockSplitter(),
+                Tools("dock-players", "standby", "pfl")),
+        };
+        var center = new ProportionalDock
+        {
+            Id = "center", Proportion = 0.43, Orientation = Orientation.Vertical,
+            VisibleDockables = CreateList<IDockable>(
+                Tools("dock-log", "log", "asrun"),
+                new ProportionalDockSplitter(),
+                Tools("dock-editor", "cues", "presenter", "messages")),
+        };
+        var right = new ProportionalDock
+        {
+            Id = "right", Proportion = 0.30, Orientation = Orientation.Vertical,
+            VisibleDockables = CreateList<IDockable>(
+                Tools("dock-carts", "cart1", "cart2"),
+                new ProportionalDockSplitter(),
+                Tools("dock-mixer", "mixer", "clock", "overlays", "stream")),
+        };
+        var main = new ProportionalDock
+        {
+            Id = "main", Orientation = Orientation.Horizontal,
+            VisibleDockables = CreateList<IDockable>(left, new ProportionalDockSplitter(), center, new ProportionalDockSplitter(), right),
+        };
+
+        var root = CreateRootDock();
+        root.Id = "root";
+        root.IsCollapsable = false;
+        root.VisibleDockables = CreateList<IDockable>(main);
+        root.ActiveDockable = main;
+        root.DefaultDockable = main;
+        return root;
+    }
+
+    public override void InitLayout(IDockable layout)
+    {
+        HostWindowLocator = new Dictionary<string, Func<IHostWindow?>>
+        {
+            [nameof(IDockWindow)] = () => new HostWindow(),
+        };
+        base.InitLayout(layout);
+    }
+}

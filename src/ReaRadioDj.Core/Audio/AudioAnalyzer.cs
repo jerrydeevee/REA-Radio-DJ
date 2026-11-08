@@ -2,14 +2,18 @@ using static ReaRadioDj.Core.Audio.BassNative;
 
 namespace ReaRadioDj.Core.Audio;
 
-public sealed record AnalysisResult(double Duration, CuePoints Cues, double? Lufs);
+/// <summary>Result of one analysis pass. Peaks = one linear peak per 20 ms block, scaled to 0..65535.</summary>
+public sealed record AnalysisResult(double Duration, CuePoints Cues, double? Lufs, ushort[] Peaks)
+{
+    public const int BlockMilliseconds = 20;
+}
 
 /// <summary>
 /// Decodes a file once (faster than real time) and measures its level envelope and EBU R128 loudness.
 /// </summary>
 public static class AudioAnalyzer
 {
-    private const double BlockSeconds = 0.02;
+    private const double BlockSeconds = AnalysisResult.BlockMilliseconds / 1000.0;
 
     public static AnalysisResult Analyze(string path, MixOptions options)
     {
@@ -28,6 +32,7 @@ public static class AudioAnalyzer
             int blockBytes = (int)BASS_ChannelSeconds2Bytes(stream, BlockSeconds);
             var buffer = new float[Math.Max(blockBytes / 4, 2)];
             var peaks = new List<double>((int)(duration / BlockSeconds) + 8);
+            var linear = new List<ushort>(peaks.Capacity);
             while (true)
             {
                 uint got = BASS_ChannelGetData(stream, buffer, (uint)(buffer.Length * 4));
@@ -40,6 +45,7 @@ public static class AudioAnalyzer
                     if (v > peak) peak = v;
                 }
                 peaks.Add(CuePointCalculator.ToDb(peak));
+                linear.Add((ushort)Math.Clamp(peak * 65535f, 0, 65535));
             }
 
             double? lufs = null;
@@ -48,7 +54,7 @@ public static class AudioAnalyzer
                 lufs = Math.Round(level, 2);
 
             var cues = CuePointCalculator.Compute(peaks, BlockSeconds, options);
-            return new AnalysisResult(Math.Round(duration, 3), cues, lufs);
+            return new AnalysisResult(Math.Round(duration, 3), cues, lufs, linear.ToArray());
         }
         finally
         {

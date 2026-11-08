@@ -1,0 +1,22 @@
+<Application xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:local="using:ReaRadioDj.Studio"
+             xmlns:dock="using:Dock.Avalonia.Themes.Fluent"
+             x:Class="ReaRadioDj.Studio.App"
+             RequestedThemeVariant="Dark">
+  <Application.DataTemplates>
+    <local:ViewLocator />
+  </Application.DataTemplates>
+  <Application.Resources>
+    <SolidColorBrush x:Key="OnAirBrush" Color="#E5484D" />
+    <SolidColorBrush x:Key="AccentBrush" Color="#3FA7FF" />
+    <SolidColorBrush x:Key="MutedTextBrush" Color="#8B95A5" />
+    <SolidColorBrush x:Key="CardBrush" Color="#1A2029" />
+    <SolidColorBrush x:Key="CardBorderBrush" Color="#2A3240" />
+  </Application.Resources>
+  <Application.Styles>
+    <FluentTheme />
+    <dock:DockFluentTheme />
+    <StyleInclude Source="/Styles.axaml" />
+  </Application.Styles>
+</Application>

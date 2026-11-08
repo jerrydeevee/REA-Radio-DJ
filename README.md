@@ -1,26 +1,32 @@
 # REA-Radio-DJ
 
-Vrije radio-playout met een ingebouwde AI-presentator. Een werkend proof-of-concept: muziek 24/7 automatisch
-afspelen met crossfades en loudness-normalisatie, een AI-presentator die tussen nummers praat, een web-interface
-voor live-assist en een Icecast-stream.
+Vrije radio-playout met een ingebouwde AI-presentator. Een losse playout-engine (service) en een desktop-studio
+met vrij verplaatsbare, dokbare en zwevende vensters. Muziek 24/7 automatisch of live-assist, met klokken,
+vaste tijden (nieuws op :00), cartwalls, standby- en PFL-spelers, microfoon-talkover en een as-run-log.
 
-> Status: proof-of-concept. Bedoeld om het idee te bewijzen en mee te experimenteren, nog niet voor een echte zender.
+> Status: in ontwikkeling (ronde 1). Nog niet bedoeld voor een echte zender.
 
 ## Wat het kan
 
-- **Playout** – BASS-mixer (32-bit float), automatische cuepunten (cue-in, mixpunt, cue-out) en crossfades.
-  Elk nummer wordt genormaliseerd naar −16 LUFS (EBU R128).
-- **Rotatie** – willekeurige nummers met scheiding op artiest en titel, elke N nummers een jingle en elke M nummers
-  een AI-break.
-- **AI-presentator** – schrijft een korte presentatie over het vorige en het volgende nummer en spreekt die in:
-  - tekst via elk OpenAI-compatibel endpoint (Ollama, LM Studio, vLLM, OpenAI …), anders via ingebouwde sjablonen;
-  - stem via **Higgs TTS 3** (Boson AI, via SGLang-Omni of vLLM-Omni), anders Windows-spraak (offline);
-  - breaks worden ruim vóór uitzending gemaakt. Is een break niet op tijd klaar, dan speelt er een jingle:
-    de uitzending wacht nooit op de AI;
-  - talk-up: heeft het volgende nummer een bekende intro (`ramp`), dan start het al onder de stem en komt het
-    omhoog zodra de presentator klaar is.
-- **Web-UI** – nu/straks, voortgang met mixpunt, start/stop/volgende, AI-break invoegen, items verplaatsen of
-  verwijderen, bibliotheek doorzoeken en toevoegen, VU-meter.
+- **Engine als service** – `REA-Radio-DJ.exe` speelt de uitzending, ook als de studio dicht is. Alles is te bedienen
+  via REST (`/api/...`), met live status via WebSocket (`/api/ws`) of server-sent events (`/api/events`).
+- **Playout** – BASS-mixer (32-bit float), crossfades op het mixpunt, loudness-normalisatie naar −16 LUFS
+  (EBU R128). Automatisch of live-assist (het huidige item speelt uit, jij start het volgende).
+- **Bibliotheek** – SQLite (`data/station.db`). Mappen worden categorieën. Per bestand het volledige cuemodel:
+  cue-in, fade-in klaar, intro 1 en 2, outro, fade-out, mix, cue-out en een hook. Handmatig gezette cues blijven
+  bij een nieuwe scan staan.
+- **Cue-editor** – golfvorm met sleepbare markers, zoomen, beluisteren vanaf elk punt.
+- **Planning** – uurklokken (categorie, vast item of AI-break; willekeurig, op volgorde of alleen de hook), een
+  weekgrid met per uur een klok, en vaste tijden: *hard* (onderbreekt op de seconde), *zacht* (na het huidige
+  nummer) of *overlay* (eroverheen, de muziek duikt). Materiaal wordt drie minuten vooruit klaargezet; een gemist
+  hard event speelt nooit te laat.
+- **Studio-spelers** – twee standby-spelers met stapel, een PFL-speler op een eigen uitgang, twee cartwalls van
+  4 × 16 knoppen (loop, overlay, kleur) en overlays.
+- **Mixer en routing** – kanalen voor automatisering, standby, cartwall, overlay, microfoon en PFL; uitzending en
+  voorbeluistering op aparte geluidskaarten. Microfoon open = muziek duikt (talkover).
+- **AI-presentator** – tekst via elk OpenAI-compatibel endpoint of ingebouwde sjablonen, stem via Higgs TTS 3 of
+  Windows-spraak. Breaks worden vooraf gemaakt; de uitzending wacht nooit op de AI.
+- **As-run** – alles wat echt is uitgezonden (log, carts, overlays, standby), per dag te bekijken en als CSV.
 - **Icecast-stream** – MP3 naar Icecast of SHOUTcast v2, inclusief titel-updates.
 
 ## Snel starten (Windows 10/11, x64)
@@ -30,17 +36,30 @@ voor live-assist en een Icecast-stream.
    ```powershell
    powershell -ExecutionPolicy Bypass -File scripts\fetch-bass.ps1
    ```
-3. Start met gegenereerde demo-audio:
+3. Start de engine met gegenereerde demo-audio (inclusief een nieuws-event elk uur om :00):
    ```powershell
    dotnet run --project src\ReaRadioDj.Server -- --demo
    ```
-4. Open <http://localhost:8600>.
+4. Start de studio:
+   ```powershell
+   dotnet run --project src\ReaRadioDj.Studio
+   ```
+   De studio verbindt met `http://127.0.0.1:8600`. Draait de engine niet, dan kun je hem vanuit het menu
+   *Studio* starten. Een eenvoudige web-interface staat op <http://localhost:8600>.
 
-Eigen muziek: zet bestanden (mp3, wav, flac, ogg, aiff) in `media\music` en jingles in `media\jingles`, naast de
-plek waar je het programma start, of stel andere mappen in via `appsettings.json`. De eerste keer worden alle
-bestanden geanalyseerd; daarna komt de analyse uit `data\library-cache.json`.
+Eigen muziek: zet bestanden (mp3, wav, flac, ogg, aiff) in submappen van `media\music` (elke map wordt een
+categorie) en jingles in `media\jingles`, naast de plek waar je de engine start, of stel andere mappen in via
+`appsettings.json`.
 
-Intro-lengte voor talk-up: maak naast een nummer een bestand `<nummer>.cue.json` met `{ "ramp": 12.5 }`.
+### De studio
+
+- Elk venster (log, spelers, cartwalls, bibliotheek, cue-editor, mixer, planner, as-run …) kun je verslepen,
+  naast elkaar of als tabblad docken, of los laten zweven (menu *Zwevend*), ook op een tweede scherm.
+- Menu *Indeling*: indelingen opslaan, laden en terugzetten. De laatste indeling wordt bij afsluiten bewaard.
+- Slepen vanuit de bibliotheek naar log, speler of cartknop; dubbelklik = voorbeluisteren (PFL).
+- Sneltoetsen: F5 volgende, F6 automatisch/assist, F8 microfoon, F9 stop.
+- Opties: `--engine <url>`, `--no-engine`, `--profile <map>` (eigen instellingenmap), `--show <venster>`,
+  `--float <venster>`.
 
 ## Instellingen
 
@@ -51,7 +70,10 @@ Je kunt alles overschrijven met omgevingsvariabelen, bijvoorbeeld `ReaRadioDj__O
 |---|---|
 | `OutputDevice` | `-1` standaard geluidskaart, `0` geen geluidskaart (alleen streamen), `1..` een specifiek apparaat (zie `/api/devices`) |
 | `Mix.TargetLufs` | doel-loudness, standaard −16 |
-| `Rotation.BreakEverySongs` / `JingleEverySongs` | hoe vaak een AI-break of jingle |
+| `Rotation.ArtistSeparation` / `SongSeparation` | niet dezelfde artiest / hetzelfde nummer binnen zoveel nummers |
+| `Routing.PreviewDevice` | geluidskaart voor PFL (voorbeluisteren) |
+| `Routing.MicEnabled` / `MicDevice` / `MicDuckLevel` | microfoon opnemen, invoerapparaat, muziekniveau bij open microfoon |
+| `Routing.OverlayDuckLevel` / `StandbyPlayers` | muziekniveau onder overlays, aantal standby-spelers |
 | `Presenter.Llm.BaseUrl` / `Model` | bijvoorbeeld `http://localhost:11434` en `llama3.1` voor Ollama; leeg = sjablonen |
 | `Presenter.Tts.Provider` | `sapi` (Windows) of `higgs` |
 | `Presenter.Tts.BaseUrl` | Higgs-server, standaard `http://localhost:8001` |
@@ -74,15 +96,18 @@ REA-Radio-DJ terug op Windows-spraak.
 ## Opbouw
 
 ```
-src/ReaRadioDj.Core      audio-engine (BASS), analyse, bibliotheek, rotatie, AI-presentator, Icecast
-src/ReaRadioDj.Server    ASP.NET Core: API, server-sent events, web-UI (wwwroot) en automatisering
-tests/ReaRadioDj.Tests   unit tests en audiotests (draaien op het "no sound"-apparaat van BASS)
+src/ReaRadioDj.Core       audio-engine en mixer (BASS), analyse, bibliotheek (SQLite), klokken, vaste tijden,
+                          studio-spelers, cartwall, as-run, AI-presentator, Icecast
+src/ReaRadioDj.Contracts  de berichten (DTO's) tussen engine en studio
+src/ReaRadioDj.Server     de engine-service: REST, WebSocket, server-sent events, automatisering, web-UI
+src/ReaRadioDj.Studio     de desktop-studio (Avalonia + Dock): dokbare en zwevende vensters
+tests/ReaRadioDj.Tests    unit tests en audiotests (draaien op het "no sound"-apparaat van BASS)
 scripts/fetch-bass.ps1   downloadt BASS naar /native
 ```
 
-De engine speelt alleen materiaal dat klaarstaat. Elk log-item is een decodeerkanaal in één BASS-mixer. Een
-controlelus van 10 ms start het volgende item op het mixpunt, laat het vorige uitfaden en regelt het ducken
-onder AI-breaks.
+De mixer bestaat uit geneste BASS-mixers: uitgangen (uitzending, PFL) → kanalen → bronnen. Een controlelus van
+10 ms start het volgende log-item op het mixpunt. Ducken (microfoon, overlays, AI-breaks) gaat per kanaal met een
+reden, zodat meerdere oorzaken elkaar niet in de weg zitten. De engine speelt alleen materiaal dat klaarstaat.
 
 ## Tests
 
@@ -90,10 +115,14 @@ onder AI-breaks.
 dotnet test
 ```
 
-De audiotests draaien alleen als BASS aanwezig is. Ze spelen echte audio af op het stille apparaat en starten
-een nep-Icecast-server om de stream te controleren.
+De unit tests dekken cuepunten, klokplanning, vaste tijden, de database (categorieën, klokken, weekgrid, events,
+as-run) en het log. De audiotests draaien alleen als BASS aanwezig is: ze spelen echte audio af op het stille
+apparaat (engine, cartwall, standby, ducken, bibliotheekscan) en starten een nep-Icecast-server voor de stream.
 
 ## Licentie
 
 GPL-3.0 of later, met een aanvullende toestemming om met BASS te linken. Zie [NOTICE.md](NOTICE.md) voor BASS,
 Higgs TTS 3 en de andere onderdelen.
+
+REA-Radio-DJ is een eigen ontwerp. Het werkt functioneel vergelijkbaar met bekende playout-programma's, maar
+gebruikt geen code, schermen, namen of bestandsformaten daarvan.

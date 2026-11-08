@@ -14,6 +14,7 @@ public sealed class ReaRadioDjOptions
     public bool StartAutomation { get; set; } = true;
 
     public MixOptions Mix { get; set; } = new();
+    public RoutingOptions Routing { get; set; } = new();
     public RotationOptions Rotation { get; set; } = new();
     public PresenterOptions Presenter { get; set; } = new();
     public StreamOptions Stream { get; set; } = new();
@@ -37,12 +38,24 @@ public sealed class MixOptions
     public double DuckLevel { get; set; } = 0.3;
 }
 
+public sealed class RoutingOptions
+{
+    /// <summary>Sound card for the PFL / pre-listen bus (-1 = default, 0 = none). The on-air bus uses OutputDevice.</summary>
+    public int PreviewDevice { get; set; } = -1;
+    /// <summary>Record the microphone input (talkover). Off by default.</summary>
+    public bool MicEnabled { get; set; } = false;
+    /// <summary>Recording device for the microphone (-1 = default input).</summary>
+    public int MicDevice { get; set; } = -1;
+    /// <summary>Music level while the microphone is open, 0..1.</summary>
+    public double MicDuckLevel { get; set; } = 0.25;
+    /// <summary>Automation level under overlays and overlay carts, 0..1.</summary>
+    public double OverlayDuckLevel { get; set; } = 0.35;
+    public int StandbyPlayers { get; set; } = 2;
+}
+
+/// <summary>Rotation rules used by the planner when it picks songs from a category.</summary>
 public sealed class RotationOptions
 {
-    /// <summary>Play a jingle after this many songs (0 = never).</summary>
-    public int JingleEverySongs { get; set; } = 3;
-    /// <summary>Insert an AI break after this many songs (0 = never).</summary>
-    public int BreakEverySongs { get; set; } = 2;
     /// <summary>The same artist is not repeated within this many songs.</summary>
     public int ArtistSeparation { get; set; } = 3;
     /// <summary>The same song is not repeated within this many songs.</summary>

@@ -1,0 +1,19 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:ReaRadioDj.Studio.ViewModels"
+             x:Class="ReaRadioDj.Studio.Views.OverlaysView"
+             x:DataType="vm:OverlaysTool">
+  <DockPanel Margin="6">
+    <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="6" Margin="0,0,0,6">
+      <Button Content="Speel selectie als overlay" Command="{Binding PlaySelectedCommand}" />
+      <Button Content="Alles stop" Command="{Binding StopAllCommand}" />
+    </StackPanel>
+    <TextBlock DockPanel.Dock="Bottom" Classes="muted" TextWrapping="Wrap" Margin="0,6,0,0"
+               Text="Een overlay speelt bovenop de automatisering; die dimt zolang de overlay loopt. Vaste tijden kunnen ook als overlay starten." />
+    <ItemsControl ItemsSource="{Binding Active}">
+      <ItemsControl.ItemTemplate>
+        <DataTemplate><Border Classes="card" Margin="0,0,0,4"><TextBlock Text="{Binding}" /></Border></DataTemplate>
+      </ItemsControl.ItemTemplate>
+    </ItemsControl>
+  </DockPanel>
+</UserControl>

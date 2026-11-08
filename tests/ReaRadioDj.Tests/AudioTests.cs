@@ -3,11 +3,13 @@ using System.Net.Sockets;
 using System.Text;
 using ReaRadioDj.Core;
 using ReaRadioDj.Core.Audio;
+using ReaRadioDj.Core.Data;
 using ReaRadioDj.Core.Library;
 using ReaRadioDj.Core.Model;
 using ReaRadioDj.Core.Presenter;
 using ReaRadioDj.Core.Scheduling;
 using ReaRadioDj.Core.Streaming;
+using ReaRadioDj.Core.Studio;
 using static ReaRadioDj.Core.Audio.BassNative;
 
 namespace ReaRadioDj.Tests;
@@ -36,8 +38,21 @@ public sealed class AudioTests : IDisposable
         if (BassRuntime.IsAvailable) BassRuntime.Initialize(0);
     }
 
+    private readonly List<IDisposable> _cleanup = [];
+
+    private StationDb Db() => new(Path.Combine(_dir, $"station-{Guid.NewGuid():N}.db"));
+
+    private AudioRouter Router(ReaRadioDjOptions options)
+    {
+        var router = new AudioRouter(options);
+        _cleanup.Add(router);
+        return router;
+    }
+
     public void Dispose()
     {
+        foreach (var d in Enumerable.Reverse(_cleanup)) d.Dispose();
+        Microsoft.Data.Sqlite.SqliteConnection.ClearAllPools();
         try { Directory.Delete(_dir, true); } catch (IOException) { } catch (UnauthorizedAccessException) { }
     }
 
@@ -47,6 +62,7 @@ public sealed class AudioTests : IDisposable
         JingleFolder = Path.Combine(_dir, "jingles"),
         DataFolder = Path.Combine(_dir, "data"),
         OutputDevice = 0,
+        Routing = new RoutingOptions { PreviewDevice = 0 },
     };
 
     [BassFact]
@@ -98,7 +114,7 @@ public sealed class AudioTests : IDisposable
     {
         var options = Options();
         options.Mix.FadeOut = 1;
-        var library = new MediaLibrary(options);
+        var library = new MediaLibrary(options, Db());
         var a = Path.Combine(_dir, "A - One.wav");
         var b = Path.Combine(_dir, "B - Two.wav");
         DemoContent.WriteSong(a, 261.63, seconds: 6, intro: 1);
@@ -112,7 +128,7 @@ public sealed class AudioTests : IDisposable
         log.Append(new LogItem { Type = LogItemType.Song, Media = library.Load(b, MediaKind.Song) });
 
         var started = new List<(string Label, DateTime At)>();
-        using var engine = new PlayoutEngine(options, log);
+        using var engine = new PlayoutEngine(options, log, Router(options));
         engine.ItemStarted += i => { lock (started) started.Add((i.Media!.Title, DateTime.UtcNow)); };
         engine.Start();
 
@@ -131,21 +147,21 @@ public sealed class AudioTests : IDisposable
             Assert.InRange(firstGap, 2.5, 5.6);
         }
         var state = engine.GetState();
-        Assert.True(state.Automation);
+        Assert.True(state.AutoPlay);
     }
 
     [BassFact]
     public async Task Engine_plays_a_fallback_when_a_break_is_not_ready()
     {
         var options = Options();
-        var library = new MediaLibrary(options);
+        var library = new MediaLibrary(options, Db());
         var jingle = Path.Combine(_dir, "jingle.wav");
         DemoContent.WriteSong(jingle, 523.25, seconds: 2, intro: 2);
         var log = new PlayoutLog();
         var pending = new LogItem { Type = LogItemType.AiBreak }; // never rendered
         log.Append(pending);
 
-        using var engine = new PlayoutEngine(options, log) { FallbackProvider = () => library.Load(jingle, MediaKind.Jingle) };
+        using var engine = new PlayoutEngine(options, log, Router(options)) { FallbackProvider = () => library.Load(jingle, MediaKind.Jingle) };
         var started = new TaskCompletionSource<LogItem>();
         engine.ItemStarted += i => started.TrySetResult(i);
         engine.Start();
@@ -213,11 +229,11 @@ public sealed class AudioTests : IDisposable
         options.Stream = new StreamOptions { Enabled = true, Server = $"localhost:{port}/live", Password = "secret", Bitrate = 128 };
         var song = Path.Combine(_dir, "stream.wav");
         DemoContent.WriteSong(song, 440, seconds: 8, intro: 2);
-        var library = new MediaLibrary(options);
+        var library = new MediaLibrary(options, Db());
         var log = new PlayoutLog();
         log.Append(new LogItem { Type = LogItemType.Song, Media = library.Load(song, MediaKind.Song) });
 
-        using var engine = new PlayoutEngine(options, log);
+        using var engine = new PlayoutEngine(options, log, Router(options));
         engine.Start();
         using var streamer = new IcecastStreamer(options.Stream, "Test FM");
         streamer.Start(engine.MixerHandle);
@@ -245,10 +261,10 @@ public sealed class AudioTests : IDisposable
         if (SapiSpeechEngine.InstalledVoices().Count == 0) return; // no Windows voices on this machine
 
         var options = Options();
-        var library = new MediaLibrary(options);
+        var library = new MediaLibrary(options, Db());
         var log = new PlayoutLog();
-        var prev = new MediaItem { Path = "x", Kind = MediaKind.Song, Artist = "Doe Maar", Title = "De Bom", CueOut = 1, MixPoint = 1 };
-        var next = new MediaItem { Path = "y", Kind = MediaKind.Song, Artist = "Golden Earring", Title = "Radar Love", CueOut = 1, MixPoint = 1 };
+        var prev = new MediaItem { Path = "x", Kind = MediaKind.Song, Artist = "Doe Maar", Title = "De Bom", Cues = new CueSet { Mix = 1, CueOut = 1 } };
+        var next = new MediaItem { Path = "y", Kind = MediaKind.Song, Artist = "Golden Earring", Title = "Radar Love", Cues = new CueSet { Mix = 1, CueOut = 1 } };
         log.Append(new LogItem { Type = LogItemType.Song, Media = prev });
         var brk = new LogItem { Type = LogItemType.AiBreak };
         log.Append(brk);
@@ -263,5 +279,99 @@ public sealed class AudioTests : IDisposable
         Assert.Contains("Radar Love", brk.Script);
         Assert.NotNull(brk.Media);
         Assert.True(brk.Media!.CueOut - brk.Media.CueIn > 1, "the spoken break should last more than a second");
+    }
+    [BassFact]
+    public async Task Library_scan_makes_categories_from_folders_and_keeps_edited_cues()
+    {
+        var options = Options();
+        foreach (var d in new[] { "Pop", "Rustig" }) Directory.CreateDirectory(Path.Combine(options.MusicFolder, d));
+        Directory.CreateDirectory(Path.Combine(options.JingleFolder, "Station ID"));
+        DemoContent.WriteSong(Path.Combine(options.MusicFolder, "Pop", "A - One.wav"), 261.63, seconds: 6, intro: 1);
+        DemoContent.WriteSong(Path.Combine(options.MusicFolder, "Rustig", "B - Two.wav"), 329.63, seconds: 6, intro: 1);
+        DemoContent.WriteSong(Path.Combine(options.JingleFolder, "Station ID", "ID.wav"), 523.25, seconds: 2, intro: 2);
+        var db = Db();
+        var library = new MediaLibrary(options, db);
+        await library.ScanAsync();
+
+        Assert.Equal(2, library.Songs.Count);
+        Assert.Single(library.Jingles);
+        Assert.Contains(library.Categories, c => c.Name == "Pop" && c.Kind == MediaKind.Song);
+        Assert.Contains(library.Categories, c => c.Name == "Station ID" && c.Kind == MediaKind.Jingle);
+        var one = library.Songs.Single(s => s.Title == "One");
+        Assert.Equal("A", one.Artist);
+        Assert.NotEmpty(library.GetPeaks(one.Id));
+
+        var edited = library.SaveCues(one.Id, one.Cues with { Intro = 2.5, HookIn = 3, HookOut = 4 })!;
+        Assert.Equal(2.5, edited.Intro);
+        await library.ScanAsync(); // a rescan keeps manual cue points
+        var again = new MediaLibrary(options, db);
+        Assert.Equal(2.5, again.Get(one.Id)!.Intro);
+        Assert.True(again.GetDetails(one.Id)!.CuesManual);
+        Assert.Single(again.Search("one"));
+
+        var reset = again.ResetCues(one.Id)!;
+        Assert.Null(reset.Cues.HookIn);
+        Assert.False(again.GetDetails(one.Id)!.CuesManual);
+    }
+
+    [BassFact]
+    public void Router_ducks_music_for_the_microphone_and_overlays()
+    {
+        var options = Options();
+        var router = Router(options);
+        router.Start();
+        var log = router.Strip(AudioRouter.LogStrip);
+        var cart = router.Strip(AudioRouter.CartStrip);
+        var overlay = router.Strip(AudioRouter.OverlayStrip);
+        Assert.Equal(1f, log.DuckLevel);
+
+        router.SetMic(true);
+        Assert.True(router.MicOpen);
+        Assert.Equal((float)options.Routing.MicDuckLevel, log.DuckLevel);
+        Assert.Equal((float)options.Routing.MicDuckLevel, cart.DuckLevel);
+        Assert.Equal(1f, overlay.DuckLevel);           // overlays stay at full level
+        Assert.Equal(1f, router.Strip(AudioRouter.MicStrip).DuckLevel);
+
+        // Two reasons at once: the lowest wins, releasing one keeps the other.
+        log.Duck("clip:x", 0.1f, 0);
+        Assert.Equal(0.1f, log.DuckLevel);
+        log.Duck("clip:x", null, 0);
+        Assert.Equal((float)options.Routing.MicDuckLevel, log.DuckLevel);
+
+        router.SetMic(false);
+        Assert.Equal(1f, log.DuckLevel);
+        Assert.Equal(0f, router.Strip(AudioRouter.MicStrip).DuckLevel);
+    }
+
+    [BassFact]
+    public async Task Carts_and_standby_players_play_and_report()
+    {
+        var options = Options();
+        var router = Router(options);
+        var players = new StudioPlayers(router, options);
+        var path = Path.Combine(_dir, "cart.wav");
+        DemoContent.WriteSong(path, 440, seconds: 5, intro: 2); // 0.8 s lead-in, ~3 s of sound
+        var media = new MediaLibrary(options, Db()).Load(path, MediaKind.Jingle);
+
+        var ended = new TaskCompletionSource<double>();
+        players.Carts.Ended += (_, _, played) => ended.TrySetResult(played);
+        players.Carts.Play("1:0", "ID", media, loop: false, duckMusic: true, duckLevel: 0.35);
+        Assert.True(players.Carts.IsPlaying("1:0"));
+        Assert.Equal(0.35f, router.Strip(AudioRouter.LogStrip).DuckLevel);
+        var played = await ended.Task.WaitAsync(TimeSpan.FromSeconds(10));
+        Assert.InRange(played, 1.5, 5);
+        Assert.False(players.Carts.IsPlaying("1:0"));
+        Assert.Equal(1f, router.Strip(AudioRouter.LogStrip).DuckLevel); // released when the cart ends
+
+        var standby = players.Standby[0];
+        standby.Load(media);
+        Assert.Equal(PlayerState.Cued, standby.Info.State);
+        standby.Play();
+        await Task.Delay(300);
+        Assert.Equal(PlayerState.Playing, standby.Info.State);
+        standby.Stop();
+        Assert.Equal(PlayerState.Cued, standby.Info.State); // stop rewinds to the cue-in
+        standby.Eject();
+        Assert.Equal(PlayerState.Empty, standby.Info.State);
     }
 }

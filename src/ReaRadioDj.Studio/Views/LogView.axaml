@@ -1,0 +1,85 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:ReaRadioDj.Studio.ViewModels"
+             x:Class="ReaRadioDj.Studio.Views.LogView"
+             x:DataType="vm:LogTool">
+  <DockPanel Margin="6">
+    <!-- Now playing -->
+    <Border DockPanel.Dock="Top" Classes="card" Margin="0,0,0,6">
+      <StackPanel Spacing="4">
+        <DockPanel>
+          <Border DockPanel.Dock="Left" CornerRadius="3" Padding="6,1" Margin="0,0,8,0" Background="#E5484D"
+                  IsVisible="{Binding NowType, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+            <TextBlock Text="{Binding NowType}" FontSize="11" FontWeight="Bold" Foreground="White" />
+          </Border>
+          <TextBlock DockPanel.Dock="Right" Classes="mono" FontSize="22" Text="{Binding NowRemaining}" />
+          <TextBlock Text="{Binding NowLabel}" FontSize="18" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+        </DockPanel>
+        <TextBlock Classes="muted" Text="{Binding NowDetail}" TextTrimming="CharacterEllipsis" />
+        <ProgressBar Value="{Binding Progress}" Maximum="100" Height="14" MinHeight="14" CornerRadius="3" />
+        <DockPanel>
+          <TextBlock DockPanel.Dock="Left" Classes="mono muted" Text="{Binding NowPosition}" />
+          <TextBlock DockPanel.Dock="Right" Classes="muted" Text="{Binding NowMix}" />
+          <TextBlock HorizontalAlignment="Center" FontSize="12" Foreground="#F0B429" Text="{Binding NowIntro}" />
+        </DockPanel>
+      </StackPanel>
+    </Border>
+
+    <!-- Commands -->
+    <DockPanel DockPanel.Dock="Top" Margin="0,0,0,4">
+      <TextBlock DockPanel.Dock="Right" Classes="muted" Text="{Binding Summary}" VerticalAlignment="Center" />
+      <WrapPanel>
+        <Button Classes="small" Margin="0,0,4,4" Content="Selectie als volgende" Command="{Binding AddSelectedNextCommand}" ToolTip.Tip="Het geselecteerde bibliotheekitem als volgende" />
+        <Button Classes="small" Margin="0,0,4,4" Content="Selectie achteraan" Command="{Binding AddSelectedEndCommand}" />
+        <Button Classes="small" Margin="0,0,4,4" Content="AI-break" Command="{Binding AddBreakCommand}" />
+        <Button Classes="small" Margin="0,0,4,4" Content="Opnieuw plannen" Command="{Binding ReplanCommand}" ToolTip.Tip="Gooit de klokitems weg en plant opnieuw (handmatige items blijven)" />
+      </WrapPanel>
+    </DockPanel>
+
+    <Expander DockPanel.Dock="Bottom" Header="Gespeeld" Margin="0,4,0,0" HorizontalAlignment="Stretch">
+      <ListBox ItemsSource="{Binding History}" MaxHeight="190">
+        <ListBox.ItemTemplate>
+          <DataTemplate x:DataType="vm:LogRow">
+            <DockPanel>
+              <TextBlock DockPanel.Dock="Left" Text="{Binding TypeText}" Width="54" FontSize="12"
+                         Foreground="{Binding Type, Converter={x:Static vm:Brushes.TypeColor}}" />
+              <TextBlock Text="{Binding Label}" TextTrimming="CharacterEllipsis" FontSize="12" />
+            </DockPanel>
+          </DataTemplate>
+        </ListBox.ItemTemplate>
+      </ListBox>
+    </Expander>
+
+    <ListBox x:Name="List" ItemsSource="{Binding Upcoming}" SelectedItem="{Binding Selected}">
+      <ListBox.ItemTemplate>
+        <DataTemplate x:DataType="vm:LogRow">
+          <Grid ColumnDefinitions="64,56,*,Auto,Auto">
+            <TextBlock Grid.Column="0" Classes="mono" Text="{Binding StartsAt}" VerticalAlignment="Center" />
+            <Border Grid.Column="1" CornerRadius="3" Padding="4,0" VerticalAlignment="Center" HorizontalAlignment="Left"
+                    BorderThickness="1" BorderBrush="{Binding Type, Converter={x:Static vm:Brushes.TypeColor}}">
+              <TextBlock Text="{Binding TypeText}" FontSize="11" Foreground="{Binding Type, Converter={x:Static vm:Brushes.TypeColor}}" />
+            </Border>
+            <StackPanel Grid.Column="2" Margin="4,0">
+              <TextBlock Text="{Binding Label}" TextTrimming="CharacterEllipsis" />
+              <TextBlock Classes="muted" Text="{Binding Detail}" TextTrimming="CharacterEllipsis"
+                         IsVisible="{Binding Detail, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+              <TextBlock FontSize="11" Foreground="#E5484D" Text="{Binding Error}"
+                         IsVisible="{Binding Error, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+            </StackPanel>
+            <StackPanel Grid.Column="3" Margin="4,0" VerticalAlignment="Center">
+              <TextBlock Classes="mono" Text="{Binding Length}" HorizontalAlignment="Right" />
+              <TextBlock Classes="muted" FontSize="10" Text="{Binding Origin}" HorizontalAlignment="Right" />
+            </StackPanel>
+            <StackPanel Grid.Column="4" Orientation="Horizontal" Spacing="2" VerticalAlignment="Center">
+              <Button Classes="small" Content="⤒" ToolTip.Tip="Als volgende"
+                      Command="{Binding $parent[ListBox].DataContext.MakeNextCommand}" CommandParameter="{Binding}" />
+              <Button Classes="small" Content="↑" Command="{Binding $parent[ListBox].DataContext.UpCommand}" CommandParameter="{Binding}" />
+              <Button Classes="small" Content="↓" Command="{Binding $parent[ListBox].DataContext.DownCommand}" CommandParameter="{Binding}" />
+              <Button Classes="small" Content="✕" Command="{Binding $parent[ListBox].DataContext.RemoveCommand}" CommandParameter="{Binding}" />
+            </StackPanel>
+          </Grid>
+        </DataTemplate>
+      </ListBox.ItemTemplate>
+    </ListBox>
+  </DockPanel>
+</UserControl>

@@ -1,0 +1,65 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:ReaRadioDj.Studio.ViewModels"
+             x:Class="ReaRadioDj.Studio.Views.CartwallView"
+             x:DataType="vm:CartwallTool">
+  <DockPanel Margin="6">
+    <DockPanel DockPanel.Dock="Top" Margin="0,0,0,6">
+      <Button DockPanel.Dock="Right" Classes="small" Content="Alles stop (F10)" Command="{Binding StopAllCommand}" />
+      <StackPanel Orientation="Horizontal" Spacing="4">
+        <RadioButton Content="1" IsChecked="{Binding Page1}" GroupName="{Binding Id}" />
+        <RadioButton Content="2" IsChecked="{Binding Page2}" GroupName="{Binding Id}" />
+        <RadioButton Content="3" IsChecked="{Binding Page3}" GroupName="{Binding Id}" />
+        <RadioButton Content="4" IsChecked="{Binding Page4}" GroupName="{Binding Id}" />
+        <TextBlock Classes="muted" Text="{Binding PlayingText}" VerticalAlignment="Center" Margin="8,0,0,0" />
+      </StackPanel>
+    </DockPanel>
+    <ItemsControl x:Name="Grid" ItemsSource="{Binding Buttons}">
+      <ItemsControl.ItemsPanel>
+        <ItemsPanelTemplate>
+          <UniformGrid Rows="4" Columns="4" />
+        </ItemsPanelTemplate>
+      </ItemsControl.ItemsPanel>
+      <ItemsControl.ItemTemplate>
+        <DataTemplate x:DataType="vm:CartButton">
+          <Button Margin="2" Padding="4" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
+                  HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch"
+                  Background="{Binding Background}" BorderThickness="2"
+                  BorderBrush="{Binding Playing, Converter={x:Static vm:Brushes.Active}}"
+                  Command="{Binding PressCommand}">
+            <Button.ContextMenu>
+              <ContextMenu>
+                <MenuItem Header="Selectie uit bibliotheek toewijzen" Command="{Binding AssignSelectedCommand}" />
+                <MenuItem Header="Herhalen (lus) aan/uit" Command="{Binding ToggleLoopCommand}" />
+                <MenuItem Header="Overlay aan/uit (automatisering dimt)" Command="{Binding ToggleOverlayCommand}" />
+                <MenuItem Header="Kleur">
+                  <MenuItem Header="Blauw" Command="{Binding SetColorCommand}" CommandParameter="#3FA7FF" />
+                  <MenuItem Header="Groen" Command="{Binding SetColorCommand}" CommandParameter="#2F9E6A" />
+                  <MenuItem Header="Geel" Command="{Binding SetColorCommand}" CommandParameter="#B8860B" />
+                  <MenuItem Header="Paars" Command="{Binding SetColorCommand}" CommandParameter="#7C5CD6" />
+                  <MenuItem Header="Rood" Command="{Binding SetColorCommand}" CommandParameter="#C2373C" />
+                  <MenuItem Header="Grijs" Command="{Binding SetColorCommand}" CommandParameter="#475569" />
+                </MenuItem>
+                <MenuItem Header="Cue-editor" Command="{Binding EditCuesCommand}" />
+                <Separator />
+                <MenuItem Header="Leegmaken" Command="{Binding ClearCommand}" />
+              </ContextMenu>
+            </Button.ContextMenu>
+            <Grid RowDefinitions="Auto,*,Auto">
+              <DockPanel Grid.Row="0">
+                <TextBlock DockPanel.Dock="Right" FontSize="11" Text="{Binding Flags}" Foreground="White" />
+                <TextBlock FontSize="10" Opacity="0.7" Text="{Binding Number}" Foreground="White" />
+              </DockPanel>
+              <TextBlock Grid.Row="1" Text="{Binding Label}" TextWrapping="Wrap" TextAlignment="Center" FontWeight="SemiBold"
+                         VerticalAlignment="Center" HorizontalAlignment="Center" Foreground="White" TextTrimming="CharacterEllipsis" />
+              <StackPanel Grid.Row="2">
+                <TextBlock Classes="mono" FontSize="11" Text="{Binding Sub}" HorizontalAlignment="Center" Foreground="White" />
+                <ProgressBar Value="{Binding Progress}" Maximum="100" MinHeight="3" Height="3" IsVisible="{Binding Playing}" />
+              </StackPanel>
+            </Grid>
+          </Button>
+        </DataTemplate>
+      </ItemsControl.ItemTemplate>
+    </ItemsControl>
+  </DockPanel>
+</UserControl>

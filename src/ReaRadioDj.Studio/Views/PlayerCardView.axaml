@@ -1,0 +1,34 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:ReaRadioDj.Studio.ViewModels"
+             x:Class="ReaRadioDj.Studio.Views.PlayerCardView"
+             x:DataType="vm:PlayerCard">
+  <Border Classes="card" Margin="0,0,0,6" BorderBrush="{Binding Playing, Converter={x:Static vm:Brushes.Active}}">
+    <StackPanel Spacing="4">
+      <DockPanel>
+        <TextBlock DockPanel.Dock="Right" Classes="muted" Text="{Binding StateText}" />
+        <TextBlock Classes="h" Text="{Binding Name}" />
+      </DockPanel>
+      <TextBlock Text="{Binding Label}" TextTrimming="CharacterEllipsis" FontSize="15" />
+      <ProgressBar x:Name="Bar" Value="{Binding Progress}" Maximum="100" Height="10" MinHeight="10" Cursor="Hand"
+                   ToolTip.Tip="Klik om te zoeken" />
+      <DockPanel>
+        <TextBlock DockPanel.Dock="Left" Classes="mono" Text="{Binding Elapsed}" />
+        <TextBlock DockPanel.Dock="Right" Classes="mono" FontSize="16" Text="{Binding Remaining}" />
+        <TextBlock HorizontalAlignment="Center" FontSize="12" Foreground="#F0B429" Text="{Binding Intro}" />
+      </DockPanel>
+      <WrapPanel>
+        <Button Classes="small" Margin="0,0,4,4" Content="▶ / ❚❚" Command="{Binding ToggleCommand}" MinWidth="64" />
+        <Button Classes="small" Margin="0,0,4,4" Content="■" Command="{Binding StopCommand}" ToolTip.Tip="Stop en terug naar het begin" />
+        <Button Classes="small" Margin="0,0,4,4" Content="⏏" Command="{Binding EjectCommand}" ToolTip.Tip="Uitwerpen" />
+        <Button Classes="small" Margin="0,0,4,4" Content="Laad selectie" Command="{Binding LoadSelectedCommand}" />
+        <Button Classes="small" Margin="0,0,4,4" Content="+ stapel" Command="{Binding EnqueueSelectedCommand}" ToolTip.Tip="Selectie achter het huidige item" />
+        <Button Classes="small" Margin="0,0,4,4" Content="Cues" Command="{Binding EditCuesCommand}" />
+      </WrapPanel>
+      <DockPanel IsVisible="{Binding Stack, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+        <Button DockPanel.Dock="Right" Classes="small" Content="✕" Command="{Binding ClearStackCommand}" ToolTip.Tip="Stapel leegmaken" />
+        <TextBlock Classes="muted" Text="{Binding Stack}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+      </DockPanel>
+    </StackPanel>
+  </Border>
+</UserControl>

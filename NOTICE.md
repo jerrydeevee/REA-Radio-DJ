@@ -23,7 +23,13 @@ van un4seen nodig.
 |---|---|---|
 | [TagLibSharp](https://github.com/mono/taglib-sharp) | LGPL-2.1 | Tags lezen (NuGet) |
 | System.Speech (.NET) | MIT | Windows-spraak als offline stem (NuGet) |
-| ASP.NET Core / .NET | MIT | Server en web-UI |
+| ASP.NET Core / .NET | MIT | Engine-service en web-UI |
+| [Microsoft.Data.Sqlite](https://github.com/dotnet/efcore) | MIT | Stationsdatabase (NuGet) |
+| [SQLitePCLRaw](https://github.com/ericsink/SQLitePCL.raw) en SQLite | Apache-2.0 en public domain | SQLite-binaries (NuGet) |
+| [Avalonia](https://github.com/AvaloniaUI/Avalonia) | MIT | Desktop-studio (NuGet) |
+| [Dock](https://github.com/wieslawsoltes/Dock) | MIT | Dokbare en zwevende vensters (NuGet) |
+| [CommunityToolkit.Mvvm](https://github.com/CommunityToolkit/dotnet) | MIT | MVVM-hulpmiddelen (NuGet) |
+| [Newtonsoft.Json](https://github.com/JamesNK/Newtonsoft.Json) | MIT | Opslaan van vensterindelingen (NuGet) |
 | Higgs TTS 3 (Boson AI) | Onderzoek / niet-commercieel | Optioneel; draait als losse server en zit niet in deze repository |
 
 **Let op bij Higgs TTS 3:** de modellicentie staat alleen onderzoek en niet-commercieel gebruik toe. Wie

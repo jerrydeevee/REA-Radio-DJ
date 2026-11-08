@@ -1,0 +1,30 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:ReaRadioDj.Studio.ViewModels"
+             x:Class="ReaRadioDj.Studio.Views.ClockView"
+             x:DataType="vm:ClockTool">
+  <ScrollViewer Margin="6">
+    <StackPanel Spacing="6" HorizontalAlignment="Center">
+      <TextBlock Classes="mono" FontSize="56" FontWeight="Bold" Text="{Binding Time}" HorizontalAlignment="Center" />
+      <ProgressBar Maximum="60" Value="{Binding SecondHand}" Height="4" MinHeight="4" />
+      <TextBlock Classes="muted" Text="{Binding Date}" HorizontalAlignment="Center" />
+      <TextBlock Classes="muted" Text="{Binding ClockName}" HorizontalAlignment="Center" />
+      <Grid ColumnDefinitions="*,*" Margin="0,8,0,0">
+        <StackPanel Grid.Column="0" HorizontalAlignment="Center">
+          <TextBlock Classes="muted" Text="volgend item over" HorizontalAlignment="Center" />
+          <TextBlock Classes="mono" FontSize="26" Text="{Binding ToNext}" HorizontalAlignment="Center" />
+        </StackPanel>
+        <StackPanel Grid.Column="1" HorizontalAlignment="Center">
+          <TextBlock Classes="muted" Text="vaste tijd over" HorizontalAlignment="Center" />
+          <TextBlock Classes="mono" FontSize="26" Foreground="#F0B429" Text="{Binding ToEvent}" HorizontalAlignment="Center" />
+        </StackPanel>
+      </Grid>
+      <TextBlock Text="{Binding NextEvent}" HorizontalAlignment="Center" />
+      <ItemsControl ItemsSource="{Binding Events}" Margin="0,6,0,0">
+        <ItemsControl.ItemTemplate>
+          <DataTemplate><TextBlock Classes="mono muted" Text="{Binding}" /></DataTemplate>
+        </ItemsControl.ItemTemplate>
+      </ItemsControl>
+    </StackPanel>
+  </ScrollViewer>
+</UserControl>

@@ -1,0 +1,12 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:ReaRadioDj.Studio.ViewModels"
+             xmlns:v="using:ReaRadioDj.Studio.Views"
+             x:Class="ReaRadioDj.Studio.Views.PflView"
+             x:DataType="vm:PflTool">
+  <StackPanel Margin="6">
+    <v:PlayerCardView DataContext="{Binding Player}" />
+    <TextBlock Classes="muted" TextWrapping="Wrap"
+               Text="PFL speelt op de voorbeluister-uitgang (koptelefoon), nooit op de zender. Ctrl+P = afspelen/pauze." />
+  </StackPanel>
+</UserControl>

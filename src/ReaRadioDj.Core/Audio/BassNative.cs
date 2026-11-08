@@ -114,6 +114,43 @@ internal static partial class BassNative
 
     [LibraryImport(Bass)] public static partial uint BASS_ChannelGetData(int handle, [Out] float[] buffer, uint length);
 
+    public const int BASS_ATTRIB_PAN = 3;
+    public const int BASS_ERROR_INIT = 8;
+    public const int BASS_ERROR_DEVICE = 23;
+    public const uint BASS_DEVICE_INIT = 4;
+    public const uint BASS_SAMPLE_LOOP = 4;
+    public static readonly IntPtr STREAMPROC_PUSH = new(-1);
+
+    [LibraryImport(Bass)] public static partial uint BASS_GetDevice();
+
+    [LibraryImport(Bass)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static partial bool BASS_SetDevice(uint device);
+
+    [LibraryImport(Bass)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static partial bool BASS_ChannelSetDevice(int handle, uint device);
+
+    [LibraryImport(Bass)] public static partial uint BASS_ChannelGetDevice(int handle);
+
+    [LibraryImport(Bass)] public static partial int BASS_StreamCreate(uint freq, uint chans, uint flags, IntPtr proc, IntPtr user);
+    [LibraryImport(Bass)] public static partial uint BASS_StreamPutData(int handle, IntPtr buffer, uint length);
+
+    // Recording
+    [LibraryImport(Bass)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static partial bool BASS_RecordGetDeviceInfo(uint device, out BASS_DEVICEINFO info);
+
+    [LibraryImport(Bass)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static partial bool BASS_RecordInit(int device);
+
+    [LibraryImport(Bass)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static partial bool BASS_RecordFree();
+
+    [LibraryImport(Bass)] public static partial int BASS_RecordStart(uint freq, uint chans, uint flags, IntPtr proc, IntPtr user);
+
     // ---- bassmix.h ----------------------------------------------------------------------
     public const uint BASS_MIXER_END = 0x10000;
     public const uint BASS_MIXER_NONSTOP = 0x20000;
@@ -133,6 +170,17 @@ internal static partial class BassNative
     public static partial bool BASS_Mixer_ChannelRemove(int handle);
 
     [LibraryImport(BassMix)] public static partial ulong BASS_Mixer_ChannelGetPosition(int handle, uint mode);
+
+    public const uint BASS_MIXER_CHAN_BUFFER = 0x2000;
+    public const uint BASS_POS_MIXER_RESET = 0x10000;
+
+    [LibraryImport(BassMix)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static partial bool BASS_Mixer_ChannelSetPosition(int handle, ulong pos, uint mode);
+
+    [LibraryImport(BassMix)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static partial bool BASS_Mixer_ChannelGetLevelEx(int handle, [Out] float[] levels, float length, uint flags);
 
     // ---- bassenc.h / bassenc_mp3.h ------------------------------------------------------
     public const uint BASS_ENCODE_AUTOFREE = 0x40000;

@@ -1,0 +1,17 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:ReaRadioDj.Studio.ViewModels"
+             x:Class="ReaRadioDj.Studio.Views.StreamView"
+             x:DataType="vm:StreamTool">
+  <StackPanel Margin="6" Spacing="8">
+    <StackPanel Orientation="Horizontal" Spacing="8">
+      <Ellipse Width="12" Height="12" Fill="{Binding Connected, Converter={x:Static vm:Brushes.OnAir}}" VerticalAlignment="Center" />
+      <TextBlock Text="{Binding State}" TextWrapping="Wrap" VerticalAlignment="Center" />
+    </StackPanel>
+    <StackPanel Orientation="Horizontal" Spacing="6">
+      <Button Content="Start stream" Command="{Binding StartCommand}" />
+      <Button Content="Stop stream" Command="{Binding StopCommand}" />
+    </StackPanel>
+    <TextBlock Classes="muted" TextWrapping="Wrap" Text="Icecast-server, mountpoint en bitrate staan in appsettings.json van de engine." />
+  </StackPanel>
+</UserControl>

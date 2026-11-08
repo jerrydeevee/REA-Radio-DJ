@@ -1,0 +1,38 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:ReaRadioDj.Studio.ViewModels"
+             xmlns:c="using:ReaRadioDj.Contracts"
+             x:Class="ReaRadioDj.Studio.Views.PresenterView"
+             x:DataType="vm:PresenterTool">
+  <DockPanel Margin="6">
+    <StackPanel DockPanel.Dock="Top" Spacing="6" Margin="0,0,0,6">
+      <Button Content="AI-break als volgende (Ctrl+B)" Command="{Binding AddNextCommand}" />
+      <Border Classes="card" IsVisible="{Binding NowScript, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+        <StackPanel>
+          <TextBlock Classes="muted" Text="Nu op de radio" />
+          <TextBlock Text="{Binding NowScript}" TextWrapping="Wrap" FontStyle="Italic" />
+        </StackPanel>
+      </Border>
+    </StackPanel>
+    <ListBox ItemsSource="{Binding Breaks}">
+      <ListBox.ItemTemplate>
+        <DataTemplate x:DataType="c:LogItemDto">
+          <DockPanel>
+            <Button DockPanel.Dock="Right" Classes="small" Content="✕" VerticalAlignment="Top"
+                    Command="{Binding $parent[ListBox].DataContext.RemoveCommand}" CommandParameter="{Binding}" />
+            <StackPanel>
+              <TextBlock>
+                <Run Text="{Binding StartsAt, StringFormat='{}{0:HH:mm:ss}'}" FontWeight="SemiBold" />
+                <Run Text="  " /><Run Text="{Binding BreakState}" Foreground="#A78BFA" />
+                <Run Text="  " /><Run Text="{Binding Voice}" Foreground="#8B95A5" />
+                <Run Text=" " /><Run Text="{Binding ScriptSource}" Foreground="#8B95A5" />
+              </TextBlock>
+              <TextBlock Text="{Binding Script}" TextWrapping="Wrap" Classes="muted" />
+              <TextBlock Text="{Binding Error}" Foreground="#E5484D" FontSize="11" />
+            </StackPanel>
+          </DockPanel>
+        </DataTemplate>
+      </ListBox.ItemTemplate>
+    </ListBox>
+  </DockPanel>
+</UserControl>

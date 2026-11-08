@@ -42,6 +42,32 @@ public sealed class PlayoutLog
 
     public LogItem? PeekNext() { lock (_gate) return _upcoming.Count > 0 ? _upcoming[0] : null; }
 
+    public LogItem? Find(long id) { lock (_gate) return _upcoming.FirstOrDefault(i => i.Id == id); }
+
+    /// <summary>Removes every upcoming item that was planned automatically (clock items); manual items stay.</summary>
+    public int ClearPlanned()
+    {
+        int n;
+        lock (_gate) n = _upcoming.RemoveAll(i => i.Origin.StartsWith("klok", StringComparison.Ordinal));
+        if (n > 0) Changed?.Invoke();
+        return n;
+    }
+
+    /// <summary>Moves an item to a new position (0 = next).</summary>
+    public bool MoveTo(long id, int index)
+    {
+        lock (_gate)
+        {
+            int i = _upcoming.FindIndex(x => x.Id == id);
+            if (i < 0) return false;
+            var item = _upcoming[i];
+            _upcoming.RemoveAt(i);
+            _upcoming.Insert(Math.Clamp(index, 0, _upcoming.Count), item);
+        }
+        Changed?.Invoke();
+        return true;
+    }
+
     public bool Remove(long id)
     {
         bool removed;

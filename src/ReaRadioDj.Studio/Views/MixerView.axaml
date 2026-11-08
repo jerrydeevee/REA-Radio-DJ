@@ -1,0 +1,70 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:ReaRadioDj.Studio.ViewModels"
+             xmlns:c="using:ReaRadioDj.Contracts"
+             x:Class="ReaRadioDj.Studio.Views.MixerView"
+             x:DataType="vm:MixerTool">
+  <ScrollViewer Margin="6">
+    <StackPanel Spacing="8">
+      <ItemsControl ItemsSource="{Binding Strips}">
+        <ItemsControl.ItemsPanel>
+          <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
+        </ItemsControl.ItemsPanel>
+        <ItemsControl.ItemTemplate>
+          <DataTemplate x:DataType="vm:StripCard">
+            <Border Classes="card" Width="86" Margin="0,0,6,6" Padding="6">
+              <StackPanel Spacing="4">
+                <TextBlock Text="{Binding Name}" FontWeight="SemiBold" HorizontalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                <TextBlock Classes="muted" FontSize="10" Text="{Binding BusText}" HorizontalAlignment="Center" />
+                <Grid ColumnDefinitions="*,6,6" Height="150">
+                  <Slider Grid.Column="0" Orientation="Vertical" Minimum="0" Maximum="125" Value="{Binding Volume}" HorizontalAlignment="Center" />
+                  <ProgressBar Grid.Column="1" Orientation="Vertical" Maximum="100" Value="{Binding Left}" MinWidth="5" Width="5" Foreground="#3DBD7D" />
+                  <ProgressBar Grid.Column="2" Orientation="Vertical" Maximum="100" Value="{Binding Right}" MinWidth="5" Width="5" Foreground="#3DBD7D" Margin="1,0,0,0" />
+                </Grid>
+                <TextBlock Classes="mono" FontSize="11" HorizontalAlignment="Center" Text="{Binding Volume, StringFormat='{}{0:0}%'}" />
+                <ToggleButton Content="M" IsChecked="{Binding Muted}" HorizontalAlignment="Center" Classes="mic" ToolTip.Tip="Dempen" />
+                <TextBlock FontSize="10" Foreground="#F0B429" HorizontalAlignment="Center" Text="{Binding Duck}" />
+              </StackPanel>
+            </Border>
+          </DataTemplate>
+        </ItemsControl.ItemTemplate>
+      </ItemsControl>
+
+      <Border Classes="card">
+        <DockPanel>
+          <ToggleButton DockPanel.Dock="Right" Classes="mic" Content="🎤 MIC (F8)" IsChecked="{Binding MicOpen, Mode=OneWay}" Command="{Binding ToggleMicCommand}" />
+          <StackPanel>
+            <TextBlock Classes="h" Text="Microfoon" />
+            <TextBlock Classes="muted" Text="{Binding MicStatus}" />
+          </StackPanel>
+        </DockPanel>
+      </Border>
+
+      <Expander Header="Routing en geluidskaarten" HorizontalAlignment="Stretch">
+        <StackPanel Spacing="6">
+          <TextBlock Text="Zender (uitzending)" />
+          <ComboBox ItemsSource="{Binding Outputs}" SelectedItem="{Binding OutputDevice}" HorizontalAlignment="Stretch">
+            <ComboBox.ItemTemplate><DataTemplate x:DataType="c:DeviceDto"><TextBlock Text="{Binding Name}" /></DataTemplate></ComboBox.ItemTemplate>
+          </ComboBox>
+          <TextBlock Text="PFL / voorbeluisteren (koptelefoon)" />
+          <ComboBox ItemsSource="{Binding Outputs}" SelectedItem="{Binding PreviewDevice}" HorizontalAlignment="Stretch">
+            <ComboBox.ItemTemplate><DataTemplate x:DataType="c:DeviceDto"><TextBlock Text="{Binding Name}" /></DataTemplate></ComboBox.ItemTemplate>
+          </ComboBox>
+          <CheckBox Content="Microfoon opnemen (talkover)" IsChecked="{Binding MicEnabled}" />
+          <ComboBox ItemsSource="{Binding Inputs}" SelectedItem="{Binding MicDevice}" HorizontalAlignment="Stretch" IsEnabled="{Binding MicEnabled}">
+            <ComboBox.ItemTemplate><DataTemplate x:DataType="c:DeviceDto"><TextBlock Text="{Binding Name}" /></DataTemplate></ComboBox.ItemTemplate>
+          </ComboBox>
+          <TextBlock Text="{Binding MicDuck, StringFormat='Muziek onder de microfoon: {0:0}%'}" />
+          <Slider Minimum="0" Maximum="100" Value="{Binding MicDuck}" />
+          <TextBlock Text="{Binding OverlayDuck, StringFormat='Muziek onder overlays: {0:0}%'}" />
+          <Slider Minimum="0" Maximum="100" Value="{Binding OverlayDuck}" />
+          <StackPanel Orientation="Horizontal" Spacing="6">
+            <Button Content="Opslaan" Command="{Binding SaveRoutingCommand}" />
+            <Button Content="Opnieuw lezen" Command="{Binding ReloadRoutingCommand}" />
+          </StackPanel>
+          <TextBlock Classes="muted" TextWrapping="Wrap" Text="Uitgangen wisselen direct. Een andere microfoon wordt actief na een herstart van de engine." />
+        </StackPanel>
+      </Expander>
+    </StackPanel>
+  </ScrollViewer>
+</UserControl>
