@@ -172,6 +172,89 @@ public sealed class MediaLibrary
         if (keepCues) _log.LogInformation("Kept manual cue points of {File}", info.Name);
     }
 
+    /// <summary>
+    /// Brings the rows of an external catalogue into the library. New or changed files are analysed like a folder scan;
+    /// what the database says (artist, title, album, category, rights) wins over the file tags. Files of this source that
+    /// are no longer in the database, or no longer on disk, stay in the library but are marked missing and not played.
+    /// </summary>
+    public SyncResult SyncExternal(DbSource source, IReadOnlyList<ExternalRow> rows, CancellationToken ct = default)
+    {
+        _scanLock.Wait(ct);
+        int added = 0, updated = 0, missing = 0, skipped = 0;
+        var problems = new List<string>();
+        void Problem(string text) { if (problems.Count < 20) problems.Add(text); }
+        string tag = $"db:{source.Id}";
+        try
+        {
+            var known = _db.Query("SELECT path, size, modified, cues_manual FROM media",
+                    r => (Path: r.GetString(0), Size: r.GetInt64(1), Modified: r.GetInt64(2), Manual: r.GetInt64(3) != 0))
+                .ToDictionary(x => x.Path, StringComparer.OrdinalIgnoreCase);
+            var listed = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            int done = 0;
+            foreach (var row in rows)
+            {
+                ct.ThrowIfCancellationRequested();
+                Status = $"Database {source.Name}: {++done}/{rows.Count}";
+                string path;
+                try { path = Path.GetFullPath(source.Translate(row.Path)); }
+                catch (Exception) { skipped++; Problem($"geen geldig pad: {row.Path}"); continue; }
+                if (!Extensions.Contains(Path.GetExtension(path).ToLowerInvariant())) { skipped++; Problem($"geen audiobestand: {path}"); continue; }
+                listed.Add(path);
+                if (!File.Exists(path))
+                {
+                    missing++;
+                    Problem($"niet gevonden: {path}");
+                    _db.Execute("UPDATE media SET missing = 1 WHERE path = $p", ("$p", path));
+                    continue;
+                }
+                try
+                {
+                    var info = new FileInfo(path);
+                    var kind = row.Kind ?? source.Kind;
+                    long categoryId = EnsureCategory(row.Category ?? source.Name, kind);
+                    bool isNew = !known.TryGetValue(info.FullName, out var k);
+                    if (isNew || k.Size != info.Length || k.Modified != info.LastWriteTimeUtc.Ticks)
+                    {
+                        Import(info, kind, categoryId, keepCues: !isNew && k.Manual);
+                        if (isNew) added++; else updated++;
+                    }
+                    // The database is the catalogue: its values win, empty fields keep what the tags said.
+                    _db.Transaction((c, tx) =>
+                    {
+                        using var cmd = StationDb.Command(c, """
+                            UPDATE media SET source = $s, missing = 0, kind = $k,
+                                artist = COALESCE($a, artist), title = COALESCE($t, title), album = COALESCE($al, album),
+                                category_id = CASE WHEN $hascat = 1 OR category_id IS NULL THEN $cat ELSE category_id END
+                            WHERE path = $p;
+                            SELECT id FROM media WHERE path = $p;
+                            """, ("$s", tag), ("$k", (int)kind), ("$a", row.Artist), ("$t", row.Title), ("$al", row.Album),
+                            ("$hascat", row.Category is null ? 0 : 1), ("$cat", categoryId), ("$p", info.FullName));
+                        cmd.Transaction = tx;
+                        long id = (long)cmd.ExecuteScalar()!;
+                        if (row.Isrc is not null || row.Composer is not null || row.Label is not null || row.Year is not null)
+                            RightsStore.FromTags(c, tx, id, row.Isrc ?? "", row.Composer ?? "", row.Label ?? "", row.Year);
+                    });
+                }
+                catch (Exception ex)
+                {
+                    skipped++;
+                    Problem($"{Path.GetFileName(path)}: {ex.Message}");
+                    _log.LogWarning(ex, "Skipping {File} from {Source}", path, source.Name);
+                }
+            }
+            // Items of this source that the database no longer lists.
+            var gone = _db.Query("SELECT path FROM media WHERE source = $s AND missing = 0", r => r.GetString(0), ("$s", tag))
+                .Where(p => !listed.Contains(p)).ToList();
+            foreach (var p in gone) _db.Execute("UPDATE media SET missing = 1 WHERE path = $p", ("$p", p));
+            if (gone.Count > 0) Problem($"{gone.Count} items staan niet meer in de database en worden niet meer gespeeld");
+            Reload();
+            Status = $"{Songs.Count} nummers, {Jingles.Count} jingles";
+        }
+        finally { _scanLock.Release(); }
+        Changed?.Invoke();
+        return new SyncResult(rows.Count, added, updated, missing, skipped, problems);
+    }
+
     private static string CategoryName(string root, string file, string fallback)
     {
         var rel = Path.GetRelativePath(root, Path.GetDirectoryName(file)!);

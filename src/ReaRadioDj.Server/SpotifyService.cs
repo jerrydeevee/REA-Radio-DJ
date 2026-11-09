@@ -95,6 +95,15 @@ public sealed partial class SpotifyService(IHttpClientFactory http, ReaRadioDjOp
             duration, cover, link, DateTime.Now, null);
     }
 
+    /// <summary>Tracks that may be this song (metadata only: album, release date, ISRC, label).</summary>
+    public async Task<IReadOnlyList<MetaCandidate>> SearchAsync(string artist, string title, CancellationToken ct)
+    {
+        if (!Configured) return [];
+        var client = http.CreateClient("spotify");
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", await TokenAsync(client, ct));
+        return MetadataMatch.ParseSpotify(await GetAsync(client, MetadataMatch.SpotifyUrl(artist, title), ct));
+    }
+
     private async Task<string> TokenAsync(HttpClient client, CancellationToken ct)
     {
         if (_token is not null && DateTime.UtcNow < _tokenUntil) return _token;

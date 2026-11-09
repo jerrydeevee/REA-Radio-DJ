@@ -10,7 +10,7 @@ namespace ReaRadioDj.Core.Data;
 /// </summary>
 public sealed class StationDb
 {
-    public const int SchemaVersion = 10;
+    public const int SchemaVersion = 11;
     private readonly string _connectionString;
 
     public StationDb(string path)
@@ -108,7 +108,7 @@ public sealed class StationDb
         {
             cmd.Transaction = tx;
             // Each step brings the database one version further; a new database runs them all.
-            cmd.CommandText = (version < 1 ? SchemaV1 : "") + (version < 2 ? SchemaV2 : "") + (version < 3 ? SchemaV3 : "") + (version < 4 ? SchemaV4 : "") + (version < 5 ? SchemaV5 : "") + (version < 6 ? SchemaV6 : "") + (version < 7 ? SchemaV7 : "") + (version < 8 ? SchemaV8 : "") + (version < 9 ? SchemaV9 : "") + (version < 10 ? SchemaV10 : "") + $"PRAGMA user_version = {SchemaVersion};";
+            cmd.CommandText = (version < 1 ? SchemaV1 : "") + (version < 2 ? SchemaV2 : "") + (version < 3 ? SchemaV3 : "") + (version < 4 ? SchemaV4 : "") + (version < 5 ? SchemaV5 : "") + (version < 6 ? SchemaV6 : "") + (version < 7 ? SchemaV7 : "") + (version < 8 ? SchemaV8 : "") + (version < 9 ? SchemaV9 : "") + (version < 10 ? SchemaV10 : "") + (version < 11 ? SchemaV11 : "") + $"PRAGMA user_version = {SchemaVersion};";
             cmd.ExecuteNonQuery();
         }
         tx.Commit();
@@ -119,6 +119,24 @@ public sealed class StationDb
     /// tracks from a Spotify playlist with their metadata, matched against the library.
     /// </summary>
     /// <summary>A backup voice per voice profile, used when that voice fails.</summary>
+    /// <summary>Music catalogues in other databases (ODBC); media.source tells which source a library item came from.</summary>
+    private const string SchemaV11 = """
+        CREATE TABLE IF NOT EXISTS db_sources(
+            id INTEGER PRIMARY KEY,
+            name TEXT NOT NULL,
+            enabled INTEGER NOT NULL DEFAULT 1,
+            connection TEXT NOT NULL,
+            query TEXT NOT NULL,
+            kind INTEGER NOT NULL DEFAULT 1,
+            sync_minutes INTEGER NOT NULL DEFAULT 0,
+            path_from TEXT NOT NULL DEFAULT '',
+            path_to TEXT NOT NULL DEFAULT '',
+            last_sync TEXT,
+            last_result TEXT NOT NULL DEFAULT ''
+        );
+        ALTER TABLE media ADD COLUMN source TEXT NOT NULL DEFAULT '';
+        """;
+
     /// <summary>External music scheduling: import profiles and the imported hours ("yyyy-MM-ddTHH").</summary>
     private const string SchemaV10 = """
         CREATE TABLE IF NOT EXISTS import_profiles(

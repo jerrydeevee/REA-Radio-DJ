@@ -1,0 +1,112 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:ReaRadioDj.Studio.ViewModels"
+             xmlns:c="using:ReaRadioDj.Contracts"
+             x:Class="ReaRadioDj.Studio.Views.SourcesView"
+             x:DataType="vm:SourcesTool">
+  <TabControl Classes="compact" Margin="4">
+
+    <!-- music catalogues in other databases -->
+    <TabItem Header="Databases">
+      <Grid Margin="2,4,2,2" ColumnDefinitions="140,*">
+        <DockPanel Grid.Column="0" Margin="0,0,8,0">
+          <Button DockPanel.Dock="Bottom" Classes="small" Content="Nieuwe databron" Command="{Binding NewCommand}" Margin="0,4,0,0" HorizontalAlignment="Stretch" />
+          <ListBox ItemsSource="{Binding Sources}" SelectedItem="{Binding Selected}">
+            <ListBox.ItemTemplate>
+              <DataTemplate x:DataType="c:DbSourceDto">
+                <StackPanel Opacity="{Binding Enabled, Converter={x:Static vm:Brushes.EnabledOpacity}}">
+                  <TextBlock Text="{Binding Name}" FontWeight="SemiBold" TextWrapping="Wrap" />
+                  <TextBlock Classes="muted" FontSize="11" Text="{Binding LastSync, StringFormat='ingelezen {0:ddd HH:mm}'}"
+                             IsVisible="{Binding LastSync, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                </StackPanel>
+              </DataTemplate>
+            </ListBox.ItemTemplate>
+          </ListBox>
+        </DockPanel>
+        <ScrollViewer Grid.Column="1" HorizontalScrollBarVisibility="Disabled">
+          <StackPanel Spacing="6">
+            <Border Classes="card">
+              <StackPanel Spacing="5">
+                <DockPanel>
+                  <CheckBox DockPanel.Dock="Right" Content="Actief" IsChecked="{Binding Enabled}" Margin="8,0,0,0" />
+                  <TextBox Text="{Binding Name}" Watermark="naam; ook de categorie als de query er geen geeft" />
+                </DockPanel>
+                <TextBox Text="{Binding Connection}" FontFamily="Consolas" FontSize="12" TextWrapping="Wrap"
+                         Watermark="ODBC-verbinding, bijv. DSN=Muziek of Driver={SQL Server};Server=…;Database=…;Trusted_Connection=yes" />
+                <TextBox Text="{Binding Query}" AcceptsReturn="True" MinHeight="70" FontFamily="Consolas" FontSize="12" TextWrapping="Wrap"
+                         Watermark="SELECT bestand AS path, artiest AS artist, titel AS title FROM …" />
+                <TextBlock Classes="muted" FontSize="11" TextWrapping="Wrap"
+                           Text="Kolomnamen die herkend worden: path/pad/bestand (verplicht), artist/artiest, title/titel, album, category/categorie/genre, kind/soort (jingle of muziek), isrc, year/jaar, composer/componist, label. Gebruik AS om kolommen een van deze namen te geven." />
+                <WrapPanel>
+                  <TextBlock Text="standaard soort" VerticalAlignment="Center" Margin="0,0,6,4" />
+                  <ComboBox ItemsSource="{Binding Kinds}" SelectedIndex="{Binding Kind}" Width="110" Margin="0,0,12,4" />
+                  <TextBlock Text="elke" VerticalAlignment="Center" Margin="0,0,6,4" />
+                  <NumericUpDown Value="{Binding SyncMinutes}" Minimum="0" Maximum="1440" Increment="15" FormatString="0" Width="110" Margin="0,0,6,4"
+                                 ToolTip.Tip="0 = alleen als je op Inlezen drukt (anders minstens 5)" />
+                  <TextBlock Text="min. inlezen (0 = met de hand)" VerticalAlignment="Center" Margin="0,0,0,4" />
+                </WrapPanel>
+                <TextBox Text="{Binding PathFrom}" Watermark="pad in de database, bijv. \\server\muziek\ (leeg = zoals het is)" />
+                <TextBox Text="{Binding PathTo}" Watermark="wordt hier, bijv. D:\Muziek\" />
+              </StackPanel>
+            </Border>
+            <WrapPanel>
+              <Button Classes="small go" Content="Opslaan" Command="{Binding SaveCommand}" Margin="0,0,4,4" />
+              <Button Classes="small" Content="Test de query" Command="{Binding TestCommand}" Margin="0,0,4,4" />
+              <Button Classes="small" Content="Nu inlezen" Command="{Binding SyncCommand}" IsEnabled="{Binding !Busy}" Margin="0,0,4,4" />
+              <Button Classes="small" Content="Verwijderen" Command="{Binding DeleteCommand}" Margin="0,0,4,4" />
+            </WrapPanel>
+            <TextBlock Foreground="#F0B429" TextWrapping="Wrap" Text="{Binding Problem}" IsVisible="{Binding Problem, Converter={x:Static ObjectConverters.IsNotNull}}" />
+            <TextBlock Text="{Binding LastResult}" TextWrapping="Wrap" />
+            <ItemsControl ItemsSource="{Binding TestLines}">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="x:String">
+                  <TextBlock Text="{Binding}" FontFamily="Consolas" FontSize="11" TextTrimming="CharacterEllipsis" />
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+            <TextBlock Classes="muted" FontSize="11" TextWrapping="Wrap"
+                       Text="Inlezen voegt nieuwe bestanden toe (met analyse, zoals een map inlezen) en neemt artiest, titel, categorie en rechten uit de database over. Wat niet meer in de database staat of niet meer op schijf, blijft in de bibliotheek maar wordt niet meer gespeeld." />
+          </StackPanel>
+        </ScrollViewer>
+      </Grid>
+    </TabItem>
+
+    <!-- metadata lookup -->
+    <TabItem Header="Metadata">
+      <DockPanel Margin="2,4,2,2">
+        <StackPanel DockPanel.Dock="Top" Spacing="5">
+          <TextBlock TextWrapping="Wrap" Text="Zoekt ontbrekend album, jaar, ISRC en label op voor nummers waar iets van mist. Er verandert niets tot je voorstellen toepast, en dan worden alleen lege velden gevuld." />
+          <TextBlock Classes="muted" FontSize="11" TextWrapping="Wrap" Text="{Binding SpotifyNote}" />
+          <WrapPanel>
+            <TextBlock Text="hoogstens" VerticalAlignment="Center" Margin="0,0,6,4" />
+            <NumericUpDown Value="{Binding MetaLimit}" Minimum="1" Maximum="1000" Increment="25" FormatString="0" Width="110" Margin="0,0,6,4" />
+            <TextBlock Text="nummers (± 1 per seconde)" VerticalAlignment="Center" Margin="0,0,10,4" />
+            <Button Classes="small go" Content="Zoeken" Command="{Binding StartMetaCommand}" IsEnabled="{Binding !MetaRunning}" Margin="0,0,4,4" />
+            <Button Classes="small" Content="Stoppen" Command="{Binding StopMetaCommand}" IsEnabled="{Binding MetaRunning}" Margin="0,0,4,4" />
+          </WrapPanel>
+          <TextBlock Text="{Binding MetaStatus}" TextWrapping="Wrap" />
+        </StackPanel>
+        <WrapPanel DockPanel.Dock="Bottom" Margin="0,4,0,0">
+          <Button Classes="small go" Content="Aangevinkte toepassen" Command="{Binding ApplyMetaCommand}" Margin="0,0,4,4" />
+          <Button Classes="small" Content="Aangevinkte negeren" Command="{Binding DismissMetaCommand}" Margin="0,0,4,4" />
+          <Button Classes="small" Content="Alles" Command="{Binding ChooseAllCommand}" Margin="0,0,4,4" />
+          <Button Classes="small" Content="Niets" Command="{Binding ChooseNoneCommand}" Margin="0,0,4,4" />
+        </WrapPanel>
+        <ListBox ItemsSource="{Binding Proposals}" Margin="0,6,0,0">
+          <ListBox.ItemTemplate>
+            <DataTemplate x:DataType="vm:MetaRow">
+              <DockPanel>
+                <CheckBox DockPanel.Dock="Left" IsChecked="{Binding Chosen}" VerticalAlignment="Top" Margin="0,0,6,0" />
+                <StackPanel>
+                  <TextBlock Text="{Binding P.Song}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                  <TextBlock FontSize="12" Text="{Binding Adds}" TextWrapping="Wrap" />
+                  <TextBlock Classes="muted" FontSize="11" Text="{Binding From}" TextTrimming="CharacterEllipsis" />
+                </StackPanel>
+              </DockPanel>
+            </DataTemplate>
+          </ListBox.ItemTemplate>
+        </ListBox>
+      </DockPanel>
+    </TabItem>
+  </TabControl>
+</UserControl>

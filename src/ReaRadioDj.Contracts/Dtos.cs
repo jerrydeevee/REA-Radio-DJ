@@ -178,6 +178,24 @@ public sealed record NewsBlockDto(long Id, string Name, bool Enabled, int Days, 
     long? OpenerId, long? CloserId, string Source, string Folder, int MaxAgeMinutes, long? CategoryId, string Feeds, int MaxHeadlines,
     string? When = null, DateTime? Next = null);
 
+/// <summary>A music catalogue in another database (ODBC). Kind "song" or "jingle"; SyncMinutes 0 = only on request.</summary>
+public sealed record DbSourceDto(long Id, string Name, bool Enabled, string Connection, string Query, string Kind, int SyncMinutes,
+    string PathFrom, string PathTo, DateTime? LastSync = null, string LastResult = "", bool Busy = false);
+
+/// <summary>What a test query returned: the columns, which of them are used, and the first rows.</summary>
+public sealed record DbTestDto(bool Ok, List<string> Columns, List<string> Used, List<string> Sample, string? Problem);
+
+/// <summary>What a metadata lookup found for a library item; only fields that are empty now are filled in.</summary>
+public sealed record MetaProposalDto(long MediaId, string Song, string Source, string Found, string? Album, int? Year, string? Isrc,
+    string? Label, string Link);
+
+/// <summary>The state of the metadata lookup.</summary>
+public sealed record MetaStatusDto(bool Running, int Done, int Total, string Current, int NotFound, int NothingNew, bool Spotify,
+    List<MetaProposalDto> Proposals);
+
+public sealed record MetaStartDto(int Limit);
+public sealed record IdListDto(List<long> Ids);
+
 /// <summary>Where a field is: Column for separated files (1 = first), Start and Length for fixed width. Zeros = not used.</summary>
 public sealed record ImportColumnDto(int Column = 0, int Start = 0, int Length = 0);
 
