@@ -1,0 +1,331 @@
+using System.Globalization;
+using Microsoft.Data.Sqlite;
+
+namespace ReaRadioDj.Core.Data;
+
+/// <summary>
+/// The station database (SQLite, one file in the data folder): library, categories, cue points, waveforms, clocks,
+/// week grid, timed events, cartwalls, as-run log and settings. Every call opens its own short-lived connection,
+/// so the class is safe to use from any thread. The schema is versioned with PRAGMA user_version.
+/// </summary>
+public sealed class StationDb
+{
+    public const int SchemaVersion = 7;
+    private readonly string _connectionString;
+
+    public StationDb(string path)
+    {
+        Path = System.IO.Path.GetFullPath(path);
+        Directory.CreateDirectory(System.IO.Path.GetDirectoryName(Path)!);
+        _connectionString = new SqliteConnectionStringBuilder
+        {
+            DataSource = Path,
+            Mode = SqliteOpenMode.ReadWriteCreate,
+            Cache = SqliteCacheMode.Shared,
+            ForeignKeys = true,
+        }.ToString();
+        Migrate();
+    }
+
+    public string Path { get; }
+
+    public SqliteConnection Open()
+    {
+        var c = new SqliteConnection(_connectionString);
+        c.Open();
+        using var cmd = c.CreateCommand();
+        cmd.CommandText = "PRAGMA busy_timeout = 5000;";
+        cmd.ExecuteNonQuery();
+        return c;
+    }
+
+    public int Execute(string sql, params (string Name, object? Value)[] args)
+    {
+        using var c = Open();
+        using var cmd = Command(c, sql, args);
+        return cmd.ExecuteNonQuery();
+    }
+
+    public long Insert(string sql, params (string Name, object? Value)[] args)
+    {
+        using var c = Open();
+        using var cmd = Command(c, sql + "; SELECT last_insert_rowid();", args);
+        return Convert.ToInt64(cmd.ExecuteScalar(), CultureInfo.InvariantCulture);
+    }
+
+    public T? Scalar<T>(string sql, params (string Name, object? Value)[] args)
+    {
+        using var c = Open();
+        using var cmd = Command(c, sql, args);
+        var v = cmd.ExecuteScalar();
+        if (v is null || v is DBNull) return default;
+        return (T)Convert.ChangeType(v, Nullable.GetUnderlyingType(typeof(T)) ?? typeof(T), CultureInfo.InvariantCulture);
+    }
+
+    public List<T> Query<T>(string sql, Func<SqliteDataReader, T> map, params (string Name, object? Value)[] args)
+    {
+        using var c = Open();
+        using var cmd = Command(c, sql, args);
+        using var r = cmd.ExecuteReader();
+        var list = new List<T>();
+        while (r.Read()) list.Add(map(r));
+        return list;
+    }
+
+    /// <summary>Runs several statements in one transaction.</summary>
+    public void Transaction(Action<SqliteConnection, SqliteTransaction> work)
+    {
+        using var c = Open();
+        using var tx = c.BeginTransaction();
+        work(c, tx);
+        tx.Commit();
+    }
+
+    public static SqliteCommand Command(SqliteConnection c, string sql, params (string Name, object? Value)[] args)
+    {
+        var cmd = c.CreateCommand();
+        cmd.CommandText = sql;
+        foreach (var (name, value) in args) cmd.Parameters.AddWithValue(name, value ?? DBNull.Value);
+        return cmd;
+    }
+
+    public string? GetSetting(string key) => Scalar<string>("SELECT value FROM settings WHERE key = $k", ("$k", key));
+
+    public void SetSetting(string key, string value) =>
+        Execute("INSERT INTO settings(key, value) VALUES($k, $v) ON CONFLICT(key) DO UPDATE SET value = excluded.value",
+            ("$k", key), ("$v", value));
+
+    private void Migrate()
+    {
+        using var c = Open();
+        using (var wal = c.CreateCommand()) { wal.CommandText = "PRAGMA journal_mode = WAL;"; wal.ExecuteNonQuery(); }
+        long version;
+        using (var v = c.CreateCommand()) { v.CommandText = "PRAGMA user_version;"; version = (long)v.ExecuteScalar()!; }
+        if (version >= SchemaVersion) return;
+
+        using var tx = c.BeginTransaction();
+        using (var cmd = c.CreateCommand())
+        {
+            cmd.Transaction = tx;
+            // Each step brings the database one version further; a new database runs them all.
+            cmd.CommandText = (version < 1 ? SchemaV1 : "") + (version < 2 ? SchemaV2 : "") + (version < 3 ? SchemaV3 : "") + (version < 4 ? SchemaV4 : "") + (version < 5 ? SchemaV5 : "") + (version < 6 ? SchemaV6 : "") + (version < 7 ? SchemaV7 : "") + $"PRAGMA user_version = {SchemaVersion};";
+            cmd.ExecuteNonQuery();
+        }
+        tx.Commit();
+    }
+
+    /// <summary>
+    /// Rights metadata per library item (ISRC, composer, label: for Buma/Stemra and Sena reports) and the wish list:
+    /// tracks from a Spotify playlist with their metadata, matched against the library.
+    /// </summary>
+    /// <summary>A backup voice per voice profile, used when that voice fails.</summary>
+    private const string SchemaV7 = """
+        ALTER TABLE voice_profiles ADD COLUMN fallback_id INTEGER REFERENCES voice_profiles(id) ON DELETE SET NULL;
+        """;
+
+    /// <summary>Messages the AI presenter reads out (greetings, announcements), each a limited number of times.</summary>
+    private const string SchemaV6 = """
+        CREATE TABLE IF NOT EXISTS presenter_notes(
+            id INTEGER PRIMARY KEY,
+            text TEXT NOT NULL,
+            until TEXT,
+            max_uses INTEGER NOT NULL DEFAULT 1,
+            used INTEGER NOT NULL DEFAULT 0,
+            created TEXT NOT NULL);
+        """;
+
+    /// <summary>Presenter personas per daypart: name, character, voice, length and music bed.</summary>
+    private const string SchemaV5 = """
+        CREATE TABLE IF NOT EXISTS personas(
+            id INTEGER PRIMARY KEY,
+            name TEXT NOT NULL,
+            enabled INTEGER NOT NULL DEFAULT 1,
+            days INTEGER NOT NULL DEFAULT 127,
+            hours TEXT NOT NULL DEFAULT '*',
+            presenter TEXT NOT NULL DEFAULT '',
+            character TEXT NOT NULL DEFAULT '',
+            voice_id INTEGER REFERENCES voice_profiles(id) ON DELETE SET NULL,
+            max_words INTEGER,
+            bed_category INTEGER REFERENCES categories(id) ON DELETE SET NULL,
+            sort INTEGER NOT NULL DEFAULT 0);
+        """;
+
+    private const string SchemaV4 = """
+        CREATE TABLE IF NOT EXISTS media_rights(
+            media_id INTEGER PRIMARY KEY REFERENCES media(id) ON DELETE CASCADE,
+            isrc TEXT NOT NULL DEFAULT '',
+            composer TEXT NOT NULL DEFAULT '',
+            label TEXT NOT NULL DEFAULT '',
+            year INTEGER,
+            spotify_id TEXT NOT NULL DEFAULT '');
+        CREATE INDEX IF NOT EXISTS media_rights_isrc ON media_rights(isrc);
+        CREATE TABLE IF NOT EXISTS wishlist(
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            source_id TEXT NOT NULL UNIQUE,
+            playlist TEXT NOT NULL DEFAULT '',
+            title TEXT NOT NULL DEFAULT '',
+            artist TEXT NOT NULL DEFAULT '',
+            album TEXT NOT NULL DEFAULT '',
+            isrc TEXT NOT NULL DEFAULT '',
+            label TEXT NOT NULL DEFAULT '',
+            release TEXT NOT NULL DEFAULT '',
+            duration REAL NOT NULL DEFAULT 0,
+            cover_url TEXT NOT NULL DEFAULT '',
+            link TEXT NOT NULL DEFAULT '',
+            added TEXT NOT NULL,
+            media_id INTEGER REFERENCES media(id) ON DELETE SET NULL);
+
+        """;
+
+    /// <summary>Round 2: event text (commands, reminders), stream watching and script rules.</summary>
+    private const string SchemaV3 = """
+        CREATE TABLE IF NOT EXISTS voice_profiles(
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            engine TEXT NOT NULL DEFAULT 'higgs',
+            reference_audio TEXT NOT NULL DEFAULT '',
+            reference_text TEXT NOT NULL DEFAULT '',
+            tags TEXT NOT NULL DEFAULT '',
+            temperature REAL NOT NULL DEFAULT 0.8,
+            sapi_voice TEXT NOT NULL DEFAULT '',
+            consent INTEGER NOT NULL DEFAULT 0,
+            consent_note TEXT NOT NULL DEFAULT '',
+            is_default INTEGER NOT NULL DEFAULT 0);
+
+        """;
+
+    private const string SchemaV2 = """
+        ALTER TABLE events ADD COLUMN text TEXT NOT NULL DEFAULT '';
+        CREATE TABLE IF NOT EXISTS stream_watches(
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            enabled INTEGER NOT NULL DEFAULT 1,
+            url TEXT NOT NULL,
+            days INTEGER NOT NULL DEFAULT 127,
+            hours TEXT NOT NULL DEFAULT '*',
+            mode INTEGER NOT NULL DEFAULT 0,
+            check_seconds INTEGER NOT NULL DEFAULT 15);
+        CREATE TABLE IF NOT EXISTS script_rules(
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            enabled INTEGER NOT NULL DEFAULT 1,
+            kind INTEGER NOT NULL,
+            from_category_id INTEGER REFERENCES categories(id) ON DELETE CASCADE,
+            to_category_id INTEGER REFERENCES categories(id) ON DELETE CASCADE,
+            count INTEGER NOT NULL DEFAULT 1,
+            action INTEGER NOT NULL DEFAULT 0);
+
+        """;
+
+    private const string SchemaV1 = """
+        CREATE TABLE IF NOT EXISTS categories(
+            id INTEGER PRIMARY KEY,
+            name TEXT NOT NULL UNIQUE COLLATE NOCASE,
+            kind INTEGER NOT NULL,
+            color TEXT NOT NULL DEFAULT '#3fa7ff');
+
+        CREATE TABLE IF NOT EXISTS media(
+            id INTEGER PRIMARY KEY,
+            path TEXT NOT NULL UNIQUE COLLATE NOCASE,
+            kind INTEGER NOT NULL,
+            category_id INTEGER REFERENCES categories(id) ON DELETE SET NULL,
+            artist TEXT NOT NULL DEFAULT '',
+            title TEXT NOT NULL DEFAULT '',
+            album TEXT NOT NULL DEFAULT '',
+            size INTEGER NOT NULL,
+            modified INTEGER NOT NULL,
+            duration REAL NOT NULL,
+            lufs REAL,
+            cue_in REAL NOT NULL DEFAULT 0,
+            full_level REAL, intro REAL, intro2 REAL, outro REAL, fade_out REAL,
+            mix REAL NOT NULL DEFAULT 0,
+            cue_out REAL NOT NULL DEFAULT 0,
+            hook_in REAL, hook_out REAL,
+            cues_manual INTEGER NOT NULL DEFAULT 0,
+            enabled INTEGER NOT NULL DEFAULT 1,
+            valid_from TEXT, valid_until TEXT,
+            play_count INTEGER NOT NULL DEFAULT 0,
+            last_played TEXT,
+            added TEXT NOT NULL,
+            missing INTEGER NOT NULL DEFAULT 0);
+        CREATE INDEX IF NOT EXISTS media_category ON media(category_id);
+
+        CREATE TABLE IF NOT EXISTS peaks(
+            media_id INTEGER PRIMARY KEY REFERENCES media(id) ON DELETE CASCADE,
+            block_ms INTEGER NOT NULL,
+            data BLOB NOT NULL);
+
+        CREATE TABLE IF NOT EXISTS clocks(
+            id INTEGER PRIMARY KEY,
+            name TEXT NOT NULL,
+            color TEXT NOT NULL DEFAULT '#3fa7ff');
+
+        CREATE TABLE IF NOT EXISTS clock_items(
+            id INTEGER PRIMARY KEY,
+            clock_id INTEGER NOT NULL REFERENCES clocks(id) ON DELETE CASCADE,
+            position INTEGER NOT NULL,
+            kind INTEGER NOT NULL,
+            category_id INTEGER REFERENCES categories(id) ON DELETE CASCADE,
+            media_id INTEGER REFERENCES media(id) ON DELETE CASCADE,
+            mode INTEGER NOT NULL DEFAULT 0,
+            note TEXT NOT NULL DEFAULT '');
+
+        CREATE TABLE IF NOT EXISTS week_grid(
+            day INTEGER NOT NULL,
+            hour INTEGER NOT NULL,
+            clock_id INTEGER NOT NULL REFERENCES clocks(id) ON DELETE CASCADE,
+            PRIMARY KEY(day, hour));
+
+        CREATE TABLE IF NOT EXISTS events(
+            id INTEGER PRIMARY KEY,
+            name TEXT NOT NULL,
+            enabled INTEGER NOT NULL DEFAULT 1,
+            days INTEGER NOT NULL DEFAULT 127,
+            hours TEXT NOT NULL DEFAULT '*',
+            minute INTEGER NOT NULL DEFAULT 0,
+            second INTEGER NOT NULL DEFAULT 0,
+            timing INTEGER NOT NULL DEFAULT 0,
+            action INTEGER NOT NULL DEFAULT 0,
+            category_id INTEGER REFERENCES categories(id) ON DELETE SET NULL,
+            media_id INTEGER REFERENCES media(id) ON DELETE SET NULL);
+
+        CREATE TABLE IF NOT EXISTS carts(
+            wall INTEGER NOT NULL,
+            slot INTEGER NOT NULL,
+            media_id INTEGER REFERENCES media(id) ON DELETE CASCADE,
+            label TEXT NOT NULL DEFAULT '',
+            color TEXT NOT NULL DEFAULT '',
+            loop INTEGER NOT NULL DEFAULT 0,
+            overlay INTEGER NOT NULL DEFAULT 0,
+            PRIMARY KEY(wall, slot));
+
+        CREATE TABLE IF NOT EXISTS asrun(
+            id INTEGER PRIMARY KEY,
+            started TEXT NOT NULL,
+            ended TEXT,
+            source TEXT NOT NULL,
+            type TEXT NOT NULL,
+            media_id INTEGER,
+            path TEXT, artist TEXT, title TEXT, category TEXT,
+            planned REAL, played REAL,
+            ai INTEGER NOT NULL DEFAULT 0,
+            note TEXT);
+        CREATE INDEX IF NOT EXISTS asrun_started ON asrun(started);
+
+        CREATE TABLE IF NOT EXISTS settings(
+            key TEXT PRIMARY KEY,
+            value TEXT NOT NULL);
+
+        """;
+
+    public static string Iso(DateTime t) => t.ToString("yyyy-MM-dd'T'HH:mm:ss.fff", CultureInfo.InvariantCulture);
+    public static DateTime? ParseIso(string? s) =>
+        DateTime.TryParse(s, CultureInfo.InvariantCulture, DateTimeStyles.AssumeLocal, out var t) ? t : null;
+}
+
+public static class ReaderExtensions
+{
+    public static double? GetDoubleOrNull(this SqliteDataReader r, int i) => r.IsDBNull(i) ? null : r.GetDouble(i);
+    public static long? GetInt64OrNull(this SqliteDataReader r, int i) => r.IsDBNull(i) ? null : r.GetInt64(i);
+    public static string? GetStringOrNull(this SqliteDataReader r, int i) => r.IsDBNull(i) ? null : r.GetString(i);
+}

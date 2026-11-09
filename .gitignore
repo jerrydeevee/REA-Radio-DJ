@@ -13,4 +13,6 @@ native/
 media/
 data/
 data-*/
+# ...but not the source folder Core/Data (Windows matches "data/" case-insensitively)
+!src/ReaRadioDj.Core/Data/
 appsettings.Local.json
