@@ -113,6 +113,8 @@ public sealed class LogItem
     /// <summary>What the break mentions besides the music: "weather", "news", "note" or null.</summary>
     public string? Extra { get; set; }
     public bool OutroAdded { get; set; }
+    /// <summary>Speech check: how well the rendered voice matches the script (0..1), or null when not checked.</summary>
+    public double? CheckScore { get; set; }
     public string? Script { get; set; }
     public string? ScriptSource { get; set; }
     public string? Voice { get; set; }

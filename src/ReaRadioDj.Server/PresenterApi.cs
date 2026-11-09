@@ -93,6 +93,48 @@ public sealed record PresenterExtrasSettings(long? OutroCategoryId, bool Weather
         NewsFeeds, NewsEveryMinutes);
 }
 
+/// <summary>Keys of online voices and the speech check, set in the studio (keys are never sent back unmasked).</summary>
+public sealed record VoiceServicesSettings(string ElevenLabsKey, string ElevenLabsModel, string AzureKey, string AzureRegion, bool CheckEnabled,
+    string CheckUrl, string CheckModel, double CheckMinScore, int CheckRetries, bool CheckReject)
+{
+    public const string Key = "voice-services";
+
+    public static VoiceServicesSettings From(ReaRadioDjOptions o)
+    {
+        var t = o.Presenter.Tts;
+        var c = o.Presenter.Check;
+        return new(t.ElevenLabsKey, t.ElevenLabsModel, t.AzureKey, t.AzureRegion, c.Enabled, c.BaseUrl, c.Model, c.MinScore, c.Retries, c.Reject);
+    }
+
+    public void ApplyTo(ReaRadioDjOptions o)
+    {
+        var t = o.Presenter.Tts;
+        var c = o.Presenter.Check;
+        t.ElevenLabsKey = ElevenLabsKey.Trim();
+        if (!string.IsNullOrWhiteSpace(ElevenLabsModel)) t.ElevenLabsModel = ElevenLabsModel.Trim();
+        t.AzureKey = AzureKey.Trim();
+        if (!string.IsNullOrWhiteSpace(AzureRegion)) t.AzureRegion = AzureRegion.Trim().ToLowerInvariant();
+        c.Enabled = CheckEnabled;
+        if (!string.IsNullOrWhiteSpace(CheckUrl)) c.BaseUrl = CheckUrl.Trim();
+        if (!string.IsNullOrWhiteSpace(CheckModel)) c.Model = CheckModel.Trim();
+        c.MinScore = Math.Clamp(CheckMinScore, 0.3, 1);
+        c.Retries = Math.Clamp(CheckRetries, 0, 3);
+        c.Reject = CheckReject;
+    }
+
+    public static void Load(StationDb db, ReaRadioDjOptions o)
+    {
+        if (db.GetSetting(Key) is not { } json) return;
+        try { JsonSerializer.Deserialize<VoiceServicesSettings>(json, JsonSerializerOptions.Web)?.ApplyTo(o); }
+        catch (JsonException) { }
+    }
+
+    public void Save(StationDb db) => db.SetSetting(Key, JsonSerializer.Serialize(this, JsonSerializerOptions.Web));
+
+    public VoiceServicesDto Dto() => new(ElevenLabsKey.Length > 0 ? PresenterSettings.Mask : "", ElevenLabsModel,
+        AzureKey.Length > 0 ? PresenterSettings.Mask : "", AzureRegion, CheckEnabled, CheckUrl, CheckModel, CheckMinScore, CheckRetries, CheckReject);
+}
+
 public static class PresenterApi
 {
     public static void Map(RouteGroupBuilder api, ReaRadioDjOptions options)
@@ -166,6 +208,39 @@ public static class PresenterApi
             }
             if (weather is null && headline is null) error = "weer en nieuws staan uit";
             return new ExtrasPreviewDto(weather, headline, error);
+        });
+
+        api.MapGet("/voice/services", () => VoiceServicesSettings.From(options).Dto());
+        api.MapPut("/voice/services", (VoiceServicesDto d, StationDb db) =>
+        {
+            var old = VoiceServicesSettings.From(options);
+            var s = new VoiceServicesSettings(d.ElevenLabsKey == PresenterSettings.Mask ? old.ElevenLabsKey : d.ElevenLabsKey ?? "",
+                d.ElevenLabsModel ?? "", d.AzureKey == PresenterSettings.Mask ? old.AzureKey : d.AzureKey ?? "", d.AzureRegion ?? "",
+                d.CheckEnabled, d.CheckUrl ?? "", d.CheckModel ?? "", d.CheckMinScore, d.CheckRetries, d.CheckReject);
+            s.ApplyTo(options);
+            var saved = VoiceServicesSettings.From(options);
+            saved.Save(db);
+            return saved.Dto();
+        });
+        // Speaks a text with the default voice (and its backups) and lets the speech check listen to it.
+        api.MapPost("/voice/check-test", async (CheckTestRequest r, ProfileSpeechEngine voice, SpeechCheck check, CancellationToken ct) =>
+        {
+            if (string.IsNullOrWhiteSpace(r.Text)) return new CheckTestDto(false, 0, "", "", "lege tekst");
+            var wav = Path.Combine(Path.GetTempPath(), $"rea-check-{Guid.NewGuid():N}.wav");
+            try
+            {
+                var used = await voice.SpeakAsync(r.Text, wav, voice.DefaultProfile, ct);
+                var result = await check.CheckAsync(wav, r.Text, ct);
+                return new CheckTestDto(true, Math.Round(result.Score, 2), result.Heard, used, null);
+            }
+            catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or InvalidOperationException or JsonException)
+            {
+                string why = ex is HttpRequestException { StatusCode: null } && ex.Message.Contains(new Uri(options.Presenter.Check.BaseUrl).Authority)
+                    ? $"spraakherkenning niet bereikbaar op {options.Presenter.Check.BaseUrl}; start tools/whisper/start.sh in WSL"
+                    : ex.Message;
+                return new CheckTestDto(false, 0, "", "", why);
+            }
+            finally { try { File.Delete(wav); } catch (IOException) { } }
         });
 
         var notes = p.MapGroup("/notes");

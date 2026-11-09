@@ -220,10 +220,10 @@ public sealed class VoiceService(
     // ---------------------------------------------------------------- mapping
 
     public static VoiceProfileDto Dto(VoiceProfile p) => new(p.Id, p.Name, p.Engine, p.ReferenceAudio, p.ReferenceText, p.Tags, p.Temperature,
-        p.SapiVoice, p.Consent, p.ConsentNote, p.IsDefault, p.Problem());
+        p.SapiVoice, p.Consent, p.ConsentNote, p.IsDefault, p.Problem(), p.FallbackId);
 
     public static VoiceProfile FromDto(VoiceProfileDto d) => new(d.Id, d.Name ?? "", d.Engine ?? "higgs", d.ReferenceAudio ?? "", d.ReferenceText ?? "",
-        d.Tags ?? "", d.Temperature, d.SapiVoice ?? "", d.Consent, d.ConsentNote ?? "", d.IsDefault);
+        d.Tags ?? "", d.Temperature, d.SapiVoice ?? "", d.Consent, d.ConsentNote ?? "", d.IsDefault, d.FallbackId is > 0 ? d.FallbackId : null);
 }
 
 public static class VoiceApi

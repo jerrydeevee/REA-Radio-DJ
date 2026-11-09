@@ -110,6 +110,7 @@ public sealed class PresenterOptions
     public NewsOptions News { get; set; } = new();
     public LlmOptions Llm { get; set; } = new();
     public TtsOptions Tts { get; set; } = new();
+    public SpeechCheckOptions Check { get; set; } = new();
 }
 
 /// <summary>Any OpenAI-compatible chat completion endpoint (Ollama, LM Studio, vLLM, OpenAI, ...).</summary>
@@ -142,8 +143,31 @@ public sealed class LlmOptions
     public int TimeoutSeconds { get; set; } = 60;
 }
 
+/// <summary>Listening back to every rendered break with Whisper (OpenAI-compatible /v1/audio/transcriptions).</summary>
+public sealed class SpeechCheckOptions
+{
+    public bool Enabled { get; set; } = false;
+    public string BaseUrl { get; set; } = "http://localhost:8002";
+    public string Model { get; set; } = "small";
+    public string Language { get; set; } = "nl";
+    /// <summary>Lowest acceptable match (0..1) between script and what was heard.</summary>
+    public double MinScore { get; set; } = 0.75;
+    /// <summary>Renders again this many times when the match is too low.</summary>
+    public int Retries { get; set; } = 1;
+    /// <summary>Still too low after the retries: skip the break (a jingle plays) instead of airing it with a warning.</summary>
+    public bool Reject { get; set; } = true;
+    public int TimeoutSeconds { get; set; } = 60;
+}
+
 public sealed class TtsOptions
 {
+    /// <summary>ElevenLabs API key (online voices, paid); the voice ID goes in the voice profile.</summary>
+    public string ElevenLabsKey { get; set; } = "";
+    public string ElevenLabsModel { get; set; } = "eleven_multilingual_v2";
+    /// <summary>Azure AI Speech key and region (for example westeurope); the voice name goes in the voice profile.</summary>
+    public string AzureKey { get; set; } = "";
+    public string AzureRegion { get; set; } = "westeurope";
+
     /// <summary>"higgs" (Higgs TTS 3 via an SGLang-Omni or vLLM-Omni server) or "sapi" (Windows speech, offline).</summary>
     public string Provider { get; set; } = "sapi";
     /// <summary>Base URL of the Higgs server (start it with --port 8001; Icecast usually owns 8000).</summary>

@@ -20,7 +20,8 @@ public sealed class BreakRenderer(
     ISpeechEngine? fallbackVoice,
     ILogger<BreakRenderer>? logger = null,
     PersonaStore? personas = null,
-    BreakExtras? extras = null)
+    BreakExtras? extras = null,
+    SpeechCheck? check = null)
 {
     private readonly ILogger _log = (ILogger?)logger ?? NullLogger.Instance;
     private readonly TemplateScriptWriter _template = new();
@@ -135,35 +136,31 @@ public sealed class BreakRenderer(
         Directory.CreateDirectory(_folder);
         var wav = Path.Combine(_folder, $"break-{DateTime.Now:yyyyMMdd-HHmmss}-{item.Id}.wav");
         var persona = PersonaOf(item);
-        string voice;
-        try
+        string voice = await RenderVoiceAsync(script, wav, persona, ct);
+        item.CheckScore = null;
+        if (check is { Enabled: true })
         {
-            if (persona?.VoiceId is long voiceId && primaryVoice is ProfileSpeechEngine profiles && profiles.Profile(voiceId) is { } profile)
+            var c = options.Presenter.Check;
+            for (int attempt = 0; ; attempt++)
             {
-                await profiles.SynthesizeAsync(script, wav, profile, ct);
-                voice = profile.Name;
+                SpeechCheck.Result r;
+                try { r = await check.CheckAsync(wav, script, ct); }
+                catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or System.Text.Json.JsonException && !ct.IsCancellationRequested)
+                {
+                    _log.LogWarning("Speech check not available: {Message}", ex.Message);   // no check is no reason to skip a break
+                    break;
+                }
+                item.CheckScore = Math.Round(r.Score, 2);
+                if (r.Score >= c.MinScore) break;
+                _log.LogWarning("AI break {Id}: speech check {Score:0.00} below {Min:0.00}; heard: {Heard}", item.Id, r.Score, c.MinScore, r.Heard);
+                if (attempt >= c.Retries)
+                {
+                    if (c.Reject) throw new InvalidOperationException($"gesproken tekst wijkt af (score {r.Score:0.00}): \"{r.Heard}\"");
+                    item.Error = $"controle: score {r.Score:0.00}";
+                    break;
+                }
+                voice = await RenderVoiceAsync(script, wav, persona, ct);
             }
-            else
-            {
-                await primaryVoice.SynthesizeAsync(script, wav, ct);
-                voice = primaryVoice.Name;
-            }
-        }
-        catch (Exception ex) when (fallbackVoice is not null && !ct.IsCancellationRequested)
-        {
-            _log.LogWarning("Voice {Voice} failed ({Message}); using {Fallback}", primaryVoice.Name, ex.Message, fallbackVoice.Name);
-            await fallbackVoice.SynthesizeAsync(script, wav, ct);
-            voice = fallbackVoice.Name;
-        }
-
-        if (options.Presenter.PostProcess)
-        {
-            try
-            {
-                var r = VoiceProcessor.Process(wav);
-                _log.LogDebug("Voice processed: {In:0.00}s → {Out:0.00}s, {Gain:+0.0;-0.0} dB", r.SecondsIn, r.SecondsOut, r.GainDb);
-            }
-            catch (InvalidDataException ex) { _log.LogWarning("Post-processing skipped: {Message}", ex.Message); }
         }
 
         if ((persona?.BedCategoryId ?? options.Presenter.BedCategoryId) is long bedCategory)
@@ -193,6 +190,46 @@ public sealed class BreakRenderer(
         _log.LogInformation("AI break {Id} ready ({Source} + {Voice}, {Duration:0.0}s): {Script}",
             item.Id, item.ScriptSource, voice, media.CueOut - media.CueIn, script);
     }
+
+    /// <summary>Speaks the script with the persona's voice (or the default) and its backups, then post-processes it.</summary>
+    private async Task<string> RenderVoiceAsync(string script, string wav, Persona? persona, CancellationToken ct)
+    {
+        string voice;
+        try
+        {
+            if (primaryVoice is ProfileSpeechEngine profiles)
+            {
+                var profile = persona?.VoiceId is long voiceId ? profiles.Profile(voiceId) : null;
+                voice = profile is null ? await profiles.SpeakAsync(script, wav, profiles.Profile(0) ?? DefaultProfile(profiles), ct)
+                                        : await profiles.SpeakAsync(script, wav, profile, ct);
+                if (profiles.LastFallback is { } why) _log.LogWarning("Backup voice: {Why}", why);
+            }
+            else
+            {
+                await primaryVoice.SynthesizeAsync(script, wav, ct);
+                voice = primaryVoice.Name;
+            }
+        }
+        catch (Exception ex) when (fallbackVoice is not null && !ct.IsCancellationRequested)
+        {
+            _log.LogWarning("Voice {Voice} failed ({Message}); using {Fallback}", primaryVoice.Name, ex.Message, fallbackVoice.Name);
+            await fallbackVoice.SynthesizeAsync(script, wav, ct);
+            voice = fallbackVoice.Name;
+        }
+
+        if (options.Presenter.PostProcess)
+        {
+            try
+            {
+                var r = VoiceProcessor.Process(wav);
+                _log.LogDebug("Voice processed: {In:0.00}s → {Out:0.00}s, {Gain:+0.0;-0.0} dB", r.SecondsIn, r.SecondsOut, r.GainDb);
+            }
+            catch (InvalidDataException ex) { _log.LogWarning("Post-processing skipped: {Message}", ex.Message); }
+        }
+        return voice;
+    }
+
+    private static VoiceProfile? DefaultProfile(ProfileSpeechEngine profiles) => profiles.DefaultProfile;
 
     /// <summary>Puts one jingle of the outro category straight after the break (once; not when a jingle already follows).</summary>
     private void AddOutro(LogItem item)

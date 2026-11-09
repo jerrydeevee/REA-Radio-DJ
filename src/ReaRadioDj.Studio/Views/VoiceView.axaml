@@ -63,6 +63,7 @@
         <StackPanel DockPanel.Dock="Bottom" Spacing="4" Margin="0,4,0,0">
           <Button Classes="small" Content="+ Higgs-stem" Command="{Binding NewHiggsCommand}" HorizontalAlignment="Stretch" />
           <Button Classes="small" Content="+ Windows-stem" Command="{Binding NewSapiCommand}" HorizontalAlignment="Stretch" />
+          <Button Classes="small" Content="+ Online stem" Command="{Binding NewCloudCommand}" HorizontalAlignment="Stretch" />
           <Button Classes="small" Content="★ Als presentatorstem" Command="{Binding MakeDefaultCommand}" HorizontalAlignment="Stretch" />
           <Button Classes="small" Content="Verwijderen" Command="{Binding DeleteCommand}" HorizontalAlignment="Stretch" />
         </StackPanel>
@@ -134,6 +135,50 @@
             <ComboBox ItemsSource="{Binding SapiVoices}" SelectedItem="{Binding SapiVoice}" HorizontalAlignment="Stretch" PlaceholderText="eerste stem voor de taal" />
             <TextBlock Classes="muted" TextWrapping="Wrap" Text="Werkt altijd, ook zonder GPU of server. Stuurtags worden genegeerd." />
           </StackPanel>
+
+          <!-- online voices -->
+          <StackPanel Spacing="6" IsVisible="{Binding IsCloud}">
+            <TextBlock Text="Stem" />
+            <TextBox Text="{Binding CloudVoice}" FontFamily="Consolas" />
+            <TextBlock Classes="muted" TextWrapping="Wrap" Text="{Binding CloudVoiceHint}" />
+            <TextBlock Classes="muted" TextWrapping="Wrap" Text="De sleutel staat onder 'Online stemmen en controle'. Online stemmen kosten geld per teken en sturen de tekst naar de dienst." />
+          </StackPanel>
+
+          <DockPanel>
+            <TextBlock DockPanel.Dock="Left" Text="Reservestem" VerticalAlignment="Center" Width="100" />
+            <ComboBox ItemsSource="{Binding FallbackChoices}" SelectedItem="{Binding Fallback}" HorizontalAlignment="Stretch"
+                      ToolTip.Tip="Valt deze stem uit (server weg, fout van de dienst), dan spreekt deze stem de break in." />
+          </DockPanel>
+
+          <Expander Header="Online stemmen en controle (Whisper)" HorizontalAlignment="Stretch" Margin="0,6,0,0">
+            <StackPanel Spacing="6">
+              <Grid ColumnDefinitions="130,*" RowDefinitions="Auto,Auto,Auto,Auto">
+                <TextBlock Grid.Row="0" Text="ElevenLabs-sleutel" VerticalAlignment="Center" />
+                <TextBox Grid.Row="0" Grid.Column="1" Text="{Binding ElevenLabsKey}" PasswordChar="•" Margin="0,0,0,4" />
+                <TextBlock Grid.Row="1" Text="ElevenLabs-model" VerticalAlignment="Center" />
+                <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding ElevenLabsModel}" Margin="0,0,0,4" />
+                <TextBlock Grid.Row="2" Text="Azure-sleutel" VerticalAlignment="Center" />
+                <TextBox Grid.Row="2" Grid.Column="1" Text="{Binding AzureKey}" PasswordChar="•" Margin="0,0,0,4" />
+                <TextBlock Grid.Row="3" Text="Azure-regio" VerticalAlignment="Center" />
+                <TextBox Grid.Row="3" Grid.Column="1" Text="{Binding AzureRegion}" Watermark="westeurope" Margin="0,0,0,4" />
+              </Grid>
+              <CheckBox Content="Elke break terugluisteren met Whisper en vergelijken met het script" IsChecked="{Binding CheckEnabled}" />
+              <WrapPanel>
+                <TextBox Text="{Binding CheckUrl}" Width="210" Margin="0,0,4,4" ToolTip.Tip="adres van de spraakherkenning (tools/whisper)" />
+                <TextBox Text="{Binding CheckModel}" Width="90" Margin="0,0,8,4" ToolTip.Tip="Whisper-model" />
+                <TextBlock Classes="muted" Text="min. score" VerticalAlignment="Center" Margin="0,0,4,4" />
+                <NumericUpDown Value="{Binding CheckMinScore}" Minimum="0.3" Maximum="1" Increment="0.05" FormatString="0.00" Width="110" Margin="0,0,8,4" />
+                <TextBlock Classes="muted" Text="opnieuw" VerticalAlignment="Center" Margin="0,0,4,4" />
+                <NumericUpDown Value="{Binding CheckRetries}" Minimum="0" Maximum="3" FormatString="0" Width="90" Margin="0,0,4,4" />
+              </WrapPanel>
+              <CheckBox Content="Na mislukte pogingen overslaan (jingle in de plaats) in plaats van uitzenden met waarschuwing" IsChecked="{Binding CheckReject}" />
+              <WrapPanel>
+                <Button Classes="small" Content="Opslaan" Command="{Binding SaveServicesCommand}" Margin="0,0,4,0" />
+                <Button Classes="small" Content="Proeftekst inspreken en terugluisteren" Command="{Binding CheckTestCommand}" IsEnabled="{Binding !Busy}" />
+              </WrapPanel>
+              <TextBlock Classes="muted" Text="{Binding CheckResult}" TextWrapping="Wrap" />
+            </StackPanel>
+          </Expander>
         </StackPanel>
       </ScrollViewer>
     </Grid>

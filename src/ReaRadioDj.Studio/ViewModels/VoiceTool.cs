@@ -12,7 +12,8 @@ namespace ReaRadioDj.Studio.ViewModels;
 /// </summary>
 public sealed partial class VoiceTool : StudioTool
 {
-    public static readonly string[] EngineNames = ["Higgs TTS 3 (GPU)", "Windows-spraak"];
+    public static readonly string[] EngineNames = ["Higgs TTS 3 (GPU)", "Windows-spraak", "ElevenLabs (online)", "Azure (online)"];
+    private static readonly string[] EngineKeys = ["higgs", "sapi", "elevenlabs", "azure"];
     /// <summary>Quick tags for Higgs; the text field accepts any tag the server understands.</summary>
     public static readonly string[] QuickTags =
     [
@@ -23,7 +24,7 @@ public sealed partial class VoiceTool : StudioTool
 
     private readonly DispatcherTimer _poll;
 
-    public VoiceTool() : base("voice", "Stem (Higgs TTS 3)")
+    public VoiceTool() : base("voice", "Stemmen")
     {
         _poll = new DispatcherTimer(TimeSpan.FromSeconds(3), DispatcherPriority.Background, async (_, _) => await RefreshStatusAsync());
     }
@@ -59,6 +60,22 @@ public sealed partial class VoiceTool : StudioTool
     [ObservableProperty] private string? _sapiVoice;
     [ObservableProperty] private bool _consent;
     [ObservableProperty] private string _consentNote = "";
+    [ObservableProperty] private string _cloudVoice = "";
+    [ObservableProperty] private Choice? _fallback;
+    public ObservableCollection<Choice> FallbackChoices { get; } = [];
+
+    // online voices and the speech check
+    [ObservableProperty] private string _elevenLabsKey = "";
+    [ObservableProperty] private string _elevenLabsModel = "eleven_multilingual_v2";
+    [ObservableProperty] private string _azureKey = "";
+    [ObservableProperty] private string _azureRegion = "westeurope";
+    [ObservableProperty] private bool _checkEnabled;
+    [ObservableProperty] private string _checkUrl = "http://localhost:8002";
+    [ObservableProperty] private string _checkModel = "small";
+    [ObservableProperty] private decimal? _checkMinScore = 0.75m;
+    [ObservableProperty] private decimal? _checkRetries = 1;
+    [ObservableProperty] private bool _checkReject = true;
+    [ObservableProperty] private string _checkResult = "";
 
     // test console
     [ObservableProperty] private string _testText = "Goedemiddag! Je luistert naar REA-Radio-DJ. Straks hoor je meer muziek, maar eerst het weer: zonnig en zeventien graden.";
@@ -67,11 +84,19 @@ public sealed partial class VoiceTool : StudioTool
 
     public bool IsHiggs => Engine == 0;
     public bool IsSapi => Engine == 1;
+    public bool IsCloud => Engine >= 2;
+    public string CloudVoiceHint => Engine == 2
+        ? "stem-ID uit je ElevenLabs-account (Voices → ID)"
+        : "naam van de Azure-stem, bijv. nl-NL-FennaNeural, nl-NL-ColetteNeural of nl-NL-MaartenNeural";
     public bool IsClone => IsHiggs && !string.IsNullOrWhiteSpace(ReferenceAudio);
     public string TemperatureText => $"{Temperature:0.00}";
     public string ServerButtonText => ServerRunning ? "Server stoppen" : "Server starten";
 
-    partial void OnEngineChanged(int value) { OnPropertyChanged(nameof(IsHiggs)); OnPropertyChanged(nameof(IsSapi)); OnPropertyChanged(nameof(IsClone)); }
+    partial void OnEngineChanged(int value)
+    {
+        OnPropertyChanged(nameof(IsHiggs)); OnPropertyChanged(nameof(IsSapi)); OnPropertyChanged(nameof(IsClone));
+        OnPropertyChanged(nameof(IsCloud)); OnPropertyChanged(nameof(CloudVoiceHint));
+    }
     partial void OnReferenceAudioChanged(string value) => OnPropertyChanged(nameof(IsClone));
     partial void OnTemperatureChanged(double value) => OnPropertyChanged(nameof(TemperatureText));
     partial void OnServerRunningChanged(bool value) => OnPropertyChanged(nameof(ServerButtonText));
@@ -80,7 +105,10 @@ public sealed partial class VoiceTool : StudioTool
     {
         if (value is not { } p) return;
         Name = p.Name ?? "";
-        Engine = p.Engine == "sapi" ? 1 : 0;
+        Engine = Math.Max(0, Array.IndexOf(EngineKeys, p.Engine ?? "higgs"));
+        CloudVoice = Engine >= 2 ? p.SapiVoice ?? "" : "";
+        FillFallbacks(p.Id);
+        Fallback = FallbackChoices.FirstOrDefault(c => c.Id == p.FallbackId) ?? FallbackChoices.FirstOrDefault();
         ReferenceAudio = p.ReferenceAudio ?? "";
         ReferenceText = p.ReferenceText ?? "";
         ProfileTags = p.Tags ?? "";
@@ -90,8 +118,16 @@ public sealed partial class VoiceTool : StudioTool
         ConsentNote = p.ConsentNote ?? "";
     }
 
+    private void FillFallbacks(long selfId)
+    {
+        FallbackChoices.Clear();
+        FallbackChoices.Add(new Choice(null, "(geen: alleen Windows-spraak als laatste redmiddel)"));
+        foreach (var p in Profiles.Where(p => p.Id != selfId)) FallbackChoices.Add(new Choice(p.Id, p.Name ?? ""));
+    }
+
     protected override void OnFirstShow()
     {
+        _ = LoadServicesAsync();
         _ = ReloadAsync();
         _poll.Start();
     }
@@ -136,8 +172,66 @@ public sealed partial class VoiceTool : StudioTool
         }
     }
 
-    private VoiceProfileDto Current(long id, bool isDefault) => new(id, Name, Engine == 1 ? "sapi" : "higgs", ReferenceAudio, ReferenceText, ProfileTags,
-        Math.Round(Temperature, 2), SapiVoice is { } v ? v.Split(" (")[0] : "", Consent, ConsentNote, isDefault);
+    private VoiceProfileDto Current(long id, bool isDefault) => new(id, Name, EngineKeys[Math.Clamp(Engine, 0, EngineKeys.Length - 1)],
+        ReferenceAudio, ReferenceText, ProfileTags, Math.Round(Temperature, 2),
+        IsCloud ? CloudVoice.Trim() : SapiVoice is { } v ? v.Split(" (")[0] : "", Consent, ConsentNote, isDefault, null, Fallback?.Id);
+
+    [RelayCommand]
+    private void NewCloud()
+    {
+        Selected = null;
+        Name = "Online stem (Azure)"; Engine = 3; CloudVoice = "nl-NL-FennaNeural"; ProfileTags = ""; ReferenceAudio = ""; ReferenceText = "";
+        Consent = false; ConsentNote = "";
+        FillFallbacks(0);
+        Fallback = FallbackChoices.FirstOrDefault();
+    }
+
+    // ---------------------------------------------------------------- online voices and speech check
+
+    private async Task LoadServicesAsync()
+    {
+        if (await Hub.Client.GetAsync<VoiceServicesDto>("/api/voice/services") is not { } d) return;
+        ElevenLabsKey = d.ElevenLabsKey;
+        ElevenLabsModel = d.ElevenLabsModel;
+        AzureKey = d.AzureKey;
+        AzureRegion = d.AzureRegion;
+        CheckEnabled = d.CheckEnabled;
+        CheckUrl = d.CheckUrl;
+        CheckModel = d.CheckModel;
+        CheckMinScore = (decimal)d.CheckMinScore;
+        CheckRetries = d.CheckRetries;
+        CheckReject = d.CheckReject;
+    }
+
+    [RelayCommand]
+    private async Task SaveServices()
+    {
+        var d = new VoiceServicesDto(ElevenLabsKey, ElevenLabsModel, AzureKey, AzureRegion, CheckEnabled, CheckUrl, CheckModel,
+            (double)(CheckMinScore ?? 0.75m), (int)(CheckRetries ?? 1), CheckReject);
+        if (await Hub.Client.SendForAsync<VoiceServicesDto>(HttpMethod.Put, "/api/voice/services", d) is { } saved)
+        {
+            ElevenLabsKey = saved.ElevenLabsKey;
+            AzureKey = saved.AzureKey;
+            Hub.Status = "online stemmen en controle opgeslagen";
+        }
+    }
+
+    /// <summary>Speaks the test text with the presenter voice and lets Whisper listen back.</summary>
+    [RelayCommand]
+    private async Task CheckTest()
+    {
+        if (Busy) return;
+        Busy = true;
+        CheckResult = "inspreken en terugluisteren…";
+        try
+        {
+            await SaveServices();
+            var r = await Hub.Client.SendForAsync<CheckTestDto>(HttpMethod.Post, "/api/voice/check-test", new CheckTestRequest(TestText));
+            CheckResult = r is null ? "geen antwoord"
+                : r.Ok ? $"score {r.Score:0.00} ({r.Voice}) · gehoord: \"{r.Heard}\"" : $"✕ {r.Error}";
+        }
+        finally { Busy = false; }
+    }
 
     [RelayCommand]
     private void NewHiggs()

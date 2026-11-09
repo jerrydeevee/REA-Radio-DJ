@@ -45,7 +45,7 @@ public sealed record NowPlayingDto(long Id, string Type, string Label, string Ar
 
 public sealed record LogItemDto(long Id, string Type, string Label, string? Artist, string? Title, string? Category, string Origin,
     double Length, DateTime StartsAt, string? BreakState, string? Script, string? ScriptSource, string? Voice, string? Error,
-    long? MediaId, bool UseHook, string? Extra = null);
+    long? MediaId, bool UseHook, string? Extra = null, double? CheckScore = null);
 
 public sealed record PlayerDto(string Id, string Name, string State, long? MediaId, string? Label, double Position, double CueIn,
     double CueOut, double? Intro, IReadOnlyList<string> Stack);
@@ -154,7 +154,15 @@ public sealed record MessageDto(long Id, DateTime Time, string Level, string Tex
 
 /// <summary>Engine: higgs or sapi. Problem: why the profile cannot be used (e.g. a clone without consent).</summary>
 public sealed record VoiceProfileDto(long Id, string? Name, string? Engine, string? ReferenceAudio, string? ReferenceText, string? Tags,
-    double Temperature, string? SapiVoice, bool Consent, string? ConsentNote, bool IsDefault, string? Problem = null);
+    double Temperature, string? SapiVoice, bool Consent, string? ConsentNote, bool IsDefault, string? Problem = null, long? FallbackId = null);
+
+/// <summary>Online voice keys (masked when read) and the speech check settings.</summary>
+public sealed record VoiceServicesDto(string ElevenLabsKey, string ElevenLabsModel, string AzureKey, string AzureRegion, bool CheckEnabled,
+    string CheckUrl, string CheckModel, double CheckMinScore, int CheckRetries, bool CheckReject);
+
+public sealed record CheckTestRequest(string Text);
+
+public sealed record CheckTestDto(bool Ok, double Score, string Heard, string Voice, string? Error);
 
 public sealed record GpuDto(string Name, double MemoryTotalMb, double MemoryUsedMb, double UtilizationPercent, double TemperatureC, string Driver);
 

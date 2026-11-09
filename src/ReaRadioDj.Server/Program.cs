@@ -43,6 +43,7 @@ var db = new StationDb(Path.Combine(options.DataFolder, "station.db"));
 RoutingSettings.Load(db, options);
 PresenterSettings.Load(db, options);
 PresenterExtrasSettings.Load(db, options);
+VoiceServicesSettings.Load(db, options);
 
 builder.Services.AddSingleton(options);
 builder.Services.AddSingleton(db);
@@ -74,8 +75,12 @@ builder.Services.AddSingleton(sp =>
     return new HiggsSpeechEngine(http, options.Presenter.Tts);
 });
 builder.Services.AddSingleton(_ => new SapiSpeechEngine(options.Presenter.Tts, options.Presenter.Language));
+builder.Services.AddSingleton(sp => new ElevenLabsSpeechEngine(sp.GetRequiredService<IHttpClientFactory>().CreateClient("cloudvoice"), options.Presenter.Tts));
+builder.Services.AddSingleton(sp => new AzureSpeechEngine(sp.GetRequiredService<IHttpClientFactory>().CreateClient("cloudvoice"), options.Presenter.Tts));
+builder.Services.AddSingleton(sp => new SpeechCheck(sp.GetRequiredService<IHttpClientFactory>().CreateClient("check"), options.Presenter.Check));
 builder.Services.AddSingleton(sp => new ProfileSpeechEngine(sp.GetRequiredService<VoiceStore>(), sp.GetRequiredService<HiggsSpeechEngine>(),
-    sp.GetRequiredService<SapiSpeechEngine>(), options.Presenter.Tts));
+    sp.GetRequiredService<SapiSpeechEngine>(), options.Presenter.Tts, sp.GetRequiredService<ElevenLabsSpeechEngine>(),
+    sp.GetRequiredService<AzureSpeechEngine>()));
 builder.Services.AddSingleton<VoiceService>();
 builder.Services.AddHostedService(sp => sp.GetRequiredService<VoiceService>());
 builder.Services.AddSingleton(sp =>
@@ -87,7 +92,7 @@ builder.Services.AddSingleton(sp =>
     ISpeechEngine? fallback = p.Tts.FallbackToSapi ? sp.GetRequiredService<SapiSpeechEngine>() : null;
     return new BreakRenderer(options, sp.GetRequiredService<PlayoutLog>(), sp.GetRequiredService<MediaLibrary>(),
         llm, sp.GetRequiredService<ProfileSpeechEngine>(), fallback, sp.GetService<ILogger<BreakRenderer>>(),
-        sp.GetRequiredService<PersonaStore>(), sp.GetRequiredService<BreakExtras>());
+        sp.GetRequiredService<PersonaStore>(), sp.GetRequiredService<BreakExtras>(), sp.GetRequiredService<SpeechCheck>());
 });
 builder.Services.AddSingleton<AutomationService>();
 builder.Services.AddHostedService(sp => sp.GetRequiredService<AutomationService>());

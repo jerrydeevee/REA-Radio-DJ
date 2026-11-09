@@ -293,10 +293,24 @@ public sealed partial class MainWindowViewModel : ObservableObject
         {
             var layout = _serializer.Deserialize<IRootDock>(File.ReadAllText(path));
             if (layout is null) return null;
+            RenameOldTitles(layout);
             _factory.InitLayout(layout);
             return layout;
         }
         catch (Exception) { return null; } // an old or damaged layout file: fall back to the default
+    }
+
+    /// <summary>Tab titles that changed since a layout was saved.</summary>
+    private static readonly Dictionary<string, string> RenamedTitles = new() { ["Stem (Higgs TTS 3)"] = "Stemmen" };
+
+    private static void RenameOldTitles(IDockable dockable)
+    {
+        if (dockable.Title is { } t && RenamedTitles.TryGetValue(t, out var now)) dockable.Title = now;
+        if (dockable is IDock { VisibleDockables: { } children })
+            foreach (var c in children) RenameOldTitles(c);
+        if (dockable is IRootDock { Windows: { } windows })
+            foreach (var w in windows)
+                if (w.Layout is { } l) RenameOldTitles(l);
     }
 
     private void CloseFloating()
