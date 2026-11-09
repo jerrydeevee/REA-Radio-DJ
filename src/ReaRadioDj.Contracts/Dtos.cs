@@ -166,3 +166,19 @@ public sealed record VoiceStatusDto(GpuDto? Gpu, bool ServerOnline, IReadOnlyLis
 public sealed record VoiceTestRequest(string? Text, long? ProfileId, string? Tags, bool Play);
 
 public sealed record VoiceTestResultDto(bool Ok, string Engine, double RenderSeconds, double AudioSeconds, string? File, string? Error);
+
+// ---------------------------------------------------------------- wish list (Spotify metadata) and music report
+
+public sealed record WishItemDto(long Id, string SourceId, string Playlist, string Title, string Artist, string Album, string Isrc,
+    string Release, double Duration, string CoverUrl, string Link, long? MediaId)
+{
+    public bool InLibrary => MediaId is not null;
+}
+
+public sealed record WishStatusDto(bool Configured, IReadOnlyList<string> Playlists, int Total, int InLibrary);
+
+public sealed record WishImportRequest(string? Link);
+
+public sealed record WishImportResultDto(bool Ok, string Playlist, int Total, int Added, int InLibrary, string? Error);
+
+public sealed record MusicReportSummaryDto(int Tracks, double Seconds, int WithoutIsrc, int WithoutComposer);

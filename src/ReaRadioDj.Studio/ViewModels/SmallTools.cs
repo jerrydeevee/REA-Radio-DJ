@@ -240,13 +240,13 @@ public sealed partial class AsRunTool : StudioTool
     public AsRunTool() : base("asrun", "As-run") { }
 
     public ObservableCollection<AsRunDto> Entries { get; } = [];
-    [ObservableProperty] private DateTimeOffset? _day = DateTimeOffset.Now.Date;
+    [ObservableProperty] private DateTime? _day = DateTime.Today;
     [ObservableProperty] private string _summary = "";
 
-    partial void OnDayChanged(DateTimeOffset? value) => _ = LoadAsync();
-    protected override void OnFirstShow() => _ = LoadAsync();
+    partial void OnDayChanged(DateTime? value) => _ = LoadAsync();
+    protected override void OnFirstShow() { _ = LoadAsync(); _ = LoadReportAsync(); }
 
-    private string DayText => (Day ?? DateTimeOffset.Now).ToString("yyyy-MM-dd");
+    private string DayText => (Day ?? DateTime.Today).ToString("yyyy-MM-dd");
 
     [RelayCommand]
     private async Task LoadAsync()
@@ -268,4 +268,28 @@ public sealed partial class AsRunTool : StudioTool
     }
 
     public string SuggestedFileName => $"asrun-{DayText}.csv";
+
+    // Music report for Buma/Stemra and Sena (via the NLPO): every song that went on air in a period.
+    [ObservableProperty] private DateTime? _reportFrom = DateTime.Today.AddDays(1 - DateTime.Today.Day).AddMonths(-1);
+    [ObservableProperty] private DateTime? _reportTo = DateTime.Today.AddDays(-DateTime.Today.Day);
+    [ObservableProperty] private string _reportSummary = "";
+
+    partial void OnReportFromChanged(DateTime? value) => _ = LoadReportAsync();
+    partial void OnReportToChanged(DateTime? value) => _ = LoadReportAsync();
+
+    private string FromText => (ReportFrom ?? DateTime.Today).ToString("yyyy-MM-dd");
+    private string ToText => (ReportTo ?? DateTime.Today).ToString("yyyy-MM-dd");
+    public string ReportUrl(bool summary) => $"/api/reports/music.csv?from={FromText}&to={ToText}&summary={(summary ? "true" : "false")}";
+    public string ReportFileName(bool summary) => $"muziekrapport-{(summary ? "overzicht-" : "")}{FromText}-{ToText}.csv";
+
+    [RelayCommand]
+    private async Task LoadReportAsync()
+    {
+        var r = await Hub.Client.GetAsync<MusicReportSummaryDto>($"/api/reports/music?from={FromText}&to={ToText}");
+        if (r is null) return;
+        var t = TimeSpan.FromSeconds(r.Seconds);
+        ReportSummary = $"{r.Tracks} nummers · {(int)t.TotalHours}:{t.Minutes:00} uur muziek"
+            + (r.WithoutIsrc > 0 ? $" · {r.WithoutIsrc} zonder ISRC" : "")
+            + (r.WithoutComposer > 0 ? $" · {r.WithoutComposer} zonder componist" : "");
+    }
 }

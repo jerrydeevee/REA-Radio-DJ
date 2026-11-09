@@ -15,6 +15,22 @@
         <TextBlock Classes="muted" Text="{Binding Summary}" VerticalAlignment="Center" />
       </StackPanel>
     </DockPanel>
+    <Border DockPanel.Dock="Bottom" Classes="card" Margin="0,6,0,0">
+      <StackPanel Spacing="4">
+        <TextBlock FontWeight="SemiBold" Text="Muziekrapport (Buma/Stemra · Sena)" />
+        <WrapPanel>
+          <TextBlock Classes="muted" Text="van" VerticalAlignment="Center" Margin="0,0,4,4" />
+          <CalendarDatePicker SelectedDate="{Binding ReportFrom}" Margin="0,0,8,4" />
+          <TextBlock Classes="muted" Text="t/m" VerticalAlignment="Center" Margin="0,0,4,4" />
+          <CalendarDatePicker SelectedDate="{Binding ReportTo}" Margin="0,0,8,4" />
+          <Button Classes="small" x:Name="Report" Content="Muziekrapport…" Margin="0,0,4,4"
+                  ToolTip.Tip="Elke uitzending van een nummer: datum, tijd, duur, uitvoerende, titel, componist, label, ISRC" />
+          <Button Classes="small" x:Name="ReportSum" Content="Overzicht per nummer…" Margin="0,0,4,4"
+                  ToolTip.Tip="Per nummer: aantal keer gedraaid en totale duur" />
+        </WrapPanel>
+        <TextBlock Classes="muted" Text="{Binding ReportSummary}" TextWrapping="Wrap" />
+      </StackPanel>
+    </Border>
     <ListBox ItemsSource="{Binding Entries}">
       <ListBox.ItemTemplate>
         <DataTemplate x:DataType="c:AsRunDto">

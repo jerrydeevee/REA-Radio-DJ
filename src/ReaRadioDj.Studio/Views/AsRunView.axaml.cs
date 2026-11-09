@@ -24,5 +24,13 @@ public partial class AsRunView : UserControl
             await using var stream = await file.OpenWriteAsync();
             await tool.ExportAsync(stream);
         };
+        Report.Click += async (_, _) =>
+        {
+            if (DataContext is AsRunTool t) await FileSave.FromEngineAsync(this, "Muziekrapport opslaan", t.ReportFileName(false), t.ReportUrl(false));
+        };
+        ReportSum.Click += async (_, _) =>
+        {
+            if (DataContext is AsRunTool t) await FileSave.FromEngineAsync(this, "Overzicht per nummer opslaan", t.ReportFileName(true), t.ReportUrl(true));
+        };
     }
 }

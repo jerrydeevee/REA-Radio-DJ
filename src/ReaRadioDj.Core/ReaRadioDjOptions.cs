@@ -19,6 +19,18 @@ public sealed class ReaRadioDjOptions
     public PresenterOptions Presenter { get; set; } = new();
     public StreamOptions Stream { get; set; } = new();
     public ControlOptions Control { get; set; } = new();
+    public SpotifyOptions Spotify { get; set; } = new();
+}
+
+/// <summary>
+/// Spotify Web API, only for metadata: importing a playlist as a wish list (titles, artists, ISRC, cover) and matching it
+/// with the library. Audio is never fetched from Spotify. Create an app on developer.spotify.com for the id and secret.
+/// </summary>
+public sealed class SpotifyOptions
+{
+    public string ClientId { get; set; } = "";
+    public string ClientSecret { get; set; } = "";
+    public string Market { get; set; } = "NL";
 }
 
 /// <summary>Remote control over the network. Commands are the same everywhere (see /api/commands).</summary>

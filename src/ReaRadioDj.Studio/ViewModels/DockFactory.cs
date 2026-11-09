@@ -27,6 +27,7 @@ public sealed class DockFactory : Factory
         ("mixer", "Mixer en routing", () => new MixerTool()),
         ("planner", "Planner", () => new PlannerTool()),
         ("asrun", "As-run", () => new AsRunTool()),
+        ("wishlist", "Wensenlijst (Spotify)", () => new WishlistTool()),
         ("clock", "Tijd", () => new ClockTool()),
         ("presenter", "AI-presentator", () => new PresenterTool()),
         ("overlays", "Overlays", () => new OverlaysTool()),

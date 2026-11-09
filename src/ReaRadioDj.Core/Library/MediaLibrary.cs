@@ -85,8 +85,12 @@ public sealed class MediaLibrary
             .OrderBy(f => f, StringComparer.OrdinalIgnoreCase)
             .ToList();
 
-        var known = _db.Query("SELECT path, size, modified, cues_manual FROM media WHERE kind = $k",
-                r => (Path: r.GetString(0), Size: r.GetInt64(1), Modified: r.GetInt64(2), Manual: r.GetInt64(3) != 0), ("$k", (int)kind))
+        var known = _db.Query("""
+                SELECT m.path, m.size, m.modified, m.cues_manual, m.id, r.media_id IS NOT NULL
+                FROM media m LEFT JOIN media_rights r ON r.media_id = m.id WHERE m.kind = $k
+                """,
+                r => (Path: r.GetString(0), Size: r.GetInt64(1), Modified: r.GetInt64(2), Manual: r.GetInt64(3) != 0, Id: r.GetInt64(4),
+                      HasRights: r.GetInt64(5) != 0), ("$k", (int)kind))
             .ToDictionary(x => x.Path, StringComparer.OrdinalIgnoreCase);
 
         int done = 0;
@@ -102,6 +106,7 @@ public sealed class MediaLibrary
                 {
                     _db.Execute("UPDATE media SET missing = 0, category_id = COALESCE(category_id, $c) WHERE path = $p",
                         ("$c", categoryId), ("$p", info.FullName));
+                    if (!k.HasRights) StoreRights(k.Id, info.FullName); // files from before rights metadata existed
                     continue;
                 }
                 Import(info, kind, categoryId, keepCues: k.Manual);
@@ -160,6 +165,9 @@ public sealed class MediaLibrary
             cmd.Transaction = tx;
             long id = (long)cmd.ExecuteScalar()!;
             if (peaks is not null) StorePeaks(c, tx, id, peaks);
+            var rights = ReadRights(info.FullName);
+            if (rights.Isrc.Length + rights.Composer.Length + rights.Label.Length > 0 || rights.Year is not null)
+                RightsStore.FromTags(c, tx, id, rights.Isrc, rights.Composer, rights.Label, rights.Year);
         });
         if (keepCues) _log.LogInformation("Kept manual cue points of {File}", info.Name);
     }
@@ -398,6 +406,25 @@ public sealed class MediaLibrary
             else title = name;
         }
         return (artist.Trim(), title.Trim(), album.Trim());
+    }
+
+    /// <summary>Reads the rights tags of one file and stores them (an empty record marks "looked, nothing there").</summary>
+    private void StoreRights(long id, string path)
+    {
+        var r = ReadRights(path);
+        _db.Transaction((c, tx) => RightsStore.FromTags(c, tx, id, r.Isrc, r.Composer, r.Label, r.Year));
+    }
+
+    /// <summary>Rights metadata from the tags (ID3 TSRC/TCOM/TPUB/year and the equivalents in other formats).</summary>
+    private static (string Isrc, string Composer, string Label, int? Year) ReadRights(string path)
+    {
+        try
+        {
+            using var f = TagLib.File.Create(path);
+            var t = f.Tag;
+            return ((t.ISRC ?? "").Trim(), (t.FirstComposer ?? "").Trim(), (t.Publisher ?? "").Trim(), t.Year is > 0 and < 3000 ? (int)t.Year : null);
+        }
+        catch (Exception) { return ("", "", "", null); }
     }
 
     /// <summary>Optional sidecar "song.mp3.cue.json" with {"intro": 12.5} (or the older "ramp") marks the end of the intro.</summary>

@@ -57,6 +57,10 @@ builder.Services.AddSingleton(sp => new IcecastStreamer(options.Stream, options.
 builder.Services.AddHttpClient();
 // Presenter voice: the default voice profile chooses Higgs TTS 3 (GPU server) or Windows speech.
 builder.Services.AddSingleton<VoiceStore>();
+// Wish list (Spotify metadata only) and the music report for Buma/Stemra and Sena.
+builder.Services.AddSingleton<ReaRadioDj.Core.Library.Wishlist>();
+builder.Services.AddSingleton<ReaRadioDj.Core.Studio.MusicReport>();
+builder.Services.AddSingleton<SpotifyService>();
 builder.Services.AddSingleton(sp =>
 {
     var http = sp.GetRequiredService<IHttpClientFactory>().CreateClient("tts");
@@ -107,6 +111,7 @@ json.Converters.Add(new JsonStringEnumConverter(JsonNamingPolicy.CamelCase));
 var api = app.MapGroup("/api");
 StudioApi.Map(api, options);
 VoiceApi.Map(api);
+WishlistApi.Map(api, options);
 api.MapGet("/commands", () => CommandBus.Commands);
 api.MapPost("/watches/stop", (StreamWatchService w) => w.StopLive() ? Results.Ok() : Results.NotFound());
 api.MapPost("/command", (CommandRequest body, CommandBus bus) =>
