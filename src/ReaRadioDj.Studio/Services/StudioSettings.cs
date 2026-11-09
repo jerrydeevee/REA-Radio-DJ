@@ -13,6 +13,12 @@ public sealed class StudioSettings
     public string Theme { get; set; } = "dark";
     public string LastLayout { get; set; } = "Standaard";
 
+    /// <summary>Tijd window: studio, analog or digital; counter size 0-3; flash colour when an item ends.</summary>
+    public string ClockStyle { get; set; } = "studio";
+    public int CounterSize { get; set; } = 1;
+    public bool ClockSeconds { get; set; } = true;
+    public string FlashColor { get; set; } = "#E5484D";
+
     /// <summary>Key (Avalonia gesture text, e.g. "F5", "Ctrl+B", "Shift+F1") → engine command.</summary>
     public Dictionary<string, string> Hotkeys { get; set; } = DefaultHotkeys();
 

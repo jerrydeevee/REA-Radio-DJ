@@ -18,6 +18,8 @@ public static class Brushes
     /// <summary>True when the value equals the converter parameter (for style classes).</summary>
     public static readonly IValueConverter Is = new FuncValueConverter<string?, string?, bool>((v, p) => string.Equals(v, p, StringComparison.Ordinal));
 
+    public static readonly IValueConverter Half = new FuncValueConverter<double, double>(v => Math.Max(12, Math.Round(v / 2)));
+
     public static readonly IValueConverter ValidBorder = new FuncValueConverter<bool, IBrush>(ok => ok ? Off : Red);
 
     public static readonly IValueConverter EnabledOpacity = new FuncValueConverter<bool, double>(on => on ? 1.0 : 0.45);

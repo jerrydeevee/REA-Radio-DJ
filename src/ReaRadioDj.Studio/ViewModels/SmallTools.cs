@@ -6,34 +6,143 @@ using ReaRadioDj.Studio.Services;
 
 namespace ReaRadioDj.Studio.ViewModels;
 
-/// <summary>Big studio clock with the countdowns that matter: to the next item and to the next fixed time.</summary>
+/// <summary>
+/// Studio clock with the countdowns that matter: the item on air (flashes when it ends), its intro, the next item and
+/// the next fixed time. Clock style, counter size and flash colour are chosen in the window and kept in studio.json.
+/// </summary>
 public sealed partial class ClockTool : StudioTool
 {
-    public ClockTool() : base("clock", "Tijd") { }
+    public static readonly string[] StyleNames = ["Studioklok", "Analoog", "Digitaal"];
+    private static readonly string[] StyleKeys = ["studio", "analog", "digital"];
+    public static readonly string[] SizeNames = ["Klein", "Normaal", "Groot", "Extra groot"];
+    private static readonly double[] CounterFonts = [22, 34, 52, 76];
+    public static readonly string[] FlashNames = ["Rood", "Oranje", "Wit", "Blauw"];
+    private static readonly string[] FlashColors = ["#E5484D", "#F0B429", "#FFFFFF", "#3FA7FF"];
 
-    [ObservableProperty] private string _time = "--:--:--";
+    private readonly Avalonia.Threading.DispatcherTimer _blink;
+    private double _secondsLeft = 999;
+    private bool _loaded;
+
+    public ClockTool() : base("clock", "Tijd")
+    {
+        _blink = new Avalonia.Threading.DispatcherTimer(TimeSpan.FromMilliseconds(250), Avalonia.Threading.DispatcherPriority.Render, (_, _) => Blink());
+    }
+
+    public IReadOnlyList<string> Styles => StyleNames;
+    public IReadOnlyList<string> Sizes => SizeNames;
+    public IReadOnlyList<string> Flashes => FlashNames;
+
+    [ObservableProperty] private DateTime _now;
     [ObservableProperty] private string _date = "";
     [ObservableProperty] private string _clockName = "";
     [ObservableProperty] private string _toNext = "";
     [ObservableProperty] private string _nextEvent = "";
     [ObservableProperty] private string _toEvent = "";
-    [ObservableProperty] private double _secondHand;
+
+    // item on air
+    [ObservableProperty] private string _nowLabel = "";
+    [ObservableProperty] private string _itemRemaining = "";
+    [ObservableProperty] private string _itemElapsed = "";
+    [ObservableProperty] private double _itemLeft = -1;
+    [ObservableProperty] private double _itemSecondsLeft = 999;
+    [ObservableProperty] private string _introText = "";
+    [ObservableProperty] private bool _hasIntro;
+    [ObservableProperty] private string _endState = "normal";
+    [ObservableProperty] private Avalonia.Media.IBrush _counterBackground = Brushes.FromHex("#1A2029");
+    [ObservableProperty] private Avalonia.Media.IBrush _counterForeground = Brushes.FromHex("#E6EAF0");
+
+    // choices
+    [ObservableProperty] private int _styleIndex;
+    [ObservableProperty] private int _sizeIndex = 1;
+    [ObservableProperty] private int _flashIndex;
+    [ObservableProperty] private bool _showSeconds = true;
+    [ObservableProperty] private bool _showOptions;
+
+    public string ClockStyle => StyleKeys[Math.Clamp(StyleIndex, 0, StyleKeys.Length - 1)];
+    public double CounterFont => CounterFonts[Math.Clamp(SizeIndex, 0, CounterFonts.Length - 1)];
+    public double SmallCounterFont => Math.Round(CounterFont * 0.62);
+    public Avalonia.Media.IBrush FlashBrush => Brushes.FromHex(FlashColors[Math.Clamp(FlashIndex, 0, FlashColors.Length - 1)]);
 
     public ObservableCollection<string> Events { get; } = [];
 
+    protected override void OnFirstShow()
+    {
+        var s = Hub.Settings;
+        StyleIndex = Math.Max(0, Array.IndexOf(StyleKeys, s.ClockStyle));
+        SizeIndex = Math.Clamp(s.CounterSize, 0, CounterFonts.Length - 1);
+        FlashIndex = Math.Max(0, Array.IndexOf(FlashColors, s.FlashColor));
+        ShowSeconds = s.ClockSeconds;
+        _loaded = true;
+        _blink.Start();
+    }
+
+    partial void OnStyleIndexChanged(int value) { OnPropertyChanged(nameof(ClockStyle)); Save(); }
+    partial void OnSizeIndexChanged(int value) { OnPropertyChanged(nameof(CounterFont)); OnPropertyChanged(nameof(SmallCounterFont)); Save(); }
+    partial void OnFlashIndexChanged(int value) { OnPropertyChanged(nameof(FlashBrush)); Save(); }
+    partial void OnShowSecondsChanged(bool value) => Save();
+
+    [RelayCommand] private void ToggleOptions() => ShowOptions = !ShowOptions;
+
+    private void Save()
+    {
+        if (!_loaded) return;
+        var s = Hub.Settings;
+        s.ClockStyle = ClockStyle;
+        s.CounterSize = SizeIndex;
+        s.FlashColor = FlashColors[Math.Clamp(FlashIndex, 0, FlashColors.Length - 1)];
+        s.ClockSeconds = ShowSeconds;
+        s.Save();
+    }
+
+    /// <summary>Last 10 s: the counter flashes in the chosen colour; last 20 s: amber text.</summary>
+    private void Blink()
+    {
+        bool on = DateTime.Now.Millisecond < 500;
+        if (_secondsLeft <= 10 && ItemLeft >= 0)
+        {
+            CounterBackground = on ? FlashBrush : Brushes.FromHex("#1A2029");
+            CounterForeground = on ? Brushes.FromHex(FlashIndex == 2 ? "#0B0F14" : "#FFFFFF") : FlashBrush;
+        }
+        else
+        {
+            CounterBackground = Brushes.FromHex("#1A2029");
+            CounterForeground = Brushes.FromHex(_secondsLeft <= 20 && ItemLeft >= 0 ? "#F0B429" : "#E6EAF0");
+        }
+    }
+
     protected override void OnState(StateDto s)
     {
-        Time = s.Time.ToString("HH:mm:ss");
+        Now = s.Time;
         Date = s.Time.ToString("dddd d MMMM yyyy", new System.Globalization.CultureInfo("nl-NL"));
-        SecondHand = s.Time.Second + s.Time.Millisecond / 1000.0;
         ClockName = s.Clock is null ? "geen klok in het weekgrid" : $"klok: {s.Clock}";
         ToNext = s.Engine.Current is null ? "—" : StudioHub.TimeTenths(s.Engine.SecondsToNext);
+
+        if (s.Engine.Current is { } c)
+        {
+            double left = Math.Max(0, c.To - c.Position), length = Math.Max(0.1, c.To - c.From);
+            _secondsLeft = left;
+            NowLabel = c.Label;
+            ItemRemaining = $"-{StudioHub.TimeTenths(left)}";
+            ItemElapsed = StudioHub.Time(Math.Max(0, c.Position - c.From));
+            ItemLeft = Math.Clamp(left / length, 0, 1);
+            ItemSecondsLeft = left;
+            EndState = left <= 10 ? "end" : left <= 20 ? "warn" : "normal";
+            HasIntro = c.Intro is double intro && c.Position < intro;
+            IntroText = c.Intro is double i2 && c.Position < i2 ? StudioHub.TimeTenths(i2 - c.Position) : "";
+        }
+        else
+        {
+            _secondsLeft = 999;
+            NowLabel = "niets op de lucht"; ItemRemaining = "—"; ItemElapsed = ""; ItemLeft = -1; ItemSecondsLeft = 999;
+            EndState = "normal"; HasIntro = false; IntroText = "";
+        }
+
         if (s.Events.FirstOrDefault() is { } e)
         {
             NextEvent = $"{e.Name} om {e.At:HH:mm:ss} ({e.Timing switch { "hard" => "hard", "soft" => "zacht", _ => "overlay" }})";
             ToEvent = StudioHub.Time((e.At - s.Time).TotalSeconds);
         }
-        else { NextEvent = "geen vaste tijden"; ToEvent = ""; }
+        else { NextEvent = "geen vaste tijden"; ToEvent = "—"; }
         var list = s.Events.Select(x => $"{x.At:HH:mm:ss}  {x.Name}{(x.Prepared ? "  ✓ klaar" : "")}").ToList();
         if (!list.SequenceEqual(Events)) { Events.Clear(); foreach (var l in list) Events.Add(l); }
     }
