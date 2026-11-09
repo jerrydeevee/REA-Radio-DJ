@@ -37,7 +37,7 @@ Legenda: ✅ klaar · 🟡 deels · ⬜ open
 
 | Status | Onderdeel |
 |---|---|
-| ⬜ | Voicetracking: opnemen tussen twee logitems in drie stappen (start, volgende, stop) |
+| ✅ | Voicetracking: opnemen tussen twee logitems in drie stappen (start, volgende, stop) via PFL, los van de microfoonknop. Stilte eraf, timing blijft: de stem begint over de outro (muziek zachter), het volgende nummer start waar je Volgende drukte. Beluisteren, opnieuw of in de log; de nummers eromheen blijven staan bij herplannen. Nog niet: de log wordt niet bewaard bij een herstart van de engine (geldt ook voor AI-breaks) |
 | ⬜ | Overgangseditor met golfvormen, inserts en volume-envelopes |
 | ⬜ | Nieuwsbeheer: blokken, RSS-bronnen, opener/sluiter als vaste tijd |
 

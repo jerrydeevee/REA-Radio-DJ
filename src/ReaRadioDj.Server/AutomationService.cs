@@ -148,7 +148,7 @@ public sealed class AutomationService(
                 string.IsNullOrEmpty(item.Origin) ? item.Error : $"{item.Origin}{(item.Error is null ? "" : "; " + item.Error)}", ai);
         }
         if (item.Type == LogItemType.Song && item.Media is { } s) streamer.SetTitle(s.DisplayName);
-        else if (item.Type == LogItemType.AiBreak) streamer.SetTitle(options.StationName);
+        else if (item.Type is LogItemType.AiBreak or LogItemType.VoiceTrack) streamer.SetTitle(options.StationName);
     }
 
     // ---------------------------------------------------------------- IEventSink

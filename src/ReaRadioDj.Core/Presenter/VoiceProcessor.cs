@@ -100,7 +100,7 @@ public static class VoiceProcessor
         return 20 * Math.Log10(gain);
     }
 
-    private static void Fade(float[] x, int rate, int channels, double ms)
+    internal static void Fade(float[] x, int rate, int channels, double ms)
     {
         int n = Math.Min((int)(ms / 1000 * rate), x.Length / channels / 2);
         for (int f = 0; f < n; f++)

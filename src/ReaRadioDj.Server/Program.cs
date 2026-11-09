@@ -53,6 +53,9 @@ builder.Services.AddSingleton<MediaLibrary>();
 builder.Services.AddSingleton<PlannerStore>();
 builder.Services.AddSingleton<AudioRouter>();
 builder.Services.AddSingleton<StudioPlayers>();
+builder.Services.AddSingleton(sp => new VoiceTracker(sp.GetRequiredService<PlayoutLog>(), new BassVoiceCapture(),
+    new PflVoicePreview(sp.GetRequiredService<StudioPlayers>()), path => sp.GetRequiredService<MediaLibrary>().Load(path, ReaRadioDj.Core.Model.MediaKind.Voice),
+    Path.Combine(options.DataFolder, "voicetracks"), options.Routing.MicDevice));
 builder.Services.AddSingleton<Cartwall>();
 builder.Services.AddSingleton<AsRunLog>();
 builder.Services.AddSingleton<PlayoutEngine>();
@@ -124,6 +127,7 @@ var api = app.MapGroup("/api");
 StudioApi.Map(api, options);
 VoiceApi.Map(api);
 PresenterApi.Map(api, options);
+VoiceTrackApi.Map(api, options);
 WishlistApi.Map(api, options);
 api.MapGet("/commands", () => CommandBus.Commands);
 api.MapPost("/watches/stop", (StreamWatchService w) => w.StopLive() ? Results.Ok() : Results.NotFound());

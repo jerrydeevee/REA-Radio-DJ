@@ -166,10 +166,14 @@ public sealed class PlayoutEngine : IDisposable
         }
 
         foreach (var d in _decks) d.Update();
-        if (!current.NextStarted && AutoPlay && current.Position >= current.MixAt)
+        // A voicetrack may start before the mix point: it talks over the outro, which is ducked under it.
+        double early = _log.PeekNext() is { Type: LogItemType.VoiceTrack, StartEarly: > 0 } vt
+            ? Math.Min(vt.StartEarly, Math.Max(0, current.MixAt - current.From)) : 0;
+        if (!current.NextStarted && AutoPlay && current.Position >= current.MixAt - early)
         {
             current.NextStarted = true;
-            if (current.FadeAt is null && current.FadeLength > 0) current.FadeOutAt(current.FadeLength);
+            if (early > 0.05) current.TalkOver((float)_options.Mix.DuckLevel, current.Position + early);
+            else if (current.FadeAt is null && current.FadeLength > 0) current.FadeOutAt(current.FadeLength);
             StartNext(current);
         }
     }
@@ -276,7 +280,13 @@ public sealed class PlayoutEngine : IDisposable
             else if (hook) { fadeIn = 0.3; startVolume = 0; }
             BASS_ChannelSetAttribute(_handle, BASS_ATTRIB_VOL, startVolume);
 
-            if (media.Kind == MediaKind.Voice)
+            if (item.Type == LogItemType.VoiceTrack && cues.Mix < To - 0.05)
+            {
+                // Recorded with "next": the next item starts exactly where it was started during the recording.
+                MixAt = Math.Max(From, cues.Mix);
+                FadeLength = 0;
+            }
+            else if (media.Kind == MediaKind.Voice)
             {
                 // Start the next song early by its intro length (if known), so the voice talks over the intro.
                 double overlap = 0.25;
@@ -314,9 +324,20 @@ public sealed class PlayoutEngine : IDisposable
             }
         }
 
+        /// <summary>Ducks under a voice that starts early; the usual fade still happens at the mix point.</summary>
+        public void TalkOver(float duckLevel, double fadeAt)
+        {
+            BASS_ChannelSlideAttribute(_handle, BASS_ATTRIB_VOL, _gain * duckLevel, 400);
+            _unduckAt = null;
+            if (FadeAt is null && FadeLength > 0) _talkFadeAt = fadeAt;
+        }
+
+        private double? _talkFadeAt;
+
         public void Update()
         {
             double pos = Position;
+            if (_talkFadeAt is double tf && pos >= tf) { _talkFadeAt = null; FadeOutAt(FadeLength); }
             if (_unduckAt is double u && pos >= u)
             {
                 BASS_ChannelSlideAttribute(_handle, BASS_ATTRIB_VOL, _gain, 600);

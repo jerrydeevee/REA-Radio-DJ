@@ -162,6 +162,14 @@ public sealed record VoiceServicesDto(string ElevenLabsKey, string ElevenLabsMod
 
 public sealed record CheckTestRequest(string Text);
 
+/// <summary>Voicetracking: Step is "idle", "outro" (previous item on PFL, recording) or "intro" (next item on PFL).</summary>
+public sealed record VoiceTrackDto(string Step, double Elapsed, double Outro, long? SlotBefore, VoiceTakeDto? Take, string? Error);
+
+public sealed record VoiceTakeDto(string Id, double Length, double StartEarly, double? NextAt, long BeforeItemId, string Previous, string Next,
+    double PeakDb);
+
+public sealed record VoiceTrackStartRequest(long BeforeId, double Preroll, int? Device);
+
 public sealed record CheckTestDto(bool Ok, double Score, string Heard, string Voice, string? Error);
 
 public sealed record GpuDto(string Name, double MemoryTotalMb, double MemoryUsedMb, double UtilizationPercent, double TemperatureC, string Driver);

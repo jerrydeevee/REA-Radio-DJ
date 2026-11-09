@@ -88,7 +88,7 @@ public sealed record MediaItem
 /// <summary>Pending → Rendering → (AwaitingApproval →) Ready, or Failed. Anything but Ready is skipped on air.</summary>
 public enum BreakState { Pending, Rendering, Ready, Failed, AwaitingApproval }
 
-public enum LogItemType { Song, Jingle, AiBreak }
+public enum LogItemType { Song, Jingle, AiBreak, VoiceTrack }
 
 /// <summary>One entry in the on-air log (the playlist that the engine plays from top to bottom).</summary>
 public sealed class LogItem
@@ -105,6 +105,8 @@ public sealed class LogItem
     public string Origin { get; set; } = "";
     /// <summary>Play only the hook (HookIn to HookOut) instead of the whole track.</summary>
     public bool UseHook { get; init; }
+    /// <summary>Voicetrack: start this many seconds before the previous item reaches its mix point (talk over the outro).</summary>
+    public double StartEarly { get; init; }
 
     // AI-break bookkeeping
     public BreakState BreakState { get; set; } = BreakState.Pending;
@@ -124,6 +126,7 @@ public sealed class LogItem
     {
         LogItemType.AiBreak when Media is null => $"AI-break ({BreakState})",
         LogItemType.AiBreak => "AI-break",
+        LogItemType.VoiceTrack => $"Voicetrack ({Media?.CueOut ?? 0:0.0} s)",
         _ => Media?.DisplayName ?? Type.ToString(),
     };
 

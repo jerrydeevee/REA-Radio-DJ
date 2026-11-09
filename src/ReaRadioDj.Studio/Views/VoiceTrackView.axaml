@@ -1,0 +1,76 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:ReaRadioDj.Studio.ViewModels"
+             xmlns:c="using:ReaRadioDj.Contracts"
+             x:Class="ReaRadioDj.Studio.Views.VoiceTrackView"
+             x:DataType="vm:VoiceTrackTool">
+  <ScrollViewer HorizontalScrollBarVisibility="Disabled">
+    <StackPanel Margin="6" Spacing="6">
+      <!-- where and with what -->
+      <Border Classes="card">
+        <StackPanel Spacing="6">
+          <DockPanel>
+            <TextBlock DockPanel.Dock="Left" Text="Plek in de log" VerticalAlignment="Center" Width="110" />
+            <ComboBox ItemsSource="{Binding Slots}" SelectedItem="{Binding Slot}" HorizontalAlignment="Stretch" IsEnabled="{Binding IsIdle}"
+                      PlaceholderText="geen komende items in de log" />
+          </DockPanel>
+          <DockPanel>
+            <TextBlock DockPanel.Dock="Left" Text="Microfoon" VerticalAlignment="Center" Width="110" />
+            <ComboBox ItemsSource="{Binding Devices}" SelectedItem="{Binding Device}" HorizontalAlignment="Stretch" IsEnabled="{Binding IsIdle}">
+              <ComboBox.ItemTemplate>
+                <DataTemplate x:DataType="c:DeviceDto">
+                  <TextBlock Text="{Binding Name}" />
+                </DataTemplate>
+              </ComboBox.ItemTemplate>
+            </ComboBox>
+          </DockPanel>
+          <StackPanel Orientation="Horizontal" Spacing="6">
+            <TextBlock Text="Voorloop" VerticalAlignment="Center" Width="104" />
+            <NumericUpDown Value="{Binding Preroll}" Minimum="0" Maximum="30" Increment="1" FormatString="0" Width="110" IsEnabled="{Binding IsIdle}" />
+            <TextBlock Classes="muted" Text="seconden van het einde van het vorige item" VerticalAlignment="Center" />
+          </StackPanel>
+          <TextBlock Classes="muted" FontSize="11" TextWrapping="Wrap"
+                     Text="Je hoort alles op de PFL-uitgang; er gaat niets naar de uitzending. De opname loopt via de engine, los van de microfoonknop." />
+        </StackPanel>
+      </Border>
+
+      <!-- three steps -->
+      <Border Classes="card">
+        <StackPanel Spacing="8">
+          <Grid ColumnDefinitions="*,*,*">
+            <Button Grid.Column="0" Classes="transport go" Content="START" Command="{Binding StartCommand}" IsEnabled="{Binding CanStart}"
+                    HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Margin="0,0,4,0" ToolTip.Tip="1. Einde van het vorige item op PFL; de opname begint" />
+            <Button Grid.Column="1" Classes="transport" Content="VOLGENDE" Command="{Binding NextCommand}" IsEnabled="{Binding CanNext}"
+                    HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Margin="0,0,4,0" ToolTip.Tip="2. Het volgende item start nu (je praat over de intro)" />
+            <Button Grid.Column="2" Classes="transport stop" Content="STOP" Command="{Binding StopCommand}" IsEnabled="{Binding CanStop}"
+                    HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" ToolTip.Tip="3. Opname klaar" />
+          </Grid>
+          <DockPanel>
+            <TextBlock DockPanel.Dock="Right" Classes="countdown" Text="{Binding Elapsed}" VerticalAlignment="Center" />
+            <TextBlock Classes="muted" Text="opnameduur" VerticalAlignment="Center" />
+          </DockPanel>
+          <TextBlock Text="{Binding Hint}" TextWrapping="Wrap" />
+          <Button Classes="small" Content="Afbreken" Command="{Binding CancelCommand}" IsVisible="{Binding CanStop}" HorizontalAlignment="Left" />
+          <TextBlock Foreground="#F25F5C" TextWrapping="Wrap" Text="{Binding Error}" IsVisible="{Binding Error, Converter={x:Static ObjectConverters.IsNotNull}}" />
+        </StackPanel>
+      </Border>
+
+      <!-- the take -->
+      <Border Classes="card" IsVisible="{Binding HasTake}">
+        <StackPanel Spacing="6">
+          <TextBlock Classes="h" Text="Opname" />
+          <TextBlock Text="{Binding TakeText}" TextWrapping="Wrap" />
+          <TextBlock Foreground="#F0B429" Text="{Binding TakeWarning}" TextWrapping="Wrap" FontSize="12" />
+          <WrapPanel>
+            <Button Classes="small" Content="▶ Beluisteren (PFL)" Command="{Binding PlayTakeCommand}" Margin="0,0,4,4" />
+            <Button Classes="small" Content="Opnieuw opnemen" Command="{Binding StartCommand}" IsEnabled="{Binding CanStart}" Margin="0,0,4,4" />
+            <Button Classes="small go" Content="In de log zetten" Command="{Binding PlaceCommand}" Margin="0,0,4,4" />
+            <Button Classes="small" Content="Weggooien" Command="{Binding DiscardCommand}" Margin="0,0,4,4" />
+          </WrapPanel>
+          <TextBlock Classes="muted" FontSize="11" TextWrapping="Wrap"
+                     Text="In de uitzending begint de stem waar je begon te praten (de muziek gaat dan zachter) en start het volgende item op het moment dat je Volgende drukte. De twee items rond de voicetrack blijven staan als de log opnieuw wordt gepland." />
+        </StackPanel>
+      </Border>
+    </StackPanel>
+  </ScrollViewer>
+</UserControl>

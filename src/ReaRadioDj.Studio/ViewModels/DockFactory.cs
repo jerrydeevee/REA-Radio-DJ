@@ -35,6 +35,7 @@ public sealed class DockFactory : Factory
         ("messages", "Berichten", () => new MessagesTool()),
         ("control", "Bediening en sneltoetsen", () => new ControlTool()),
         ("voice", "Stemmen", () => new VoiceTool()),
+        ("voicetrack", "Voicetracking", () => new VoiceTrackTool()),
     ];
 
     public static StudioTool Create(string id) => Windows.First(w => w.Id == id).Create();
