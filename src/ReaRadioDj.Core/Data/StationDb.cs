@@ -10,7 +10,7 @@ namespace ReaRadioDj.Core.Data;
 /// </summary>
 public sealed class StationDb
 {
-    public const int SchemaVersion = 7;
+    public const int SchemaVersion = 8;
     private readonly string _connectionString;
 
     public StationDb(string path)
@@ -108,7 +108,7 @@ public sealed class StationDb
         {
             cmd.Transaction = tx;
             // Each step brings the database one version further; a new database runs them all.
-            cmd.CommandText = (version < 1 ? SchemaV1 : "") + (version < 2 ? SchemaV2 : "") + (version < 3 ? SchemaV3 : "") + (version < 4 ? SchemaV4 : "") + (version < 5 ? SchemaV5 : "") + (version < 6 ? SchemaV6 : "") + (version < 7 ? SchemaV7 : "") + $"PRAGMA user_version = {SchemaVersion};";
+            cmd.CommandText = (version < 1 ? SchemaV1 : "") + (version < 2 ? SchemaV2 : "") + (version < 3 ? SchemaV3 : "") + (version < 4 ? SchemaV4 : "") + (version < 5 ? SchemaV5 : "") + (version < 6 ? SchemaV6 : "") + (version < 7 ? SchemaV7 : "") + (version < 8 ? SchemaV8 : "") + $"PRAGMA user_version = {SchemaVersion};";
             cmd.ExecuteNonQuery();
         }
         tx.Commit();
@@ -119,6 +119,27 @@ public sealed class StationDb
     /// tracks from a Spotify playlist with their metadata, matched against the library.
     /// </summary>
     /// <summary>A backup voice per voice profile, used when that voice fails.</summary>
+    /// <summary>News blocks: fixed time, opener, the news (folder, category or headlines), closer.</summary>
+    private const string SchemaV8 = """
+        CREATE TABLE IF NOT EXISTS news_blocks(
+            id INTEGER PRIMARY KEY,
+            name TEXT NOT NULL,
+            enabled INTEGER NOT NULL DEFAULT 1,
+            days INTEGER NOT NULL DEFAULT 127,
+            hours TEXT NOT NULL DEFAULT '*',
+            minute INTEGER NOT NULL DEFAULT 0,
+            second INTEGER NOT NULL DEFAULT 0,
+            timing INTEGER NOT NULL DEFAULT 0,
+            opener_id INTEGER REFERENCES media(id) ON DELETE SET NULL,
+            closer_id INTEGER REFERENCES media(id) ON DELETE SET NULL,
+            source INTEGER NOT NULL DEFAULT 0,
+            folder TEXT NOT NULL DEFAULT '',
+            max_age INTEGER NOT NULL DEFAULT 60,
+            category_id INTEGER REFERENCES categories(id) ON DELETE SET NULL,
+            feeds TEXT NOT NULL DEFAULT '',
+            max_headlines INTEGER NOT NULL DEFAULT 5);
+        """;
+
     private const string SchemaV7 = """
         ALTER TABLE voice_profiles ADD COLUMN fallback_id INTEGER REFERENCES voice_profiles(id) ON DELETE SET NULL;
         """;

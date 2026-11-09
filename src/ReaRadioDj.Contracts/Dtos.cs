@@ -170,6 +170,17 @@ public sealed record VoiceTakeDto(string Id, double Length, double StartEarly, d
 
 public sealed record VoiceTrackStartRequest(long BeforeId, double Preroll, int? Device);
 
+/// <summary>
+/// A news block. Timing "hard" or "soft"; Source "folder" (newest file in Folder, at most MaxAgeMinutes old),
+/// "category" or "headlines" (Feeds, one URL per line, read out by the AI voice). When and Next are filled in by the engine.
+/// </summary>
+public sealed record NewsBlockDto(long Id, string Name, bool Enabled, int Days, string Hours, int Minute, int Second, string Timing,
+    long? OpenerId, long? CloserId, string Source, string Folder, int MaxAgeMinutes, long? CategoryId, string Feeds, int MaxHeadlines,
+    string? When = null, DateTime? Next = null);
+
+/// <summary>What a news block would play now: the parts in order, or the problem that would make it skip.</summary>
+public sealed record NewsCheckDto(bool Ok, List<string> Parts, string? Problem, string? Script);
+
 /// <summary>Transition editor: a point on a volume line (seconds in the item's own time, linear gain 0..1.5).</summary>
 public sealed record EnvelopePointDto(double Seconds, double Gain);
 

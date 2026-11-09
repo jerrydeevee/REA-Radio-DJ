@@ -1,0 +1,116 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:ReaRadioDj.Studio.ViewModels"
+             xmlns:c="using:ReaRadioDj.Contracts"
+             x:Class="ReaRadioDj.Studio.Views.NewsView"
+             x:DataType="vm:NewsTool">
+  <Grid Margin="6" ColumnDefinitions="150,*">
+    <!-- the blocks -->
+    <DockPanel Grid.Column="0" Margin="0,0,8,0">
+      <Button DockPanel.Dock="Bottom" Classes="small" Content="Nieuw nieuwsblok" Command="{Binding NewCommand}" Margin="0,4,0,0" HorizontalAlignment="Stretch" />
+      <ListBox ItemsSource="{Binding Blocks}" SelectedItem="{Binding Selected}">
+        <ListBox.ItemTemplate>
+          <DataTemplate x:DataType="c:NewsBlockDto">
+            <StackPanel Opacity="{Binding Enabled, Converter={x:Static vm:Brushes.EnabledOpacity}}">
+              <TextBlock Text="{Binding Name}" FontWeight="SemiBold" />
+              <TextBlock Classes="muted" FontSize="11" Text="{Binding When}" TextWrapping="Wrap" />
+              <TextBlock Classes="muted" FontSize="11" Text="{Binding Next, StringFormat='volgende: {0:ddd HH:mm:ss}'}" />
+            </StackPanel>
+          </DataTemplate>
+        </ListBox.ItemTemplate>
+      </ListBox>
+    </DockPanel>
+
+    <!-- the chosen block -->
+    <ScrollViewer Grid.Column="1" HorizontalScrollBarVisibility="Disabled">
+      <StackPanel Spacing="6">
+        <Border Classes="card">
+          <StackPanel Spacing="5">
+            <DockPanel>
+              <CheckBox DockPanel.Dock="Right" Content="Actief" IsChecked="{Binding Enabled}" Margin="8,0,0,0" />
+              <TextBox Text="{Binding Name}" Watermark="naam, bijv. Nieuws op het hele uur" />
+            </DockPanel>
+            <ItemsControl ItemsSource="{Binding Days}">
+              <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="vm:DayChoice">
+                  <CheckBox Content="{Binding Name}" IsChecked="{Binding On}" MinWidth="44" />
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+            <WrapPanel>
+              <TextBlock Text="Uren" VerticalAlignment="Center" Margin="0,0,6,4" />
+              <TextBox Text="{Binding Hours}" Width="130" Margin="0,0,12,4" ToolTip.Tip="* = elk uur, of bijv. 7-9,12,17-19" />
+              <TextBlock Text="minuut" VerticalAlignment="Center" Margin="0,0,6,4" />
+              <NumericUpDown Value="{Binding Minute}" Minimum="0" Maximum="59" Increment="1" FormatString="0" Width="100" Margin="0,0,8,4" />
+              <TextBlock Text="sec" VerticalAlignment="Center" Margin="0,0,6,4" />
+              <NumericUpDown Value="{Binding Second}" Minimum="0" Maximum="59" Increment="1" FormatString="0" Width="100" Margin="0,0,0,4" />
+            </WrapPanel>
+            <ComboBox ItemsSource="{Binding Timings}" SelectedIndex="{Binding Timing}" HorizontalAlignment="Stretch" />
+          </StackPanel>
+        </Border>
+
+        <Border Classes="card">
+          <StackPanel Spacing="5">
+            <DockPanel>
+              <TextBlock DockPanel.Dock="Left" Text="Opener" Width="70" VerticalAlignment="Center" />
+              <ComboBox ItemsSource="{Binding Jingles}" SelectedItem="{Binding Opener}" HorizontalAlignment="Stretch" />
+            </DockPanel>
+            <DockPanel>
+              <TextBlock DockPanel.Dock="Left" Text="Nieuws" Width="70" VerticalAlignment="Center" />
+              <ComboBox ItemsSource="{Binding Sources}" SelectedIndex="{Binding Source}" HorizontalAlignment="Stretch" />
+            </DockPanel>
+
+            <StackPanel Spacing="4" IsVisible="{Binding IsFolder}" Margin="70,0,0,0">
+              <TextBox Text="{Binding Folder}" Watermark="map waar het nieuwsbestand binnenkomt, bijv. D:\Nieuws" />
+              <StackPanel Orientation="Horizontal" Spacing="6">
+                <TextBlock Text="hoogstens" VerticalAlignment="Center" />
+                <NumericUpDown Value="{Binding MaxAge}" Minimum="1" Maximum="1440" Increment="5" FormatString="0" Width="110" />
+                <TextBlock Text="minuten oud" VerticalAlignment="Center" />
+              </StackPanel>
+            </StackPanel>
+
+            <ComboBox ItemsSource="{Binding Categories}" SelectedItem="{Binding Category}" IsVisible="{Binding IsCategory}"
+                      HorizontalAlignment="Stretch" PlaceholderText="categorie" Margin="70,0,0,0">
+              <ComboBox.ItemTemplate>
+                <DataTemplate x:DataType="c:CategoryDto">
+                  <TextBlock Text="{Binding Name}" />
+                </DataTemplate>
+              </ComboBox.ItemTemplate>
+            </ComboBox>
+
+            <StackPanel Spacing="4" IsVisible="{Binding IsHeadlines}" Margin="70,0,0,0">
+              <TextBox Text="{Binding Feeds}" AcceptsReturn="True" MinHeight="64" TextWrapping="NoWrap" FontFamily="Consolas" FontSize="12"
+                       Watermark="RSS- of Atom-adressen, één per regel" />
+              <StackPanel Orientation="Horizontal" Spacing="6">
+                <TextBlock Text="hoogstens" VerticalAlignment="Center" />
+                <NumericUpDown Value="{Binding MaxHeadlines}" Minimum="1" Maximum="12" Increment="1" FormatString="0" Width="100" />
+                <TextBlock Text="koppen per bron" VerticalAlignment="Center" />
+              </StackPanel>
+              <TextBlock Classes="muted" FontSize="11" TextWrapping="Wrap"
+                         Text="De koppen worden letterlijk voorgelezen, zonder taalmodel: er wordt niets bij verzonnen. Nodig: de AI-presentator staat aan." />
+            </StackPanel>
+
+            <DockPanel>
+              <TextBlock DockPanel.Dock="Left" Text="Sluiter" Width="70" VerticalAlignment="Center" />
+              <ComboBox ItemsSource="{Binding Jingles}" SelectedItem="{Binding Closer}" HorizontalAlignment="Stretch" />
+            </DockPanel>
+          </StackPanel>
+        </Border>
+
+        <WrapPanel>
+          <Button Classes="small go" Content="Opslaan" Command="{Binding SaveCommand}" Margin="0,0,4,4" />
+          <Button Classes="small" Content="Test: wat zou nu spelen?" Command="{Binding CheckCommand}" Margin="0,0,4,4" />
+          <Button Classes="small" Content="Verwijderen" Command="{Binding DeleteCommand}" Margin="0,0,4,4" />
+        </WrapPanel>
+        <TextBlock Text="{Binding CheckText}" TextWrapping="Wrap" />
+        <TextBlock Foreground="#F0B429" TextWrapping="Wrap" Text="{Binding CheckProblem}" IsVisible="{Binding CheckProblem, Converter={x:Static ObjectConverters.IsNotNull}}" />
+        <Border Classes="card" IsVisible="{Binding Script, Converter={x:Static ObjectConverters.IsNotNull}}">
+          <TextBlock Text="{Binding Script}" TextWrapping="Wrap" FontStyle="Italic" />
+        </Border>
+        <TextBlock Classes="muted" FontSize="11" TextWrapping="Wrap"
+                   Text="Een blok wordt 3 minuten vooraf klaargezet. Is er geen actueel nieuws (bestand te oud of weg, geen koppen), dan wordt het hele blok overgeslagen met een waarschuwing in Berichten, zodat er nooit een opener zonder nieuws klinkt." />
+      </StackPanel>
+    </ScrollViewer>
+  </Grid>
+</UserControl>

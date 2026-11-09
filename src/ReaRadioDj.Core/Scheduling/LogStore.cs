@@ -85,6 +85,8 @@ public sealed class LogStore(string path)
     {
         var media = e.Media is { } m && File.Exists(m.Path) ? m : null;
         if (e.Media is not null && media is null && e.Type != LogItemType.AiBreak) return null;
+        // A news bulletin whose audio is gone is not rendered again as an ordinary break: it was for another hour.
+        if (e.Type == LogItemType.AiBreak && media is null && e.Extra == "nieuws") return null;
         bool rerender = e.Type == LogItemType.AiBreak && media is null && e.BreakState is not BreakState.Failed;
         return new LogItem
         {

@@ -10,7 +10,8 @@ public enum EventTiming { Hard = 0, Soft = 1, Overlay = 2 }
 /// PlayMedia / PlayCategory / AiBreak put audio on air. Command runs a command from the command bus (for example
 /// "STREAM START" or "AUTO OFF"); Reminder shows a message in the studio; Alert shows a warning that stands out.
 /// </summary>
-public enum EventAction { PlayMedia = 0, PlayCategory = 1, AiBreak = 2, Command = 3, Reminder = 4, Alert = 5 }
+/// <summary>News: a news block (opener, news, closer); MediaId holds the block id.</summary>
+public enum EventAction { PlayMedia = 0, PlayCategory = 1, AiBreak = 2, Command = 3, Reminder = 4, Alert = 5, News = 6 }
 
 /// <summary>
 /// A fixed-time event, for example the news at :00:00 every hour. Days is a bit mask (bit 0 = Monday ... bit 6 =
@@ -101,6 +102,8 @@ public interface IEventSink
     void Notify(string message);
     /// <summary>Runs a command, reminder or alert event.</summary>
     void Execute(TimedEvent e);
+    /// <summary>The items of a news block in playing order, or null (with a warning) when there is no current news.</summary>
+    IReadOnlyList<LogItem>? PrepareNews(long blockId) => null;
 }
 
 public sealed record UpcomingEvent(long Id, string Name, DateTime At, EventTiming Timing, bool Prepared);
@@ -113,8 +116,11 @@ public sealed record UpcomingEvent(long Id, string Name, DateTime At, EventTimin
 public sealed class EventRunner
 {
     public static readonly TimeSpan PrepareLead = TimeSpan.FromMinutes(3);
-    private readonly Dictionary<(long, DateTime), LogItem> _prepared = [];
+    private readonly Dictionary<(long, DateTime), IReadOnlyList<LogItem>> _prepared = [];
     private readonly HashSet<(long, DateTime)> _fired = [];
+    /// <summary>News without current content is tried again until its time (the bulletin may still come in).</summary>
+    private readonly Dictionary<(long, DateTime), DateTime> _retryAt = [];
+    public static readonly TimeSpan NewsRetry = TimeSpan.FromSeconds(30);
     private readonly object _gate = new();
 
     public static TimeSpan LateWindow(EventTiming t) => t == EventTiming.Soft ? TimeSpan.FromMinutes(2) : TimeSpan.FromSeconds(5);
@@ -138,11 +144,22 @@ public sealed class EventRunner
                     continue;
                 }
 
-                if (t - now <= PrepareLead && !_prepared.ContainsKey(key))
+                if (t - now <= PrepareLead && !_prepared.ContainsKey(key)
+                    && !(_retryAt.TryGetValue(key, out var retry) && now < retry && now < t))
                 {
-                    var item = Prepare(e, sink);
-                    if (item is null) { _fired.Add(key); sink.Notify($"{e.Name}: geen materiaal gevonden"); continue; }
-                    _prepared[key] = item;
+                    var items = Prepare(e, sink);
+                    if (items is null && e.Action == EventAction.News && now < t)
+                    {
+                        _retryAt[key] = now + NewsRetry;
+                        continue;
+                    }
+                    if (items is null)
+                    {
+                        _fired.Add(key);
+                        if (e.Action != EventAction.News) sink.Notify($"{e.Name}: geen materiaal gevonden"); // news says why itself
+                        continue;
+                    }
+                    _prepared[key] = items;
                 }
                 if (now < t) continue;
 
@@ -151,6 +168,7 @@ public sealed class EventRunner
             }
             // Forget old bookkeeping.
             _fired.RemoveWhere(k => k.Item2 < now.AddHours(-2));
+            foreach (var k in _retryAt.Keys.Where(k => k.Item2 < now.AddMinutes(-5)).ToList()) _retryAt.Remove(k);
             foreach (var k in _prepared.Keys.Where(k => k.Item2 < now.AddMinutes(-5)).ToList()) _prepared.Remove(k);
         }
     }
@@ -167,7 +185,11 @@ public sealed class EventRunner
                 .ToList();
     }
 
-    private static LogItem? Prepare(TimedEvent e, IEventSink sink)
+    private static IReadOnlyList<LogItem>? Prepare(TimedEvent e, IEventSink sink) =>
+        e.Action == EventAction.News ? (e.MediaId is long block && sink.PrepareNews(block) is { Count: > 0 } news ? news : null)
+        : PrepareOne(e, sink) is { } one ? [one] : null;
+
+    private static LogItem? PrepareOne(TimedEvent e, IEventSink sink)
     {
         string origin = $"vast: {e.Name}";
         switch (e.Action)
@@ -185,13 +207,20 @@ public sealed class EventRunner
         }
     }
 
-    private static void Fire(TimedEvent e, LogItem item, IEventSink sink)
+    private static void Fire(TimedEvent e, IReadOnlyList<LogItem> items, IEventSink sink)
     {
-        switch (e.Timing)
+        if (e.Action == EventAction.News && items.Any(i => i.Type == LogItemType.AiBreak && i.BreakState != BreakState.Ready))
         {
-            case EventTiming.Hard: sink.PlayNow(item, 0.5); break;
-            case EventTiming.Soft: sink.InsertNext(item); break;
-            case EventTiming.Overlay: sink.PlayOverlay(item); break;
+            sink.Notify($"{e.Name}: het voorgelezen nieuws was niet op tijd klaar, blok overgeslagen");
+            return;
+        }
+        if (e.Timing == EventTiming.Overlay) { foreach (var item in items) sink.PlayOverlay(item); }
+        else
+        {
+            // Everything after the first item goes to the top of the log first (last one first), so they follow in order.
+            for (int i = items.Count - 1; i >= 1; i--) sink.InsertNext(items[i]);
+            if (e.Timing == EventTiming.Hard) sink.PlayNow(items[0], 0.5);
+            else sink.InsertNext(items[0]);
         }
         sink.Notify($"{e.Name} gestart ({e.Timing switch { EventTiming.Hard => "hard", EventTiming.Soft => "zacht", _ => "overlay" }})");
     }

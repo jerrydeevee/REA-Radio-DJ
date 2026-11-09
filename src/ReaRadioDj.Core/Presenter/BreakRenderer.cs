@@ -75,6 +75,25 @@ public sealed class BreakRenderer(
         }
     }
 
+    /// <summary>
+    /// Speaks a given text (a news bulletin read from headlines): no script writer, so nothing is added or changed.
+    /// Waits for approval first when that is switched on, like any break.
+    /// </summary>
+    public async Task RenderTextAsync(LogItem item, string text, string source, CancellationToken ct)
+    {
+        item.BreakState = BreakState.Rendering;
+        item.Error = null;
+        item.Script = text;
+        item.ScriptSource = source;
+        try
+        {
+            if (options.Presenter.RequireApproval) { item.BreakState = BreakState.AwaitingApproval; return; }
+            await SpeakAsync(item, text, ct);
+        }
+        catch (Exception ex) when (!ct.IsCancellationRequested) { Fail(item, ex); }
+        finally { if (item.BreakState == BreakState.Rendering) item.BreakState = BreakState.Failed; }
+    }
+
     /// <summary>A person approved the script (possibly edited): speak it now.</summary>
     public async Task<bool> ApproveAsync(LogItem item, string? editedScript, CancellationToken ct)
     {

@@ -189,7 +189,29 @@ public sealed class BreakExtras(HttpClient http, PresenterOptions options, NoteS
     }
 
     /// <summary>Titles and channel name from RSS 2.0 or Atom.</summary>
-    internal static IEnumerable<(string Title, string Source)> ParseFeed(string xml)
+    /// <summary>The headlines of several feeds, newest first per feed, at most <paramref name="perFeed"/> each.</summary>
+    public static async Task<(List<string> Headlines, List<string> Problems)> HeadlinesAsync(HttpClient http, IEnumerable<string> feeds,
+        int perFeed, CancellationToken ct)
+    {
+        var headlines = new List<string>();
+        var problems = new List<string>();
+        foreach (var feed in feeds)
+        {
+            try
+            {
+                using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+                cts.CancelAfter(TimeSpan.FromSeconds(10));
+                headlines.AddRange(ParseFeed(await http.GetStringAsync(feed, cts.Token)).Select(i => i.Title).Take(perFeed));
+            }
+            catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or System.Xml.XmlException && !ct.IsCancellationRequested)
+            {
+                problems.Add($"{feed}: {ex.Message}");
+            }
+        }
+        return (headlines.Distinct(StringComparer.OrdinalIgnoreCase).ToList(), problems);
+    }
+
+    public static IEnumerable<(string Title, string Source)> ParseFeed(string xml)
     {
         var doc = XDocument.Parse(xml);
         XNamespace atom = "http://www.w3.org/2005/Atom";

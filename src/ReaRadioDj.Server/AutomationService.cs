@@ -38,7 +38,14 @@ public sealed class AutomationService(
     public static bool SeedDemoEvents { get; set; }
 
     public string? CurrentClock => _scheduler.CurrentClock;
-    public IReadOnlyList<UpcomingEvent> UpcomingEvents(int count) => _events.Upcoming(planner.Events, DateTime.Now, count);
+    public IReadOnlyList<UpcomingEvent> UpcomingEvents(int count) => _events.Upcoming(AllEvents(), DateTime.Now, count);
+
+    /// <summary>The planner's fixed-time events plus the news blocks.</summary>
+    private IReadOnlyList<TimedEvent> AllEvents()
+    {
+        var news = services.GetRequiredService<NewsService>().Events;
+        return news.Count == 0 ? planner.Events : [.. planner.Events, .. news];
+    }
 
     protected override async Task ExecuteAsync(CancellationToken ct)
     {
@@ -113,7 +120,7 @@ public sealed class AutomationService(
         using var timer = new PeriodicTimer(TimeSpan.FromMilliseconds(100));
         while (await timer.WaitForNextTickAsync(ct).AsTask().ContinueWith(t => !t.IsCanceled && t.Result, CancellationToken.None))
         {
-            try { _events.Tick(planner.Events, DateTime.Now, this); }
+            try { _events.Tick(AllEvents(), DateTime.Now, this); }
             catch (Exception ex) { logger.LogError(ex, "Event check failed"); }
         }
     }
@@ -186,6 +193,9 @@ public sealed class AutomationService(
     }
 
     MediaItem? IEventSink.Media(long id) => library.Get(id);
+
+    IReadOnlyList<LogItem>? IEventSink.PrepareNews(long blockId) =>
+        services.GetRequiredService<NewsService>().Prepare(blockId, id => ((IEventSink)this).PickFromCategory(id), _ct);
 
     void IEventSink.PrepareBreak(LogItem item)
     {

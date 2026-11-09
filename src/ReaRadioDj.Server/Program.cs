@@ -51,6 +51,8 @@ builder.Services.AddSingleton<MessageCenter>();
 builder.Services.AddSingleton<PlayoutLog>();
 builder.Services.AddSingleton<MediaLibrary>();
 builder.Services.AddSingleton<PlannerStore>();
+builder.Services.AddSingleton<NewsStore>();
+builder.Services.AddSingleton<NewsService>();
 builder.Services.AddSingleton<AudioRouter>();
 builder.Services.AddSingleton<StudioPlayers>();
 builder.Services.AddSingleton(sp => new VoiceTracker(sp.GetRequiredService<PlayoutLog>(), new BassVoiceCapture(),
@@ -129,6 +131,7 @@ VoiceApi.Map(api);
 PresenterApi.Map(api, options);
 VoiceTrackApi.Map(api, options);
 TransitionApi.Map(api, options);
+NewsApi.Map(api);
 WishlistApi.Map(api, options);
 api.MapGet("/commands", () => CommandBus.Commands);
 api.MapPost("/watches/stop", (StreamWatchService w) => w.StopLive() ? Results.Ok() : Results.NotFound());

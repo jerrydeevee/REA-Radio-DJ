@@ -37,6 +37,7 @@ public sealed class DockFactory : Factory
         ("voice", "Stemmen", () => new VoiceTool()),
         ("voicetrack", "Voicetracking", () => new VoiceTrackTool()),
         ("transition", "Overgangen", () => new TransitionTool()),
+        ("news", "Nieuws", () => new NewsTool()),
     ];
 
     public static StudioTool Create(string id) => Windows.First(w => w.Id == id).Create();
@@ -79,7 +80,7 @@ public sealed class DockFactory : Factory
         {
             Id = "left", Proportion = 0.27, Orientation = Orientation.Vertical,
             VisibleDockables = CreateList<IDockable>(
-                Tools("dock-library", "library", "planner"),
+                Tools("dock-library", "library", "planner", "news"),
                 new ProportionalDockSplitter(),
                 Tools("dock-players", "standby", "pfl")),
         };
