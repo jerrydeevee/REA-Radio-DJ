@@ -109,6 +109,8 @@ public sealed class LogItem
     public double StartEarly { get; init; }
     /// <summary>Hand-made transition from the item before this one (transition editor), or null for the automatic mix.</summary>
     public Transition? MixIn { get; set; }
+    /// <summary>Ad spot: the proof-of-broadcast record it belongs to.</summary>
+    public long? AdPlayId { get; init; }
 
     // AI-break bookkeeping
     public BreakState BreakState { get; set; } = BreakState.Pending;

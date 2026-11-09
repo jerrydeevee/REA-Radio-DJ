@@ -10,7 +10,7 @@ namespace ReaRadioDj.Core.Data;
 /// </summary>
 public sealed class StationDb
 {
-    public const int SchemaVersion = 8;
+    public const int SchemaVersion = 9;
     private readonly string _connectionString;
 
     public StationDb(string path)
@@ -108,7 +108,7 @@ public sealed class StationDb
         {
             cmd.Transaction = tx;
             // Each step brings the database one version further; a new database runs them all.
-            cmd.CommandText = (version < 1 ? SchemaV1 : "") + (version < 2 ? SchemaV2 : "") + (version < 3 ? SchemaV3 : "") + (version < 4 ? SchemaV4 : "") + (version < 5 ? SchemaV5 : "") + (version < 6 ? SchemaV6 : "") + (version < 7 ? SchemaV7 : "") + (version < 8 ? SchemaV8 : "") + $"PRAGMA user_version = {SchemaVersion};";
+            cmd.CommandText = (version < 1 ? SchemaV1 : "") + (version < 2 ? SchemaV2 : "") + (version < 3 ? SchemaV3 : "") + (version < 4 ? SchemaV4 : "") + (version < 5 ? SchemaV5 : "") + (version < 6 ? SchemaV6 : "") + (version < 7 ? SchemaV7 : "") + (version < 8 ? SchemaV8 : "") + (version < 9 ? SchemaV9 : "") + $"PRAGMA user_version = {SchemaVersion};";
             cmd.ExecuteNonQuery();
         }
         tx.Commit();
@@ -119,6 +119,53 @@ public sealed class StationDb
     /// tracks from a Spotify playlist with their metadata, matched against the library.
     /// </summary>
     /// <summary>A backup voice per voice profile, used when that voice fails.</summary>
+    /// <summary>Commercials: campaigns with their spots, ad breaks on fixed times, and the proof of broadcast.</summary>
+    private const string SchemaV9 = """
+        CREATE TABLE IF NOT EXISTS ad_campaigns(
+            id INTEGER PRIMARY KEY,
+            advertiser TEXT NOT NULL,
+            name TEXT NOT NULL,
+            enabled INTEGER NOT NULL DEFAULT 1,
+            start TEXT NOT NULL,
+            "end" TEXT NOT NULL,
+            days INTEGER NOT NULL DEFAULT 127,
+            hours TEXT NOT NULL DEFAULT '*',
+            per_day INTEGER NOT NULL DEFAULT 4,
+            per_hour INTEGER NOT NULL DEFAULT 1,
+            position INTEGER NOT NULL DEFAULT 0,
+            notes TEXT NOT NULL DEFAULT '');
+        CREATE TABLE IF NOT EXISTS ad_spots(
+            campaign_id INTEGER NOT NULL REFERENCES ad_campaigns(id) ON DELETE CASCADE,
+            media_id INTEGER NOT NULL REFERENCES media(id) ON DELETE CASCADE,
+            position INTEGER NOT NULL DEFAULT 0,
+            PRIMARY KEY(campaign_id, media_id));
+        CREATE TABLE IF NOT EXISTS ad_breaks(
+            id INTEGER PRIMARY KEY,
+            name TEXT NOT NULL,
+            enabled INTEGER NOT NULL DEFAULT 1,
+            days INTEGER NOT NULL DEFAULT 127,
+            hours TEXT NOT NULL DEFAULT '*',
+            minute INTEGER NOT NULL DEFAULT 0,
+            second INTEGER NOT NULL DEFAULT 0,
+            timing INTEGER NOT NULL DEFAULT 0,
+            opener_id INTEGER REFERENCES media(id) ON DELETE SET NULL,
+            closer_id INTEGER REFERENCES media(id) ON DELETE SET NULL,
+            max_seconds INTEGER NOT NULL DEFAULT 120);
+        CREATE TABLE IF NOT EXISTS ad_plays(
+            id INTEGER PRIMARY KEY,
+            campaign_id INTEGER NOT NULL,
+            media_id INTEGER NOT NULL,
+            advertiser TEXT NOT NULL,
+            campaign TEXT NOT NULL,
+            spot TEXT NOT NULL,
+            break TEXT NOT NULL,
+            scheduled TEXT NOT NULL,
+            started TEXT,
+            length REAL NOT NULL,
+            played REAL);
+        CREATE INDEX IF NOT EXISTS ad_plays_scheduled ON ad_plays(scheduled);
+        """;
+
     /// <summary>News blocks: fixed time, opener, the news (folder, category or headlines), closer.</summary>
     private const string SchemaV8 = """
         CREATE TABLE IF NOT EXISTS news_blocks(

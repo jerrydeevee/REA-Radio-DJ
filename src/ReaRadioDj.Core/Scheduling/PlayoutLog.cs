@@ -24,6 +24,26 @@ public sealed class PlayoutLog
         Changed?.Invoke();
     }
 
+    /// <summary>
+    /// Inserts an item as the next thing to play, but never inside a block that is on air: items that belong to the same
+    /// news or ad block as the item on air (same origin before " · ") stay together and the new item goes after them.
+    /// </summary>
+    public void InsertAfterBlock(LogItem item)
+    {
+        lock (_gate)
+        {
+            int at = 0;
+            if (_history.Count > 0 && Block(_history[0].Origin) is { } onAir)
+                while (at < _upcoming.Count && Block(_upcoming[at].Origin) == onAir) at++;
+            _upcoming.Insert(at, item);
+        }
+        Changed?.Invoke();
+    }
+
+    /// <summary>"nieuws: 14 uur · sluiter" → "nieuws: 14 uur"; null for items that are not part of a block.</summary>
+    private static string? Block(string? origin) =>
+        origin?.IndexOf(" · ", StringComparison.Ordinal) is int i and > 0 ? origin[..i] : null;
+
     /// <summary>Takes the next item off the top of the log and moves it into the history.</summary>
     public LogItem? TakeNext()
     {

@@ -178,6 +178,24 @@ public sealed record NewsBlockDto(long Id, string Name, bool Enabled, int Days, 
     long? OpenerId, long? CloserId, string Source, string Folder, int MaxAgeMinutes, long? CategoryId, string Feeds, int MaxHeadlines,
     string? When = null, DateTime? Next = null);
 
+/// <summary>A spot of a campaign (a library item) with its playing length.</summary>
+public sealed record AdSpotDto(long MediaId, string Name, double Length);
+
+/// <summary>An ad campaign. Dates "yyyy-MM-dd"; Position "any", "first" or "last". Today and Status are filled in by the engine.</summary>
+public sealed record AdCampaignDto(long Id, string Advertiser, string Name, bool Enabled, string Start, string End, int Days, string Hours,
+    int PerDay, int PerHour, string Position, List<AdSpotDto> Spots, string Notes, int Today = 0, string? Status = null);
+
+/// <summary>An ad break on a fixed time. Timing "hard" or "soft".</summary>
+public sealed record AdBreakDto(long Id, string Name, bool Enabled, int Days, string Hours, int Minute, int Second, string Timing,
+    long? OpenerId, long? CloserId, int MaxSeconds, string? When = null, DateTime? Next = null);
+
+/// <summary>One spot in the proof of broadcast.</summary>
+public sealed record AdPlayDto(long Id, string Advertiser, string Campaign, string Spot, string Break, DateTime Scheduled, DateTime? Started,
+    double Length, double? Played, bool Complete);
+
+/// <summary>What an ad break would hold now.</summary>
+public sealed record AdPreviewDto(List<string> Lines, double Seconds, string? Problem);
+
 /// <summary>What a news block would play now: the parts in order, or the problem that would make it skip.</summary>
 public sealed record NewsCheckDto(bool Ok, List<string> Parts, string? Problem, string? Script);
 

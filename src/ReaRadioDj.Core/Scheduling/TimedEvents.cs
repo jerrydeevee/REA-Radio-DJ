@@ -11,7 +11,8 @@ public enum EventTiming { Hard = 0, Soft = 1, Overlay = 2 }
 /// "STREAM START" or "AUTO OFF"); Reminder shows a message in the studio; Alert shows a warning that stands out.
 /// </summary>
 /// <summary>News: a news block (opener, news, closer); MediaId holds the block id.</summary>
-public enum EventAction { PlayMedia = 0, PlayCategory = 1, AiBreak = 2, Command = 3, Reminder = 4, Alert = 5, News = 6 }
+/// <summary>Ads: an ad break (opener, spots, closer); MediaId holds the break id.</summary>
+public enum EventAction { PlayMedia = 0, PlayCategory = 1, AiBreak = 2, Command = 3, Reminder = 4, Alert = 5, News = 6, Ads = 7 }
 
 /// <summary>
 /// A fixed-time event, for example the news at :00:00 every hour. Days is a bit mask (bit 0 = Monday ... bit 6 =
@@ -104,6 +105,8 @@ public interface IEventSink
     void Execute(TimedEvent e);
     /// <summary>The items of a news block in playing order, or null (with a warning) when there is no current news.</summary>
     IReadOnlyList<LogItem>? PrepareNews(long blockId) => null;
+    /// <summary>The items of an ad break (opener, spots, closer), or null when no campaign needs a spot now.</summary>
+    IReadOnlyList<LogItem>? PrepareAds(long breakId, DateTime at) => null;
 }
 
 public sealed record UpcomingEvent(long Id, string Name, DateTime At, EventTiming Timing, bool Prepared);
@@ -147,7 +150,7 @@ public sealed class EventRunner
                 if (t - now <= PrepareLead && !_prepared.ContainsKey(key)
                     && !(_retryAt.TryGetValue(key, out var retry) && now < retry && now < t))
                 {
-                    var items = Prepare(e, sink);
+                    var items = Prepare(e, t, sink);
                     if (items is null && e.Action == EventAction.News && now < t)
                     {
                         _retryAt[key] = now + NewsRetry;
@@ -156,7 +159,7 @@ public sealed class EventRunner
                     if (items is null)
                     {
                         _fired.Add(key);
-                        if (e.Action != EventAction.News) sink.Notify($"{e.Name}: geen materiaal gevonden"); // news says why itself
+                        if (e.Action is not (EventAction.News or EventAction.Ads)) sink.Notify($"{e.Name}: geen materiaal gevonden"); // these say why themselves
                         continue;
                     }
                     _prepared[key] = items;
@@ -185,9 +188,12 @@ public sealed class EventRunner
                 .ToList();
     }
 
-    private static IReadOnlyList<LogItem>? Prepare(TimedEvent e, IEventSink sink) =>
-        e.Action == EventAction.News ? (e.MediaId is long block && sink.PrepareNews(block) is { Count: > 0 } news ? news : null)
-        : PrepareOne(e, sink) is { } one ? [one] : null;
+    private static IReadOnlyList<LogItem>? Prepare(TimedEvent e, DateTime at, IEventSink sink) => e.Action switch
+    {
+        EventAction.News => e.MediaId is long block && sink.PrepareNews(block) is { Count: > 0 } news ? news : null,
+        EventAction.Ads => e.MediaId is long brk && sink.PrepareAds(brk, at) is { Count: > 0 } ads ? ads : null,
+        _ => PrepareOne(e, sink) is { } one ? [one] : null,
+    };
 
     private static LogItem? PrepareOne(TimedEvent e, IEventSink sink)
     {

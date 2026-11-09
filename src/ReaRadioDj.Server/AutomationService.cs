@@ -44,7 +44,8 @@ public sealed class AutomationService(
     private IReadOnlyList<TimedEvent> AllEvents()
     {
         var news = services.GetRequiredService<NewsService>().Events;
-        return news.Count == 0 ? planner.Events : [.. planner.Events, .. news];
+        var ads = services.GetRequiredService<AdService>().Events;
+        return news.Count == 0 && ads.Count == 0 ? planner.Events : [.. planner.Events, .. news, .. ads];
     }
 
     protected override async Task ExecuteAsync(CancellationToken ct)
@@ -52,7 +53,9 @@ public sealed class AutomationService(
         _ct = ct;
         engine.FallbackProvider = Fallback;
         engine.ItemStarted += OnItemStarted;
-        engine.ItemEnded += (item, played) => End("log:" + item.Id, played);
+        var adService = services.GetRequiredService<AdService>();
+        engine.ItemStarted += adService.OnStarted;
+        engine.ItemEnded += (item, played) => { End("log:" + item.Id, played); adService.OnEnded(item, played); };
         foreach (var p in players.Standby)
         {
             p.Started += (pl, m) => Begin($"player:{pl.Id}", pl.Name, Kind(m), m, m.CueOut - m.CueIn);
@@ -194,6 +197,9 @@ public sealed class AutomationService(
 
     MediaItem? IEventSink.Media(long id) => library.Get(id);
 
+    IReadOnlyList<LogItem>? IEventSink.PrepareAds(long breakId, DateTime at) =>
+        services.GetRequiredService<AdService>().Prepare(breakId, at);
+
     IReadOnlyList<LogItem>? IEventSink.PrepareNews(long blockId) =>
         services.GetRequiredService<NewsService>().Prepare(blockId, id => ((IEventSink)this).PickFromCategory(id), _ct);
 
@@ -205,7 +211,7 @@ public sealed class AutomationService(
 
     void IEventSink.PlayNow(LogItem item, double fade) => engine.PlayNow(item, fade);
 
-    void IEventSink.InsertNext(LogItem item) => log.Insert(0, item);
+    void IEventSink.InsertNext(LogItem item) => log.InsertAfterBlock(item);
 
     void IEventSink.PlayOverlay(LogItem item)
     {

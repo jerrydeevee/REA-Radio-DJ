@@ -48,7 +48,7 @@ Legenda: ✅ klaar · 🟡 deels · ⬜ open
 |---|---|
 | ⬜ | Externe muziekplanning: logs importeren met import-profielen, bibliotheek exporteren |
 | ⬜ | Database-bibliotheken (ODBC) en metadata-opzoeking |
-| ⬜ | Reclamebeheer: adverteerders, campagnes, blokken, bewijs van uitzending |
+| ✅ | Reclamebeheer: adverteerders, campagnes, blokken, bewijs van uitzending |
 | 🟡 | Hardware-bediening: commandobus staat; MIDI, serieel, GPIO-kaarten, Ember+, Livewire+ en mengtafels nog koppelen |
 | 🟡 | Rapportage auteursrechten: CSV staat; kolomindeling nog afstemmen op het sjabloon van de NLPO / Buma/Stemra / Sena |
 
