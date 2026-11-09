@@ -8,7 +8,9 @@ using ReaRadioDj.Core.Model;
 namespace ReaRadioDj.Core.Presenter;
 
 /// <summary>What the presenter knows when writing a break.</summary>
-public sealed record BreakContext(string StationName, string PresenterName, DateTime Time, MediaItem? Previous, MediaItem? Next);
+/// <param name="Character">Persona instructions for the language model; null = the general ones.</param>
+public sealed record BreakContext(string StationName, string PresenterName, DateTime Time, MediaItem? Previous, MediaItem? Next,
+    string? Character = null, int? MaxWords = null);
 
 public interface IScriptWriter
 {
@@ -139,14 +141,15 @@ public sealed class OpenAiScriptWriter(HttpClient http, PresenterOptions options
     /// </summary>
     internal static (string System, string User) Prompt(PresenterOptions options, BreakContext c)
     {
+        int maxWords = c.MaxWords ?? options.MaxWords;
         var system = $"""
-            {options.Persona}
+            {(string.IsNullOrWhiteSpace(c.Character) ? options.Persona : c.Character)}
             Je heet {c.PresenterName} en presenteert op {c.StationName}.
             Je schrijft ALLEEN de tekst die je hardop zegt tussen twee nummers, in correct en natuurlijk Nederlands,
             zoals een ervaren presentator het live zou zeggen.
 
             Regels:
-            - Hoogstens {options.MaxWords} woorden, één tot drie korte zinnen.
+            - Hoogstens {maxWords} woorden, één tot drie korte zinnen.
             - Noem titels en artiesten precies zoals ze gegeven worden; vertaal of verbuig ze niet.
             - Verzin geen feiten over artiesten, nummers, het weer of het nieuws.
             - Geen aanhalingstekens, opsommingen, regieaanwijzingen, emoji of Engelse zinnen.

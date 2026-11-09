@@ -108,6 +108,8 @@ public sealed class LogItem
 
     // AI-break bookkeeping
     public BreakState BreakState { get; set; } = BreakState.Pending;
+    /// <summary>Name of the persona chosen for the break's air time (null = general settings).</summary>
+    public string? Persona { get; set; }
     public string? Script { get; set; }
     public string? ScriptSource { get; set; }
     public string? Voice { get; set; }

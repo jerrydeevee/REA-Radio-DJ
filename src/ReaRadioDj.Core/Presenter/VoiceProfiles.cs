@@ -109,6 +109,8 @@ public sealed class ProfileSpeechEngine(VoiceStore store, HiggsSpeechEngine higg
 {
     public string Name => Pick(store.Default).Engine.Name;
 
+    public VoiceProfile? Profile(long id) => store.Get(id);
+
     public Task SynthesizeAsync(string text, string wavPath, CancellationToken ct) => SynthesizeAsync(text, wavPath, store.Default, ct);
 
     public Task SynthesizeAsync(string text, string wavPath, VoiceProfile? profile, CancellationToken ct)

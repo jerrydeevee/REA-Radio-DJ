@@ -25,8 +25,8 @@ Legenda: ✅ klaar · 🟡 deels · ⬜ open
 |---|---|
 | ✅ | Taalmodel koppelen: elke OpenAI-compatibele server (Ollama, LM Studio, online dienst), instelbaar in de studio met proefscript; getest met Ollama `gemma3:12b` (goed Nederlands) |
 | ✅ | Nabewerking: stilte weg, hoogdoorlaat 80 Hz, compressor, piek -1 dBFS; loudness op stationsnorm en samplerate doet de playout zelf |
-| ⬜ | Music bed onder de break, outro-element, talk-up tot de zang |
-| ⬜ | Persona's en dayparts (stem + stijl per tijdvak in een rooster) |
+| ✅ | Muziekbed onder de break (aanloop, dip onder de stem, uitfade met het laatste woord); talk-up over de intro tot de zang. Outro-element (jingle na de break) nog open |
+| ✅ | Persona's per dagdeel: naam, karakter, stem, lengte en muziekbed per dagen + uren |
 | ✅ | Script goedkeuren, bewerken of opnieuw laten schrijven vóór het inspreken (niet op tijd goedgekeurd = jingle) |
 | ⬜ | Controle met Whisper: klopt de gesproken tekst met het script |
 | ⬜ | Variabelen: weer, RSS/nieuws, luisteraarsberichten |

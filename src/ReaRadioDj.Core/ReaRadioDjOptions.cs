@@ -102,6 +102,8 @@ public sealed class PresenterOptions
     public bool RequireApproval { get; set; } = false;
     /// <summary>High-pass, compressor, silence trim and peak level on every rendered break.</summary>
     public bool PostProcess { get; set; } = true;
+    /// <summary>Library category with music beds to lay under every break; null = no bed. A persona can choose its own.</summary>
+    public long? BedCategoryId { get; set; }
     public LlmOptions Llm { get; set; } = new();
     public TtsOptions Tts { get; set; } = new();
 }

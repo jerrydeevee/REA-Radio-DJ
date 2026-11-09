@@ -18,7 +18,8 @@ public sealed class BreakRenderer(
     IScriptWriter? llmWriter,
     ISpeechEngine primaryVoice,
     ISpeechEngine? fallbackVoice,
-    ILogger<BreakRenderer>? logger = null)
+    ILogger<BreakRenderer>? logger = null,
+    PersonaStore? personas = null)
 {
     private readonly ILogger _log = (ILogger?)logger ?? NullLogger.Instance;
     private readonly TemplateScriptWriter _template = new();
@@ -42,8 +43,10 @@ public sealed class BreakRenderer(
         try
         {
             var (previous, next) = log.NeighbourSongs(item.Id);
-            var (script, source) = await WriteScriptAsync(new BreakContext(options.StationName, options.Presenter.PresenterName,
-                EstimateAirTime(item), previous, next), ct);
+            var airTime = EstimateAirTime(item);
+            var persona = personas?.For(airTime);
+            item.Persona = persona?.Name;
+            var (script, source) = await WriteScriptAsync(Context(airTime, previous, next, persona), ct);
             item.Script = script;
             item.ScriptSource = source;
             if (options.Presenter.RequireApproval)
@@ -81,8 +84,19 @@ public sealed class BreakRenderer(
     }
 
     /// <summary>A trial script for the given neighbours, without speaking it (to tune the persona and the model).</summary>
-    public Task<(string Script, string Source)> TryScriptAsync(MediaItem? previous, MediaItem? next, CancellationToken ct) =>
-        WriteScriptAsync(new BreakContext(options.StationName, options.Presenter.PresenterName, DateTime.Now, previous, next), ct);
+    public Task<(string Script, string Source)> TryScriptAsync(MediaItem? previous, MediaItem? next, CancellationToken ct,
+        Persona? persona = null) =>
+        WriteScriptAsync(Context(DateTime.Now, previous, next, persona ?? personas?.For(DateTime.Now)), ct);
+
+    private BreakContext Context(DateTime time, MediaItem? previous, MediaItem? next, Persona? persona) => new(
+        options.StationName,
+        string.IsNullOrWhiteSpace(persona?.PresenterName) ? options.Presenter.PresenterName : persona.PresenterName,
+        time, previous, next,
+        string.IsNullOrWhiteSpace(persona?.Character) ? null : persona.Character,
+        persona?.MaxWords);
+
+    private Persona? PersonaOf(LogItem item) =>
+        item.Persona is { } name ? personas?.All().FirstOrDefault(p => p.Name == name) : null;
 
     private async Task<(string Script, string Source)> WriteScriptAsync(BreakContext context, CancellationToken ct)
     {
@@ -99,10 +113,11 @@ public sealed class BreakRenderer(
             raw = await _template.WriteAsync(context, ct);
             source = _template.Name;
         }
-        var script = ScriptSanitizer.Clean(raw, options.Presenter.MaxWords);
+        int maxWords = context.MaxWords ?? options.Presenter.MaxWords;
+        var script = ScriptSanitizer.Clean(raw, maxWords);
         if (script.Length == 0)
         {
-            script = ScriptSanitizer.Clean(await _template.WriteAsync(context, ct), options.Presenter.MaxWords);
+            script = ScriptSanitizer.Clean(await _template.WriteAsync(context, ct), maxWords);
             source = _template.Name;
         }
         return (script, source);
@@ -112,11 +127,20 @@ public sealed class BreakRenderer(
     {
         Directory.CreateDirectory(_folder);
         var wav = Path.Combine(_folder, $"break-{DateTime.Now:yyyyMMdd-HHmmss}-{item.Id}.wav");
+        var persona = PersonaOf(item);
         string voice;
         try
         {
-            await primaryVoice.SynthesizeAsync(script, wav, ct);
-            voice = primaryVoice.Name;
+            if (persona?.VoiceId is long voiceId && primaryVoice is ProfileSpeechEngine profiles && profiles.Profile(voiceId) is { } profile)
+            {
+                await profiles.SynthesizeAsync(script, wav, profile, ct);
+                voice = profile.Name;
+            }
+            else
+            {
+                await primaryVoice.SynthesizeAsync(script, wav, ct);
+                voice = primaryVoice.Name;
+            }
         }
         catch (Exception ex) when (fallbackVoice is not null && !ct.IsCancellationRequested)
         {
@@ -135,8 +159,27 @@ public sealed class BreakRenderer(
             catch (InvalidDataException ex) { _log.LogWarning("Post-processing skipped: {Message}", ex.Message); }
         }
 
-        var media = library.Load(wav, MediaKind.Voice) with { Title = script, Artist = options.Presenter.PresenterName };
-        item.Voice = voice;
+        if ((persona?.BedCategoryId ?? options.Presenter.BedCategoryId) is long bedCategory)
+        {
+            var beds = library.InCategory(bedCategory);
+            if (beds.Count > 0)
+            {
+                var bed = beds[Random.Shared.Next(beds.Count)];
+                try
+                {
+                    BreakMixer.Mix(wav, bed.Path);
+                    voice += $" + bed {bed.Title}";
+                }
+                catch (Exception ex) when (ex is InvalidDataException or InvalidOperationException or IOException)
+                {
+                    _log.LogWarning("Music bed {Bed} skipped: {Message}", bed.Path, ex.Message);
+                }
+            }
+        }
+
+        string presenter = string.IsNullOrWhiteSpace(persona?.PresenterName) ? options.Presenter.PresenterName : persona.PresenterName;
+        var media = library.Load(wav, MediaKind.Voice) with { Title = script, Artist = presenter };
+        item.Voice = persona is null ? voice : $"{persona.Name}: {voice}";
         item.Media = media;
         item.BreakState = BreakState.Ready;
         _log.LogInformation("AI break {Id} ready ({Source} + {Voice}, {Duration:0.0}s): {Script}",

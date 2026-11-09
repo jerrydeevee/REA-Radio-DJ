@@ -322,6 +322,59 @@ public sealed class AudioTests : IDisposable
     }
 
     [BassFact]
+    public void Bed_plays_before_the_voice_dips_under_it_and_ends_with_it()
+    {
+        var options = Options();
+        var voice = Path.Combine(options.DataFolder, "voice.wav");
+        var bed = Path.Combine(options.DataFolder, "bed.wav");
+        // voice: 2 s, sound from 0.5 to 1.5 s
+        Directory.CreateDirectory(options.DataFolder);
+        File.WriteAllBytes(voice, VoiceProcessor.Write(24000, 1, VoiceProcessorTests.Voice()));
+        // a steady stereo tone of 1.5 s at 22050 Hz: shorter than needed (loops) and resampled by the mixer
+        File.WriteAllBytes(bed, VoiceProcessor.Write(22050, 2,
+            Enumerable.Range(0, 22050 * 3).Select(i => (float)(0.5 * Math.Sin(2 * Math.PI * 220 * (i / 2) / 22050.0))).ToArray()));
+
+        double start = BreakMixer.Mix(voice, bed);
+        var (rate, channels, x) = VoiceProcessor.Read(File.ReadAllBytes(voice));
+        Assert.Equal(BassRuntime.SampleRate, rate);
+        Assert.Equal(2, channels);
+        Assert.Equal(1.5, start);
+        Assert.Equal(1.5 + 2 + 0.25, x.Length / 2.0 / rate, 1);
+
+        double Peak(double from, double to) =>
+            Enumerable.Range((int)(from * rate) * 2, (int)((to - from) * rate) * 2).Max(i => Math.Abs(x[i]));
+        double preRoll = Peak(0.2, 1.0), underVoiceGap = Peak(1.6, 1.9), voiceOn = Peak(2.2, 2.8);
+        Assert.InRange(20 * Math.Log10(preRoll), -9.5, -6.5);        // bed alone at -8 dB
+        Assert.InRange(20 * Math.Log10(underVoiceGap), -22, -18);     // dipped to -20 dB before the voice sound starts
+        Assert.True(voiceOn > underVoiceGap * 2, "the voice is on top of the bed");
+        double right = Enumerable.Range((int)(2.2 * rate), (int)(0.6 * rate)).Max(f => Math.Abs(x[f * 2 + 1]));
+        Assert.True(right > underVoiceGap * 2, "a mono voice is heard on both channels");
+        Assert.True(Math.Abs(x[^2]) < 0.01, "the bed has faded out at the end");
+    }
+
+    [BassFact]
+    public async Task Break_uses_the_persona_of_its_air_time()
+    {
+        var options = Options();
+        var db = Db();
+        var library = new MediaLibrary(options, db);
+        var personas = new PersonaStore(db);
+        personas.Save(new Persona(0, "Nacht", true, TimedEvent.AllDays, "*", "Nachtuil", "Je bent rustig.", null, 12, null, 0));
+        var log = new PlayoutLog();
+        var brk = new LogItem { Type = LogItemType.AiBreak };
+        log.Append(brk);
+        var renderer = new BreakRenderer(options, log, library, new FixedWriter("een twee drie vier vijf zes zeven acht negen tien elf twaalf dertien veertien."),
+            new ToneVoice(), null, personas: personas);
+
+        await renderer.RenderAsync(brk, CancellationToken.None);
+        Assert.Equal(BreakState.Ready, brk.BreakState);
+        Assert.Equal("Nacht", brk.Persona);
+        Assert.StartsWith("Nacht: ", brk.Voice);
+        Assert.Equal("Nachtuil", brk.Media!.Artist);
+        Assert.Equal(12, brk.Script!.Split(' ').Length);   // the persona's word limit
+    }
+
+    [BassFact]
     public async Task Library_scan_makes_categories_from_folders_and_keeps_edited_cues()
     {
         var options = Options();

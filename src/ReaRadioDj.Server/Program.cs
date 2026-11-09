@@ -58,6 +58,7 @@ builder.Services.AddSingleton(sp => new IcecastStreamer(options.Stream, options.
 builder.Services.AddHttpClient();
 // Presenter voice: the default voice profile chooses Higgs TTS 3 (GPU server) or Windows speech.
 builder.Services.AddSingleton<VoiceStore>();
+builder.Services.AddSingleton<PersonaStore>();
 // Wish list (Spotify metadata only) and the music report for Buma/Stemra and Sena.
 builder.Services.AddSingleton<ReaRadioDj.Core.Library.Wishlist>();
 builder.Services.AddSingleton<ReaRadioDj.Core.Studio.MusicReport>();
@@ -81,7 +82,8 @@ builder.Services.AddSingleton(sp =>
     IScriptWriter llm = new OpenAiScriptWriter(http, p);   // settings can change at runtime; unconfigured → template
     ISpeechEngine? fallback = p.Tts.FallbackToSapi ? sp.GetRequiredService<SapiSpeechEngine>() : null;
     return new BreakRenderer(options, sp.GetRequiredService<PlayoutLog>(), sp.GetRequiredService<MediaLibrary>(),
-        llm, sp.GetRequiredService<ProfileSpeechEngine>(), fallback, sp.GetService<ILogger<BreakRenderer>>());
+        llm, sp.GetRequiredService<ProfileSpeechEngine>(), fallback, sp.GetService<ILogger<BreakRenderer>>(),
+        sp.GetRequiredService<PersonaStore>());
 });
 builder.Services.AddSingleton<AutomationService>();
 builder.Services.AddHostedService(sp => sp.GetRequiredService<AutomationService>());

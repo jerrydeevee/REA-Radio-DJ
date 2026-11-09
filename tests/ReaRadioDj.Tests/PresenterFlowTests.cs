@@ -1,4 +1,6 @@
+using ReaRadioDj.Core.Data;
 using ReaRadioDj.Core.Model;
+using ReaRadioDj.Core.Scheduling;
 using ReaRadioDj.Core.Presenter;
 
 namespace ReaRadioDj.Tests;
@@ -68,4 +70,43 @@ public sealed class VoiceProcessorTests : IDisposable
     [Fact]
     public void Server_root_accepts_both_forms() =>
         Assert.Equal(OpenAiScriptWriter.Root("http://localhost:11434/v1/"), OpenAiScriptWriter.Root("http://localhost:11434"));
+}
+
+public sealed class PersonaStoreTests : IDisposable
+{
+    private readonly string _dir = Path.Combine(Path.GetTempPath(), "rea-radio-dj-persona-" + Guid.NewGuid().ToString("N"));
+    private readonly StationDb _db;
+
+    public PersonaStoreTests()
+    {
+        Directory.CreateDirectory(_dir);
+        _db = new StationDb(Path.Combine(_dir, "station.db"));
+    }
+
+    public void Dispose()
+    {
+        Microsoft.Data.Sqlite.SqliteConnection.ClearAllPools();
+        try { Directory.Delete(_dir, true); } catch (IOException) { } catch (UnauthorizedAccessException) { }
+    }
+
+    [Fact]
+    public void First_matching_persona_wins_by_day_and_hour()
+    {
+        var st = new PersonaStore(_db);
+        int weekdays = 0b001_1111;
+        st.Save(new Persona(0, "Ochtend", true, weekdays, "6-9", "Joke", "Rustig", null, 30, null, 0));
+        st.Save(new Persona(0, "Weekend", true, TimedEvent.AllDays & ~weekdays, "*", "Bram", "", null, 400, null, 1));
+        st.Save(new Persona(0, "Uit", false, TimedEvent.AllDays, "*", "", "", null, null, null, 2));
+
+        Assert.Equal("Ochtend", st.For(new DateTime(2026, 11, 9, 7, 30, 0))?.Name);   // Monday 07:30
+        Assert.Null(st.For(new DateTime(2026, 11, 9, 12, 0, 0)));                      // Monday noon: general settings
+        Assert.Equal("Weekend", st.For(new DateTime(2026, 11, 14, 7, 30, 0))?.Name);   // Saturday
+        Assert.Equal(150, st.All().Single(p => p.Name == "Weekend").MaxWords);         // clamped
+
+        var o = st.All().Single(p => p.Name == "Ochtend");
+        st.Save(o with { Hours = "6-10" });
+        Assert.Equal("Ochtend", st.For(new DateTime(2026, 11, 9, 10, 15, 0))?.Name);
+        Assert.True(st.Delete(o.Id));
+        Assert.Equal(2, st.All().Count);
+    }
 }

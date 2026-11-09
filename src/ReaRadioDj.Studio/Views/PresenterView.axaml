@@ -1,6 +1,7 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:ReaRadioDj.Studio.ViewModels"
+             xmlns:c="using:ReaRadioDj.Contracts"
              x:Class="ReaRadioDj.Studio.Views.PresenterView"
              x:DataType="vm:PresenterTool">
   <ScrollViewer HorizontalScrollBarVisibility="Disabled">
@@ -52,7 +53,7 @@
       </ItemsControl>
 
       <!-- settings -->
-      <Expander Header="Instellingen: taalmodel en persona" HorizontalAlignment="Stretch" IsExpanded="True">
+      <Expander Header="Instellingen: taalmodel en persona" HorizontalAlignment="Stretch">
         <StackPanel Spacing="6">
           <CheckBox Content="AI-presentator aan" IsChecked="{Binding Enabled}" />
           <Grid ColumnDefinitions="110,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto">
@@ -87,10 +88,72 @@
           </Grid>
           <TextBlock Classes="muted" Text="{Binding LlmStatus}" TextWrapping="Wrap" />
           <CheckBox Content="Nabewerking van de stem (stilte weg, hoogdoorlaat, compressie, piekniveau)" IsChecked="{Binding PostProcess}" />
+          <DockPanel>
+            <TextBlock Text="Muziekbed" Width="110" VerticalAlignment="Center" />
+            <ComboBox ItemsSource="{Binding BedChoices}" SelectedItem="{Binding Bed}" MinWidth="220"
+                      ToolTip.Tip="Een categorie met beds (jingle-categorie). Elke break krijgt er willekeurig één onder de stem." />
+          </DockPanel>
           <WrapPanel>
             <Button Classes="small" Content="Opslaan" Command="{Binding SaveCommand}" Margin="0,0,4,0" />
             <Button Classes="small" Content="Proefscript schrijven" Command="{Binding TryCommand}" IsEnabled="{Binding !Trying}"
                     ToolTip.Tip="Slaat op en laat het taalmodel een tekst schrijven voor de volgende twee nummers. Er wordt niets ingesproken of uitgezonden." />
+          </WrapPanel>
+          <Border Classes="card" IsVisible="{Binding Trial, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+            <SelectableTextBlock Text="{Binding Trial}" TextWrapping="Wrap" FontStyle="Italic" />
+          </Border>
+        </StackPanel>
+      </Expander>
+
+      <!-- personas per daypart -->
+      <Expander Header="Persona's per dagdeel" HorizontalAlignment="Stretch">
+        <StackPanel Spacing="6">
+          <TextBlock Classes="muted" TextWrapping="Wrap"
+                     Text="Per dagdeel een eigen presentator: naam, karakter, stem, lengte en muziekbed. De eerste persona die past bij het uur van de break wordt gebruikt; lege velden nemen de algemene instellingen over." />
+          <DockPanel>
+            <TextBlock DockPanel.Dock="Right" Classes="muted" Text="{Binding PersonaNow}" VerticalAlignment="Center" Margin="6,0,0,0" />
+            <ComboBox ItemsSource="{Binding Personas}" SelectedItem="{Binding SelectedPersona}" MinWidth="220">
+              <ComboBox.ItemTemplate>
+                <DataTemplate x:DataType="c:PersonaDto">
+                  <TextBlock><Run Text="{Binding Name}" FontWeight="SemiBold" /><Run Text="  " /><Run Text="{Binding Describe}" Foreground="#8B95A5" /></TextBlock>
+                </DataTemplate>
+              </ComboBox.ItemTemplate>
+            </ComboBox>
+          </DockPanel>
+          <Grid ColumnDefinitions="110,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto">
+            <TextBlock Grid.Row="0" Text="Naam" VerticalAlignment="Center" />
+            <DockPanel Grid.Row="0" Grid.Column="1" Margin="0,0,0,4">
+              <CheckBox DockPanel.Dock="Right" Content="Actief" IsChecked="{Binding PersonaEnabled}" Margin="6,0,0,0" />
+              <TextBox Text="{Binding PersonaName}" Watermark="bijv. Ochtendshow" />
+            </DockPanel>
+            <TextBlock Grid.Row="1" Text="Dagen" VerticalAlignment="Center" />
+            <ItemsControl Grid.Row="1" Grid.Column="1" ItemsSource="{Binding PersonaDays}" Margin="0,0,0,4">
+              <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="vm:DayChoice">
+                  <CheckBox Content="{Binding Name}" IsChecked="{Binding On}" MinWidth="44" />
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+            <TextBlock Grid.Row="2" Text="Uren" VerticalAlignment="Center" />
+            <TextBox Grid.Row="2" Grid.Column="1" Text="{Binding PersonaHours}" Watermark="* = hele dag, of bijv. 6-9 of 6-9,16-18" Margin="0,0,0,4" />
+            <TextBlock Grid.Row="3" Text="Presentator" VerticalAlignment="Center" />
+            <TextBox Grid.Row="3" Grid.Column="1" Text="{Binding PersonaPresenter}" Watermark="leeg = algemene naam" Margin="0,0,0,4" />
+            <TextBlock Grid.Row="4" Text="Stem" VerticalAlignment="Center" />
+            <ComboBox Grid.Row="4" Grid.Column="1" ItemsSource="{Binding VoiceChoices}" SelectedItem="{Binding PersonaVoice}" MinWidth="220" Margin="0,0,0,4" />
+            <TextBlock Grid.Row="5" Text="Muziekbed" VerticalAlignment="Center" />
+            <ComboBox Grid.Row="5" Grid.Column="1" ItemsSource="{Binding BedChoices}" SelectedItem="{Binding PersonaBed}" MinWidth="220" Margin="0,0,0,4" />
+            <TextBlock Grid.Row="6" Text="Woorden" VerticalAlignment="Center" />
+            <NumericUpDown Grid.Row="6" Grid.Column="1" Value="{Binding PersonaMaxWords}" Minimum="10" Maximum="150" Increment="5" FormatString="0"
+                           Width="140" HorizontalAlignment="Left" Watermark="algemeen" Margin="0,0,0,4" />
+            <TextBlock Grid.Row="7" Text="Karakter" VerticalAlignment="Top" Margin="0,6,0,0" />
+            <TextBox Grid.Row="7" Grid.Column="1" Text="{Binding PersonaCharacter}" TextWrapping="Wrap" AcceptsReturn="True" MinHeight="60"
+                     Watermark="bijv. Je bent Joke, rustig en warm, voor de vroege ochtend. Je noemt af en toe dorpen uit Aa en Hunze." />
+          </Grid>
+          <WrapPanel>
+            <Button Classes="small" Content="Nieuw" Command="{Binding NewPersonaCommand}" Margin="0,0,4,0" />
+            <Button Classes="small" Content="Opslaan" Command="{Binding SavePersonaCommand}" Margin="0,0,4,0" />
+            <Button Classes="small" Content="Verwijderen" Command="{Binding DeletePersonaCommand}" Margin="0,0,4,0" />
+            <Button Classes="small" Content="Proefscript als deze persona" Command="{Binding TryPersonaCommand}" IsEnabled="{Binding !Trying}" />
           </WrapPanel>
           <Border Classes="card" IsVisible="{Binding Trial, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
             <SelectableTextBlock Text="{Binding Trial}" TextWrapping="Wrap" FontStyle="Italic" />

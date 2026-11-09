@@ -45,6 +45,12 @@ public sealed partial class BreakVm : ObservableObject
     }
 }
 
+/// <summary>An entry of a choice list with an optional id ("(geen)" / "(standaard)" have none).</summary>
+public sealed record Choice(long? Id, string Name)
+{
+    public override string ToString() => Name;
+}
+
 /// <summary>
 /// AI presenter: the upcoming breaks (approve, edit or rewrite the script before it is spoken) and the settings:
 /// language model (any OpenAI-compatible server, such as Ollama or LM Studio on this PC), persona, length, approval
@@ -72,8 +78,101 @@ public sealed partial class PresenterTool : StudioTool
     [ObservableProperty] private string _llmStatus = "";
     [ObservableProperty] private string _trial = "";
     [ObservableProperty] private bool _trying;
+    [ObservableProperty] private Choice? _bed;
 
-    protected override void OnFirstShow() => _ = LoadSettingsAsync();
+    public ObservableCollection<Choice> BedChoices { get; } = [];
+    public ObservableCollection<Choice> VoiceChoices { get; } = [];
+
+    // personas per daypart
+    public ObservableCollection<PersonaDto> Personas { get; } = [];
+    public ObservableCollection<DayChoice> PersonaDays { get; } = new(PlannerTool.DayNames.Select((n, i) => new DayChoice(i, n)));
+    [ObservableProperty] private PersonaDto? _selectedPersona;
+    [ObservableProperty] private string _personaName = "";
+    [ObservableProperty] private bool _personaEnabled = true;
+    [ObservableProperty] private string _personaHours = "*";
+    [ObservableProperty] private string _personaPresenter = "";
+    [ObservableProperty] private string _personaCharacter = "";
+    [ObservableProperty] private decimal? _personaMaxWords;
+    [ObservableProperty] private Choice? _personaVoice;
+    [ObservableProperty] private Choice? _personaBed;
+    [ObservableProperty] private string _personaNow = "";
+
+    partial void OnSelectedPersonaChanged(PersonaDto? value)
+    {
+        if (value is null) return;
+        PersonaName = value.Name;
+        PersonaEnabled = value.Enabled;
+        PersonaHours = value.Hours;
+        PersonaPresenter = value.PresenterName;
+        PersonaCharacter = value.Character;
+        PersonaMaxWords = value.MaxWords;
+        foreach (var d in PersonaDays) d.On = (value.Days & (1 << d.Index)) != 0;
+        PersonaVoice = VoiceChoices.FirstOrDefault(c => c.Id == value.VoiceId) ?? VoiceChoices.FirstOrDefault();
+        PersonaBed = BedChoices.FirstOrDefault(c => c.Id == value.BedCategoryId) ?? BedChoices.FirstOrDefault();
+    }
+
+    [RelayCommand]
+    private void NewPersona()
+    {
+        SelectedPersona = null;
+        PersonaName = "Nieuwe persona";
+        PersonaEnabled = true;
+        PersonaHours = "6-9";
+        PersonaPresenter = "";
+        PersonaCharacter = "";
+        PersonaMaxWords = null;
+        foreach (var d in PersonaDays) d.On = d.Index < 5;
+        PersonaVoice = VoiceChoices.FirstOrDefault();
+        PersonaBed = BedChoices.FirstOrDefault();
+    }
+
+    [RelayCommand]
+    private async Task SavePersona()
+    {
+        int days = PersonaDays.Where(d => d.On).Sum(d => 1 << d.Index);
+        var d = new PersonaDto(SelectedPersona?.Id ?? 0, PersonaName, PersonaEnabled, days, PersonaHours, PersonaPresenter, PersonaCharacter,
+            PersonaVoice?.Id, PersonaMaxWords is decimal w ? (int)w : null, PersonaBed?.Id, SelectedPersona?.Sort ?? Personas.Count);
+        bool ok = d.Id > 0
+            ? await Hub.Client.PutAsync($"/api/presenter/personas/{d.Id}", d)
+            : await Hub.Client.PostAsync("/api/presenter/personas", d);
+        if (ok) { Hub.Status = $"persona '{d.Name}' opgeslagen"; await LoadPersonasAsync(d.Name); }
+    }
+
+    [RelayCommand]
+    private async Task DeletePersona()
+    {
+        if (SelectedPersona is { } p && await Hub.Client.DeleteAsync($"/api/presenter/personas/{p.Id}")) await LoadPersonasAsync(null);
+    }
+
+    private async Task LoadPersonasAsync(string? select)
+    {
+        if (await Hub.Client.GetAsync<List<PersonaDto>>("/api/presenter/personas") is not { } list) return;
+        Personas.Clear();
+        foreach (var p in list) Personas.Add(p);
+        PersonaNow = list.FirstOrDefault(p => p.OnAirNow) is { } now ? $"nu: {now.Name}" : "nu: algemene instellingen";
+        SelectedPersona = Personas.FirstOrDefault(p => p.Name == select) ?? Personas.FirstOrDefault();
+    }
+
+    private async Task LoadChoicesAsync()
+    {
+        var cats = await Hub.Client.GetAsync<List<CategoryDto>>("/api/categories") ?? [];
+        BedChoices.Clear();
+        BedChoices.Add(new Choice(null, "(geen bed)"));
+        foreach (var c in cats.Where(c => c.Kind != "song")) BedChoices.Add(new Choice(c.Id, c.Name));
+        var voices = await Hub.Client.GetAsync<List<VoiceProfileDto>>("/api/voice/profiles") ?? [];
+        VoiceChoices.Clear();
+        VoiceChoices.Add(new Choice(null, "(standaardstem)"));
+        foreach (var v in voices) VoiceChoices.Add(new Choice(v.Id, v.Name));
+    }
+
+    protected override void OnFirstShow() => _ = LoadAllAsync();
+
+    private async Task LoadAllAsync()
+    {
+        await LoadChoicesAsync();
+        await LoadSettingsAsync();
+        await LoadPersonasAsync(null);
+    }
 
     protected override void OnState(StateDto s)
     {
@@ -125,6 +224,7 @@ public sealed partial class PresenterTool : StudioTool
         Temperature = (decimal)d.Temperature;
         RequireApproval = d.RequireApproval;
         PostProcess = d.PostProcess;
+        Bed = BedChoices.FirstOrDefault(c => c.Id == d.BedCategoryId) ?? BedChoices.FirstOrDefault();
         await RefreshModelsAsync();
     }
 
@@ -154,7 +254,7 @@ public sealed partial class PresenterTool : StudioTool
     private async Task Save()
     {
         var d = new PresenterSettingsDto(Enabled, PresenterName, Persona, (int)(MaxWords ?? 45), LlmBaseUrl, LlmModel ?? "", LlmApiKey,
-            (double)(Temperature ?? 0.8m), RequireApproval, PostProcess);
+            (double)(Temperature ?? 0.8m), RequireApproval, PostProcess, Bed?.Id);
         if (await Hub.Client.SendForAsync<PresenterSettingsDto>(HttpMethod.Put, "/api/presenter/settings", d) is { } saved)
         {
             LlmApiKey = saved.LlmApiKey;
@@ -172,9 +272,28 @@ public sealed partial class PresenterTool : StudioTool
         try
         {
             await Save();
-            var r = await Hub.Client.SendForAsync<ScriptTryDto>(HttpMethod.Post, "/api/presenter/try", null);
-            Trial = r is null ? "geen antwoord" : $"{r.Script}\n\n— {r.Source}, {r.Words} woorden, {r.Seconds:0.0} s";
+            var r = await Hub.Client.SendForAsync<ScriptTryDto>(HttpMethod.Post, "/api/presenter/try", new ScriptTryRequest(null));
+            Trial = r is null ? "geen antwoord" : Describe(r);
         }
         finally { Trying = false; }
     }
+
+    /// <summary>A trial script written as the selected persona (after saving it).</summary>
+    [RelayCommand]
+    private async Task TryPersona()
+    {
+        if (Trying) return;
+        Trying = true;
+        Trial = "schrijven…";
+        try
+        {
+            await SavePersona();
+            var r = await Hub.Client.SendForAsync<ScriptTryDto>(HttpMethod.Post, "/api/presenter/try", new ScriptTryRequest(SelectedPersona?.Id));
+            Trial = r is null ? "geen antwoord" : Describe(r);
+        }
+        finally { Trying = false; }
+    }
+
+    private static string Describe(ScriptTryDto r) =>
+        $"{r.Script}\n\n— {(r.Persona is null ? "" : r.Persona + ", ")}{r.Source}, {r.Words} woorden, {r.Seconds:0.0} s";
 }
