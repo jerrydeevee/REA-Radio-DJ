@@ -1,46 +1,69 @@
 # Rondeplan
 
-Ronde 1 staat (engine-service, desktop-studio, bibliotheek met cues, klokken en vaste tijden, spelers, cartwalls,
-mixer, as-run, REST/WebSocket, tray-icoon). Hieronder de volgende rondes. Alles wordt eigen ontwerp: functies zoals
-een professioneel playoutsysteem ze nodig heeft, zonder teksten, namen, schermen of bestandsformaten van andere
-pakketten over te nemen.
+Alles wordt eigen ontwerp: functies zoals een professioneel playoutsysteem ze nodig heeft, zonder teksten, namen,
+schermen of bestandsformaten van andere pakketten over te nemen.
 
-## Ronde 2a — Bediening, planning en regels (klaar)
+Legenda: ✅ klaar · 🟡 deels · ⬜ open
 
-| Onderdeel | Wat | Status |
-|---|---|---|
-| Commandobus | Eén lijst tekstcommando's (`NEXT`, `AUTO ON`, `CART 1 5`, `MIC TOGGLE` …) die overal hetzelfde werkt | klaar |
-| Bediening op afstand | TCP (regel-voor-regel, met wachtwoord), OSC (UDP), HTTP (`/api/command`) | klaar |
-| Sneltoetsen | Vrij in te stellen in de studio; elke toets stuurt een commando | klaar |
-| Planner-uitbreiding | Vaste tijden kunnen ook een commando uitvoeren, een herinnering tonen of een alarm geven | klaar |
-| Streambewaking | Externe stream (Icecast/SHOUTcast-URL) in een tijdvenster bewaken; is hij live, dan neemt hij het programma over (pauzeren) of speelt hij eroverheen | klaar |
-| Studio-UX | Aftelbalk die leegloopt (oranje bij 20 s, rood knipperend bij 10 s), intro-teller, grote aanraakknoppen (groen = start, rood = stop), weergaven Automatisering (rustig bewaken) en Live-assist (volledige studio) | klaar |
-| Scriptregels | Regels op basis van het vorige nummer: onderdrukken of uitstellen (bijv. niet twee keer dezelfde categorie, maximaal N op rij) | klaar |
+## Klaar
+
+| Onderdeel | Wat |
+|---|---|
+| ✅ Ronde 1 | Engine-service, desktop-studio (dockbaar, 1-3 schermen), bibliotheek met automatische cues en LUFS, klokken, weekgrid, vaste tijden, standby/PFL-spelers, 2 cartwalls, mixer met ducking, as-run, Icecast, REST/WebSocket, tray-icoon |
+| ✅ Ronde 2a | Commandobus (HTTP, TCP, OSC), sneltoetsen, planner-commando's/herinneringen/alarmen, scriptregels, externe streams bewaken |
+| ✅ Studio-UX | Aftelbalk (oranje 20 s, rood knipperend 10 s), intro-teller, aanraakknoppen, weergaven Automatisering/Live-assist |
+| ✅ Studioklok | Studio-, analoge en digitale klok, schaalbaar; grote tellers met flitskleur aan het einde |
+| ✅ Stem (Higgs TTS 3) | Stemprofielen (Higgs of Windows), stuurtags, variatie, klonen alleen met vastgelegde toestemming, proefopname op PFL, GPU- en serverstatus, server starten/stoppen vanuit de studio |
+
+## AI-presentator en stem — vervolg
+
+| Status | Onderdeel |
+|---|---|
+| ⬜ | Higgs-server installeren op de GPU (WSL + SGLang-Omni of vLLM-Omni, model ~4B downloaden) en koppelen via `ServerCommand` |
+| ⬜ | Taalmodel koppelen (Ollama/LM Studio lokaal of een API) voor de scripts; nu alleen sjabloonteksten |
+| ⬜ | Nabewerking: 24 → 48 kHz, hoogdoorlaat, compressie, loudness op stationsnorm |
+| ⬜ | Music bed onder de break, outro-element, talk-up tot de zang |
+| ⬜ | Persona's en dayparts (stem + stijl per tijdvak in een rooster) |
+| ⬜ | Script goedkeuren of bewerken vóór het renderen |
+| ⬜ | Controle met Whisper: klopt de gesproken tekst met het script |
+| ⬜ | Variabelen: weer, RSS/nieuws, luisteraarsberichten |
+| ⬜ | Referentiecodes per stem vooraf berekenen (sneller klonen) |
+| ⬜ | Andere stemmen als reserve (ElevenLabs, Azure) |
 
 ## Ronde 2b — Presentatie
 
-- **Voicetracking**: opnemen tussen twee items in de log, in drie stappen (start = vorige item loopt uit,
-  volgende = volgend item start, stop). Opnames als gewone items in de log; ook voor AI-breaks te gebruiken.
-- **Overgangseditor**: grafisch de overgang tussen twee items instellen tot op de milliseconde, met inserts
-  (voice-overs), volume-envelopes en direct opnemen. Wat je ziet en hoort, gaat de lucht in.
-- **Nieuwsbeheer**: nieuwsblokken, RSS-bronnen, tekst voor de presentator, nieuws-opener/-sluiter als vaste tijd.
+| Status | Onderdeel |
+|---|---|
+| ⬜ | Voicetracking: opnemen tussen twee logitems in drie stappen (start, volgende, stop) |
+| ⬜ | Overgangseditor met golfvormen, inserts en volume-envelopes |
+| ⬜ | Nieuwsbeheer: blokken, RSS-bronnen, opener/sluiter als vaste tijd |
 
 ## Ronde 3 — Koppelingen en reclame
 
-- **Externe planning**: logbestanden van muziekplanners importeren via instelbare import-profielen
-  (kolommen/vaste breedte/CSV), met automatisch aanmaken van planner-items; bibliotheek exporteren voor de
-  muziekplanner.
-- **Database-bibliotheken**: bibliotheek uit een eigen databasetabel of -view (ODBC) plus metadata-opzoeking.
-- **Reclamebeheer**: adverteerders, campagnes, spots, blokken; blokken automatisch in de overlay-planner;
-  bewijs van uitzending als basis voor facturatie; import van traffic-logs.
-- **Hardware-bediening**: MIDI, seriële I/O, GPIO-kaarten en mengtafelprotocollen (o.a. Ember+), via dezelfde
-  commandobus.
+| Status | Onderdeel |
+|---|---|
+| ⬜ | Externe muziekplanning: logs importeren met import-profielen, bibliotheek exporteren |
+| ⬜ | Database-bibliotheken (ODBC) en metadata-opzoeking |
+| ⬜ | Reclamebeheer: adverteerders, campagnes, blokken, bewijs van uitzending |
+| 🟡 | Hardware-bediening: commandobus staat; MIDI, serieel, GPIO-kaarten, Ember+, Livewire+ en mengtafels nog koppelen |
+| ⬜ | Rapportage auteursrechten (Buma/Stemra, Sena) |
 
 ## Ronde 4 — Meerdere studio's en op afstand
 
-- **Gebruikers en rechten**: gebruikers, profielen, rechten, wachtwoorden; per gebruiker eigen indelingen.
-- **Multi-studio**: een studio vanuit een andere bedienen (planner, log, mixer), master/slave met hartslag en
-  automatische overname.
-- **Centrale bibliotheek**: bibliotheekserver in het netwerk; studio's halen media op afstand.
-- **Voicetracking op afstand**: logsjabloon en audio synchroniseren naar thuis (gecomprimeerd), opnemen, terugsturen.
-- **Remote-app**: Android-tablet (bedienen) en telefoon (bewaken), op de bestaande API.
+| Status | Onderdeel |
+|---|---|
+| ⬜ | Gebruikers, rollen en rechten |
+| ⬜ | Multi-studio: master/slave met hartslag en automatische overname |
+| ⬜ | Centrale bibliotheekserver |
+| ⬜ | Voicetracking op afstand |
+| ⬜ | Remote-app: Android-tablet (bedienen) en telefoon (bewaken) |
+
+## Audio en techniek
+
+| Status | Onderdeel |
+|---|---|
+| ⬜ | ASIO-uitvoer |
+| ⬜ | Meerdere streamservers en codecs (AAC, Opus), HLS |
+| ⬜ | Opnemen (programma, mic) en automatische opname |
+| ⬜ | DSP/VST per kanaal, ReplayGain en BPM-detectie |
+| ⬜ | Watchdog en herstel na een crash |
