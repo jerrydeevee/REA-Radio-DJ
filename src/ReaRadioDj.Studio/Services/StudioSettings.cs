@@ -22,6 +22,11 @@ public sealed class StudioSettings
     /// <summary>Standby/PFL players: "wave" (waveform, cue markers, big counter) or "compact".</summary>
     public string PlayerStyle { get; set; } = "wave";
 
+    /// <summary>Colours of deck A (on air), B (next) and C (after that), also used in the log; colour of big counters.</summary>
+    public string[] DeckColors { get; set; } = ["#E5484D", "#F0B429", "#3FA7FF"];
+    public string CounterColor { get; set; } = "#F5F7FA";
+    public bool DecksHorizontal { get; set; } = true;
+
     /// <summary>Key (Avalonia gesture text, e.g. "F5", "Ctrl+B", "Shift+F1") → engine command.</summary>
     public Dictionary<string, string> Hotkeys { get; set; } = DefaultHotkeys();
 

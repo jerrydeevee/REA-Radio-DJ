@@ -17,6 +17,9 @@ public sealed partial class LogRow : ObservableObject
     public string TypeText => Type switch { "song" => "Muziek", "jingle" => "Jingle", "aiBreak" => "AI", _ => Type };
     [ObservableProperty] private string _startsAt = "";
     [ObservableProperty] private string _length = "";
+    /// <summary>Deck letter (B = next, C = after that) and its colour from the deck palette; empty for later items.</summary>
+    [ObservableProperty] private string _deck = "";
+    [ObservableProperty] private Avalonia.Media.IBrush? _deckBrush;
 }
 
 /// <summary>The on-air log: what plays now, what comes next (with start times) and what played.</summary>
@@ -77,6 +80,8 @@ public sealed partial class LogTool : StudioTool
         {
             Upcoming[i].StartsAt = s.Upcoming[i].StartsAt.ToString("HH:mm:ss");
             Upcoming[i].Length = StudioHub.Time(s.Upcoming[i].Length);
+            Upcoming[i].Deck = i < 2 ? DeckPalette.Letter(i + 1) : "";
+            Upcoming[i].DeckBrush = i < 2 ? DeckPalette.Brush(i + 1) : null;
         }
         var total = s.Upcoming.Sum(u => u.Length);
         Summary = $"{s.Upcoming.Count} items · {StudioHub.Time(total)}";

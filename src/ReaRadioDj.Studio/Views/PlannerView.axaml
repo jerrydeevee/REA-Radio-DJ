@@ -15,7 +15,7 @@
       <Button Classes="small" Content="Vernieuwen" Command="{Binding ReloadCommand}" />
       <Button Classes="small" Content="Log opnieuw plannen" Command="{Binding ReplanCommand}" ToolTip.Tip="Na het wijzigen van klokken of het grid" />
     </StackPanel>
-    <TabControl Classes="compact">
+    <TabControl Classes="compact" SelectedIndex="{Binding PlannerTab}">
       <!-- ============================================================ day overview -->
       <TabItem Header="Dag">
         <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled">
@@ -115,6 +115,61 @@
           </Grid>
         </Grid>
         </ScrollViewer>
+      </TabItem>
+
+      <!-- ============================================================ week agenda -->
+      <TabItem Header="Week">
+        <DockPanel>
+          <DockPanel DockPanel.Dock="Top" Margin="0,0,0,4">
+            <StackPanel DockPanel.Dock="Left" Orientation="Horizontal" Spacing="4">
+              <Button Classes="small" Content="◀" Command="{Binding PrevWeekCommand}" ToolTip.Tip="Vorige week" />
+              <Button Classes="small go" Content="Deze week" Command="{Binding TodayCommand}" />
+              <Button Classes="small" Content="▶" Command="{Binding NextWeekCommand}" ToolTip.Tip="Volgende week" />
+            </StackPanel>
+            <TextBlock Classes="muted" Text="Klik een blok om die dag te openen" DockPanel.Dock="Right" VerticalAlignment="Center" />
+            <TextBlock Text="{Binding WeekTitle}" FontWeight="SemiBold" VerticalAlignment="Center" Margin="10,0" />
+          </DockPanel>
+          <ScrollViewer HorizontalScrollBarVisibility="Auto">
+            <Grid ColumnDefinitions="30,*" MinWidth="720">
+              <StackPanel Grid.Column="0" Margin="0,24,0,0">
+                <ItemsControl ItemsSource="{x:Static vm:PlannerTool.WeekHours}">
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate><TextBlock Classes="mono muted" Height="26" FontSize="11" Text="{Binding}" /></DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+              </StackPanel>
+              <ItemsControl Grid.Column="1" ItemsSource="{Binding WeekDays}">
+                <ItemsControl.ItemsPanel><ItemsPanelTemplate><UniformGrid Columns="7" Rows="1" /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate x:DataType="vm:WeekDayVm">
+                    <StackPanel Margin="1,0">
+                      <Border Height="22" Margin="0,0,0,2" CornerRadius="3" Background="#1A2029"
+                              BorderThickness="0,0,0,2" BorderBrush="{Binding IsToday, Converter={x:Static vm:Brushes.Active}}">
+                        <TextBlock Text="{Binding Title}" HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="12" FontWeight="SemiBold" />
+                      </Border>
+                      <ItemsControl ItemsSource="{Binding Blocks}">
+                        <ItemsControl.ItemTemplate>
+                          <DataTemplate x:DataType="vm:WeekBlockVm">
+                            <Button Height="{Binding Height}" Margin="0,0,0,2" Padding="5,3" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
+                                    HorizontalContentAlignment="Left" VerticalContentAlignment="Top" Background="{Binding Brush}"
+                                    BorderThickness="2" BorderBrush="{Binding IsNow, Converter={x:Static vm:Brushes.Active}}" CornerRadius="3"
+                                    Command="{Binding $parent[UserControl].DataContext.OpenBlockCommand}" CommandParameter="{Binding}">
+                              <StackPanel>
+                                <TextBlock Text="{Binding Span}" Classes="mono" FontSize="10" Foreground="White" Opacity="0.85" />
+                                <TextBlock Text="{Binding Name}" FontWeight="SemiBold" Foreground="White" TextWrapping="Wrap" />
+                                <TextBlock Text="{Binding Events}" FontSize="10" Foreground="White" Opacity="0.85" />
+                              </StackPanel>
+                            </Button>
+                          </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                      </ItemsControl>
+                    </StackPanel>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+            </Grid>
+          </ScrollViewer>
+        </DockPanel>
       </TabItem>
 
       <!-- ============================================================ clocks -->

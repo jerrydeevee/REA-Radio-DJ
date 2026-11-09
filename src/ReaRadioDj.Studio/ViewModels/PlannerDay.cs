@@ -28,6 +28,27 @@ public sealed class DayBlockVm(string name, IBrush brush, string span, IReadOnly
     public bool IsNow { get; } = now;
 }
 
+/// <summary>A programme block in the week agenda: as tall as its number of hours.</summary>
+public sealed class WeekBlockVm(DateTime date, int start, string name, string span, IBrush brush, double height, bool now, int events)
+{
+    public DateTime Date { get; } = date;
+    public int Start { get; } = start;
+    public string Name { get; } = name;
+    public string Span { get; } = span;
+    public IBrush Brush { get; } = brush;
+    public double Height { get; } = height;
+    public bool IsNow { get; } = now;
+    public string Events { get; } = events > 0 ? $"{events} vaste tijd{(events == 1 ? "" : "en")}" : "";
+}
+
+/// <summary>One day column in the week agenda.</summary>
+public sealed class WeekDayVm(string title, bool today, IReadOnlyList<WeekBlockVm> blocks)
+{
+    public string Title { get; } = title;
+    public bool IsToday { get; } = today;
+    public IReadOnlyList<WeekBlockVm> Blocks { get; } = blocks;
+}
+
 /// <summary>One line in the agenda of the selected day or hour.</summary>
 public sealed record DayLine(string Time, string Text, string Detail, IBrush Brush);
 
@@ -44,6 +65,54 @@ public sealed partial class PlannerTool
     public ObservableCollection<DayBlockVm> DayBlocks { get; } = [];
     public ObservableCollection<DayLine> DayAgenda { get; } = [];
     public ObservableCollection<DayLine> HourLines { get; } = [];
+    public ObservableCollection<WeekDayVm> WeekDays { get; } = [];
+    public static IReadOnlyList<string> WeekHours { get; } = Enumerable.Range(0, 24).Select(h => $"{h:00}").ToList();
+    public const double HourHeight = 26;
+    [ObservableProperty] private string _weekTitle = "";
+    [ObservableProperty] private int _plannerTab;
+
+    [RelayCommand] private void PrevWeek() => DayDate = (DayDate ?? DateTime.Today).AddDays(-7);
+    [RelayCommand] private void NextWeek() => DayDate = (DayDate ?? DateTime.Today).AddDays(7);
+
+    /// <summary>Click on a block in the week: open that day and hour in the Day tab.</summary>
+    [RelayCommand]
+    private void OpenBlock(WeekBlockVm? b)
+    {
+        if (b is null) return;
+        _selectedHour = b.Start;
+        DayDate = b.Date;
+        BuildDay();
+        PlannerTab = 0;
+    }
+
+    private void BuildWeek()
+    {
+        var date = (DayDate ?? DateTime.Today).Date;
+        var monday = date.AddDays(-DayIndex(date));
+        WeekTitle = $"week {ISOWeek.GetWeekOfYear(monday)} · {monday.ToString("d MMM", Dutch)} – {monday.AddDays(6).ToString("d MMM yyyy", Dutch)}";
+        var now = DateTime.Now;
+        WeekDays.Clear();
+        for (int d = 0; d < 7; d++)
+        {
+            var day = monday.AddDays(d);
+            bool today = day == DateTime.Today;
+            var events = EventsOn(day).ToList();
+            var blocks = new List<WeekBlockVm>();
+            int start = 0;
+            while (start < 24)
+            {
+                var clock = ClockAt(day, start);
+                int end = start;
+                while (end + 1 < 24 && ClockAt(day, end + 1)?.Id == clock?.Id) end++;
+                int count = end - start + 1;
+                blocks.Add(new WeekBlockVm(day, start, clock?.Name ?? "vrije rotatie", count == 24 ? "hele dag" : $"{start:00}:00–{(end + 1) % 24:00}:00",
+                    Brushes.FromHex(clock?.Color, "#334155"), count * HourHeight - 2, today && now.Hour >= start && now.Hour <= end,
+                    events.Count(e => e.Hour >= start && e.Hour <= end)));
+                start = end + 1;
+            }
+            WeekDays.Add(new WeekDayVm(day.ToString("ddd d MMM", Dutch), today, blocks));
+        }
+    }
     [ObservableProperty] private DateTime? _dayDate = DateTime.Today;
     [ObservableProperty] private string _dayTitle = "";
     [ObservableProperty] private string _hourTitle = "";
@@ -116,6 +185,7 @@ public sealed partial class PlannerTool
             DayAgenda.Add(new DayLine(w.Hours.Trim() == "*" ? "hele dag" : $"uur {w.Hours}", w.Name,
                 w.Mode == "overlay" ? "externe stream (overlay)" : "externe stream (neemt over)", Brushes.FromHex("#2DD4BF")));
         BuildHour();
+        BuildWeek();
     }
 
     private void BuildHour()

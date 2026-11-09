@@ -16,6 +16,7 @@ public sealed class DockFactory : Factory
     /// <summary>Every window the studio has: id, menu name, constructor.</summary>
     public static readonly IReadOnlyList<(string Id, string Name, Func<StudioTool> Create)> Windows =
     [
+        ("decks", "Live-decks (A · B · C)", () => new DeckTool()),
         ("log", "Programmalog", () => new LogTool()),
         ("standby", "Standby-spelers", () => new StandbyTool()),
         ("pfl", "PFL / voorbeluisteren", () => new PflTool()),
@@ -83,6 +84,8 @@ public sealed class DockFactory : Factory
         {
             Id = "center", Proportion = 0.43, Orientation = Orientation.Vertical,
             VisibleDockables = CreateList<IDockable>(
+                Tools("dock-decks", "decks"),
+                new ProportionalDockSplitter(),
                 Tools("dock-log", "log", "asrun"),
                 new ProportionalDockSplitter(),
                 Tools("dock-editor", "cues", "presenter", "voice", "messages", "control")),
