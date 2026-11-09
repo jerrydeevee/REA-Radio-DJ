@@ -46,7 +46,7 @@ Legenda: ✅ klaar · 🟡 deels · ⬜ open
 
 | Status | Onderdeel |
 |---|---|
-| ⬜ | Externe muziekplanning: logs importeren met import-profielen, bibliotheek exporteren |
+| ✅ | Externe muziekplanning: logs importeren met import-profielen, bibliotheek exporteren |
 | ⬜ | Database-bibliotheken (ODBC) en metadata-opzoeking |
 | ✅ | Reclamebeheer: adverteerders, campagnes, blokken, bewijs van uitzending |
 | 🟡 | Hardware-bediening: commandobus staat; MIDI, serieel, GPIO-kaarten, Ember+, Livewire+ en mengtafels nog koppelen |

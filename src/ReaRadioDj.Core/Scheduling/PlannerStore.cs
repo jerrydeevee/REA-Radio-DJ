@@ -27,10 +27,14 @@ public sealed class PlannerStore : IScheduleSource
     {
         _db = db;
         _library = library;
+        Imports = new Import.ImportStore(db);
         Reload();
     }
 
     public event Action? Changed;
+
+    /// <summary>Logs imported from an external music scheduler; an imported hour replaces the clock of that hour.</summary>
+    public Import.ImportStore Imports { get; }
 
     public IReadOnlyList<ClockDef> Clocks { get { lock (_gate) return _clocks.Values.OrderBy(c => c.Name).ToList(); } }
     public IReadOnlyList<TimedEvent> Events { get { lock (_gate) return _events; } }
@@ -51,6 +55,17 @@ public sealed class PlannerStore : IScheduleSource
 
     public IReadOnlyList<MediaItem> InCategory(long categoryId) => _library.InCategory(categoryId);
     public MediaItem? Media(long id) => _library.Get(id);
+
+    public IReadOnlyList<(int Index, MediaItem Media)> Imported(DateTime hour)
+    {
+        var items = Imports.Hour(hour);
+        if (items.Count == 0) return [];
+        var now = DateTime.Now;
+        var result = new List<(int, MediaItem)>(items.Count);
+        foreach (var (index, id) in items)
+            if (_library.GetDetails(id) is { } d && d.IsPlayable(now)) result.Add((index, d.Media));
+        return result;
+    }
     public MediaKind? CategoryKind(long categoryId) => _library.Categories.FirstOrDefault(c => c.Id == categoryId)?.Kind;
 
     // ---------------------------------------------------------------- loading

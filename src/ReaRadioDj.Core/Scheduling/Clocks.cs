@@ -22,6 +22,8 @@ public interface IScheduleSource
     MediaKind? CategoryKind(long categoryId);
     /// <summary>Planning rules that look at the previous items (none by default).</summary>
     IReadOnlyList<ScriptRule> Rules => [];
+    /// <summary>Items of an imported log for this hour (position, playable item); empty when the hour follows its clock.</summary>
+    IReadOnlyList<(int Index, MediaItem Media)> Imported(DateTime hour) => [];
 }
 
 /// <summary>
@@ -51,6 +53,27 @@ public sealed class ClockScheduler(RotationOptions rotation, bool presenterEnabl
         while (log.Count < rotation.LookAhead && added < 100 && skipped < 50)
         {
             var at = now.AddSeconds(secondsToNext + log.Upcoming.Sum(i => i.PlannedLength));
+            var hourStart = new DateTime(at.Year, at.Month, at.Day, at.Hour, 0, 0);
+
+            // An imported log takes the place of the clock; when its lines run out before the hour ends, the clock fills up.
+            var imported = source.Imported(hourStart);
+            if (imported.Count > 0)
+            {
+                int last = log.LastImported(hourStart);
+                var next = imported.FirstOrDefault(i => i.Index > last);
+                if (next.Media is { } media)
+                {
+                    log.Append(new LogItem
+                    {
+                        Type = TypeOf(media.Kind), Media = media, Origin = $"import: {hourStart:HH}:00",
+                        ImportHour = hourStart, ImportIndex = next.Index,
+                    });
+                    CurrentClock = "import";
+                    added++;
+                    continue;
+                }
+            }
+
             var clock = source.ClockFor(at);
             if (clock is null || clock.Rules.Count == 0) return added;
 

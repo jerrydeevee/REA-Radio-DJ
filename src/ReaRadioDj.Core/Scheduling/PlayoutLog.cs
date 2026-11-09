@@ -44,6 +44,20 @@ public sealed class PlayoutLog
     private static string? Block(string? origin) =>
         origin?.IndexOf(" · ", StringComparison.Ordinal) is int i and > 0 ? origin[..i] : null;
 
+    /// <summary>Items the planner added (from a clock or an imported log): these are thrown away and planned again.</summary>
+    public static bool IsPlanned(string origin) =>
+        origin.StartsWith("klok", StringComparison.Ordinal) || origin.StartsWith("import", StringComparison.Ordinal);
+
+    /// <summary>
+    /// Position after the last item of an imported hour that is already in the log or was played (-1 = none yet), so
+    /// the planner goes on with the right line, also after replanning or a restart.
+    /// </summary>
+    public int LastImported(DateTime hour)
+    {
+        lock (_gate)
+            return _upcoming.Concat(_history).Where(i => i.ImportHour == hour).Select(i => i.ImportIndex).DefaultIfEmpty(-1).Max();
+    }
+
     /// <summary>Takes the next item off the top of the log and moves it into the history.</summary>
     public LogItem? TakeNext()
     {
@@ -84,7 +98,7 @@ public sealed class PlayoutLog
     public int ClearPlanned()
     {
         int n;
-        lock (_gate) n = _upcoming.RemoveAll(i => i.Origin.StartsWith("klok", StringComparison.Ordinal));
+        lock (_gate) n = _upcoming.RemoveAll(i => IsPlanned(i.Origin));
         if (n > 0) Changed?.Invoke();
         return n;
     }

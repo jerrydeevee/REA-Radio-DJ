@@ -39,6 +39,7 @@ public sealed class DockFactory : Factory
         ("transition", "Overgangen", () => new TransitionTool()),
         ("news", "Nieuws", () => new NewsTool()),
         ("ads", "Reclame", () => new AdsTool()),
+        ("import", "Log-import", () => new ImportTool()),
     ];
 
     public static StudioTool Create(string id) => Windows.First(w => w.Id == id).Create();
@@ -81,7 +82,7 @@ public sealed class DockFactory : Factory
         {
             Id = "left", Proportion = 0.27, Orientation = Orientation.Vertical,
             VisibleDockables = CreateList<IDockable>(
-                Tools("dock-library", "library", "planner", "news", "ads"),
+                Tools("dock-library", "library", "planner", "news", "ads", "import"),
                 new ProportionalDockSplitter(),
                 Tools("dock-players", "standby", "pfl")),
         };

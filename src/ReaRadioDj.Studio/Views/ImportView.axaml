@@ -1,0 +1,163 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:ReaRadioDj.Studio.ViewModels"
+             xmlns:c="using:ReaRadioDj.Contracts"
+             x:Class="ReaRadioDj.Studio.Views.ImportView"
+             x:DataType="vm:ImportTool">
+  <TabControl Classes="compact" Margin="4">
+
+    <!-- reading a log file -->
+    <TabItem Header="Importeren">
+      <DockPanel Margin="2,4,2,2">
+        <StackPanel DockPanel.Dock="Top" Spacing="5">
+          <WrapPanel>
+            <TextBlock Text="Profiel" VerticalAlignment="Center" Margin="0,0,6,4" />
+            <ComboBox ItemsSource="{Binding Profiles}" SelectedItem="{Binding UseProfile}" MinWidth="170" Margin="0,0,10,4" PlaceholderText="geen profiel">
+              <ComboBox.ItemTemplate>
+                <DataTemplate x:DataType="c:ImportProfileDto"><TextBlock Text="{Binding Name}" /></DataTemplate>
+              </ComboBox.ItemTemplate>
+            </ComboBox>
+            <TextBlock Text="datum" VerticalAlignment="Center" Margin="0,0,6,4" />
+            <CalendarDatePicker SelectedDate="{Binding Date}" FirstDayOfWeek="Monday" Margin="0,0,10,4" />
+            <TextBlock Text="eerste uur" VerticalAlignment="Center" Margin="0,0,6,4"
+                       ToolTip.Tip="Alleen nodig als het profiel geen tijd heeft: de regels lopen dan door vanaf dit uur." />
+            <ComboBox ItemsSource="{Binding HoursOfDay}" SelectedItem="{Binding StartHour}" Width="70" Margin="0,0,0,4" />
+          </WrapPanel>
+          <WrapPanel>
+            <Button x:Name="Pick" Classes="small" Content="Logbestand kiezen…" Margin="0,0,4,4" />
+            <Button Classes="small" Content="Controleren" Command="{Binding CheckCommand}" IsEnabled="{Binding HasFile}" Margin="0,0,4,4" />
+            <Button Classes="small go" Content="Importeren" Command="{Binding ApplyCommand}" IsEnabled="{Binding HasFile}" Margin="0,0,10,4" />
+            <TextBlock Classes="muted" Text="{Binding FileName}" VerticalAlignment="Center" Margin="0,0,0,4" />
+          </WrapPanel>
+          <TextBlock Text="{Binding Summary}" TextWrapping="Wrap" />
+          <TextBlock Foreground="#F0B429" TextWrapping="Wrap" Text="{Binding Problem}" IsVisible="{Binding Problem, Converter={x:Static ObjectConverters.IsNotNull}}" />
+        </StackPanel>
+        <ListBox ItemsSource="{Binding Lines}" Margin="0,6,0,0">
+          <ListBox.ItemTemplate>
+            <DataTemplate x:DataType="c:ImportLineDto">
+              <Grid ColumnDefinitions="36,110,*">
+                <TextBlock Classes="muted" FontSize="11" Text="{Binding Number}" VerticalAlignment="Center" />
+                <TextBlock Grid.Column="1" FontSize="12" Text="{Binding Hour}" VerticalAlignment="Center" />
+                <StackPanel Grid.Column="2">
+                  <TextBlock FontSize="12" Text="{Binding Match}" IsVisible="{Binding Match, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                  <TextBlock FontSize="11" Foreground="#F0B429" Text="{Binding Problem}" IsVisible="{Binding Problem, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                  <TextBlock Classes="muted" FontSize="10" FontFamily="Consolas" Text="{Binding Text}" TextTrimming="CharacterEllipsis" />
+                </StackPanel>
+              </Grid>
+            </DataTemplate>
+          </ListBox.ItemTemplate>
+        </ListBox>
+      </DockPanel>
+    </TabItem>
+
+    <!-- import profiles -->
+    <TabItem Header="Profielen">
+      <Grid Margin="2,4,2,2" ColumnDefinitions="140,*">
+        <DockPanel Grid.Column="0" Margin="0,0,8,0">
+          <Button DockPanel.Dock="Bottom" Classes="small" Content="Nieuw profiel" Command="{Binding NewProfileCommand}" Margin="0,4,0,0" HorizontalAlignment="Stretch" />
+          <ListBox ItemsSource="{Binding Profiles}" SelectedItem="{Binding Selected}">
+            <ListBox.ItemTemplate>
+              <DataTemplate x:DataType="c:ImportProfileDto"><TextBlock Text="{Binding Name}" FontWeight="SemiBold" TextWrapping="Wrap" /></DataTemplate>
+            </ListBox.ItemTemplate>
+          </ListBox>
+        </DockPanel>
+        <ScrollViewer Grid.Column="1" HorizontalScrollBarVisibility="Disabled">
+          <StackPanel Spacing="6">
+            <Border Classes="card">
+              <StackPanel Spacing="5">
+                <TextBox Text="{Binding Name}" Watermark="naam, bijv. de muziekplanner van de studio" />
+                <ComboBox ItemsSource="{Binding Layouts}" SelectedIndex="{Binding Layout}" HorizontalAlignment="Stretch" />
+                <WrapPanel>
+                  <ComboBox ItemsSource="{Binding Separators}" SelectedIndex="{Binding Separator}" IsVisible="{Binding IsDelimited}" Width="140" Margin="0,0,10,4" />
+                  <CheckBox Content="eerste regel zijn kopjes" IsChecked="{Binding HasHeader}" Margin="0,0,10,4" />
+                </WrapPanel>
+                <DockPanel>
+                  <TextBlock DockPanel.Dock="Left" Text="sla regels over die beginnen met" VerticalAlignment="Center" Margin="0,0,6,0" />
+                  <TextBox Text="{Binding SkipPrefix}" Watermark="bijv. # of ;" />
+                </DockPanel>
+              </StackPanel>
+            </Border>
+
+            <Border Classes="card">
+              <StackPanel Spacing="4">
+                <TextBlock Classes="muted" FontSize="11" TextWrapping="Wrap"
+                           Text="Waar staat elk veld? 0 = niet in het bestand. Gezocht wordt op bestand, dan nummer, dan bestandsnaam, dan artiest + titel." />
+                <ItemsControl ItemsSource="{Binding Fields}">
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="vm:ImportField">
+                      <StackPanel Orientation="Horizontal" Spacing="6" Margin="0,0,0,4">
+                        <TextBlock Text="{Binding Name}" Width="64" VerticalAlignment="Center" />
+                        <StackPanel Orientation="Horizontal" Spacing="6" IsVisible="{Binding Delimited}">
+                          <TextBlock Text="kolom" VerticalAlignment="Center" />
+                          <NumericUpDown Value="{Binding Column}" Minimum="0" Maximum="99" Increment="1" FormatString="0" Width="100" />
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal" Spacing="6" IsVisible="{Binding Fixed}">
+                          <TextBlock Text="vanaf teken" VerticalAlignment="Center" />
+                          <NumericUpDown Value="{Binding Start}" Minimum="0" Maximum="999" Increment="1" FormatString="0" Width="100" />
+                          <TextBlock Text="lengte" VerticalAlignment="Center" />
+                          <NumericUpDown Value="{Binding Length}" Minimum="0" Maximum="999" Increment="1" FormatString="0" Width="100" />
+                        </StackPanel>
+                      </StackPanel>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+                <DockPanel>
+                  <TextBlock DockPanel.Dock="Left" Text="tijd als" Width="64" VerticalAlignment="Center" Margin="0,0,6,0" />
+                  <TextBox Text="{Binding TimeFormat}" Width="120" HorizontalAlignment="Left" ToolTip.Tip="bijv. HH:mm:ss, HH:mm of HHmmss" />
+                </DockPanel>
+              </StackPanel>
+            </Border>
+
+            <Border Classes="card">
+              <StackPanel Spacing="4">
+                <TextBlock Classes="muted" FontSize="11" TextWrapping="Wrap"
+                           Text="Ziet de muziekplanner de muziek op een andere plek? Dan wordt het begin van het pad vervangen." />
+                <TextBox Text="{Binding PathFrom}" Watermark="pad in het logbestand, bijv. \\server\muziek\" />
+                <TextBox Text="{Binding PathTo}" Watermark="wordt hier, bijv. D:\Muziek\" />
+              </StackPanel>
+            </Border>
+
+            <WrapPanel>
+              <Button Classes="small go" Content="Opslaan" Command="{Binding SaveProfileCommand}" Margin="0,0,4,4" />
+              <Button Classes="small" Content="Verwijderen" Command="{Binding DeleteProfileCommand}" Margin="0,0,4,4" />
+            </WrapPanel>
+            <TextBlock Foreground="#F0B429" TextWrapping="Wrap" Text="{Binding ProfileProblem}" IsVisible="{Binding ProfileProblem, Converter={x:Static ObjectConverters.IsNotNull}}" />
+          </StackPanel>
+        </ScrollViewer>
+      </Grid>
+    </TabItem>
+
+    <!-- imported hours and the library export -->
+    <TabItem Header="Uren">
+      <DockPanel Margin="2,4,2,2">
+        <StackPanel DockPanel.Dock="Top" Spacing="5">
+          <TextBlock Classes="muted" FontSize="11" TextWrapping="Wrap"
+                     Text="Deze uren spelen de geïmporteerde log in plaats van hun klok. Raakt een uur op voordat het voorbij is, dan vult de klok aan." />
+          <WrapPanel>
+            <Button Classes="small" Content="Vernieuwen" Command="{Binding RefreshHoursCommand}" Margin="0,0,4,4" />
+            <Button Classes="small" Content="Uur verwijderen" Command="{Binding DeleteHourCommand}" Margin="0,0,4,4" />
+            <Button Classes="small" Content="Hele dag verwijderen" Command="{Binding DeleteDayCommand}" Margin="0,0,4,4" />
+          </WrapPanel>
+        </StackPanel>
+        <Border DockPanel.Dock="Bottom" Classes="card" Margin="0,6,0,0">
+          <StackPanel Spacing="4">
+            <TextBlock Text="Bibliotheek voor de muziekplanner" FontWeight="SemiBold" />
+            <TextBlock Classes="muted" FontSize="11" TextWrapping="Wrap"
+                       Text="Alle nummers en jingles als CSV: nummer, bestand, artiest, titel, album, categorie, soort, lengte, intro, outro." />
+            <Button x:Name="Export" Classes="small" Content="Bibliotheek exporteren…" HorizontalAlignment="Left" />
+          </StackPanel>
+        </Border>
+        <ListBox ItemsSource="{Binding Hours}" SelectedItem="{Binding SelectedHour}">
+          <ListBox.ItemTemplate>
+            <DataTemplate x:DataType="vm:ImportedHourRow">
+              <StackPanel>
+                <TextBlock Text="{Binding When}" FontWeight="SemiBold" />
+                <TextBlock Classes="muted" FontSize="11" Text="{Binding Detail}" TextTrimming="CharacterEllipsis" />
+              </StackPanel>
+            </DataTemplate>
+          </ListBox.ItemTemplate>
+        </ListBox>
+      </DockPanel>
+    </TabItem>
+  </TabControl>
+</UserControl>

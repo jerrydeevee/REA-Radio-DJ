@@ -178,6 +178,26 @@ public sealed record NewsBlockDto(long Id, string Name, bool Enabled, int Days, 
     long? OpenerId, long? CloserId, string Source, string Folder, int MaxAgeMinutes, long? CategoryId, string Feeds, int MaxHeadlines,
     string? When = null, DateTime? Next = null);
 
+/// <summary>Where a field is: Column for separated files (1 = first), Start and Length for fixed width. Zeros = not used.</summary>
+public sealed record ImportColumnDto(int Column = 0, int Start = 0, int Length = 0);
+
+/// <summary>How the logs of an external music scheduler look. Layout "delimited" or "fixed"; Separator ";", ",", "\t" or "|".</summary>
+public sealed record ImportProfileDto(long Id, string Name, string Layout, string Separator, bool HasHeader, string SkipPrefix,
+    ImportColumnDto Time, string TimeFormat, ImportColumnDto File, ImportColumnDto MediaId, ImportColumnDto Artist, ImportColumnDto Title,
+    string PathFrom, string PathTo);
+
+/// <summary>A log file to read with a profile. Date "yyyy-MM-dd"; StartHour is used when the profile has no time field.</summary>
+public sealed record ImportRequestDto(long ProfileId, string Text, string Date, int StartHour, string? FileName);
+
+/// <summary>One line of an imported log: the hour it goes in, what it was matched to, or the problem.</summary>
+public sealed record ImportLineDto(int Number, string? Hour, string Text, string? Match, string? Problem);
+
+/// <summary>The outcome of reading (and, when Applied, storing) a log file.</summary>
+public sealed record ImportResultDto(bool Applied, int Lines, int Matched, List<ImportLineDto> Items, List<string> Hours, string? Error);
+
+/// <summary>An hour that plays an imported log instead of its clock.</summary>
+public sealed record ImportedHourDto(string Date, int Hour, int Items, string Source);
+
 /// <summary>A spot of a campaign (a library item) with its playing length.</summary>
 public sealed record AdSpotDto(long MediaId, string Name, double Length);
 

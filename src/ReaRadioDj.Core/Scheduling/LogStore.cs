@@ -27,7 +27,7 @@ public sealed class LogStore(string path)
     public sealed record Entry(LogItemType Type, MediaItem? Media, string Origin, bool UseHook = false, double StartEarly = 0,
         BreakState BreakState = BreakState.Pending, string? Persona = null, string? Extra = null, bool OutroAdded = false,
         double? CheckScore = null, string? Script = null, string? ScriptSource = null, string? Voice = null, Transition? MixIn = null,
-        long? AdPlayId = null);
+        long? AdPlayId = null, DateTime? ImportHour = null, int ImportIndex = 0);
 
     public sealed record Snapshot(DateTime SavedAt, List<Entry> Upcoming, List<Entry> History);
 
@@ -68,7 +68,7 @@ public sealed class LogStore(string path)
         var upcoming = new List<LogItem>();
         foreach (var e in snap.Upcoming)
         {
-            if (stale && e.Origin.StartsWith("klok", StringComparison.Ordinal)) { replanned++; continue; }
+            if (stale && PlayoutLog.IsPlanned(e.Origin)) { replanned++; continue; }
             if (FromEntry(e) is { } item) upcoming.Add(item);
             else missing++;
         }
@@ -80,7 +80,7 @@ public sealed class LogStore(string path)
 
     private static Entry ToEntry(LogItem i) => new(i.Type, i.Media, i.Origin, i.UseHook, i.StartEarly,
         i.BreakState == BreakState.Rendering ? BreakState.Pending : i.BreakState, i.Persona, i.Extra, i.OutroAdded, i.CheckScore,
-        i.Script, i.ScriptSource, i.Voice, i.MixIn, i.AdPlayId);
+        i.Script, i.ScriptSource, i.Voice, i.MixIn, i.AdPlayId, i.ImportHour, i.ImportIndex);
 
     private static LogItem? FromEntry(Entry e)
     {
@@ -106,6 +106,8 @@ public sealed class LogStore(string path)
             Voice = rerender ? null : e.Voice,
             MixIn = e.MixIn is { Insert: { } ins } t && !File.Exists(ins.Path) ? t with { Insert = null } : e.MixIn,
             AdPlayId = e.AdPlayId,
+            ImportHour = e.ImportHour,
+            ImportIndex = e.ImportIndex,
         };
     }
 }

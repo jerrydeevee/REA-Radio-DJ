@@ -111,6 +111,9 @@ public sealed class LogItem
     public Transition? MixIn { get; set; }
     /// <summary>Ad spot: the proof-of-broadcast record it belongs to.</summary>
     public long? AdPlayId { get; init; }
+    /// <summary>Imported log: the hour and the position within that hour this item comes from.</summary>
+    public DateTime? ImportHour { get; init; }
+    public int ImportIndex { get; init; }
 
     // AI-break bookkeeping
     public BreakState BreakState { get; set; } = BreakState.Pending;

@@ -10,7 +10,7 @@ namespace ReaRadioDj.Core.Data;
 /// </summary>
 public sealed class StationDb
 {
-    public const int SchemaVersion = 9;
+    public const int SchemaVersion = 10;
     private readonly string _connectionString;
 
     public StationDb(string path)
@@ -108,7 +108,7 @@ public sealed class StationDb
         {
             cmd.Transaction = tx;
             // Each step brings the database one version further; a new database runs them all.
-            cmd.CommandText = (version < 1 ? SchemaV1 : "") + (version < 2 ? SchemaV2 : "") + (version < 3 ? SchemaV3 : "") + (version < 4 ? SchemaV4 : "") + (version < 5 ? SchemaV5 : "") + (version < 6 ? SchemaV6 : "") + (version < 7 ? SchemaV7 : "") + (version < 8 ? SchemaV8 : "") + (version < 9 ? SchemaV9 : "") + $"PRAGMA user_version = {SchemaVersion};";
+            cmd.CommandText = (version < 1 ? SchemaV1 : "") + (version < 2 ? SchemaV2 : "") + (version < 3 ? SchemaV3 : "") + (version < 4 ? SchemaV4 : "") + (version < 5 ? SchemaV5 : "") + (version < 6 ? SchemaV6 : "") + (version < 7 ? SchemaV7 : "") + (version < 8 ? SchemaV8 : "") + (version < 9 ? SchemaV9 : "") + (version < 10 ? SchemaV10 : "") + $"PRAGMA user_version = {SchemaVersion};";
             cmd.ExecuteNonQuery();
         }
         tx.Commit();
@@ -119,6 +119,23 @@ public sealed class StationDb
     /// tracks from a Spotify playlist with their metadata, matched against the library.
     /// </summary>
     /// <summary>A backup voice per voice profile, used when that voice fails.</summary>
+    /// <summary>External music scheduling: import profiles and the imported hours ("yyyy-MM-ddTHH").</summary>
+    private const string SchemaV10 = """
+        CREATE TABLE IF NOT EXISTS import_profiles(
+            id INTEGER PRIMARY KEY,
+            name TEXT NOT NULL,
+            settings TEXT NOT NULL
+        );
+        CREATE TABLE IF NOT EXISTS imported_items(
+            hour TEXT NOT NULL,
+            position INTEGER NOT NULL,
+            media_id INTEGER NOT NULL,
+            line TEXT NOT NULL,
+            source TEXT NOT NULL,
+            PRIMARY KEY(hour, position)
+        );
+        """;
+
     /// <summary>Commercials: campaigns with their spots, ad breaks on fixed times, and the proof of broadcast.</summary>
     private const string SchemaV9 = """
         CREATE TABLE IF NOT EXISTS ad_campaigns(
