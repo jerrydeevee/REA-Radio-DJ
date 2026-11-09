@@ -10,7 +10,7 @@ namespace ReaRadioDj.Core.Data;
 /// </summary>
 public sealed class StationDb
 {
-    public const int SchemaVersion = 11;
+    public const int SchemaVersion = 12;
     private readonly string _connectionString;
 
     public StationDb(string path)
@@ -108,7 +108,7 @@ public sealed class StationDb
         {
             cmd.Transaction = tx;
             // Each step brings the database one version further; a new database runs them all.
-            cmd.CommandText = (version < 1 ? SchemaV1 : "") + (version < 2 ? SchemaV2 : "") + (version < 3 ? SchemaV3 : "") + (version < 4 ? SchemaV4 : "") + (version < 5 ? SchemaV5 : "") + (version < 6 ? SchemaV6 : "") + (version < 7 ? SchemaV7 : "") + (version < 8 ? SchemaV8 : "") + (version < 9 ? SchemaV9 : "") + (version < 10 ? SchemaV10 : "") + (version < 11 ? SchemaV11 : "") + $"PRAGMA user_version = {SchemaVersion};";
+            cmd.CommandText = (version < 1 ? SchemaV1 : "") + (version < 2 ? SchemaV2 : "") + (version < 3 ? SchemaV3 : "") + (version < 4 ? SchemaV4 : "") + (version < 5 ? SchemaV5 : "") + (version < 6 ? SchemaV6 : "") + (version < 7 ? SchemaV7 : "") + (version < 8 ? SchemaV8 : "") + (version < 9 ? SchemaV9 : "") + (version < 10 ? SchemaV10 : "") + (version < 11 ? SchemaV11 : "") + (version < 12 ? SchemaV12 : "") + $"PRAGMA user_version = {SchemaVersion};";
             cmd.ExecuteNonQuery();
         }
         tx.Commit();
@@ -119,6 +119,34 @@ public sealed class StationDb
     /// tracks from a Spotify playlist with their metadata, matched against the library.
     /// </summary>
     /// <summary>A backup voice per voice profile, used when that voice fails.</summary>
+    /// <summary>Hardware: MIDI, serial and Livewire devices, the commands their buttons start and the tallies they show.</summary>
+    private const string SchemaV12 = """
+        CREATE TABLE IF NOT EXISTS hw_devices(
+            id INTEGER PRIMARY KEY,
+            name TEXT NOT NULL,
+            enabled INTEGER NOT NULL DEFAULT 1,
+            kind INTEGER NOT NULL,
+            port TEXT NOT NULL,
+            baud INTEGER NOT NULL DEFAULT 9600,
+            password TEXT NOT NULL DEFAULT ''
+        );
+        CREATE TABLE IF NOT EXISTS hw_inputs(
+            id INTEGER PRIMARY KEY,
+            device_id INTEGER NOT NULL,
+            trigger TEXT NOT NULL,
+            on_command TEXT NOT NULL DEFAULT '',
+            off_command TEXT NOT NULL DEFAULT ''
+        );
+        CREATE TABLE IF NOT EXISTS hw_outputs(
+            id INTEGER PRIMARY KEY,
+            device_id INTEGER NOT NULL,
+            state INTEGER NOT NULL,
+            target TEXT NOT NULL DEFAULT '',
+            on_text TEXT NOT NULL DEFAULT '',
+            off_text TEXT NOT NULL DEFAULT ''
+        );
+        """;
+
     /// <summary>Music catalogues in other databases (ODBC); media.source tells which source a library item came from.</summary>
     private const string SchemaV11 = """
         CREATE TABLE IF NOT EXISTS db_sources(

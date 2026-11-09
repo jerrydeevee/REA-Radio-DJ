@@ -18,4 +18,7 @@
     <ProjectReference Include="..\ReaRadioDj.Core\ReaRadioDj.Core.csproj" />
     <ProjectReference Include="..\ReaRadioDj.Contracts\ReaRadioDj.Contracts.csproj" />
   </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="System.IO.Ports" Version="10.0.14" />
+  </ItemGroup>
 </Project>

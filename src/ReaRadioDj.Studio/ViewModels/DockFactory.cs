@@ -41,6 +41,7 @@ public sealed class DockFactory : Factory
         ("ads", "Reclame", () => new AdsTool()),
         ("import", "Log-import", () => new ImportTool()),
         ("sources", "Databronnen", () => new SourcesTool()),
+        ("hardware", "Hardware", () => new HardwareTool()),
     ];
 
     public static StudioTool Create(string id) => Windows.First(w => w.Id == id).Create();
@@ -95,7 +96,7 @@ public sealed class DockFactory : Factory
                 new ProportionalDockSplitter(),
                 Tools("dock-log", "log", "asrun"),
                 new ProportionalDockSplitter(),
-                Tools("dock-editor", "cues", "transition", "presenter", "voice", "messages", "control")),
+                Tools("dock-editor", "cues", "transition", "presenter", "voice", "messages", "control", "hardware")),
         };
         var right = new ProportionalDock
         {

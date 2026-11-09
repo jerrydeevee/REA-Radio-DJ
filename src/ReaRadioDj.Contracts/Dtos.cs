@@ -178,6 +178,24 @@ public sealed record NewsBlockDto(long Id, string Name, bool Enabled, int Days, 
     long? OpenerId, long? CloserId, string Source, string Folder, int MaxAgeMinutes, long? CategoryId, string Feeds, int MaxHeadlines,
     string? When = null, DateTime? Next = null);
 
+/// <summary>A hardware device. Kind "midi", "serial" or "livewire"; Port is the MIDI name, COM port or host.</summary>
+public sealed record HwDeviceDto(long Id, string Name, bool Enabled, string Kind, string Port, int Baud, string Password,
+    bool Connected = false, string Status = "");
+
+/// <summary>A trigger ("note 60", "cc 7", "gpi 3.1" or a serial line) and the commands for on and off.</summary>
+public sealed record HwInputDto(long Id, long DeviceId, string Trigger, string OnCommand, string OffCommand);
+
+/// <summary>A tally: State "mic", "onair" or "auto"; Target "note 60", "cc 20" or "gpo 4.2"; serial texts for on and off.</summary>
+public sealed record HwOutputDto(long Id, long DeviceId, string State, string Target, string OnText, string OffText);
+
+/// <summary>Something a device reported, and what it started.</summary>
+public sealed record HwEventDto(DateTime Time, long DeviceId, string Device, string Key, bool On, string Result);
+
+public sealed record HwPortsDto(List<string> Midi, List<string> Serial);
+
+/// <summary>Everything the hardware window shows.</summary>
+public sealed record HwOverviewDto(List<HwDeviceDto> Devices, List<HwInputDto> Inputs, List<HwOutputDto> Outputs, Dictionary<string, bool> States);
+
 /// <summary>A music catalogue in another database (ODBC). Kind "song" or "jingle"; SyncMinutes 0 = only on request.</summary>
 public sealed record DbSourceDto(long Id, string Name, bool Enabled, string Connection, string Query, string Kind, int SyncMinutes,
     string PathFrom, string PathTo, DateTime? LastSync = null, string LastResult = "", bool Busy = false);

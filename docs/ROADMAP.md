@@ -49,7 +49,8 @@ Legenda: ✅ klaar · 🟡 deels · ⬜ open
 | ✅ | Externe muziekplanning: logs importeren met import-profielen, bibliotheek exporteren |
 | ✅ | Database-bibliotheken (ODBC) en metadata-opzoeking |
 | ✅ | Reclamebeheer: adverteerders, campagnes, blokken, bewijs van uitzending |
-| 🟡 | Hardware-bediening: commandobus staat; MIDI, serieel, GPIO-kaarten, Ember+, Livewire+ en mengtafels nog koppelen |
+| ✅ | Hardware-bediening: MIDI (knoppen, faders, lampjes), seriële poort (GPIO-kaarten, relais) en Livewire GPIO (LWRP) koppelen aan de commandobus; lampjes voor microfoon, op de lucht en automatisch (venster Hardware) |
+| ⬜ | Ember+ (Lawo) en mengtafel-specifieke koppelingen |
 | 🟡 | Rapportage auteursrechten: CSV staat; kolomindeling nog afstemmen op het sjabloon van de NLPO / Buma/Stemra / Sena |
 
 ## Ronde 4 — Meerdere studio's en op afstand
