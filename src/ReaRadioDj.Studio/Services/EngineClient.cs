@@ -88,6 +88,17 @@ public sealed class EngineClient : IDisposable
         catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or JsonException) { Error?.Invoke($"{path}: {ex.Message}"); return default; }
     }
 
+    /// <summary>Runs a text command on the engine (the same commands as TCP, OSC and the planner).</summary>
+    public async Task<CommandResultDto> RunCommandAsync(string text)
+    {
+        try
+        {
+            using var response = await _http.PostAsJsonAsync("/api/command", new { text }, Wire.Json);
+            return await response.Content.ReadFromJsonAsync<CommandResultDto>(Wire.Json) ?? new CommandResultDto(false, $"{(int)response.StatusCode}");
+        }
+        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or JsonException) { return new CommandResultDto(false, ex.Message); }
+    }
+
     private async Task<bool> SendAsync(HttpMethod method, string path, object? body)
     {
         try

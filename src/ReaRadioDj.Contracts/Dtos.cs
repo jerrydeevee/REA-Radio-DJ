@@ -125,9 +125,23 @@ public sealed record GridCellDto(int Day, int Hour, long ClockId);
 public sealed record GridUpdateRequest(IReadOnlyList<GridCellDto> Cells, long? ClockId);
 
 /// <summary>Days: bit 0 = Monday ... bit 6 = Sunday. Hours: "*" or "7-9,12". Timing: hard, soft, overlay.
-/// Action: playMedia, playCategory, aiBreak.</summary>
+/// Action: playMedia, playCategory, aiBreak, command, reminder, alert. Text: the command(s) (one per line or split by
+/// ';'), or the text of the reminder/alert.</summary>
 public sealed record TimedEventDto(long Id, string Name, bool Enabled, int Days, string Hours, int Minute, int Second,
-    string Timing, string Action, long? CategoryId, long? MediaId, string? Description = null, DateTime? Next = null);
+    string Timing, string Action, long? CategoryId, long? MediaId, string? Description = null, DateTime? Next = null,
+    string? Text = null);
+
+/// <summary>Kind: maxInRow, notAfter. Action: suppress, defer. Empty category = any.</summary>
+public sealed record ScriptRuleDto(long Id, string Name, bool Enabled, string Kind, long? FromCategoryId, long? ToCategoryId,
+    int Count, string Action, string? Description = null);
+
+/// <summary>Mode: takeover, overlay. Live: the stream is on air right now.</summary>
+public sealed record StreamWatchDto(long Id, string Name, bool Enabled, string Url, int Days, string Hours, string Mode,
+    int CheckSeconds, string? Description = null, string? State = null);
+
+public sealed record CommandInfoDto(string Syntax, string Description, string Group);
+
+public sealed record CommandResultDto(bool Ok, string Text);
 
 // ---------------------------------------------------------------- reporting
 

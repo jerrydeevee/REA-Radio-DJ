@@ -6,15 +6,22 @@ namespace ReaRadioDj.Core.Scheduling;
 /// <summary>Hard = interrupts what plays at the exact time; Soft = plays after the current item; Overlay = plays on top.</summary>
 public enum EventTiming { Hard = 0, Soft = 1, Overlay = 2 }
 
-public enum EventAction { PlayMedia = 0, PlayCategory = 1, AiBreak = 2 }
+/// <summary>
+/// PlayMedia / PlayCategory / AiBreak put audio on air. Command runs a command from the command bus (for example
+/// "STREAM START" or "AUTO OFF"); Reminder shows a message in the studio; Alert shows a warning that stands out.
+/// </summary>
+public enum EventAction { PlayMedia = 0, PlayCategory = 1, AiBreak = 2, Command = 3, Reminder = 4, Alert = 5 }
 
 /// <summary>
 /// A fixed-time event, for example the news at :00:00 every hour. Days is a bit mask (bit 0 = Monday ... bit 6 =
 /// Sunday); Hours is "*" or a list such as "7-9,12,17-19".
 /// </summary>
 public sealed record TimedEvent(long Id, string Name, bool Enabled, int Days, string Hours, int Minute, int Second,
-    EventTiming Timing, EventAction Action, long? CategoryId, long? MediaId)
+    EventTiming Timing, EventAction Action, long? CategoryId, long? MediaId, string Text = "")
 {
+    /// <summary>True for events that do something other than playing audio.</summary>
+    public bool IsControl => Action is EventAction.Command or EventAction.Reminder or EventAction.Alert;
+
     public const int AllDays = 0b111_1111;
 
     public static int DayBit(DayOfWeek d) => 1 << (((int)d + 6) % 7);
@@ -92,6 +99,8 @@ public interface IEventSink
     void InsertNext(LogItem item);
     void PlayOverlay(LogItem item);
     void Notify(string message);
+    /// <summary>Runs a command, reminder or alert event.</summary>
+    void Execute(TimedEvent e);
 }
 
 public sealed record UpcomingEvent(long Id, string Name, DateTime At, EventTiming Timing, bool Prepared);
@@ -120,6 +129,14 @@ public sealed class EventRunner
                 if (at is not DateTime t) continue;
                 var key = (e.Id, t);
                 if (_fired.Contains(key)) continue;
+
+                if (e.IsControl)
+                {
+                    if (now < t) continue;
+                    _fired.Add(key);
+                    sink.Execute(e);
+                    continue;
+                }
 
                 if (t - now <= PrepareLead && !_prepared.ContainsKey(key))
                 {

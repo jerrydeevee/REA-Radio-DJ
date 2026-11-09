@@ -115,6 +115,17 @@ public sealed class PlayoutLog
         }
     }
 
+    /// <summary>The last items played plus everything planned, oldest first (used by the script rules).</summary>
+    public IReadOnlyList<LogItem> Sequence(int recent = 10)
+    {
+        lock (_gate)
+        {
+            var list = _history.Take(recent).Reverse().ToList();
+            list.AddRange(_upcoming);
+            return list;
+        }
+    }
+
     public int SongsSinceLast(LogItemType type)
     {
         lock (_gate)

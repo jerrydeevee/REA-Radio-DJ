@@ -15,6 +15,11 @@ public static class Brushes
     public static readonly IValueConverter Active = new FuncValueConverter<bool, IBrush>(on => on ? Green : Off);
     public static readonly IValueConverter Highlight = new FuncValueConverter<bool, IBrush>(on => on ? new SolidColorBrush(Color.Parse("#1F3A2C")) : Transparent);
 
+    /// <summary>True when the value equals the converter parameter (for style classes).</summary>
+    public static readonly IValueConverter Is = new FuncValueConverter<string?, string?, bool>((v, p) => string.Equals(v, p, StringComparison.Ordinal));
+
+    public static readonly IValueConverter ValidBorder = new FuncValueConverter<bool, IBrush>(ok => ok ? Off : Red);
+
     public static readonly IValueConverter EnabledOpacity = new FuncValueConverter<bool, double>(on => on ? 1.0 : 0.45);
     public static readonly IValueConverter Seconds = new FuncValueConverter<double, string>(s => Services.StudioHub.Time(s));
 

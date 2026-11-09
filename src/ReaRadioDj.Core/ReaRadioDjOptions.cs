@@ -18,6 +18,20 @@ public sealed class ReaRadioDjOptions
     public RotationOptions Rotation { get; set; } = new();
     public PresenterOptions Presenter { get; set; } = new();
     public StreamOptions Stream { get; set; } = new();
+    public ControlOptions Control { get; set; } = new();
+}
+
+/// <summary>Remote control over the network. Commands are the same everywhere (see /api/commands).</summary>
+public sealed class ControlOptions
+{
+    /// <summary>127.0.0.1 = only this computer; 0.0.0.0 = the whole network.</summary>
+    public string BindAddress { get; set; } = "127.0.0.1";
+    /// <summary>Line-based TCP (telnet-style). 0 = off.</summary>
+    public int TcpPort { get; set; } = 8601;
+    /// <summary>OSC over UDP (TouchOSC, Companion, lighting desks). 0 = off.</summary>
+    public int OscPort { get; set; } = 8602;
+    /// <summary>When set, a TCP client first sends "AUTH &lt;password&gt;".</summary>
+    public string Password { get; set; } = "";
 }
 
 public sealed class MixOptions

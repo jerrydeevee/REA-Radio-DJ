@@ -167,6 +167,7 @@ public class EventRunnerTests
         public void InsertNext(LogItem item) => Calls.Add($"next {item.Media?.Title}");
         public void PlayOverlay(LogItem item) => Calls.Add($"overlay {item.Media?.Title}");
         public void Notify(string message) => Calls.Add($"msg {message}");
+        public void Execute(TimedEvent e) => Calls.Add($"exec {e.Action} {e.Text}");
     }
 
     private static readonly DateTime Top = new(2026, 11, 9, 0, 0, 0);
@@ -272,6 +273,8 @@ public class ClockSchedulerTests
         public IReadOnlyList<MediaItem> InCategory(long categoryId) => categories.TryGetValue(categoryId, out var c) ? c.Items : [];
         public MediaItem? Media(long id) => categories.Values.SelectMany(c => c.Items).FirstOrDefault(m => m.Id == id);
         public MediaKind? CategoryKind(long categoryId) => categories.TryGetValue(categoryId, out var c) ? c.Kind : null;
+        public List<ScriptRule> RuleList { get; } = [];
+        public IReadOnlyList<ScriptRule> Rules => RuleList;
     }
 
     private static long _id;

@@ -115,11 +115,23 @@ public static class Snapshot
             Parse(r.Mode, RuleMode.Random), r.Note ?? "")).ToList());
 
     public static TimedEventDto Event(TimedEvent e, DateTime now) => new(e.Id, e.Name, e.Enabled, e.Days, e.Hours, e.Minute, e.Second,
-        Name(e.Timing), Name(e.Action), e.CategoryId, e.MediaId, e.Describe(), e.Enabled ? e.NextOccurrence(now) : null);
+        Name(e.Timing), Name(e.Action), e.CategoryId, e.MediaId, e.Describe(), e.Enabled ? e.NextOccurrence(now) : null, e.Text);
 
     public static TimedEvent Event(TimedEventDto e) => new(e.Id, string.IsNullOrWhiteSpace(e.Name) ? "Vast item" : e.Name, e.Enabled,
         e.Days, e.Hours ?? "*", e.Minute, e.Second, Parse(e.Timing, EventTiming.Hard), Parse(e.Action, EventAction.PlayCategory),
-        e.CategoryId, e.MediaId);
+        e.CategoryId, e.MediaId, e.Text ?? "");
+
+    public static ScriptRuleDto Rule(ScriptRule r, Func<long?, string> category) => new(r.Id, r.Name, r.Enabled, Name(r.Kind),
+        r.FromCategoryId, r.ToCategoryId, r.Count, Name(r.Action), r.Describe(category));
+
+    public static ScriptRule Rule(ScriptRuleDto r) => new(r.Id, string.IsNullOrWhiteSpace(r.Name) ? "Regel" : r.Name, r.Enabled,
+        Parse(r.Kind, RuleKind.MaxInRow), r.FromCategoryId, r.ToCategoryId, r.Count, Parse(r.Action, RuleAction.Suppress));
+
+    public static StreamWatchDto Watch(StreamWatch w, string? state) => new(w.Id, w.Name, w.Enabled, w.Url, w.Days, w.Hours,
+        Name(w.Mode), w.CheckSeconds, w.Describe(), state);
+
+    public static StreamWatch Watch(StreamWatchDto w) => new(w.Id, string.IsNullOrWhiteSpace(w.Name) ? "Externe stream" : w.Name,
+        w.Enabled, (w.Url ?? "").Trim(), w.Days, w.Hours ?? "*", Parse(w.Mode, WatchMode.Takeover), w.CheckSeconds);
 
     public static AsRunDto AsRun(AsRunEntry e) => new(e.Id, e.Started, e.Ended, e.Source, e.Type, e.MediaId, e.Path, e.Artist, e.Title,
         e.Category, e.Planned, e.Played, e.Ai, e.Note);

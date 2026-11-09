@@ -25,6 +25,7 @@ public sealed class AutomationService(
     BreakRenderer breaks,
     IcecastStreamer streamer,
     MessageCenter messages,
+    IServiceProvider services,
     ILogger<AutomationService> logger) : BackgroundService, IEventSink
 {
     private readonly ClockScheduler _scheduler = new(options.Rotation, options.Presenter.Enabled);
@@ -180,6 +181,26 @@ public sealed class AutomationService(
     }
 
     void IEventSink.Notify(string message) => messages.Info(message);
+
+    void IEventSink.Execute(TimedEvent e)
+    {
+        switch (e.Action)
+        {
+            case EventAction.Command:
+                foreach (var line in e.Text.Split(['\n', ';'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+                {
+                    var r = services.GetRequiredService<Remote.CommandBus>().Run(line, $"planner: {e.Name}");
+                    if (!r.Ok) messages.Warning($"{e.Name}: '{line}' mislukt ({r.Text})");
+                }
+                break;
+            case EventAction.Reminder:
+                messages.Info($"Herinnering: {(string.IsNullOrWhiteSpace(e.Text) ? e.Name : e.Text)}");
+                break;
+            case EventAction.Alert:
+                messages.Add("alarm", string.IsNullOrWhiteSpace(e.Text) ? e.Name : e.Text);
+                break;
+        }
+    }
 
     public override async Task StopAsync(CancellationToken ct)
     {

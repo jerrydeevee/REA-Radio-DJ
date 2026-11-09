@@ -30,6 +30,57 @@
     <Setter Property="Background" Value="{DynamicResource OnAirBrush}" />
     <Setter Property="Foreground" Value="White" />
   </Style>
+  <!-- Transport: big enough to hit with a finger in a hurry (44 px), clear colours: green = go, red = stop -->
+  <Style Selector=":is(Button).transport">
+    <Setter Property="MinHeight" Value="44" />
+    <Setter Property="MinWidth" Value="52" />
+    <Setter Property="FontSize" Value="15" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="Padding" Value="14,6" />
+    <Setter Property="VerticalContentAlignment" Value="Center" />
+    <Setter Property="HorizontalContentAlignment" Value="Center" />
+  </Style>
+  <Style Selector="Button.transport.go">
+    <Setter Property="Background" Value="#2F9E6A" />
+    <Setter Property="Foreground" Value="White" />
+  </Style>
+  <Style Selector="Button.transport.stop">
+    <Setter Property="Background" Value="#7A1F25" />
+    <Setter Property="Foreground" Value="White" />
+  </Style>
+  <Style Selector="ToggleButton.view">
+    <Setter Property="FontSize" Value="11" />
+    <Setter Property="Padding" Value="8,2" />
+    <Setter Property="MinWidth" Value="104" />
+    <Setter Property="HorizontalContentAlignment" Value="Center" />
+  </Style>
+  <Style Selector="ToggleButton.view:checked /template/ ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource AccentBrush}" />
+    <Setter Property="Foreground" Value="#0B0F14" />
+  </Style>
+
+  <!-- Countdown of the item on air: runs empty, amber in the last 20 s, red and flashing in the last 10 s -->
+  <Style Selector="ProgressBar.countdown">
+    <Setter Property="Foreground" Value="#3DBD7D" />
+    <Setter Property="Background" Value="#1A2029" />
+    <Setter Property="CornerRadius" Value="4" />
+  </Style>
+  <Style Selector="ProgressBar.countdown.warn">
+    <Setter Property="Foreground" Value="#F0B429" />
+  </Style>
+  <Style Selector="ProgressBar.countdown.end">
+    <Setter Property="Foreground" Value="#E5484D" />
+  </Style>
+  <Style Selector="ProgressBar.countdown.end.flash">
+    <Setter Property="Background" Value="#5A1A1E" />
+  </Style>
+  <Style Selector="TextBlock.remaining.warn">
+    <Setter Property="Foreground" Value="#F0B429" />
+  </Style>
+  <Style Selector="TextBlock.remaining.end">
+    <Setter Property="Foreground" Value="#E5484D" />
+  </Style>
+
   <Style Selector="TabControl.compact > TabItem">
     <Setter Property="FontSize" Value="14" />
     <Setter Property="MinHeight" Value="30" />

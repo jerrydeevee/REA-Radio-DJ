@@ -14,12 +14,16 @@ internal sealed class Clip
     {
         Media = media;
         From = from;
-        To = to;
+        To = IsUrl(media.Path) ? double.MaxValue : to; // a live stream has no end position
         Loop = loop;
         _gain = gain;
-        Handle = BassRuntime.Check(
-            BASS_StreamCreateFile(false, media.Path, 0, 0, BASS_STREAM_DECODE | BASS_SAMPLE_FLOAT | BASS_UNICODE),
-            $"BASS_StreamCreateFile({Path.GetFileName(media.Path)})");
+        Handle = IsUrl(media.Path)
+            ? BassRuntime.Check(
+                BASS_StreamCreateURL(media.Path, 0, BASS_STREAM_DECODE | BASS_SAMPLE_FLOAT | BASS_UNICODE | BASS_STREAM_BLOCK, IntPtr.Zero, IntPtr.Zero),
+                $"BASS_StreamCreateURL({media.Path})")
+            : BassRuntime.Check(
+                BASS_StreamCreateFile(false, media.Path, 0, 0, BASS_STREAM_DECODE | BASS_SAMPLE_FLOAT | BASS_UNICODE),
+                $"BASS_StreamCreateFile({Path.GetFileName(media.Path)})");
         if (from > 0) BASS_ChannelSetPosition(Handle, BASS_ChannelSeconds2Bytes(Handle, from), BASS_POS_BYTE);
         BASS_ChannelSetAttribute(Handle, BASS_ATTRIB_VOL, fadeIn > 0 ? 0 : gain);
         BassRuntime.Check(BASS_Mixer_StreamAddChannel(strip.Handle, Handle, BASS_MIXER_CHAN_NORAMPIN | (paused ? BASS_MIXER_CHAN_PAUSE : 0)),
@@ -27,6 +31,10 @@ internal sealed class Clip
         if (fadeIn > 0) BASS_ChannelSlideAttribute(Handle, BASS_ATTRIB_VOL, gain, (uint)(fadeIn * 1000));
         Started = DateTime.Now;
     }
+
+    /// <summary>An http(s) address is played as an internet stream (no seeking, plays until the stream ends).</summary>
+    public static bool IsUrl(string path) =>
+        path.StartsWith("http://", StringComparison.OrdinalIgnoreCase) || path.StartsWith("https://", StringComparison.OrdinalIgnoreCase);
 
     public MediaItem Media { get; }
     public int Handle { get; }
@@ -338,12 +346,15 @@ public sealed class StudioPlayers
         Pfl = new ManualPlayer("pfl", "PFL", router, router.Strip(AudioRouter.PflStrip), lufs);
         Carts = new ClipBank(router, router.Strip(AudioRouter.CartStrip), lufs);
         Overlays = new ClipBank(router, router.Strip(AudioRouter.OverlayStrip), lufs);
+        // External live streams that take over the program play on the automation strip (the engine is paused then).
+        Live = new ClipBank(router, router.Strip(AudioRouter.LogStrip), lufs);
     }
 
     public IReadOnlyList<ManualPlayer> Standby { get; }
     public ManualPlayer Pfl { get; }
     public ClipBank Carts { get; }
     public ClipBank Overlays { get; }
+    public ClipBank Live { get; }
 
     public ManualPlayer? Find(string id) => id == "pfl" ? Pfl : Standby.FirstOrDefault(p => p.Id == id);
 }

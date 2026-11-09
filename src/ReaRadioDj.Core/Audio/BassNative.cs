@@ -30,6 +30,8 @@ internal static partial class BassNative
     public const uint BASS_STREAM_AUTOFREE = 0x40000;
     public const uint BASS_STREAM_DECODE = 0x200000;
     public const uint BASS_UNICODE = 0x80000000;
+    /// <summary>Internet stream: download in small blocks, no seeking (live streams).</summary>
+    public const uint BASS_STREAM_BLOCK = 0x100000;
 
     public const uint BASS_ACTIVE_STOPPED = 0;
     public const uint BASS_ACTIVE_PLAYING = 1;
@@ -69,6 +71,9 @@ internal static partial class BassNative
     [LibraryImport(Bass)]
     [return: MarshalAs(UnmanagedType.Bool)]
     public static partial bool BASS_GetDeviceInfo(uint device, out BASS_DEVICEINFO info);
+
+    [LibraryImport(Bass, EntryPoint = "BASS_StreamCreateURL", StringMarshalling = StringMarshalling.Utf16)]
+    public static partial int BASS_StreamCreateURL(string url, uint offset, uint flags, IntPtr proc, IntPtr user);
 
     [LibraryImport(Bass, EntryPoint = "BASS_StreamCreateFile", StringMarshalling = StringMarshalling.Utf16)]
     public static partial int BASS_StreamCreateFile([MarshalAs(UnmanagedType.Bool)] bool mem, string file, ulong offset, ulong length, uint flags);

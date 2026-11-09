@@ -20,6 +20,8 @@ public sealed class PlannerStore : IScheduleSource
     private Dictionary<long, ClockDef> _clocks = [];
     private Dictionary<(int, int), long> _grid = [];
     private IReadOnlyList<TimedEvent> _events = [];
+    private IReadOnlyList<ScriptRule> _rules = [];
+    private IReadOnlyList<StreamWatch> _watches = [];
 
     public PlannerStore(StationDb db, MediaLibrary library)
     {
@@ -32,6 +34,8 @@ public sealed class PlannerStore : IScheduleSource
 
     public IReadOnlyList<ClockDef> Clocks { get { lock (_gate) return _clocks.Values.OrderBy(c => c.Name).ToList(); } }
     public IReadOnlyList<TimedEvent> Events { get { lock (_gate) return _events; } }
+    public IReadOnlyList<ScriptRule> Rules { get { lock (_gate) return _rules; } }
+    public IReadOnlyList<StreamWatch> StreamWatches { get { lock (_gate) return _watches; } }
     public IReadOnlyList<GridCell> Grid { get { lock (_gate) return _grid.Select(g => new GridCell(g.Key.Item1, g.Key.Item2, g.Value)).OrderBy(g => g.Day).ThenBy(g => g.Hour).ToList(); } }
 
     // ---------------------------------------------------------------- IScheduleSource
@@ -61,11 +65,19 @@ public sealed class PlannerStore : IScheduleSource
                 items.Where(i => i.ClockId == c.Id).Select(i => i.Rule).ToList()));
         var grid = _db.Query("SELECT day, hour, clock_id FROM week_grid", r => (Day: (int)r.GetInt64(0), Hour: (int)r.GetInt64(1), Clock: r.GetInt64(2)))
             .ToDictionary(g => (g.Day, g.Hour), g => g.Clock);
-        var events = _db.Query("SELECT id, name, enabled, days, hours, minute, second, timing, action, category_id, media_id FROM events ORDER BY minute, second, name",
+        var events = _db.Query("SELECT id, name, enabled, days, hours, minute, second, timing, action, category_id, media_id, text FROM events ORDER BY minute, second, name",
             r => new TimedEvent(r.GetInt64(0), r.GetString(1), r.GetInt64(2) != 0, (int)r.GetInt64(3), r.GetString(4), (int)r.GetInt64(5),
-                (int)r.GetInt64(6), (EventTiming)r.GetInt64(7), (EventAction)r.GetInt64(8), r.GetInt64OrNull(9), r.GetInt64OrNull(10)));
+                (int)r.GetInt64(6), (EventTiming)r.GetInt64(7), (EventAction)r.GetInt64(8), r.GetInt64OrNull(9), r.GetInt64OrNull(10), r.GetString(11)));
+        var rules = _db.Query("SELECT id, name, enabled, kind, from_category_id, to_category_id, count, action FROM script_rules ORDER BY id",
+            r => new ScriptRule(r.GetInt64(0), r.GetString(1), r.GetInt64(2) != 0, (RuleKind)r.GetInt64(3), r.GetInt64OrNull(4),
+                r.GetInt64OrNull(5), (int)r.GetInt64(6), (RuleAction)r.GetInt64(7)));
+        var watches = _db.Query("SELECT id, name, enabled, url, days, hours, mode, check_seconds FROM stream_watches ORDER BY name",
+            r => new StreamWatch(r.GetInt64(0), r.GetString(1), r.GetInt64(2) != 0, r.GetString(3), (int)r.GetInt64(4), r.GetString(5),
+                (WatchMode)r.GetInt64(6), (int)r.GetInt64(7)));
         lock (_gate)
         {
+            _rules = rules;
+            _watches = watches;
             _clocks = clocks;
             _grid = grid;
             _events = events;
@@ -180,18 +192,18 @@ public sealed class PlannerStore : IScheduleSource
         {
             ("$n", e.Name.Trim()), ("$en", e.Enabled ? 1 : 0), ("$d", e.Days & TimedEvent.AllDays), ("$h", string.IsNullOrWhiteSpace(e.Hours) ? "*" : e.Hours.Trim()),
             ("$mi", Math.Clamp(e.Minute, 0, 59)), ("$s", Math.Clamp(e.Second, 0, 59)), ("$t", (int)e.Timing), ("$a", (int)e.Action),
-            ("$c", e.CategoryId), ("$m", e.MediaId), ("$id", e.Id),
+            ("$c", e.CategoryId), ("$m", e.MediaId), ("$id", e.Id), ("$tx", e.Text ?? ""),
         };
         long id = e.Id;
         if (id > 0)
             _db.Execute("""
                 UPDATE events SET name=$n, enabled=$en, days=$d, hours=$h, minute=$mi, second=$s, timing=$t, action=$a,
-                                  category_id=$c, media_id=$m WHERE id=$id
+                                  category_id=$c, media_id=$m, text=$tx WHERE id=$id
                 """, args);
         else
             id = _db.Insert("""
-                INSERT INTO events(name, enabled, days, hours, minute, second, timing, action, category_id, media_id)
-                VALUES($n, $en, $d, $h, $mi, $s, $t, $a, $c, $m)
+                INSERT INTO events(name, enabled, days, hours, minute, second, timing, action, category_id, media_id, text)
+                VALUES($n, $en, $d, $h, $mi, $s, $t, $a, $c, $m, $tx)
                 """, args);
         Saved();
         return id;
@@ -200,6 +212,56 @@ public sealed class PlannerStore : IScheduleSource
     public bool DeleteEvent(long id)
     {
         int n = _db.Execute("DELETE FROM events WHERE id=$id", ("$id", id));
+        Saved();
+        return n > 0;
+    }
+
+    // ---------------------------------------------------------------- script rules
+
+    public long SaveRule(ScriptRule r)
+    {
+        var args = new (string, object?)[]
+        {
+            ("$n", r.Name.Trim()), ("$e", r.Enabled ? 1 : 0), ("$k", (int)r.Kind), ("$f", r.FromCategoryId), ("$t", r.ToCategoryId),
+            ("$c", Math.Clamp(r.Count, 1, 50)), ("$a", (int)r.Action), ("$id", r.Id),
+        };
+        long id = r.Id;
+        if (id > 0)
+            _db.Execute("UPDATE script_rules SET name=$n, enabled=$e, kind=$k, from_category_id=$f, to_category_id=$t, count=$c, action=$a WHERE id=$id", args);
+        else
+            id = _db.Insert("INSERT INTO script_rules(name, enabled, kind, from_category_id, to_category_id, count, action) VALUES($n, $e, $k, $f, $t, $c, $a)", args);
+        Saved();
+        return id;
+    }
+
+    public bool DeleteRule(long id)
+    {
+        int n = _db.Execute("DELETE FROM script_rules WHERE id=$id", ("$id", id));
+        Saved();
+        return n > 0;
+    }
+
+    // ---------------------------------------------------------------- stream watching
+
+    public long SaveStreamWatch(StreamWatch w)
+    {
+        var args = new (string, object?)[]
+        {
+            ("$n", w.Name.Trim()), ("$e", w.Enabled ? 1 : 0), ("$u", w.Url.Trim()), ("$d", w.Days & TimedEvent.AllDays),
+            ("$h", string.IsNullOrWhiteSpace(w.Hours) ? "*" : w.Hours.Trim()), ("$m", (int)w.Mode), ("$c", Math.Clamp(w.CheckSeconds, 5, 600)), ("$id", w.Id),
+        };
+        long id = w.Id;
+        if (id > 0)
+            _db.Execute("UPDATE stream_watches SET name=$n, enabled=$e, url=$u, days=$d, hours=$h, mode=$m, check_seconds=$c WHERE id=$id", args);
+        else
+            id = _db.Insert("INSERT INTO stream_watches(name, enabled, url, days, hours, mode, check_seconds) VALUES($n, $e, $u, $d, $h, $m, $c)", args);
+        Saved();
+        return id;
+    }
+
+    public bool DeleteStreamWatch(long id)
+    {
+        int n = _db.Execute("DELETE FROM stream_watches WHERE id=$id", ("$id", id));
         Saved();
         return n > 0;
     }

@@ -32,6 +32,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
         Hub.PropertyChanged += (_, e) => { if (e.PropertyName is nameof(StudioHub.Status) or nameof(StudioHub.ConnectionText)) OnPropertyChanged(nameof(StatusLine)); };
         Hub.EditCuesRequested += id => ShowWindow("cues");
         RefreshLayoutNames();
+        _factory.AutomationView = _settings.LastLayout == AutomationLayoutName;
         Layout = LoadLayoutFile(_settings.LastLayout) ?? NewDefaultLayout();
         CurrentLayout = _settings.LastLayout;
         // --show <window id> (repeatable): bring windows to the front at start; --cues <media id>: open in the cue editor.
@@ -65,6 +66,16 @@ public sealed partial class MainWindowViewModel : ObservableObject
     [ObservableProperty] private double _levelLeft;
     [ObservableProperty] private double _levelRight;
     [ObservableProperty] private string _nextEvent = "";
+    /// <summary>0-100: how much of the current item is left (the bar runs empty).</summary>
+    [ObservableProperty] private double _nowLeft;
+    /// <summary>normal, warn (last 20 s), end (last 10 s, flashes).</summary>
+    [ObservableProperty] private string _endState = "normal";
+    [ObservableProperty] private bool _flash;
+    [ObservableProperty] private string _introText = "";
+    [ObservableProperty] private bool _automationView;
+
+    public const string AutomationLayoutName = "Automatisering";
+    public const string AssistLayoutName = "Standaard";
 
     public string ModeText => AutoPlay ? "AUTOMATISCH" : "LIVE-ASSIST";
     public string StatusLine => string.IsNullOrEmpty(Hub.Status) ? Hub.ConnectionText : $"{Hub.ConnectionText} · {Hub.Status}";
@@ -85,9 +96,18 @@ public sealed partial class MainWindowViewModel : ObservableObject
         if (s.Engine.Current is { } c)
         {
             NowLabel = c.Label;
-            NowRemaining = $"-{StudioHub.Time(c.To - c.Position)}";
+            double left = Math.Max(0, c.To - c.Position), length = Math.Max(0.1, c.To - c.From);
+            NowRemaining = $"-{StudioHub.Time(left)}";
+            NowLeft = Math.Clamp(left / length * 100, 0, 100);
+            EndState = left <= 10 ? "end" : left <= 20 ? "warn" : "normal";
+            Flash = EndState == "end" && s.Time.Millisecond < 500;
+            IntroText = c.Intro is double intro && c.Position < intro ? $"INTRO {Math.Ceiling(intro - c.Position):0}" : "";
         }
-        else { NowLabel = AutoPlay ? "wachten op materiaal…" : "stil — start het volgende item (F5)"; NowRemaining = ""; }
+        else
+        {
+            NowLabel = AutoPlay ? "wachten op materiaal…" : "stil — start het volgende item (F5)";
+            NowRemaining = ""; NowLeft = 0; EndState = "normal"; Flash = false; IntroText = "";
+        }
         NextLabel = s.Upcoming.FirstOrDefault() is { } n ? $"Straks: {n.Label}" : "";
         NextEvent = s.Events.FirstOrDefault() is { } e ? $"{e.Name} {e.At:HH:mm:ss} (over {StudioHub.Time((e.At - s.Time).TotalSeconds)})" : "";
     }
@@ -104,6 +124,17 @@ public sealed partial class MainWindowViewModel : ObservableObject
 
     [RelayCommand]
     private Task PflToggle() => Hub.PlayerCommand("pfl", "toggle");
+
+    /// <summary>Hotkeys: any engine command; errors show in the status line.</summary>
+    [RelayCommand]
+    private async Task RunEngineCommand(string? text)
+    {
+        if (string.IsNullOrWhiteSpace(text)) return;
+        var r = await Hub.Client.RunCommandAsync(text);
+        if (!r.Ok) Hub.Status = $"{text}: {r.Text}";
+    }
+
+    public StudioSettings Settings => _settings;
 
     [RelayCommand]
     private async Task StartEngine()
@@ -157,9 +188,32 @@ public sealed partial class MainWindowViewModel : ObservableObject
     private void ResetLayout()
     {
         CloseFloating();
+        _factory.AutomationView = CurrentLayout == AutomationLayoutName;
         Layout = NewDefaultLayout();
         Hub.Status = "standaardindeling hersteld";
     }
+
+    /// <summary>
+    /// One click between the calm automation view and the full live-assist studio. Each view remembers its own
+    /// arrangement (saved as a layout under its own name).
+    /// </summary>
+    [RelayCommand]
+    private void SwitchView(string? view)
+    {
+        bool automation = view == "auto" || (view is null && !AutomationView);
+        string target = automation ? AutomationLayoutName : AssistLayoutName;
+        if (target == CurrentLayout) return;
+        SaveOnExit();
+        CloseFloating();
+        _factory.AutomationView = automation;
+        Layout = LoadLayoutFile(target) ?? NewDefaultLayout();
+        CurrentLayout = target;
+        _settings.LastLayout = target;
+        _settings.Save();
+        RefreshLayoutNames();
+    }
+
+    partial void OnCurrentLayoutChanged(string value) => AutomationView = value == AutomationLayoutName;
 
     [RelayCommand]
     private void SaveLayout()

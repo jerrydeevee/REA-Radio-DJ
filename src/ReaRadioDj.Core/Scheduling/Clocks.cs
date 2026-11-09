@@ -20,6 +20,8 @@ public interface IScheduleSource
     IReadOnlyList<MediaItem> InCategory(long categoryId);
     MediaItem? Media(long id);
     MediaKind? CategoryKind(long categoryId);
+    /// <summary>Planning rules that look at the previous items (none by default).</summary>
+    IReadOnlyList<ScriptRule> Rules => [];
 }
 
 /// <summary>
@@ -35,6 +37,8 @@ public sealed class ClockScheduler(RotationOptions rotation, bool presenterEnabl
     private long _clockId = -1;
     private DateTime _hour = DateTime.MinValue;
     private int _position;
+    private ClockRule? _deferred;
+    private bool _deferWaiting;
 
     /// <summary>Name of the clock that is being followed now.</summary>
     public string? CurrentClock { get; private set; }
@@ -56,15 +60,26 @@ public sealed class ClockScheduler(RotationOptions rotation, bool presenterEnabl
                 _clockId = clock.Id;
                 _hour = hour;
                 _position = 0;
+                _deferred = null; // a new hour starts clean
             }
             CurrentClock = clock.Name;
 
-            var rule = clock.Rules[_position % clock.Rules.Count];
-            _position++;
+            // A position that was deferred by a rule gets one more try, right after the item that followed it.
+            bool retry = _deferred is not null && !_deferWaiting;
+            var rule = retry ? _deferred! : clock.Rules[_position % clock.Rules.Count];
+            if (retry) _deferred = null; else _position++;
             var item = Build(rule, clock, log, source);
             if (item is null) { skipped++; continue; }
+
+            if (ScriptRule.FirstBlocking(source.Rules, item, log.Sequence()) is { } blocking)
+            {
+                if (blocking.Action == RuleAction.Defer && !retry && _deferred is null) { _deferred = rule; _deferWaiting = true; }
+                skipped++;
+                continue;
+            }
             log.Append(item);
             added++;
+            _deferWaiting = false;
         }
         return added;
     }

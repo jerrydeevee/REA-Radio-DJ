@@ -44,7 +44,11 @@ public sealed partial class PlannerTool : StudioTool
 {
     public static readonly string[] DayNames = ["ma", "di", "wo", "do", "vr", "za", "zo"];
     public static readonly string[] Timings = ["Hard (onderbreekt)", "Zacht (na het huidige item)", "Overlay (eroverheen)"];
-    public static readonly string[] Actions = ["Vast item", "Uit categorie", "AI-presentator"];
+    public static readonly string[] Actions = ["Vast item", "Uit categorie", "AI-presentator", "Commando uitvoeren", "Herinnering tonen", "Alarm geven"];
+    private static readonly string[] ActionKeys = ["playMedia", "playCategory", "aiBreak", "command", "reminder", "alert"];
+    public static readonly string[] RuleKindNames = ["Maximaal N op rij", "Niet direct na"];
+    public static readonly string[] RuleActionNames = ["Overslaan", "Uitstellen (na het volgende item)"];
+    public static readonly string[] WatchModeNames = ["Neemt het programma over", "Speelt eroverheen (muziek dimt)"];
 
     public PlannerTool() : base("planner", "Planner")
     {
@@ -59,6 +63,9 @@ public sealed partial class PlannerTool : StudioTool
     public IReadOnlyList<string> TimingChoices => Timings;
     public IReadOnlyList<string> ActionChoices => Actions;
     public IReadOnlyList<string> Days => DayNames;
+    public IReadOnlyList<string> ScriptRuleKinds => RuleKindNames;
+    public IReadOnlyList<string> ScriptRuleActions => RuleActionNames;
+    public IReadOnlyList<string> WatchModes => WatchModeNames;
 
     // ------------------------------------------------------------ clocks
     public ObservableCollection<ClockDto> Clocks { get; } = [];
@@ -104,6 +111,18 @@ public sealed partial class PlannerTool : StudioTool
     [ObservableProperty] private CategoryDto? _eventCategory;
     [ObservableProperty] private long? _eventMediaId;
     [ObservableProperty] private string _eventMediaLabel = "";
+    [ObservableProperty] private string _eventText = "";
+    public bool EventIsAudio => EventAction <= 2;
+    public bool EventIsText => EventAction >= 3;
+    public string EventTextHint => EventAction == 3
+        ? "Commando's, een per regel (bijv. AUTO OFF, CART 1 5, MIC ON). Zie Extra > Commando's."
+        : "Tekst die in de studio verschijnt";
+    partial void OnEventActionChanged(int value)
+    {
+        OnPropertyChanged(nameof(EventIsAudio));
+        OnPropertyChanged(nameof(EventIsText));
+        OnPropertyChanged(nameof(EventTextHint));
+    }
     public ObservableCollection<DayChoice> EventDays { get; } = new(DayNames.Select((n, i) => new DayChoice(i, n)));
 
     partial void OnSelectedEventChanged(TimedEventDto? value)
@@ -115,7 +134,8 @@ public sealed partial class PlannerTool : StudioTool
         EventMinute = e.Minute;
         EventSecond = e.Second;
         EventTiming = e.Timing switch { "soft" => 1, "overlay" => 2, _ => 0 };
-        EventAction = e.Action switch { "playMedia" => 0, "aiBreak" => 2, _ => 1 };
+        EventAction = Array.IndexOf(ActionKeys, e.Action) is var a and >= 0 ? a : 1;
+        EventText = e.Text ?? "";
         EventCategory = Categories.FirstOrDefault(c => c.Id == e.CategoryId);
         EventMediaId = e.MediaId;
         EventMediaLabel = e.MediaId is long id ? $"item {id}" : "";
@@ -135,6 +155,8 @@ public sealed partial class PlannerTool : StudioTool
         var grid = await Hub.Client.GetAsync<List<GridCellDto>>("/api/planner/grid");
         var events = await Hub.Client.GetAsync<List<TimedEventDto>>("/api/planner/events");
         if (clocks is null || grid is null || events is null) return;
+        var rules = await Hub.Client.GetAsync<List<ScriptRuleDto>>("/api/planner/rules") ?? [];
+        var watches = await Hub.Client.GetAsync<List<StreamWatchDto>>("/api/planner/watches") ?? [];
 
         var keepClock = SelectedClock?.Id;
         Clocks.Clear();
@@ -160,6 +182,16 @@ public sealed partial class PlannerTool : StudioTool
         Events.Clear();
         foreach (var e in events) Events.Add(e);
         SelectedEvent = Events.FirstOrDefault(e => e.Id == keepEvent);
+
+        var keepRule = SelectedScriptRule?.Id;
+        ScriptRules.Clear();
+        foreach (var r in rules) ScriptRules.Add(r);
+        SelectedScriptRule = ScriptRules.FirstOrDefault(r => r.Id == keepRule);
+
+        var keepWatch = SelectedWatch?.Id;
+        Watches.Clear();
+        foreach (var w in watches) Watches.Add(w);
+        SelectedWatch = Watches.FirstOrDefault(w => w.Id == keepWatch);
     }
 
     // clocks
@@ -229,7 +261,7 @@ public sealed partial class PlannerTool : StudioTool
         SelectedEvent = null;
         EventName = "Nieuws"; EventEnabled = true; EventHours = "*"; EventMinute = 0; EventSecond = 0; EventTiming = 0; EventAction = 1;
         EventCategory = Categories.FirstOrDefault(c => c.Name.Contains("nieuws", StringComparison.OrdinalIgnoreCase)) ?? Categories.FirstOrDefault();
-        EventMediaId = null; EventMediaLabel = "";
+        EventMediaId = null; EventMediaLabel = ""; EventText = "";
         foreach (var d in EventDays) d.On = true;
     }
 
@@ -247,8 +279,8 @@ public sealed partial class PlannerTool : StudioTool
     {
         int days = EventDays.Where(d => d.On).Sum(d => 1 << d.Index);
         var dto = new TimedEventDto(SelectedEvent?.Id ?? 0, EventName, EventEnabled, days, EventHours, (int)EventMinute, (int)EventSecond,
-            EventTiming switch { 1 => "soft", 2 => "overlay", _ => "hard" }, EventAction switch { 0 => "playMedia", 2 => "aiBreak", _ => "playCategory" },
-            EventCategory?.Id, EventMediaId);
+            EventTiming switch { 1 => "soft", 2 => "overlay", _ => "hard" }, ActionKeys[Math.Clamp(EventAction, 0, ActionKeys.Length - 1)],
+            EventCategory?.Id, EventMediaId, Text: EventText);
         bool ok = SelectedEvent is { } e ? await Hub.Client.PutAsync($"/api/planner/events/{e.Id}", dto) : await Hub.Client.PostAsync("/api/planner/events", dto);
         if (ok) { Hub.Status = $"vaste tijd '{EventName}' opgeslagen"; await ReloadAsync(); }
     }
@@ -257,6 +289,108 @@ public sealed partial class PlannerTool : StudioTool
     private async Task DeleteEvent()
     {
         if (SelectedEvent is { } e && await Hub.Client.DeleteAsync($"/api/planner/events/{e.Id}")) { SelectedEvent = null; await ReloadAsync(); }
+    }
+
+    // ------------------------------------------------------------ planning rules
+    public ObservableCollection<ScriptRuleDto> ScriptRules { get; } = [];
+    [ObservableProperty] private ScriptRuleDto? _selectedScriptRule;
+    [ObservableProperty] private string _ruleName = "";
+    [ObservableProperty] private bool _ruleEnabled = true;
+    [ObservableProperty] private int _ruleKind;
+    [ObservableProperty] private CategoryDto? _ruleFrom;
+    [ObservableProperty] private CategoryDto? _ruleTo;
+    [ObservableProperty] private decimal _ruleCount = 2;
+    [ObservableProperty] private int _ruleAction;
+    public bool RuleIsMaxInRow => RuleKind == 0;
+    public bool RuleIsNotAfter => RuleKind == 1;
+    partial void OnRuleKindChanged(int value) { OnPropertyChanged(nameof(RuleIsMaxInRow)); OnPropertyChanged(nameof(RuleIsNotAfter)); }
+
+    partial void OnSelectedScriptRuleChanged(ScriptRuleDto? value)
+    {
+        if (value is not { } r) return;
+        RuleName = r.Name;
+        RuleEnabled = r.Enabled;
+        RuleKind = r.Kind == "notAfter" ? 1 : 0;
+        RuleFrom = Categories.FirstOrDefault(c => c.Id == r.FromCategoryId);
+        RuleTo = Categories.FirstOrDefault(c => c.Id == r.ToCategoryId);
+        RuleCount = r.Count;
+        RuleAction = r.Action == "defer" ? 1 : 0;
+    }
+
+    [RelayCommand] private void ClearRuleFrom() => RuleFrom = null;
+    [RelayCommand] private void ClearRuleTo() => RuleTo = null;
+
+    [RelayCommand]
+    private void NewScriptRule()
+    {
+        SelectedScriptRule = null;
+        RuleName = "Niet te veel van een categorie"; RuleEnabled = true; RuleKind = 0; RuleFrom = null;
+        RuleTo = Categories.FirstOrDefault(c => c.Kind == "song"); RuleCount = 2; RuleAction = 1;
+    }
+
+    [RelayCommand]
+    private async Task SaveScriptRule()
+    {
+        var dto = new ScriptRuleDto(SelectedScriptRule?.Id ?? 0, RuleName, RuleEnabled, RuleKind == 1 ? "notAfter" : "maxInRow",
+            RuleKind == 1 ? RuleFrom?.Id : null, RuleTo?.Id, (int)RuleCount, RuleAction == 1 ? "defer" : "suppress");
+        bool ok = SelectedScriptRule is { } r ? await Hub.Client.PutAsync($"/api/planner/rules/{r.Id}", dto) : await Hub.Client.PostAsync("/api/planner/rules", dto);
+        if (ok) { Hub.Status = $"regel '{RuleName}' opgeslagen, log opnieuw gepland"; await ReloadAsync(); }
+    }
+
+    [RelayCommand]
+    private async Task DeleteScriptRule()
+    {
+        if (SelectedScriptRule is { } r && await Hub.Client.DeleteAsync($"/api/planner/rules/{r.Id}")) { SelectedScriptRule = null; await ReloadAsync(); }
+    }
+
+    // ------------------------------------------------------------ external streams
+    public ObservableCollection<StreamWatchDto> Watches { get; } = [];
+    [ObservableProperty] private StreamWatchDto? _selectedWatch;
+    [ObservableProperty] private string _watchName = "";
+    [ObservableProperty] private bool _watchEnabled = true;
+    [ObservableProperty] private string _watchUrl = "";
+    [ObservableProperty] private string _watchHours = "*";
+    [ObservableProperty] private int _watchMode;
+    [ObservableProperty] private decimal _watchCheck = 15;
+    public ObservableCollection<DayChoice> WatchDays { get; } = new(DayNames.Select((n, i) => new DayChoice(i, n)));
+
+    partial void OnSelectedWatchChanged(StreamWatchDto? value)
+    {
+        if (value is not { } w) return;
+        WatchName = w.Name; WatchEnabled = w.Enabled; WatchUrl = w.Url; WatchHours = w.Hours;
+        WatchMode = w.Mode == "overlay" ? 1 : 0; WatchCheck = w.CheckSeconds;
+        foreach (var d in WatchDays) d.On = (w.Days & (1 << d.Index)) != 0;
+    }
+
+    [RelayCommand]
+    private void NewWatch()
+    {
+        SelectedWatch = null;
+        WatchName = "Buitenuitzending"; WatchEnabled = true; WatchUrl = "http://"; WatchHours = "*"; WatchMode = 0; WatchCheck = 15;
+        foreach (var d in WatchDays) d.On = true;
+    }
+
+    [RelayCommand]
+    private async Task SaveWatch()
+    {
+        int days = WatchDays.Where(d => d.On).Sum(d => 1 << d.Index);
+        var dto = new StreamWatchDto(SelectedWatch?.Id ?? 0, WatchName, WatchEnabled, WatchUrl.Trim(), days, WatchHours,
+            WatchMode == 1 ? "overlay" : "takeover", (int)WatchCheck);
+        bool ok = SelectedWatch is { } w ? await Hub.Client.PutAsync($"/api/planner/watches/{w.Id}", dto) : await Hub.Client.PostAsync("/api/planner/watches", dto);
+        if (ok) { Hub.Status = $"stream '{WatchName}' opgeslagen"; await ReloadAsync(); }
+        else Hub.Status = "opslaan mislukt: controleer de URL (http:// of https://)";
+    }
+
+    [RelayCommand]
+    private async Task DeleteWatch()
+    {
+        if (SelectedWatch is { } w && await Hub.Client.DeleteAsync($"/api/planner/watches/{w.Id}")) { SelectedWatch = null; await ReloadAsync(); }
+    }
+
+    [RelayCommand]
+    private async Task StopLiveWatch()
+    {
+        if (await Hub.Client.PostAsync("/api/watches/stop")) { Hub.Status = "externe stream van de lucht gehaald"; await ReloadAsync(); }
     }
 }
 

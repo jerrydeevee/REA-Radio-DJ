@@ -14,6 +14,7 @@ using ReaRadioDj.Core.Scheduling;
 using ReaRadioDj.Core.Streaming;
 using ReaRadioDj.Core.Studio;
 using ReaRadioDj.Server;
+using ReaRadioDj.Server.Remote;
 
 // appsettings.json and the browser studio live next to the executable; media and data folders are relative to the
 // working directory. "--demo" is our own switch and is kept away from the configuration parser.
@@ -68,6 +69,12 @@ builder.Services.AddSingleton(sp =>
 });
 builder.Services.AddSingleton<AutomationService>();
 builder.Services.AddHostedService(sp => sp.GetRequiredService<AutomationService>());
+// Remote control: one command list for TCP, OSC, HTTP, hotkeys and the planner.
+builder.Services.AddSingleton<CommandBus>();
+builder.Services.AddHostedService<TcpControlService>();
+builder.Services.AddHostedService<OscControlService>();
+builder.Services.AddSingleton<StreamWatchService>();
+builder.Services.AddHostedService(sp => sp.GetRequiredService<StreamWatchService>());
 // Icon next to the clock, so a running engine can always be found back (not when running as a service).
 if (Environment.UserInteractive && !args.Contains("--no-tray") && builder.Configuration.GetValue("ReaRadioDj:Tray", true))
     builder.Services.AddHostedService<TrayIcon>();
@@ -88,6 +95,13 @@ json.Converters.Add(new JsonStringEnumConverter(JsonNamingPolicy.CamelCase));
 
 var api = app.MapGroup("/api");
 StudioApi.Map(api, options);
+api.MapGet("/commands", () => CommandBus.Commands);
+api.MapPost("/watches/stop", (StreamWatchService w) => w.StopLive() ? Results.Ok() : Results.NotFound());
+api.MapPost("/command", (CommandRequest body, CommandBus bus) =>
+{
+    var r = bus.Run(body.Text, "http");
+    return r.Ok ? Results.Ok(r) : Results.BadRequest(r);
+});
 
 api.MapGet("/state", (IServiceProvider sp) => Snapshot.Build(sp));
 
@@ -136,3 +150,5 @@ api.Map("/ws", async (HttpContext http, IServiceProvider sp) =>
 
 app.Run();
 return 0;
+
+internal sealed record CommandRequest(string? Text);

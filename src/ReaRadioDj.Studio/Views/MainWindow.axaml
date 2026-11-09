@@ -7,23 +7,22 @@
         Width="1600" Height="950" MinWidth="900" MinHeight="600"
         Icon="/Assets/rea.ico"
         WindowStartupLocation="CenterScreen">
-  <Window.KeyBindings>
-    <KeyBinding Gesture="F5" Command="{Binding NextCommand}" />
-    <KeyBinding Gesture="F6" Command="{Binding ToggleAutoCommand}" />
-    <KeyBinding Gesture="F7" Command="{Binding SkipCommand}" />
-    <KeyBinding Gesture="F8" Command="{Binding ToggleMicCommand}" />
-    <KeyBinding Gesture="F9" Command="{Binding StopCommand}" />
-    <KeyBinding Gesture="F10" Command="{Binding StopCartsCommand}" />
-    <KeyBinding Gesture="Ctrl+B" Command="{Binding AddBreakCommand}" />
-    <KeyBinding Gesture="Ctrl+P" Command="{Binding PflToggleCommand}" />
-  </Window.KeyBindings>
   <DockPanel>
+    <!-- View switch: calm automation monitoring or the full live-assist studio, one click -->
+    <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="4" HorizontalAlignment="Right" Margin="0,4,10,-30" ZIndex="1"
+                ToolTip.Tip="Weergave: rustig bewaken of de volledige studio. Elke weergave onthoudt zijn eigen indeling.">
+      <TextBlock Classes="muted" Text="Weergave" VerticalAlignment="Center" Margin="0,0,4,0" />
+      <ToggleButton Classes="view" Content="Automatisering" IsChecked="{Binding AutomationView, Mode=OneWay}" Command="{Binding SwitchViewCommand}" CommandParameter="auto" />
+      <ToggleButton Classes="view" Content="Live-assist" IsChecked="{Binding !AutomationView, Mode=OneWay}" Command="{Binding SwitchViewCommand}" CommandParameter="assist" />
+    </StackPanel>
     <Menu DockPanel.Dock="Top">
       <MenuItem Header="_Studio">
         <MenuItem Header="Engine starten" Command="{Binding StartEngineCommand}" />
         <Separator />
-        <MenuItem Header="AI-break als volgende   Ctrl+B" Command="{Binding AddBreakCommand}" />
-        <MenuItem Header="Alle carts stoppen   F10" Command="{Binding StopCartsCommand}" />
+        <MenuItem Header="AI-break als volgende" Command="{Binding AddBreakCommand}" />
+        <MenuItem Header="Alle carts stoppen" Command="{Binding StopCartsCommand}" />
+        <Separator />
+        <MenuItem Header="Bediening en sneltoetsen…" Command="{Binding ShowWindowCommand}" CommandParameter="control" />
       </MenuItem>
       <MenuItem Header="_Vensters" ItemsSource="{Binding WindowMenu}" Command="{x:Null}" CommandParameter="{x:Null}">
         <MenuItem.Styles>
@@ -84,24 +83,34 @@
         </StackPanel>
         <StackPanel Grid.Column="2" VerticalAlignment="Center">
           <DockPanel>
-            <TextBlock DockPanel.Dock="Right" Classes="mono" FontSize="18" Text="{Binding NowRemaining}" Margin="10,0,0,0" />
+            <TextBlock DockPanel.Dock="Right" Classes="mono remaining" Classes.warn="{Binding EndState, Converter={x:Static vm:Brushes.Is}, ConverterParameter=warn}"
+                       Classes.end="{Binding EndState, Converter={x:Static vm:Brushes.Is}, ConverterParameter=end}"
+                       FontSize="22" FontWeight="Bold" Text="{Binding NowRemaining}" Margin="10,0,0,0" />
+            <Border DockPanel.Dock="Right" Background="#F0B429" CornerRadius="3" Padding="6,1" Margin="10,0,0,0" VerticalAlignment="Center"
+                    IsVisible="{Binding IntroText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" ToolTip.Tip="Tijd tot de zang begint: zolang kun je praten">
+              <TextBlock Text="{Binding IntroText}" Foreground="#11161D" FontWeight="Bold" Classes="mono" />
+            </Border>
             <TextBlock Text="{Binding NowLabel}" FontSize="16" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
           </DockPanel>
+          <ProgressBar Classes="countdown" Value="{Binding NowLeft}" Maximum="100" MinHeight="8" Margin="0,3,0,3"
+                       Classes.warn="{Binding EndState, Converter={x:Static vm:Brushes.Is}, ConverterParameter=warn}"
+                       Classes.end="{Binding EndState, Converter={x:Static vm:Brushes.Is}, ConverterParameter=end}"
+                       Classes.flash="{Binding Flash}" />
           <DockPanel>
             <TextBlock DockPanel.Dock="Right" Classes="muted" Text="{Binding NextEvent}" Margin="10,0,0,0" />
             <TextBlock Classes="muted" Text="{Binding NextLabel}" TextTrimming="CharacterEllipsis" />
           </DockPanel>
         </StackPanel>
         <StackPanel Grid.Column="3" Orientation="Horizontal" Spacing="6" Margin="12,0" VerticalAlignment="Center">
-          <Button Content="⏵ Volgende" ToolTip.Tip="Start het volgende item (F5)" Command="{Binding NextCommand}" />
-          <Button Content="{Binding ModeText}" Command="{Binding ToggleAutoCommand}" ToolTip.Tip="Automatisch / live-assist (F6)" MinWidth="120" />
-          <Button Content="⏭" Command="{Binding SkipCommand}" ToolTip.Tip="Overslaan (F7)" />
-          <ToggleButton Classes="mic" Content="🎤 MIC" IsChecked="{Binding MicOpen, Mode=OneWay}" Command="{Binding ToggleMicCommand}" ToolTip.Tip="{Binding MicStatus, StringFormat='{}{0} (F8)'}" />
-          <Button Content="■" Command="{Binding StopCommand}" ToolTip.Tip="Stop automatisering (F9)" />
+          <Button Classes="transport go" Content="⏵ VOLGENDE" ToolTip.Tip="Start het volgende item (F5)" Command="{Binding NextCommand}" />
+          <Button Classes="transport" Content="{Binding ModeText}" Command="{Binding ToggleAutoCommand}" ToolTip.Tip="Automatisch / live-assist (F6)" MinWidth="130" />
+          <Button Classes="transport" Content="⏭" Command="{Binding SkipCommand}" ToolTip.Tip="Overslaan (F7)" />
+          <ToggleButton Classes="mic transport" Content="🎤 MIC" IsChecked="{Binding MicOpen, Mode=OneWay}" Command="{Binding ToggleMicCommand}" ToolTip.Tip="{Binding MicStatus, StringFormat='{}{0} (F8)'}" />
+          <Button Classes="transport stop" Content="■" Command="{Binding StopCommand}" ToolTip.Tip="Stop automatisering (F9)" />
         </StackPanel>
         <StackPanel Grid.Column="4" Width="90" VerticalAlignment="Center" Spacing="3" Margin="0,0,12,0">
-          <ProgressBar Value="{Binding LevelLeft}" Maximum="100" MinHeight="6" Foreground="#3DBD7D" />
-          <ProgressBar Value="{Binding LevelRight}" Maximum="100" MinHeight="6" Foreground="#3DBD7D" />
+          <ProgressBar Value="{Binding LevelLeft}" Maximum="100" MinHeight="6" MinWidth="0" Foreground="#3DBD7D" />
+          <ProgressBar Value="{Binding LevelRight}" Maximum="100" MinHeight="6" MinWidth="0" Foreground="#3DBD7D" />
         </StackPanel>
         <TextBlock Grid.Column="5" Classes="mono" FontSize="30" Text="{Binding Clock}" VerticalAlignment="Center" />
       </Grid>

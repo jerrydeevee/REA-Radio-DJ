@@ -31,9 +31,13 @@ public sealed class DockFactory : Factory
         ("overlays", "Overlays", () => new OverlaysTool()),
         ("stream", "Stream", () => new StreamTool()),
         ("messages", "Berichten", () => new MessagesTool()),
+        ("control", "Bediening en sneltoetsen", () => new ControlTool()),
     ];
 
     public static StudioTool Create(string id) => Windows.First(w => w.Id == id).Create();
+
+    /// <summary>True = the calm automation view (log, time, levels, messages); false = the full live-assist studio.</summary>
+    public bool AutomationView { get; set; }
 
     public override IRootDock CreateLayout()
     {
@@ -42,6 +46,28 @@ public sealed class DockFactory : Factory
             var tools = ids.Select(i => (IDockable)Create(i)).ToArray();
             var dock = new ToolDock { Id = id, Title = id, VisibleDockables = CreateList(tools), ActiveDockable = tools[0], Alignment = Alignment.Unset };
             return dock;
+        }
+
+        if (AutomationView)
+        {
+            var log = new ProportionalDock
+            {
+                Id = "a-left", Proportion = 0.55, Orientation = Orientation.Vertical,
+                VisibleDockables = CreateList<IDockable>(Tools("dock-log", "log", "asrun")),
+            };
+            var status = new ProportionalDock
+            {
+                Id = "a-right", Proportion = 0.45, Orientation = Orientation.Vertical,
+                VisibleDockables = CreateList<IDockable>(
+                    Tools("dock-clock", "clock"),
+                    new ProportionalDockSplitter(),
+                    Tools("dock-status", "messages", "presenter", "stream", "mixer")),
+            };
+            return Root(new ProportionalDock
+            {
+                Id = "main", Orientation = Orientation.Horizontal,
+                VisibleDockables = CreateList<IDockable>(log, new ProportionalDockSplitter(), status),
+            });
         }
 
         var left = new ProportionalDock
@@ -58,7 +84,7 @@ public sealed class DockFactory : Factory
             VisibleDockables = CreateList<IDockable>(
                 Tools("dock-log", "log", "asrun"),
                 new ProportionalDockSplitter(),
-                Tools("dock-editor", "cues", "presenter", "messages")),
+                Tools("dock-editor", "cues", "presenter", "messages", "control")),
         };
         var right = new ProportionalDock
         {
@@ -74,6 +100,11 @@ public sealed class DockFactory : Factory
             VisibleDockables = CreateList<IDockable>(left, new ProportionalDockSplitter(), center, new ProportionalDockSplitter(), right),
         };
 
+        return Root(main);
+    }
+
+    private IRootDock Root(ProportionalDock main)
+    {
         var root = CreateRootDock();
         root.Id = "root";
         root.IsCollapsable = false;

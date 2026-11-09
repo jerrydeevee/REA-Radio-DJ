@@ -8,6 +8,7 @@ using ReaRadioDj.Core.Presenter;
 using ReaRadioDj.Core.Scheduling;
 using ReaRadioDj.Core.Streaming;
 using ReaRadioDj.Core.Studio;
+using ReaRadioDj.Server.Remote;
 using static ReaRadioDj.Server.Snapshot;
 
 namespace ReaRadioDj.Server;
@@ -187,6 +188,16 @@ public static class StudioApi
         planner.MapPut("/events/{id:long}", (long id, TimedEventDto e, PlannerStore p) => Results.Ok(new { id = p.SaveEvent(Event(e) with { Id = id }) }));
         planner.MapDelete("/events/{id:long}", (long id, PlannerStore p) => p.DeleteEvent(id) ? Results.Ok() : Results.NotFound());
 
+        // Planning rules (look at the previous items) and external streams; both replan the log after a change.
+        planner.MapGet("/rules", (PlannerStore p, MediaLibrary l) => p.Rules.Select(r => Rule(r, CategoryName(l))));
+        planner.MapPost("/rules", (ScriptRuleDto r, PlannerStore p, AutomationService a) => { var id = p.SaveRule(Rule(r) with { Id = 0 }); a.Replan(); return Results.Ok(new { id }); });
+        planner.MapPut("/rules/{id:long}", (long id, ScriptRuleDto r, PlannerStore p, AutomationService a) => { p.SaveRule(Rule(r) with { Id = id }); a.Replan(); return Results.Ok(new { id }); });
+        planner.MapDelete("/rules/{id:long}", (long id, PlannerStore p, AutomationService a) => { var ok = p.DeleteRule(id); a.Replan(); return ok ? Results.Ok() : Results.NotFound(); });
+        planner.MapGet("/watches", (PlannerStore p, StreamWatchService w) => p.StreamWatches.Select(x => Watch(x, w.StateOf(x.Id))));
+        planner.MapPost("/watches", (StreamWatchDto x, PlannerStore p) => Valid(x) ?? Results.Ok(new { id = p.SaveStreamWatch(Watch(x) with { Id = 0 }) }));
+        planner.MapPut("/watches/{id:long}", (long id, StreamWatchDto x, PlannerStore p) => Valid(x) ?? Results.Ok(new { id = p.SaveStreamWatch(Watch(x) with { Id = id }) }));
+        planner.MapDelete("/watches/{id:long}", (long id, PlannerStore p) => p.DeleteStreamWatch(id) ? Results.Ok() : Results.NotFound());
+
         // ------------------------------------------------------------ as-run, messages, stream
         api.MapGet("/asrun", (AsRunLog a, DateOnly? day) => a.Day(day ?? DateOnly.FromDateTime(DateTime.Now)).Select(AsRun));
         api.MapGet("/asrun.csv", (AsRunLog a, DateOnly? day) =>
@@ -200,6 +211,13 @@ public static class StudioApi
         api.MapPost("/stream/start", (IcecastStreamer s, PlayoutEngine e) => { s.Start(e.MixerHandle); return Results.Ok(s.GetStatus()); });
         api.MapPost("/stream/stop", (IcecastStreamer s) => { s.Stop(); return Results.Ok(s.GetStatus()); });
     }
+
+    private static Func<long?, string> CategoryName(MediaLibrary l) =>
+        id => id is long c ? l.Categories.FirstOrDefault(x => x.Id == c)?.Name ?? $"categorie {c}" : "alles";
+
+    private static IResult? Valid(StreamWatchDto w) =>
+        Uri.TryCreate(w.Url?.Trim(), UriKind.Absolute, out var u) && u.Scheme is "http" or "https"
+            ? null : Results.BadRequest(new { error = "URL moet met http:// of https:// beginnen" });
 
     private static RoutingDto Routing(RoutingSettings s) =>
         new(s.OutputDevice, s.PreviewDevice, s.MicEnabled, s.MicDevice, s.MicDuckLevel, s.OverlayDuckLevel);

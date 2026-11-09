@@ -13,6 +13,24 @@ public sealed class StudioSettings
     public string Theme { get; set; } = "dark";
     public string LastLayout { get; set; } = "Standaard";
 
+    /// <summary>Key (Avalonia gesture text, e.g. "F5", "Ctrl+B", "Shift+F1") → engine command.</summary>
+    public Dictionary<string, string> Hotkeys { get; set; } = DefaultHotkeys();
+
+    public static Dictionary<string, string> DefaultHotkeys() => new()
+    {
+        ["F5"] = "NEXT",
+        ["F6"] = "AUTO TOGGLE",
+        ["F7"] = "SKIP",
+        ["F8"] = "MIC TOGGLE",
+        ["F9"] = "STOP",
+        ["F10"] = "CARTS STOP",
+        ["Ctrl+B"] = "BREAK",
+        ["Ctrl+P"] = "PLAYER PFL TOGGLE",
+        ["Shift+F5"] = "PLAYER 1 TOGGLE",
+        ["Shift+F6"] = "PLAYER 2 TOGGLE",
+        ["Shift+F9"] = "OVERLAY STOP",
+    };
+
     /// <summary>Engine for this session only (command line --engine); not saved.</summary>
     [System.Text.Json.Serialization.JsonIgnore] public string? SessionEngineUrl { get; set; }
     [System.Text.Json.Serialization.JsonIgnore] public string EffectiveEngineUrl => SessionEngineUrl ?? EngineUrl;

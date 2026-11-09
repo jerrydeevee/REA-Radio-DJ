@@ -126,3 +126,25 @@ Higgs TTS 3 en de andere onderdelen.
 
 REA-Radio-DJ is een eigen ontwerp. Het werkt functioneel vergelijkbaar met bekende playout-programma's, maar
 gebruikt geen code, schermen, namen of bestandsformaten daarvan.
+
+## Bediening op afstand
+
+Alles wat je in de studio kunt, kan ook met tekstcommando's (`NEXT`, `AUTO OFF`, `CART 1 5`, `MIC TOGGLE`,
+`VOLUME log 80`, `STREAM START` …). De lijst staat in de studio onder **Studio › Bediening en sneltoetsen** en op
+`GET /api/commands`. Dezelfde commando's werken via:
+
+- **HTTP**: `POST /api/command` met `{"text":"NEXT"}`
+- **TCP** (poort 8601): één commando per regel, antwoord `OK …` of `ERR …`; met wachtwoord eerst `AUTH <wachtwoord>`
+- **OSC** (UDP 8602): `/rea/next`, `/rea/cart/1/5`, `/rea/mic/toggle`, `/rea/cmd "AUTO OFF"` (waarde 0 = loslaten, genegeerd)
+- **Sneltoetsen** in de studio (vrij in te stellen) en **vaste tijden** in de planner (actie *Commando uitvoeren*)
+
+Standaard luistert dit alleen op deze computer. Voor het netwerk in `appsettings.json`:
+
+```json
+"ReaRadioDj": { "Control": { "BindAddress": "0.0.0.0", "TcpPort": 8601, "OscPort": 8602, "Password": "geheim" } }
+```
+
+De planner kent verder **regels** (bijv. maximaal 2 uit dezelfde categorie op rij; overslaan of uitstellen) en
+**externe streams**: een Icecast/SHOUTcast-URL die in een tijdvenster wordt bewaakt en, zodra hij live is, het
+programma overneemt of eroverheen speelt.
+

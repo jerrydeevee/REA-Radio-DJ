@@ -1,0 +1,57 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:ReaRadioDj.Studio.ViewModels"
+             xmlns:c="using:ReaRadioDj.Contracts"
+             x:Class="ReaRadioDj.Studio.Views.ControlView"
+             x:DataType="vm:ControlTool">
+  <TabControl Classes="compact" Margin="6">
+    <!-- ============================================================ commands -->
+    <TabItem Header="Commando's">
+      <DockPanel>
+        <DockPanel DockPanel.Dock="Top" Margin="0,0,0,6">
+          <Button DockPanel.Dock="Right" Content="Uitvoeren" Command="{Binding RunCommand}" Background="#2F9E6A" Margin="6,0,0,0" IsDefault="True" />
+          <TextBox Text="{Binding CommandText}" Watermark="bijv. CART 1 5, MIC ON, VOLUME log 80" FontFamily="Consolas" />
+        </DockPanel>
+        <TextBlock DockPanel.Dock="Bottom" Classes="muted" TextWrapping="Wrap" Margin="0,6,0,0" Text="{Binding ConnectInfo}" />
+        <ListBox DockPanel.Dock="Bottom" ItemsSource="{Binding History}" MaxHeight="110" Margin="0,6,0,0" Classes="mono" />
+        <ListBox ItemsSource="{Binding Commands}" SelectedItem="{Binding SelectedCommand}">
+          <ListBox.ItemTemplate>
+            <DataTemplate x:DataType="c:CommandInfoDto">
+              <Grid ColumnDefinitions="90,280,*">
+                <TextBlock Grid.Column="0" Classes="muted" Text="{Binding Group}" />
+                <TextBlock Grid.Column="1" Classes="mono" Text="{Binding Syntax}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                <TextBlock Grid.Column="2" Text="{Binding Description}" TextTrimming="CharacterEllipsis" />
+              </Grid>
+            </DataTemplate>
+          </ListBox.ItemTemplate>
+        </ListBox>
+      </DockPanel>
+    </TabItem>
+
+    <!-- ============================================================ hotkeys -->
+    <TabItem Header="Sneltoetsen">
+      <DockPanel>
+        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="4" Margin="0,0,0,6">
+          <Button Classes="small" Content="+ sneltoets" Command="{Binding AddHotkeyCommand}" />
+          <Button Classes="small" Content="Standaard herstellen" Command="{Binding ResetHotkeysCommand}" />
+          <Button Content="Opslaan" Command="{Binding SaveHotkeysCommand}" Background="#2F9E6A" />
+        </StackPanel>
+        <TextBlock DockPanel.Dock="Bottom" Classes="muted" TextWrapping="Wrap" Margin="0,6,0,0"
+                   Text="Toets als F5, Ctrl+B, Shift+F1 of Ctrl+Alt+1. Elk commando uit de lijst kan; kies een regel en klik een commando op het eerste tabblad om het over te nemen. Sneltoetsen gelden in alle studiovensters." />
+        <ListBox ItemsSource="{Binding HotkeyRows}" SelectedItem="{Binding SelectedHotkey}">
+          <ListBox.ItemTemplate>
+            <DataTemplate x:DataType="vm:HotkeyRow">
+              <DockPanel>
+                <Button DockPanel.Dock="Right" Classes="small" Content="✕" Margin="4,0,0,0"
+                        Command="{Binding $parent[ListBox].DataContext.RemoveHotkeyCommand}" CommandParameter="{Binding}" />
+                <TextBox DockPanel.Dock="Left" Width="130" Text="{Binding Key}" FontFamily="Consolas"
+                         BorderBrush="{Binding Valid, Converter={x:Static vm:Brushes.ValidBorder}}" />
+                <TextBox Margin="4,0,0,0" Text="{Binding Command}" FontFamily="Consolas" Watermark="commando" />
+              </DockPanel>
+            </DataTemplate>
+          </ListBox.ItemTemplate>
+        </ListBox>
+      </DockPanel>
+    </TabItem>
+  </TabControl>
+</UserControl>
