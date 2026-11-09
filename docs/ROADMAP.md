@@ -30,7 +30,7 @@ Legenda: ✅ klaar · 🟡 deels · ⬜ open
 | ✅ | Script goedkeuren, bewerken of opnieuw laten schrijven vóór het inspreken (niet op tijd goedgekeurd = jingle) |
 | ✅ | Controle met Whisper: elke break wordt teruggeluisterd en vergeleken met het script (score per woord); te laag = opnieuw inspreken, daarna overslaan of uitzenden met waarschuwing. Server in `tools/whisper` (model small, GPU of CPU, geen ffmpeg nodig); getest: echte break score 0,86 |
 | ✅ | Variabelen: weer (Open-Meteo), nieuwskoppen (RSS/Atom, elke kop één keer) en berichten om voor te lezen; hoogstens één per break |
-| ⬜ | Referentiecodes per stem vooraf berekenen (sneller klonen) |
+| ➖ | Referentiecodes per stem vooraf berekenen: niet nodig. De Higgs-server bewaart de codes zelf na de eerste break (kloon 4,9 s eerste keer, daarna 3,1 s; standaardstem 2,3 s). Een geüploade stem bewaart alleen het geluid, niet de codes, dus bespaart niets. Winst zou alleen 1,5 s op de eerste break na een herstart zijn, en breaks worden ruim vooraf gemaakt |
 | ✅ | Andere stemmen als reserve: ElevenLabs en Azure als stem-engine; elke stem kan een reservestem hebben (keten tot vier stappen, Windows-spraak als laatste redmiddel) |
 
 ## Ronde 2b — Presentatie
