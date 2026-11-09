@@ -16,6 +16,107 @@
       <Button Classes="small" Content="Log opnieuw plannen" Command="{Binding ReplanCommand}" ToolTip.Tip="Na het wijzigen van klokken of het grid" />
     </StackPanel>
     <TabControl Classes="compact">
+      <!-- ============================================================ day overview -->
+      <TabItem Header="Dag">
+        <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled">
+        <Grid ColumnDefinitions="210,8,*,8,260" MinWidth="760">
+          <!-- left: date, calendar, now -->
+          <ScrollViewer Grid.Column="0">
+            <StackPanel Spacing="6">
+              <Border Classes="card">
+                <StackPanel Spacing="2">
+                  <TextBlock Text="{Binding DayTitle}" FontWeight="SemiBold" TextWrapping="Wrap" />
+                  <TextBlock Text="{Binding NowClock}" Foreground="#3DBD7D" TextWrapping="Wrap"
+                             IsVisible="{Binding NowClock, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+                </StackPanel>
+              </Border>
+              <Grid ColumnDefinitions="Auto,*,Auto">
+                <Button Grid.Column="0" Classes="small" Content="◀" Command="{Binding PrevDayCommand}" ToolTip.Tip="Vorige dag" />
+                <Button Grid.Column="1" Classes="small go" Content="Vandaag" Command="{Binding TodayCommand}" HorizontalAlignment="Stretch" Margin="4,0" />
+                <Button Grid.Column="2" Classes="small" Content="▶" Command="{Binding NextDayCommand}" ToolTip.Tip="Volgende dag" />
+              </Grid>
+              <Viewbox Stretch="Uniform" StretchDirection="DownOnly">
+                <Calendar SelectedDate="{Binding DayDate}" FirstDayOfWeek="Monday" />
+              </Viewbox>
+              <TextBlock Classes="muted" TextWrapping="Wrap" FontSize="11"
+                         Text="De dag volgt het weekgrid: een blok is een reeks uren met dezelfde klok. Klik een uur voor de inhoud." />
+            </StackPanel>
+          </ScrollViewer>
+
+          <!-- middle: programme blocks with hour buttons -->
+          <ScrollViewer Grid.Column="2">
+            <ItemsControl ItemsSource="{Binding DayBlocks}">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="vm:DayBlockVm">
+                  <Border Classes="card" Margin="0,0,0,6" BorderThickness="4,1,1,1" BorderBrush="{Binding Brush}">
+                    <StackPanel Spacing="4">
+                      <DockPanel>
+                        <Border DockPanel.Dock="Right" Background="#3DBD7D" CornerRadius="3" Padding="6,1" IsVisible="{Binding IsNow}">
+                          <TextBlock Text="NU" FontWeight="Bold" FontSize="11" Foreground="#11161D" />
+                        </Border>
+                        <TextBlock Text="{Binding Name}" FontWeight="SemiBold" FontSize="15" />
+                        <TextBlock Classes="muted mono" Text="{Binding Span}" Margin="10,0,0,0" VerticalAlignment="Center" />
+                      </DockPanel>
+                      <ItemsControl ItemsSource="{Binding Hours}">
+                        <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                          <DataTemplate x:DataType="vm:DayHourVm">
+                            <Button Classes="small mono" Margin="0,0,4,4" MinWidth="64" HorizontalContentAlignment="Center"
+                                    Classes.go="{Binding IsNow}" BorderThickness="2"
+                                    BorderBrush="{Binding Selected, Converter={x:Static vm:Brushes.Active}}"
+                                    Command="{Binding $parent[UserControl].DataContext.PickHourCommand}" CommandParameter="{Binding}">
+                              <StackPanel Orientation="Horizontal" Spacing="2">
+                                <TextBlock Text="{Binding Text}" />
+                                <TextBlock Text="{Binding Badge}" Foreground="#F0B429" FontWeight="Bold" />
+                              </StackPanel>
+                            </Button>
+                          </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                      </ItemsControl>
+                    </StackPanel>
+                  </Border>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </ScrollViewer>
+
+          <!-- right: the chosen hour and the agenda of the day -->
+          <Grid Grid.Column="4" RowDefinitions="Auto,*,8,Auto,*">
+            <TextBlock Grid.Row="0" Text="{Binding HourTitle}" FontWeight="SemiBold" Margin="0,0,0,4" TextWrapping="Wrap" />
+            <ListBox Grid.Row="1" ItemsSource="{Binding HourLines}">
+              <ListBox.ItemTemplate>
+                <DataTemplate x:DataType="vm:DayLine">
+                  <DockPanel>
+                    <Border DockPanel.Dock="Left" Width="4" Background="{Binding Brush}" CornerRadius="2" Margin="0,0,6,0" />
+                    <TextBlock DockPanel.Dock="Left" Classes="mono muted" Text="{Binding Time}" Width="64" />
+                    <StackPanel>
+                      <TextBlock Text="{Binding Text}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                      <TextBlock Classes="muted" FontSize="11" Text="{Binding Detail}" TextTrimming="CharacterEllipsis" />
+                    </StackPanel>
+                  </DockPanel>
+                </DataTemplate>
+              </ListBox.ItemTemplate>
+            </ListBox>
+            <TextBlock Grid.Row="3" Text="VASTE TIJDEN EN STREAMS VANDAAG" FontSize="11" FontWeight="Bold" Classes="muted" Margin="0,0,0,4" />
+            <ListBox Grid.Row="4" ItemsSource="{Binding DayAgenda}">
+              <ListBox.ItemTemplate>
+                <DataTemplate x:DataType="vm:DayLine">
+                  <DockPanel>
+                    <Border DockPanel.Dock="Left" Width="4" Background="{Binding Brush}" CornerRadius="2" Margin="0,0,6,0" />
+                    <TextBlock DockPanel.Dock="Left" Classes="mono muted" Text="{Binding Time}" Width="64" />
+                    <StackPanel>
+                      <TextBlock Text="{Binding Text}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                      <TextBlock Classes="muted" FontSize="11" Text="{Binding Detail}" TextTrimming="CharacterEllipsis" />
+                    </StackPanel>
+                  </DockPanel>
+                </DataTemplate>
+              </ListBox.ItemTemplate>
+            </ListBox>
+          </Grid>
+        </Grid>
+        </ScrollViewer>
+      </TabItem>
+
       <!-- ============================================================ clocks -->
       <TabItem Header="Klokken">
         <Grid ColumnDefinitions="160,*">

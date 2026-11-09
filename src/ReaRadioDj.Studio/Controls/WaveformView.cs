@@ -20,10 +20,14 @@ public sealed class WaveformView : Control
     public static readonly StyledProperty<double> PlayheadProperty = AvaloniaProperty.Register<WaveformView, double>(nameof(Playhead), -1);
     public static readonly StyledProperty<double> CueInProperty = AvaloniaProperty.Register<WaveformView, double>(nameof(CueIn));
     public static readonly StyledProperty<double> CueOutProperty = AvaloniaProperty.Register<WaveformView, double>(nameof(CueOut));
+    public static readonly StyledProperty<string> EmptyTextProperty = AvaloniaProperty.Register<WaveformView, string>(nameof(EmptyText), "Kies een item in de bibliotheek en klik op Cues");
+    public static readonly StyledProperty<bool> ShowCursorProperty = AvaloniaProperty.Register<WaveformView, bool>(nameof(ShowCursor), true);
+    /// <summary>Player mode: markers cannot be dragged and a click raises <see cref="Clicked"/> (seek).</summary>
+    public static readonly StyledProperty<bool> ReadOnlyMarkersProperty = AvaloniaProperty.Register<WaveformView, bool>(nameof(ReadOnlyMarkers));
 
     static WaveformView()
     {
-        AffectsRender<WaveformView>(PeaksProperty, MarkersProperty, CursorSecondsProperty, PlayheadProperty, CueInProperty, CueOutProperty);
+        AffectsRender<WaveformView>(PeaksProperty, MarkersProperty, CursorSecondsProperty, PlayheadProperty, CueInProperty, CueOutProperty, EmptyTextProperty);
         PeaksProperty.Changed.AddClassHandler<WaveformView>((w, _) => w.ResetZoom());
         ClipToBoundsProperty.OverrideDefaultValue<WaveformView>(true);
         FocusableProperty.OverrideDefaultValue<WaveformView>(true);
@@ -36,9 +40,14 @@ public sealed class WaveformView : Control
     public double Playhead { get => GetValue(PlayheadProperty); set => SetValue(PlayheadProperty, value); }
     public double CueIn { get => GetValue(CueInProperty); set => SetValue(CueInProperty, value); }
     public double CueOut { get => GetValue(CueOutProperty); set => SetValue(CueOutProperty, value); }
+    public string EmptyText { get => GetValue(EmptyTextProperty); set => SetValue(EmptyTextProperty, value); }
+    public bool ShowCursor { get => GetValue(ShowCursorProperty); set => SetValue(ShowCursorProperty, value); }
+    public bool ReadOnlyMarkers { get => GetValue(ReadOnlyMarkersProperty); set => SetValue(ReadOnlyMarkersProperty, value); }
 
     /// <summary>Raised while and after a marker is dragged: key, new position in seconds.</summary>
     public event Action<string, double>? MarkerMoved;
+    /// <summary>Raised on a click when <see cref="ReadOnlyMarkers"/> is set: position in seconds.</summary>
+    public event Action<double>? Clicked;
 
     private double _viewStart, _viewLength = 1;
     private string? _dragKey;
@@ -71,7 +80,7 @@ public sealed class WaveformView : Control
         var peaks = Peaks;
         if (peaks is null || peaks.Length == 0 || w < 2)
         {
-            var t = new FormattedText("Kies een item in de bibliotheek en klik op Cues", System.Globalization.CultureInfo.CurrentCulture,
+            var t = new FormattedText(EmptyText, System.Globalization.CultureInfo.CurrentCulture,
                 FlowDirection.LeftToRight, Typeface.Default, 13, new SolidColorBrush(Color.Parse("#8B95A5")));
             ctx.DrawText(t, new Point(10, h / 2 - 8));
             return;
@@ -121,7 +130,7 @@ public sealed class WaveformView : Control
 
         // Cursor and playhead
         double cx = X(CursorSeconds);
-        ctx.DrawLine(new Pen(new SolidColorBrush(Color.Parse("#F0B429")), 1, new DashStyle([4, 3], 0)), new Point(cx, 0), new Point(cx, h));
+        if (ShowCursor) ctx.DrawLine(new Pen(new SolidColorBrush(Color.Parse("#F0B429")), 1, new DashStyle([4, 3], 0)), new Point(cx, 0), new Point(cx, h));
         if (Playhead >= 0)
         {
             double px = X(Playhead);
@@ -140,6 +149,12 @@ public sealed class WaveformView : Control
         base.OnPointerPressed(e);
         Focus();
         var x = e.GetPosition(this).X;
+        if (ReadOnlyMarkers)
+        {
+            if (Peaks is { Length: > 0 }) Clicked?.Invoke(Math.Clamp(Seconds(x), 0, Total));
+            e.Handled = true;
+            return;
+        }
         _dragKey = (Markers ?? []).Select(m => (m, d: Math.Abs(X(m.Seconds) - x))).Where(t => t.d < 7).OrderBy(t => t.d).Select(t => t.m.Key).FirstOrDefault();
         if (_dragKey is null) CursorSeconds = Math.Clamp(Seconds(x), 0, Total);
         e.Pointer.Capture(this);

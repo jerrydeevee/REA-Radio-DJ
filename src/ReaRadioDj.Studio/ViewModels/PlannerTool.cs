@@ -192,6 +192,8 @@ public sealed partial class PlannerTool : StudioTool
         Watches.Clear();
         foreach (var w in watches) Watches.Add(w);
         SelectedWatch = Watches.FirstOrDefault(w => w.Id == keepWatch);
+
+        SetDayData(clocks, grid);
     }
 
     // clocks

@@ -1,28 +1,58 @@
 using System.Collections.ObjectModel;
+using Avalonia.Media;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using ReaRadioDj.Contracts;
+using ReaRadioDj.Studio.Controls;
 using ReaRadioDj.Studio.Services;
 
 namespace ReaRadioDj.Studio.ViewModels;
 
-/// <summary>One manual player (standby or PFL) as shown in a window.</summary>
-public sealed partial class PlayerCard(string id) : ObservableObject
+/// <summary>
+/// One manual player (standby or PFL) as shown in a window. Two looks: compact (title, bar, buttons) or waveform
+/// (waveform with cue markers and play head, a big counter that runs down and flashes in the last seconds).
+/// </summary>
+public sealed partial class PlayerCard : ObservableObject
 {
-    public string Id { get; } = id;
-    [ObservableProperty] private string _name = id;
+    /// <summary>Raised when the look of all players changes (one setting for every player window).</summary>
+    public static event Action? StyleChanged;
+
+    public PlayerCard(string id)
+    {
+        Id = id;
+        _wave = Hub.Settings.PlayerStyle != "compact";
+        StyleChanged += () => Wave = Hub.Settings.PlayerStyle != "compact";
+    }
+
+    public string Id { get; }
+    [ObservableProperty] private string _name = "";
     [ObservableProperty] private string _label = "leeg";
     [ObservableProperty] private string _state = "empty";
     [ObservableProperty] private string _elapsed = "";
     [ObservableProperty] private string _remaining = "";
     [ObservableProperty] private string _intro = "";
     [ObservableProperty] private double _progress;
+    [ObservableProperty] private double _left;
     [ObservableProperty] private string _stack = "";
     [ObservableProperty] private bool _playing;
     [ObservableProperty] private long? _mediaId;
+    [ObservableProperty] private bool _wave;
+
+    // waveform look
+    [ObservableProperty] private ushort[]? _peaks;
+    [ObservableProperty] private double _blockSeconds = 0.02;
+    [ObservableProperty] private IReadOnlyList<WaveMarker> _markers = [];
+    [ObservableProperty] private double _position = -1;
+    [ObservableProperty] private double _cueIn;
+    [ObservableProperty] private double _cueOut;
+    [ObservableProperty] private string _endState = "normal";
+    [ObservableProperty] private bool _flash;
 
     public string StateText => State switch { "playing" => "speelt", "paused" => "pauze", "cued" => "klaar", _ => "leeg" };
+    public string StyleButtonText => Wave ? "Compact" : "Golfvorm";
     partial void OnStateChanged(string value) => OnPropertyChanged(nameof(StateText));
+    partial void OnWaveChanged(bool value) => OnPropertyChanged(nameof(StyleButtonText));
+    partial void OnMediaIdChanged(long? value) => _ = LoadWaveAsync(value);
 
     public void Update(PlayerDto p)
     {
@@ -32,11 +62,49 @@ public sealed partial class PlayerCard(string id) : ObservableObject
         MediaId = p.MediaId;
         Label = p.Label ?? "leeg — sleep een item hierheen";
         double len = Math.Max(0.1, p.CueOut - p.CueIn);
-        Elapsed = p.Label is null ? "" : StudioHub.Time(p.Position - p.CueIn);
-        Remaining = p.Label is null ? "" : "-" + StudioHub.Time(p.CueOut - p.Position);
-        Progress = p.Label is null ? 0 : Math.Clamp((p.Position - p.CueIn) / len * 100, 0, 100);
-        Intro = p.Intro is double i && i > p.Position && p.Label is not null ? $"intro {StudioHub.TimeTenths(i - p.Position)}" : "";
+        double left = Math.Max(0, p.CueOut - p.Position);
+        bool loaded = p.Label is not null;
+        Elapsed = loaded ? StudioHub.Time(p.Position - p.CueIn) : "";
+        Remaining = loaded ? "-" + StudioHub.Time(left) : "";
+        Progress = loaded ? Math.Clamp((p.Position - p.CueIn) / len * 100, 0, 100) : 0;
+        Left = loaded ? Math.Clamp(left / len * 100, 0, 100) : 0;
+        Position = loaded ? p.Position : -1;
+        CueIn = p.CueIn;
+        CueOut = p.CueOut;
+        EndState = !Playing ? "normal" : left <= 10 ? "end" : left <= 20 ? "warn" : "normal";
+        Flash = EndState == "end" && DateTime.Now.Millisecond < 500;
+        Intro = p.Intro is double i && i > p.Position && loaded ? $"intro {StudioHub.TimeTenths(i - p.Position)}" : "";
         Stack = p.Stack.Count == 0 ? "" : $"daarna: {string.Join(", ", p.Stack.Take(3))}{(p.Stack.Count > 3 ? $" (+{p.Stack.Count - 3})" : "")}";
+    }
+
+    /// <summary>Fetches the waveform and cue points of the loaded item (only when the waveform look is used).</summary>
+    private async Task LoadWaveAsync(long? id)
+    {
+        if (id is not long mediaId) { Peaks = null; Markers = []; return; }
+        var media = await Hub.Client.GetAsync<MediaDto>($"/api/media/{mediaId}");
+        var peaks = await Hub.Client.GetAsync<PeaksDto>($"/api/media/{mediaId}/peaks");
+        if (MediaId != mediaId) return; // another item was loaded in the meantime
+        if (peaks is not null)
+        {
+            var bytes = Convert.FromBase64String(peaks.Data);
+            var data = new ushort[bytes.Length / 2];
+            Buffer.BlockCopy(bytes, 0, data, 0, data.Length * 2);
+            BlockSeconds = peaks.BlockMs / 1000.0;
+            Peaks = data;
+        }
+        else Peaks = null;
+        Markers = media is null ? [] : MarkersFor(media.Cues);
+    }
+
+    /// <summary>The cue points a presenter needs while playing: intro, outro, start of the next item and the end.</summary>
+    public static IReadOnlyList<WaveMarker> MarkersFor(CueDto c)
+    {
+        var list = new List<WaveMarker>();
+        if (c.Intro is double intro) list.Add(new("intro", "Intro", intro, Color.Parse("#F0B429")));
+        if (c.Outro is double outro) list.Add(new("outro", "Outro", outro, Color.Parse("#FB923C")));
+        if (c.Mix > 0 && c.Mix < c.CueOut) list.Add(new("mix", "Volgende", c.Mix, Color.Parse("#E5484D")));
+        list.Add(new("cueOut", "Uit", c.CueOut, Color.Parse("#A1A1AA")));
+        return list;
     }
 
     private static StudioHub Hub => StudioHub.Current;
@@ -49,7 +117,17 @@ public sealed partial class PlayerCard(string id) : ObservableObject
     [RelayCommand] private Task EnqueueSelected() => Hub.SelectedMedia is { } m ? Hub.Client.PostAsync($"/api/players/{Id}/enqueue", new { mediaId = m.Id }) : Task.CompletedTask;
     [RelayCommand] private void EditCues() { if (MediaId is long id) Hub.RequestCueEditor(id); }
 
+    /// <summary>Switches every player between the waveform and the compact look (saved in the studio settings).</summary>
+    [RelayCommand]
+    private void ToggleStyle()
+    {
+        Hub.Settings.PlayerStyle = Wave ? "compact" : "wave";
+        Hub.Settings.Save();
+        StyleChanged?.Invoke();
+    }
+
     public Task Seek(double fraction, double cueIn, double cueOut) => Hub.PlayerCommand(Id, "seek", cueIn + fraction * (cueOut - cueIn));
+    public Task SeekTo(double seconds) => Hub.PlayerCommand(Id, "seek", seconds);
 
     /// <summary>Drop: loads the item, or puts it on the stack when the player is busy.</summary>
     public Task Drop(long mediaId) => Hub.Client.PostAsync($"/api/players/{Id}/{(State == "playing" ? "enqueue" : "load")}", new { mediaId });

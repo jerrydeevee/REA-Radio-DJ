@@ -16,6 +16,9 @@ public sealed partial class CartButton(CartwallTool wall, int slot) : Observable
     [ObservableProperty] private IBrush _background = Brushes.FromHex(null);
     [ObservableProperty] private bool _playing;
     [ObservableProperty] private double _progress;
+    /// <summary>Remaining part of the cart (100 = full): a bar that runs empty while it plays.</summary>
+    [ObservableProperty] private double _left;
+    [ObservableProperty] private bool _loaded;
     [ObservableProperty] private bool _loop;
     [ObservableProperty] private bool _overlay;
     [ObservableProperty] private long? _mediaId;
@@ -41,6 +44,7 @@ public sealed partial class CartButton(CartwallTool wall, int slot) : Observable
 public sealed partial class CartwallTool : StudioTool
 {
     public static readonly string[] Colors = ["#3FA7FF", "#3DBD7D", "#F0B429", "#A78BFA", "#E5484D", "#2DD4BF", "#F472B6", "#FB923C"];
+    private const string PlayingColor = "#D7373F";
     private List<CartDto> _carts = [];
 
     public CartwallTool() : base("cart1", "Cartwall 1")
@@ -89,6 +93,9 @@ public sealed partial class CartwallTool : StudioTool
             b.Loop = c?.Loop ?? false;
             b.Overlay = c?.Overlay ?? false;
             b.Background = Brushes.FromHex(c is { MediaId: not null } ? (string.IsNullOrWhiteSpace(c.Color) ? "#334155" : c.Color) : null);
+            b.Loaded = c is { MediaId: not null };
+            b.Left = b.Loaded ? 100 : 0;
+            b.Playing = false;
         }
         if (Hub.State is { } s) OnState(s);
     }
@@ -104,13 +111,20 @@ public sealed partial class CartwallTool : StudioTool
             {
                 b.Playing = true;
                 b.Progress = clip.Length > 0 ? Math.Clamp(clip.Position / clip.Length * 100, 0, 100) : 0;
-                b.Sub = "-" + StudioHub.Time(clip.Length - clip.Position);
+                b.Left = 100 - b.Progress;
+                double rest = clip.Length - clip.Position;
+                b.Sub = "-" + StudioHub.Time(rest);
+                // playing: red; the last five seconds blink (not for loops, they do not end)
+                bool blink = !clip.Loop && rest <= 5 && s.Time.Millisecond < 500;
+                b.Background = Brushes.FromHex(blink ? "#7A1F23" : PlayingColor);
             }
             else if (b.Playing)
             {
                 b.Playing = false;
                 b.Progress = 0;
+                b.Left = b.Loaded ? 100 : 0;
                 b.Sub = b.Data is { MediaId: not null } d ? StudioHub.Time(d.Length) : "";
+                b.Background = Brushes.FromHex(b.Data is { MediaId: not null } d2 ? (string.IsNullOrWhiteSpace(d2.Color) ? "#334155" : d2.Color) : null);
             }
         }
         var others = active.Keys.Where(k => k / 16 != Page).Select(k => $"p{k / 16 + 1}:{k % 16 + 1}").ToList();
