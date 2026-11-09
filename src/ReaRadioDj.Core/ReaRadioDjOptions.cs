@@ -111,7 +111,7 @@ public sealed class TtsOptions
     /// <summary>Optional voice-clone reference: a path or URL the Higgs *server* can read, plus its transcript.</summary>
     public string ReferenceAudio { get; set; } = "";
     public string ReferenceText { get; set; } = "";
-    /// <summary>Higgs control tags put in front of every break, e.g. "&lt;|emotion:happy|&gt;".</summary>
+    /// <summary>Higgs control tags put in front of every break, e.g. "&lt;|emotion:enthusiasm|&gt;".</summary>
     public string Tags { get; set; } = "";
     public double Temperature { get; set; } = 0.8;
     /// <summary>Name (or part of it) of the Windows voice for the "sapi" provider; empty = first voice for the language.</summary>

@@ -15,7 +15,11 @@ public sealed partial class VoiceTool : StudioTool
     public static readonly string[] EngineNames = ["Higgs TTS 3 (GPU)", "Windows-spraak"];
     /// <summary>Quick tags for Higgs; the text field accepts any tag the server understands.</summary>
     public static readonly string[] QuickTags =
-        ["<|emotion:happy|>", "<|emotion:excited|>", "<|emotion:calm|>", "<|emotion:serious|>", "<|emotion:warm|>"];
+    [
+        "<|emotion:enthusiasm|>", "<|emotion:elation|>", "<|emotion:contentment|>", "<|emotion:determination|>",
+        "<|emotion:affection|>", "<|emotion:amusement|>", "<|prosody:speed_fast|>", "<|prosody:speed_slow|>",
+        "<|prosody:expressive_high|>", "<|prosody:pitch_low|>", "<|style:whispering|>",
+    ];
 
     private readonly DispatcherTimer _poll;
 
@@ -139,7 +143,7 @@ public sealed partial class VoiceTool : StudioTool
     private void NewHiggs()
     {
         Selected = null;
-        Name = "Nieuwe Higgs-stem"; Engine = 0; ReferenceAudio = ""; ReferenceText = ""; ProfileTags = "<|emotion:happy|>";
+        Name = "Nieuwe Higgs-stem"; Engine = 0; ReferenceAudio = ""; ReferenceText = ""; ProfileTags = "<|emotion:enthusiasm|>";
         Temperature = 0.8; Consent = false; ConsentNote = "";
     }
 
@@ -155,8 +159,17 @@ public sealed partial class VoiceTool : StudioTool
     private void AddTag(string? tag)
     {
         if (string.IsNullOrEmpty(tag) || ProfileTags.Contains(tag, StringComparison.Ordinal)) return;
-        // one emotion at a time: replace an existing emotion tag
-        ProfileTags = System.Text.RegularExpressions.Regex.Replace(ProfileTags, @"<\|emotion:[^|]*\|>", "") + tag;
+        // one tag per category (emotion, style, speed, pitch, expressiveness): a new one replaces the old one
+        string pattern = tag switch
+        {
+            _ when tag.StartsWith("<|emotion:", StringComparison.Ordinal) => @"<\|emotion:[^|]*\|>",
+            _ when tag.StartsWith("<|style:", StringComparison.Ordinal) => @"<\|style:[^|]*\|>",
+            _ when tag.Contains(":speed_", StringComparison.Ordinal) => @"<\|prosody:speed_[^|]*\|>",
+            _ when tag.Contains(":pitch_", StringComparison.Ordinal) => @"<\|prosody:pitch_[^|]*\|>",
+            _ when tag.Contains(":expressive_", StringComparison.Ordinal) => @"<\|prosody:expressive_[^|]*\|>",
+            _ => "(?!)",
+        };
+        ProfileTags = System.Text.RegularExpressions.Regex.Replace(ProfileTags, pattern, "") + tag;
     }
 
     [RelayCommand]

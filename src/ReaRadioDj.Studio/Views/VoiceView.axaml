@@ -94,7 +94,7 @@
           <!-- Higgs -->
           <StackPanel Spacing="6" IsVisible="{Binding IsHiggs}">
             <TextBlock Text="Stuurtags (voor elke break)" />
-            <TextBox Text="{Binding ProfileTags}" FontFamily="Consolas" Watermark="&lt;|emotion:happy|&gt;" />
+            <TextBox Text="{Binding ProfileTags}" FontFamily="Consolas" Watermark="&lt;|emotion:enthusiasm|&gt;&lt;|prosody:speed_fast|&gt;" />
             <ItemsControl ItemsSource="{Binding Tags}">
               <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
               <ItemsControl.ItemTemplate>

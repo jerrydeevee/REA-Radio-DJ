@@ -77,17 +77,24 @@ Je kunt alles overschrijven met omgevingsvariabelen, bijvoorbeeld `ReaRadioDj__O
 | `Presenter.Llm.BaseUrl` / `Model` | bijvoorbeeld `http://localhost:11434` en `llama3.1` voor Ollama; leeg = sjablonen |
 | `Presenter.Tts.Provider` | `sapi` (Windows) of `higgs` |
 | `Presenter.Tts.BaseUrl` | Higgs-server, standaard `http://localhost:8001` |
-| `Presenter.Tts.Tags` | Higgs-stuurtags vóór elke break, bijv. `<\|emotion:happy\|>` |
+| `Presenter.Tts.Tags` | Higgs-stuurtags vóór elke break, bijv. `<\|emotion:enthusiasm\|>`; per stem in te stellen in het venster *Stem* |
 | `Stream.*` | Icecast-server (`host:port/mount`), wachtwoord, bitrate |
 
 ### Higgs TTS 3 gebruiken
 
-Higgs draait als aparte server, het liefst op Linux of in WSL met een NVIDIA-GPU:
+Higgs draait als aparte server (SGLang-Omni) in WSL met een NVIDIA-GPU. De scripts staan in `tools/higgs`:
 
 ```bash
-hf download bosonai/higgs-tts-3-4b
-sgl-omni serve --model-path bosonai/higgs-tts-3-4b --port 8001
+# in WSL (Ubuntu): eenmalig een C-compiler, daarna de server en het model (~9 GB) in ~/higgs
+sudo apt-get install -y build-essential
+mkdir -p ~/higgs && cp tools/higgs/*.sh ~/higgs/ && bash ~/higgs/install.sh
+bash ~/higgs/pin.sh      # RTX 50-serie: CUDA-compiler gelijk zetten met de CUDA 13.0-runtime
+~/higgs/start.sh         # server op poort 8001; referentieclips in ~/higgs/voices
 ```
+
+De studio kan de server ook zelf starten en stoppen (venster *Stem*): `Presenter.Tts.ServerCommand` staat op
+`wsl.exe` met `-d Ubuntu -- bash -lc ~/higgs/start.sh`; met `StartServer` = `true` start hij mee met de engine.
+Let op de licentie van het model: *Boson Higgs TTS 3 Research and Non-Commercial License*.
 
 Zet daarna `Presenter.Tts.Provider` op `higgs`. Voor een eigen stem vul je `ReferenceAudio` (een pad of URL die de
 **server** kan lezen) en `ReferenceText` (wat er in dat fragment gezegd wordt) in. Faalt Higgs, dan valt
