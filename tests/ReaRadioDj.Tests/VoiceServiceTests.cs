@@ -38,6 +38,15 @@ public sealed class SpeechCheckScoreTests
     }
 
     [Fact]
+    public void How_whisper_writes_numbers_names_and_ampersands_is_not_counted_as_wrong()
+    {
+        const string script = "Goedemorgen Aa en Hunze! Het is tien over acht en dat was Years and Years met King. Straks hoor je Louane.";
+        Assert.Equal(1, SpeechCheck.Score(script, "Goedemorgen AA en Hunze. Het is 10 over 8 en dat was Jeers en Jeers met King. Straks hoor je Louanje."));
+        Assert.Equal(1, SpeechCheck.Score(script, "Goedemorgen A&Hunze! Het is 10 over 8 en dat was Jeers en Jeers met King. Straks hoor je Luane."));
+        Assert.Equal(1, SpeechCheck.Score("het is tweeëntwintig graden", "het is 22 graden"));
+    }
+
+    [Fact]
     public void Missing_and_wrong_words_lower_the_score()
     {
         double s = SpeechCheck.Score("dat was een mooi nummer van Anouk", "dat was een nummer van Marco");

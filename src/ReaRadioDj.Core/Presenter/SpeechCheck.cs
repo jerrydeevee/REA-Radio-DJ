@@ -63,11 +63,18 @@ public sealed partial class SpeechCheck(HttpClient http, SpeechCheckOptions opti
         return Math.Max(0, 1 - d[b.Length] / (double)a.Length);
     }
 
-    /// <summary>Equal, or close enough for a recogniser (one letter off in a longer word: "Hofstede"/"Hofsteede").</summary>
+    /// <summary>
+    /// Equal, or close enough for a recogniser: the same sound key ("Years"/"Jeers", "Aa"/"A"), or one letter off in a
+    /// longer word ("Hofstede"/"Hofsteede", "Louane"/"Louanje").
+    /// </summary>
     private static bool Same(string x, string y)
     {
         if (x == y) return true;
-        if (Math.Min(x.Length, y.Length) < 5 || Math.Abs(x.Length - y.Length) > 1) return false;
+        if (char.IsDigit(x[0]) || char.IsDigit(y[0])) return false;
+        x = Sound(x);
+        y = Sound(y);
+        if (x == y) return true;
+        if (Math.Min(x.Length, y.Length) < 4 || Math.Abs(x.Length - y.Length) > 1) return false;
         int i = 0;
         while (i < x.Length && i < y.Length && x[i] == y[i]) i++;
         int k = 0;
@@ -75,13 +82,44 @@ public sealed partial class SpeechCheck(HttpClient http, SpeechCheckOptions opti
         return Math.Max(x.Length, y.Length) - i - k <= 1;
     }
 
+    /// <summary>A rough Dutch sound key: spellings that sound alike map to the same letters, doubled letters collapse.</summary>
+    internal static string Sound(string w)
+    {
+        var s = new StringBuilder(w)
+            .Replace("ph", "f").Replace("qu", "kw").Replace("ck", "k").Replace("c", "k").Replace("x", "ks")
+            .Replace("ij", "ei").Replace("y", "j").Replace("ea", "ee").Replace("ou", "u").Replace("au", "u")
+            .Replace("dt", "t").Replace("th", "t").Replace("w", "v").Replace("z", "s").ToString();
+        if (s.EndsWith('d')) s = s[..^1] + "t";
+        var sb = new StringBuilder(s.Length);
+        foreach (var c in s)
+            if (sb.Length == 0 || sb[^1] != c) sb.Append(c);
+        return sb.ToString();
+    }
+
     internal static string[] Words(string text)
     {
-        var s = text.Normalize(NormalizationForm.FormD);
+        var s = text.Replace("&", " en ").Normalize(NormalizationForm.FormD);
         var sb = new StringBuilder(s.Length);
         foreach (var c in s)
             if (CharUnicodeInfo.GetUnicodeCategory(c) != UnicodeCategory.NonSpacingMark) sb.Append(char.ToLowerInvariant(c));
-        return NonWord().Replace(sb.ToString(), " ").Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        return NonWord().Replace(sb.ToString(), " ").Split(' ', StringSplitOptions.RemoveEmptyEntries).Select(Canonical).ToArray();
+    }
+
+    private static readonly string[] Units = ["nul", "een", "twee", "drie", "vier", "vijf", "zes", "zeven", "acht", "negen",
+        "tien", "elf", "twaalf", "dertien", "veertien", "vijftien", "zestien", "zeventien", "achttien", "negentien"];
+    private static readonly string[] Tens = ["", "", "twintig", "dertig", "veertig", "vijftig", "zestig", "zeventig", "tachtig", "negentig"];
+
+    /// <summary>Number words become digits (Whisper writes "tien over acht" as "10 over 8"); "and" is "en".</summary>
+    private static string Canonical(string w)
+    {
+        if (w == "and") return "en";
+        if (w == "een") return w; // mostly the article; Whisper keeps it as a word too
+        if (Array.IndexOf(Units, w) is var u and >= 0) return u.ToString(CultureInfo.InvariantCulture);
+        if (Array.IndexOf(Tens, w) is var t and >= 2) return (t * 10).ToString(CultureInfo.InvariantCulture);
+        for (int ten = 2; ten < Tens.Length; ten++)
+            if (w.EndsWith("en" + Tens[ten], StringComparison.Ordinal) && Array.IndexOf(Units, w[..^(Tens[ten].Length + 2)]) is var one and > 0 and < 10)
+                return (ten * 10 + one).ToString(CultureInfo.InvariantCulture);
+        return w;
     }
 
     [GeneratedRegex(@"[^a-z0-9]+")] private static partial Regex NonWord();

@@ -28,7 +28,7 @@ Legenda: ✅ klaar · 🟡 deels · ⬜ open
 | ✅ | Muziekbed onder de break (aanloop, dip onder de stem, uitfade met het laatste woord); talk-up over de intro tot de zang. Outro-jingle na de break |
 | ✅ | Persona's per dagdeel: naam, karakter, stem, lengte en muziekbed per dagen + uren |
 | ✅ | Script goedkeuren, bewerken of opnieuw laten schrijven vóór het inspreken (niet op tijd goedgekeurd = jingle) |
-| ✅ | Controle met Whisper: elke break wordt teruggeluisterd en vergeleken met het script (score per woord); te laag = opnieuw inspreken, daarna overslaan of uitzenden met waarschuwing. Server in `tools/whisper` (nog live te testen: model nog niet gedownload) |
+| ✅ | Controle met Whisper: elke break wordt teruggeluisterd en vergeleken met het script (score per woord); te laag = opnieuw inspreken, daarna overslaan of uitzenden met waarschuwing. Server in `tools/whisper` (model small, GPU of CPU, geen ffmpeg nodig); getest: echte break score 0,86 |
 | ✅ | Variabelen: weer (Open-Meteo), nieuwskoppen (RSS/Atom, elke kop één keer) en berichten om voor te lezen; hoogstens één per break |
 | ⬜ | Referentiecodes per stem vooraf berekenen (sneller klonen) |
 | ✅ | Andere stemmen als reserve: ElevenLabs en Azure als stem-engine; elke stem kan een reservestem hebben (keten tot vier stappen, Windows-spraak als laatste redmiddel) |
