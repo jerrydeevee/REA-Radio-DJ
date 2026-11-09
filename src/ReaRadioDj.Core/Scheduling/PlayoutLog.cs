@@ -53,6 +53,9 @@ public sealed class PlayoutLog
         Changed?.Invoke();
     }
 
+    /// <summary>Tells listeners that an item changed in place (for example its transition).</summary>
+    public void Touch() => Changed?.Invoke();
+
     public LogItem? PeekNext() { lock (_gate) return _upcoming.Count > 0 ? _upcoming[0] : null; }
 
     public LogItem? Find(long id) { lock (_gate) return _upcoming.FirstOrDefault(i => i.Id == id); }

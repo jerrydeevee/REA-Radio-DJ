@@ -39,7 +39,7 @@ Legenda: ✅ klaar · 🟡 deels · ⬜ open
 |---|---|
 | ✅ | Voicetracking: opnemen tussen twee logitems in drie stappen (start, volgende, stop) via PFL, los van de microfoonknop. Stilte eraf, timing blijft: de stem begint over de outro (muziek zachter), het volgende nummer start waar je Volgende drukte. Beluisteren, opnieuw of in de log; de nummers eromheen blijven staan bij herplannen. |
 | ✅ | Log bewaard bij herstart: de engine schrijft de log (komende items en recente geschiedenis) elke seconde naar `log.json` in de datamap als er iets veranderd is, en zet hem terug bij het starten. Voicetracks, handmatige items en gemaakte AI-breaks komen terug; een break waarvan het bestand weg is wordt opnieuw gemaakt, items zonder audiobestand vallen weg. Is de log ouder dan een uur, dan worden alleen de klokitems opnieuw gepland. Getest met een harde kill: alle 9 items terug in dezelfde volgorde. Het nummer dat op dat moment liep, begint niet opnieuw |
-| ⬜ | Overgangseditor met golfvormen, inserts en volume-envelopes |
+| ✅ | Overgangseditor (venster Overgangen, of ⇄ in de programmalog): beide golfvormen op één tijdlijn, het volgende item opzij slepen om te kiezen waar het start, gele volumelijnen voor beide items (punten slepen, dubbelklik toevoegen, rechtsklik weg), een jingle of sweeper als insert in de middelste baan, snelknoppen voor uitfaden. Beluisteren mixt de overgang offline en speelt hem op PFL. Opgeslagen op het logitem en bewaard bij een herstart; geldt alleen zolang dezelfde twee items na elkaar staan. Getest in BASS: volgende nummer op 2,0 s in plaats van het mixpunt (5,5 s), insert op 1,5 s, uitgaand nummer weg na zijn fade |
 | ⬜ | Nieuwsbeheer: blokken, RSS-bronnen, opener/sluiter als vaste tijd |
 
 ## Ronde 3 — Koppelingen en reclame

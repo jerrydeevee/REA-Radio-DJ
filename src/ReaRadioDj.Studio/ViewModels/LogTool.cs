@@ -101,7 +101,7 @@ public sealed partial class LogTool : StudioTool
         Type = u.Type,
         Label = u.Type == "aiBreak" ? $"AI-presentator ({BreakText(u.BreakState)})" : (string.IsNullOrEmpty(u.Title) ? u.Label : u.Title),
         Detail = u.Type == "aiBreak" ? u.Script : string.Join(" · ", new[] { u.Artist, u.Category }.Where(x => !string.IsNullOrWhiteSpace(x))),
-        Origin = u.UseHook ? u.Origin + " · hook" : u.Origin,
+        Origin = (u.UseHook ? u.Origin + " · hook" : u.Origin) + (u.HandMadeMix ? " · eigen overgang" : ""),
         Error = u.Error,
         Length = StudioHub.Time(u.Length),
     };
@@ -116,6 +116,7 @@ public sealed partial class LogTool : StudioTool
     [RelayCommand] private Task Down(LogRow? row) => row is null ? Task.CompletedTask : Hub.Client.PostAsync($"/api/log/{row.Id}/down");
     [RelayCommand] private Task MakeNext(LogRow? row) => row is null ? Task.CompletedTask : Hub.Client.PostAsync($"/api/log/{row.Id}/move", new MoveRequest(null, 0));
     [RelayCommand] private Task AddBreak() => Hub.Client.PostAsync("/api/log/break", new AddBreakRequest(0));
+    [RelayCommand] private void EditTransition(LogRow? row) { if (row is not null) Hub.RequestTransition(row.Id); }
     [RelayCommand] private Task Replan() => Hub.Client.PostAsync("/api/log/replan");
 
     [RelayCommand]

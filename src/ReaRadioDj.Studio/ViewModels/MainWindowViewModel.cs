@@ -31,6 +31,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
         Hub.StateReceived += OnState;
         Hub.PropertyChanged += (_, e) => { if (e.PropertyName is nameof(StudioHub.Status) or nameof(StudioHub.ConnectionText)) OnPropertyChanged(nameof(StatusLine)); };
         Hub.EditCuesRequested += id => ShowWindow("cues");
+        Hub.TransitionRequested += _ => ShowWindow("transition");
         RefreshLayoutNames();
         _factory.AutomationView = _settings.LastLayout == AutomationLayoutName;
         Layout = LoadLayoutFile(_settings.LastLayout) ?? NewDefaultLayout();

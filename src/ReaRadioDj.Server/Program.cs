@@ -128,6 +128,7 @@ StudioApi.Map(api, options);
 VoiceApi.Map(api);
 PresenterApi.Map(api, options);
 VoiceTrackApi.Map(api, options);
+TransitionApi.Map(api, options);
 WishlistApi.Map(api, options);
 api.MapGet("/commands", () => CommandBus.Commands);
 api.MapPost("/watches/stop", (StreamWatchService w) => w.StopLive() ? Results.Ok() : Results.NotFound());

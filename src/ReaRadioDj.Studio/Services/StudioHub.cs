@@ -67,6 +67,17 @@ public sealed partial class StudioHub : ObservableObject
 
     public void RequestCueEditor(long mediaId) => EditCuesRequested?.Invoke(mediaId);
 
+    /// <summary>Raised when a window asks to edit the transition into a log item.</summary>
+    public event Action<long>? TransitionRequested;
+    /// <summary>The last log item asked for, for a transition window that opens only now.</summary>
+    public long? PendingTransition { get; private set; }
+
+    public void RequestTransition(long logItemId)
+    {
+        PendingTransition = logItemId;
+        TransitionRequested?.Invoke(logItemId);
+    }
+
     public void NotifyLibraryChanged() => LibraryChanged?.Invoke();
 
     public async Task RefreshCategoriesAsync()

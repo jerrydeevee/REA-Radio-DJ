@@ -77,6 +77,8 @@
               <TextBlock Classes="muted" FontSize="10" Text="{Binding Origin}" HorizontalAlignment="Right" />
             </StackPanel>
             <StackPanel Grid.Column="4" Orientation="Horizontal" Spacing="2" VerticalAlignment="Center">
+              <Button Classes="small" Content="⇄" ToolTip.Tip="Overgang naar dit item bewerken"
+                      Command="{Binding $parent[ListBox].DataContext.EditTransitionCommand}" CommandParameter="{Binding}" />
               <Button Classes="small" Content="⤒" ToolTip.Tip="Als volgende"
                       Command="{Binding $parent[ListBox].DataContext.MakeNextCommand}" CommandParameter="{Binding}" />
               <Button Classes="small" Content="↑" Command="{Binding $parent[ListBox].DataContext.UpCommand}" CommandParameter="{Binding}" />

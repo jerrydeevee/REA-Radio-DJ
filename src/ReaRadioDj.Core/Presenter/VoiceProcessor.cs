@@ -159,7 +159,7 @@ public static class VoiceProcessor
         throw new InvalidDataException("WAV zonder data-blok");
     }
 
-    internal static byte[] Write(int rate, int channels, float[] samples)
+    public static byte[] Write(int rate, int channels, float[] samples)
     {
         int dataSize = samples.Length * 2;
         var b = new byte[44 + dataSize];

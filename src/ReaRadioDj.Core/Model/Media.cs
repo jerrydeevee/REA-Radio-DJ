@@ -107,6 +107,8 @@ public sealed class LogItem
     public bool UseHook { get; init; }
     /// <summary>Voicetrack: start this many seconds before the previous item reaches its mix point (talk over the outro).</summary>
     public double StartEarly { get; init; }
+    /// <summary>Hand-made transition from the item before this one (transition editor), or null for the automatic mix.</summary>
+    public Transition? MixIn { get; set; }
 
     // AI-break bookkeeping
     public BreakState BreakState { get; set; } = BreakState.Pending;

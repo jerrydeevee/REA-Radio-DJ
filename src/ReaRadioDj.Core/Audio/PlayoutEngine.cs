@@ -26,6 +26,8 @@ public sealed class PlayoutEngine : IDisposable
     private readonly ILogger _logger;
     private readonly object _gate = new();
     private readonly List<Deck> _decks = [];
+    /// <summary>Jingles laid over a transition: they play alongside and never start the next item.</summary>
+    private readonly List<Deck> _inserts = [];
     private readonly System.Collections.Concurrent.ConcurrentQueue<Action> _events = new();
     private Thread? _thread;
     private volatile bool _running;
@@ -77,7 +79,7 @@ public sealed class PlayoutEngine : IDisposable
         lock (_gate)
         {
             AutoPlay = false;
-            foreach (var d in _decks) d.FadeOutNow(1.0);
+            foreach (var d in _decks.Concat(_inserts)) d.FadeOutNow(1.0);
         }
     }
 
@@ -124,7 +126,7 @@ public sealed class PlayoutEngine : IDisposable
     {
         lock (_gate)
         {
-            var playing = _decks.Select(d => d.Describe()).ToList();
+            var playing = _inserts.Concat(_decks).Select(d => d.Describe()).ToList();
             var (l, r) = _router.IsStarted ? _router.Program.Levels() : (0f, 0f);
             var cur = _decks.LastOrDefault();
             double toNext = cur is null ? 0 : Math.Max(0, (AutoPlay && !cur.NextStarted ? cur.MixAt : cur.To) - cur.Position);
@@ -146,17 +148,21 @@ public sealed class PlayoutEngine : IDisposable
         }
     }
 
+    private bool Finished(Deck d)
+    {
+        if (!d.IsDone()) return false;
+        double played = d.Played;
+        d.Free();
+        var item = d.Item;
+        _events.Enqueue(() => ItemEnded?.Invoke(item, played));
+        return true;
+    }
+
     private void Tick()
     {
-        _decks.RemoveAll(d =>
-        {
-            if (!d.IsDone()) return false;
-            double played = d.Played;
-            d.Free();
-            var item = d.Item;
-            _events.Enqueue(() => ItemEnded?.Invoke(item, played));
-            return true;
-        });
+        _decks.RemoveAll(Finished);
+        _inserts.RemoveAll(Finished);
+        foreach (var d in _inserts) d.Update();
 
         var current = _decks.LastOrDefault();
         if (current is null)
@@ -165,14 +171,24 @@ public sealed class PlayoutEngine : IDisposable
             return;
         }
 
-        foreach (var d in _decks) d.Update();
+        // A hand-made transition into the next item takes over the mix point, the fades and an optional insert.
+        var upcoming = _log.PeekNext();
+        if (!current.NextStarted)
+            current.Apply(upcoming?.MixIn is { } t && t.AfterPath == current.Media.Path ? t : null);
+        foreach (var d in _decks)
+        {
+            d.Update();
+            if (d.InsertDue() is { } insert) StartInsert(insert);
+        }
+        bool handMade = current.Transition is not null;
         // A voicetrack may start before the mix point: it talks over the outro, which is ducked under it.
-        double early = _log.PeekNext() is { Type: LogItemType.VoiceTrack, StartEarly: > 0 } vt
+        double early = !handMade && upcoming is { Type: LogItemType.VoiceTrack, StartEarly: > 0 } vt
             ? Math.Min(vt.StartEarly, Math.Max(0, current.MixAt - current.From)) : 0;
         if (!current.NextStarted && AutoPlay && current.Position >= current.MixAt - early)
         {
             current.NextStarted = true;
-            if (early > 0.05) current.TalkOver((float)_options.Mix.DuckLevel, current.Position + early);
+            if (handMade) { } // the volume lines do the rest
+            else if (early > 0.05) current.TalkOver((float)_options.Mix.DuckLevel, current.Position + early);
             else if (current.FadeAt is null && current.FadeLength > 0) current.FadeOutAt(current.FadeLength);
             StartNext(current);
         }
@@ -212,6 +228,17 @@ public sealed class PlayoutEngine : IDisposable
         }
     }
 
+    private void StartInsert(MediaItem media)
+    {
+        try
+        {
+            var item = new LogItem { Type = LogItemType.Jingle, Media = media, Origin = "overgang" };
+            _inserts.Add(new Deck(this, item, media, null) { NextStarted = true });
+            _events.Enqueue(() => ItemStarted?.Invoke(item));
+        }
+        catch (BassException ex) { _logger.LogError(ex, "Cannot play insert {Path}", media.Path); }
+    }
+
     internal float LoudnessGain(MediaItem media) => AudioRouter.LoudnessGain(media, _options.Mix.TargetLufs);
 
     public void Dispose()
@@ -220,8 +247,9 @@ public sealed class PlayoutEngine : IDisposable
         _thread?.Join(500);
         lock (_gate)
         {
-            foreach (var d in _decks) d.Free();
+            foreach (var d in _decks.Concat(_inserts)) d.Free();
             _decks.Clear();
+            _inserts.Clear();
         }
     }
 
@@ -239,7 +267,8 @@ public sealed class PlayoutEngine : IDisposable
         public MediaItem Media { get; }
         public double From { get; }
         public double To { get; }
-        public double MixAt { get; }
+        public double MixAt { get; private set; }
+        private readonly double _autoMixAt;
         /// <summary>Fade length used at the mix point when the track has no fade-out cue.</summary>
         public double FadeLength { get; }
         /// <summary>Position where a scheduled fade-out starts (fade-out cue or the end of a hook).</summary>
@@ -256,7 +285,8 @@ public sealed class PlayoutEngine : IDisposable
             _gain = engine.LoudnessGain(media);
 
             bool hook = item.UseHook && cues is { HookIn: double, HookOut: double };
-            From = hook ? cues.HookIn!.Value : cues.CueIn;
+            var mixIn = !hook && item.MixIn is { } tr && previous is not null && tr.AfterPath == previous.Media.Path ? tr : null;
+            From = hook ? cues.HookIn!.Value : mixIn?.From ?? cues.CueIn;
             To = hook ? cues.HookOut!.Value : cues.CueOut;
 
             _handle = BassRuntime.Check(
@@ -266,7 +296,7 @@ public sealed class PlayoutEngine : IDisposable
 
             // Talk-up: when a voice break is still running, start under it and come up when it ends.
             float startVolume = _gain;
-            if (previous is { Media.Kind: MediaKind.Voice } voice && !voice.IsDone())
+            if (mixIn is null && previous is { Media.Kind: MediaKind.Voice } voice && !voice.IsDone())
             {
                 double voiceLeft = Math.Max(0, voice.To - voice.Position);
                 if (voiceLeft > 0.2)
@@ -276,7 +306,8 @@ public sealed class PlayoutEngine : IDisposable
                 }
             }
             double fadeIn = 0;
-            if (!hook && cues.FullLevel is double full && full > From) { fadeIn = full - From; startVolume = 0; }
+            if (mixIn is not null) { _in = mixIn.In; startVolume = _gain * (float)Envelope(From); }
+            else if (!hook && cues.FullLevel is double full && full > From) { fadeIn = full - From; startVolume = 0; }
             else if (hook) { fadeIn = 0.3; startVolume = 0; }
             BASS_ChannelSetAttribute(_handle, BASS_ATTRIB_VOL, startVolume);
 
@@ -308,6 +339,8 @@ public sealed class PlayoutEngine : IDisposable
                 if (cues.FadeOut is double fo && fo > From && fo < To) { FadeAt = fo; _scheduledFade = To - fo; }
             }
 
+            _autoMixAt = MixAt;
+            Breakpoints();
             BassRuntime.Check(BASS_Mixer_StreamAddChannel(engine._mixer, _handle, BASS_MIXER_CHAN_NORAMPIN | BASS_STREAM_AUTOFREE),
                 "BASS_Mixer_StreamAddChannel");
             if (fadeIn > 0 && _unduckAt is null) BASS_ChannelSlideAttribute(_handle, BASS_ATTRIB_VOL, _gain, (uint)(fadeIn * 1000));
@@ -334,16 +367,75 @@ public sealed class PlayoutEngine : IDisposable
 
         private double? _talkFadeAt;
 
+        // Volume lines: the one this item came in with and the one it goes out with (hand-made transitions).
+        private IReadOnlyList<EnvelopePoint> _in = [];
+        private IReadOnlyList<EnvelopePoint> _out = [];
+        private List<double> _breaks = [];
+        private int _segment = int.MinValue;
+        private MediaItem? _insert;
+        private double _insertAt;
+
+        /// <summary>The hand-made transition into the next item, or null for the automatic mix.</summary>
+        public Transition? Transition { get; private set; }
+
+        public void Apply(Transition? t)
+        {
+            if (ReferenceEquals(t, Transition) || _fading) return;
+            bool had = Transition is not null;
+            Transition = t;
+            MixAt = t is null ? _autoMixAt : Math.Clamp(t.StartAt, From, To);
+            _out = t?.Out ?? [];
+            _insert = t?.Insert;
+            _insertAt = t?.InsertAt ?? 0;
+            _stopAt = _out.Count > 0 && _out[^1].Gain < 0.001 ? Math.Min(To, _out[^1].Seconds + 0.05) : null;
+            Breakpoints();
+            if (had && t is null && _in.Count == 0) BASS_ChannelSlideAttribute(_handle, BASS_ATTRIB_VOL, _gain, 300);
+        }
+
+        /// <summary>The insert to start now, once.</summary>
+        public MediaItem? InsertDue()
+        {
+            if (_insert is null || Position < _insertAt) return null;
+            var m = _insert;
+            _insert = null;
+            return m;
+        }
+
+        private double Envelope(double seconds) => Model.Transition.GainAt(_in, seconds) * Model.Transition.GainAt(_out, seconds);
+
+        private void Breakpoints()
+        {
+            _breaks = _in.Concat(_out).Select(p => p.Seconds).Distinct().Order().ToList();
+            _segment = int.MinValue;
+        }
+
+        /// <summary>Slides the volume towards the value at the next point of the volume lines.</summary>
+        private void FollowEnvelope(double pos)
+        {
+            if (_breaks.Count == 0 || _fading) return;
+            int seg = -1;
+            while (seg + 1 < _breaks.Count && _breaks[seg + 1] <= pos) seg++;
+            if (seg == _segment) return;
+            _segment = seg;
+            if (seg + 1 < _breaks.Count)
+            {
+                double at = _breaks[seg + 1];
+                BASS_ChannelSlideAttribute(_handle, BASS_ATTRIB_VOL, _gain * (float)Envelope(at), (uint)Math.Max(1, (at - pos) * 1000));
+            }
+            else BASS_ChannelSlideAttribute(_handle, BASS_ATTRIB_VOL, _gain * (float)Envelope(pos), 30);
+        }
+
         public void Update()
         {
             double pos = Position;
+            FollowEnvelope(pos);
             if (_talkFadeAt is double tf && pos >= tf) { _talkFadeAt = null; FadeOutAt(FadeLength); }
             if (_unduckAt is double u && pos >= u)
             {
                 BASS_ChannelSlideAttribute(_handle, BASS_ATTRIB_VOL, _gain, 600);
                 _unduckAt = null;
             }
-            if (!_fading && FadeAt is double f && pos >= f) FadeOutAt(_scheduledFade);
+            if (!_fading && Transition is null && FadeAt is double f && pos >= f) FadeOutAt(_scheduledFade);
         }
 
         public void FadeOutAt(double seconds)

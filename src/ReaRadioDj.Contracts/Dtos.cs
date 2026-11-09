@@ -45,7 +45,7 @@ public sealed record NowPlayingDto(long Id, string Type, string Label, string Ar
 
 public sealed record LogItemDto(long Id, string Type, string Label, string? Artist, string? Title, string? Category, string Origin,
     double Length, DateTime StartsAt, string? BreakState, string? Script, string? ScriptSource, string? Voice, string? Error,
-    long? MediaId, bool UseHook, string? Extra = null, double? CheckScore = null);
+    long? MediaId, bool UseHook, string? Extra = null, double? CheckScore = null, bool HandMadeMix = false);
 
 public sealed record PlayerDto(string Id, string Name, string State, long? MediaId, string? Label, double Position, double CueIn,
     double CueOut, double? Intro, IReadOnlyList<string> Stack);
@@ -169,6 +169,20 @@ public sealed record VoiceTakeDto(string Id, double Length, double StartEarly, d
     double PeakDb);
 
 public sealed record VoiceTrackStartRequest(long BeforeId, double Preroll, int? Device);
+
+/// <summary>Transition editor: a point on a volume line (seconds in the item's own time, linear gain 0..1.5).</summary>
+public sealed record EnvelopePointDto(double Seconds, double Gain);
+
+/// <summary>How an item comes in: starts at <c>StartAt</c> in the outgoing item, from <c>From</c> in itself.</summary>
+public sealed record TransitionSettingsDto(double StartAt, double From, List<EnvelopePointDto> Out, List<EnvelopePointDto> In,
+    long? InsertMediaId, double InsertAt);
+
+/// <summary>One side of a transition with its waveform (linear peaks, UInt16 little-endian, base64).</summary>
+public sealed record TransitionSideDto(long LogId, string Label, long MediaId, double Duration, double CueIn, double CueOut,
+    double Mix, string Peaks);
+
+public sealed record TransitionDto(long ItemId, TransitionSideDto Out, TransitionSideDto In, TransitionSettingsDto Settings,
+    TransitionSettingsDto Automatic, bool HandMade, int BlockMs, string? InsertLabel, double InsertLength);
 
 public sealed record CheckTestDto(bool Ok, double Score, string Heard, string Voice, string? Error);
 

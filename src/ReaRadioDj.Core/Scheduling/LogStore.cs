@@ -26,7 +26,7 @@ public sealed class LogStore(string path)
 
     public sealed record Entry(LogItemType Type, MediaItem? Media, string Origin, bool UseHook = false, double StartEarly = 0,
         BreakState BreakState = BreakState.Pending, string? Persona = null, string? Extra = null, bool OutroAdded = false,
-        double? CheckScore = null, string? Script = null, string? ScriptSource = null, string? Voice = null);
+        double? CheckScore = null, string? Script = null, string? ScriptSource = null, string? Voice = null, Transition? MixIn = null);
 
     public sealed record Snapshot(DateTime SavedAt, List<Entry> Upcoming, List<Entry> History);
 
@@ -79,7 +79,7 @@ public sealed class LogStore(string path)
 
     private static Entry ToEntry(LogItem i) => new(i.Type, i.Media, i.Origin, i.UseHook, i.StartEarly,
         i.BreakState == BreakState.Rendering ? BreakState.Pending : i.BreakState, i.Persona, i.Extra, i.OutroAdded, i.CheckScore,
-        i.Script, i.ScriptSource, i.Voice);
+        i.Script, i.ScriptSource, i.Voice, i.MixIn);
 
     private static LogItem? FromEntry(Entry e)
     {
@@ -101,6 +101,7 @@ public sealed class LogStore(string path)
             Script = rerender ? null : e.Script,
             ScriptSource = rerender ? null : e.ScriptSource,
             Voice = rerender ? null : e.Voice,
+            MixIn = e.MixIn is { Insert: { } ins } t && !File.Exists(ins.Path) ? t with { Insert = null } : e.MixIn,
         };
     }
 }

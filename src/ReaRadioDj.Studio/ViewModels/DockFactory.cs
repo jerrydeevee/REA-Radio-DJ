@@ -36,6 +36,7 @@ public sealed class DockFactory : Factory
         ("control", "Bediening en sneltoetsen", () => new ControlTool()),
         ("voice", "Stemmen", () => new VoiceTool()),
         ("voicetrack", "Voicetracking", () => new VoiceTrackTool()),
+        ("transition", "Overgangen", () => new TransitionTool()),
     ];
 
     public static StudioTool Create(string id) => Windows.First(w => w.Id == id).Create();
@@ -90,7 +91,7 @@ public sealed class DockFactory : Factory
                 new ProportionalDockSplitter(),
                 Tools("dock-log", "log", "asrun"),
                 new ProportionalDockSplitter(),
-                Tools("dock-editor", "cues", "presenter", "voice", "messages", "control")),
+                Tools("dock-editor", "cues", "transition", "presenter", "voice", "messages", "control")),
         };
         var right = new ProportionalDock
         {
