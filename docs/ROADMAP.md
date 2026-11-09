@@ -25,11 +25,11 @@ Legenda: ✅ klaar · 🟡 deels · ⬜ open
 |---|---|
 | ✅ | Taalmodel koppelen: elke OpenAI-compatibele server (Ollama, LM Studio, online dienst), instelbaar in de studio met proefscript; getest met Ollama `gemma3:12b` (goed Nederlands) |
 | ✅ | Nabewerking: stilte weg, hoogdoorlaat 80 Hz, compressor, piek -1 dBFS; loudness op stationsnorm en samplerate doet de playout zelf |
-| ✅ | Muziekbed onder de break (aanloop, dip onder de stem, uitfade met het laatste woord); talk-up over de intro tot de zang. Outro-element (jingle na de break) nog open |
+| ✅ | Muziekbed onder de break (aanloop, dip onder de stem, uitfade met het laatste woord); talk-up over de intro tot de zang. Outro-jingle na de break |
 | ✅ | Persona's per dagdeel: naam, karakter, stem, lengte en muziekbed per dagen + uren |
 | ✅ | Script goedkeuren, bewerken of opnieuw laten schrijven vóór het inspreken (niet op tijd goedgekeurd = jingle) |
 | ⬜ | Controle met Whisper: klopt de gesproken tekst met het script |
-| ⬜ | Variabelen: weer, RSS/nieuws, luisteraarsberichten |
+| ✅ | Variabelen: weer (Open-Meteo), nieuwskoppen (RSS/Atom, elke kop één keer) en berichten om voor te lezen; hoogstens één per break |
 | ⬜ | Referentiecodes per stem vooraf berekenen (sneller klonen) |
 | ⬜ | Andere stemmen als reserve (ElevenLabs, Azure) |
 

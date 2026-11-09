@@ -375,6 +375,37 @@ public sealed class AudioTests : IDisposable
     }
 
     [BassFact]
+    public async Task Ready_break_gets_one_outro_jingle_and_mentions_a_note()
+    {
+        var options = Options();
+        Directory.CreateDirectory(Path.Combine(options.JingleFolder, "Outro"));
+        DemoContent.WriteJingle(Path.Combine(options.JingleFolder, "Outro", "Sweeper.wav"), [523.25, 659.25]);
+        var db = Db();
+        var library = new MediaLibrary(options, db);
+        await library.ScanAsync();
+        options.Presenter.OutroCategoryId = library.Categories.Single(c => c.Name == "Outro").Id;
+        var notes = new NoteStore(db);
+        notes.Add("Groeten aan Jan!", null, 1);
+
+        var log = new PlayoutLog();
+        var brk = new LogItem { Type = LogItemType.AiBreak };
+        log.Append(brk);
+        log.Append(new LogItem { Type = LogItemType.Song, Media = new MediaItem { Path = "y", Kind = MediaKind.Song, Title = "Radar Love" } });
+        var renderer = new BreakRenderer(options, log, library, null, new ToneVoice(), null,
+            extras: new BreakExtras(new HttpClient(), options.Presenter, notes));
+
+        await renderer.RenderAsync(brk, CancellationToken.None);
+        Assert.Equal(BreakState.Ready, brk.BreakState);
+        Assert.Equal("note", brk.Extra);
+        Assert.Contains("Groeten aan Jan!", brk.Script);
+        var items = log.Upcoming;
+        Assert.Equal(LogItemType.Jingle, items[1].Type);
+        Assert.Equal("AI-break outro", items[1].Origin);
+        Assert.Equal(LogItemType.Song, items[2].Type);
+        Assert.Equal(1, notes.All().Single().Used);
+    }
+
+    [BassFact]
     public async Task Library_scan_makes_categories_from_folders_and_keeps_edited_cues()
     {
         var options = Options();

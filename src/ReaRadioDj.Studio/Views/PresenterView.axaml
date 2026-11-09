@@ -104,6 +104,67 @@
         </StackPanel>
       </Expander>
 
+      <!-- weather, news, listener messages, outro -->
+      <Expander Header="Weer, nieuws, berichten en outro" HorizontalAlignment="Stretch">
+        <StackPanel Spacing="6">
+          <TextBlock Classes="muted" TextWrapping="Wrap"
+                     Text="Per break noemt de presentator hoogstens één ding: eerst een bericht (groet, aankondiging), anders het weer of een nieuwskop, elk niet vaker dan ingesteld." />
+          <TextBlock FontWeight="SemiBold" Text="Berichten om voor te lezen" />
+          <ItemsControl ItemsSource="{Binding Notes}">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="c:PresenterNoteDto">
+                <DockPanel Margin="0,0,0,2">
+                  <Button DockPanel.Dock="Right" Classes="small" Content="✕"
+                          Command="{Binding $parent[UserControl].DataContext.DeleteNoteCommand}" CommandParameter="{Binding}" />
+                  <TextBlock DockPanel.Dock="Right" Classes="mono muted" Margin="6,0" VerticalAlignment="Center">
+                    <Run Text="{Binding Used}" /><Run Text="/" /><Run Text="{Binding MaxUses}" />
+                  </TextBlock>
+                  <TextBlock Text="{Binding Text}" TextWrapping="Wrap" VerticalAlignment="Center" />
+                </DockPanel>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+          <TextBox Text="{Binding NoteText}" TextWrapping="Wrap" Watermark="bijv. Groeten aan Jan Hofstede uit Gieten, die vandaag 80 wordt!" />
+          <WrapPanel>
+            <TextBlock Classes="muted" Text="geldig t/m" VerticalAlignment="Center" Margin="0,0,4,0" />
+            <CalendarDatePicker SelectedDate="{Binding NoteUntil}" Margin="0,0,8,0" />
+            <NumericUpDown Value="{Binding NoteUses}" Minimum="1" Maximum="20" FormatString="0" Width="110" Margin="0,0,4,0" />
+            <TextBlock Classes="muted" Text="keer" VerticalAlignment="Center" Margin="0,0,8,0" />
+            <Button Classes="small" Content="Toevoegen" Command="{Binding AddNoteCommand}" />
+          </WrapPanel>
+
+          <CheckBox Content="Weer noemen (Open-Meteo, geen sleutel nodig)" IsChecked="{Binding WeatherEnabled}" Margin="0,6,0,0" />
+          <WrapPanel>
+            <TextBox Text="{Binding Place}" Watermark="plaats" Width="160" Margin="0,0,4,4" />
+            <NumericUpDown Value="{Binding Latitude}" FormatString="0.000" Increment="0.01" Width="130" Margin="0,0,4,4" ToolTip.Tip="breedtegraad" />
+            <NumericUpDown Value="{Binding Longitude}" FormatString="0.000" Increment="0.01" Width="130" Margin="0,0,8,4" ToolTip.Tip="lengtegraad" />
+            <TextBlock Classes="muted" Text="hoogstens elke" VerticalAlignment="Center" Margin="0,0,4,4" />
+            <NumericUpDown Value="{Binding WeatherEvery}" Minimum="5" Maximum="1440" Increment="5" FormatString="0" Width="110" Margin="0,0,4,4" />
+            <TextBlock Classes="muted" Text="min" VerticalAlignment="Center" Margin="0,0,0,4" />
+          </WrapPanel>
+
+          <CheckBox Content="Nieuwskoppen noemen (RSS of Atom, elke kop één keer)" IsChecked="{Binding NewsEnabled}" />
+          <TextBox Text="{Binding NewsFeeds}" AcceptsReturn="True" TextWrapping="NoWrap" MinHeight="50"
+                   Watermark="één feed-adres per regel, bijv. de RSS van de eigen nieuwsredactie" />
+          <WrapPanel>
+            <TextBlock Classes="muted" Text="hoogstens elke" VerticalAlignment="Center" Margin="0,0,4,0" />
+            <NumericUpDown Value="{Binding NewsEvery}" Minimum="5" Maximum="1440" Increment="5" FormatString="0" Width="110" Margin="0,0,4,0" />
+            <TextBlock Classes="muted" Text="min" VerticalAlignment="Center" />
+          </WrapPanel>
+
+          <DockPanel Margin="0,6,0,0">
+            <TextBlock Text="Outro na de break" Width="130" VerticalAlignment="Center" />
+            <ComboBox ItemsSource="{Binding BedChoices}" SelectedItem="{Binding Outro}" MinWidth="220"
+                      ToolTip.Tip="Een jingle uit deze categorie komt direct na elke AI-break (niet als er al een jingle volgt)." />
+          </DockPanel>
+          <WrapPanel>
+            <Button Classes="small" Content="Opslaan" Command="{Binding SaveExtrasCommand}" Margin="0,0,4,0" />
+            <Button Classes="small" Content="Nu ophalen (proef)" Command="{Binding PreviewExtrasCommand}" />
+          </WrapPanel>
+          <TextBlock Classes="muted" Text="{Binding ExtrasPreview}" TextWrapping="Wrap" />
+        </StackPanel>
+      </Expander>
+
       <!-- personas per daypart -->
       <Expander Header="Persona's per dagdeel" HorizontalAlignment="Stretch">
         <StackPanel Spacing="6">

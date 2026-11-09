@@ -45,7 +45,7 @@ public sealed record NowPlayingDto(long Id, string Type, string Label, string Ar
 
 public sealed record LogItemDto(long Id, string Type, string Label, string? Artist, string? Title, string? Category, string Origin,
     double Length, DateTime StartsAt, string? BreakState, string? Script, string? ScriptSource, string? Voice, string? Error,
-    long? MediaId, bool UseHook);
+    long? MediaId, bool UseHook, string? Extra = null);
 
 public sealed record PlayerDto(string Id, string Name, string State, long? MediaId, string? Label, double Position, double CueIn,
     double CueOut, double? Intro, IReadOnlyList<string> Stack);
@@ -198,3 +198,13 @@ public sealed record ScriptTryDto(string Script, string Source, double Seconds, 
 public sealed record ScriptTryRequest(long? PersonaId);
 
 public sealed record ApproveBreakRequest(string? Script);
+
+/// <summary>What the presenter may mention besides the music, and the jingle after a break.</summary>
+public sealed record PresenterExtrasDto(long? OutroCategoryId, bool WeatherEnabled, string Place, double Latitude, double Longitude,
+    int WeatherEveryMinutes, bool NewsEnabled, string NewsFeeds, int NewsEveryMinutes);
+
+public sealed record ExtrasPreviewDto(string? Weather, string? Headline, string? Error);
+
+public sealed record PresenterNoteDto(long Id, string Text, DateTime? Until, int MaxUses, int Used);
+
+public sealed record AddNoteRequest(string Text, DateTime? Until, int MaxUses);

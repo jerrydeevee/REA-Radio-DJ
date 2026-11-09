@@ -40,7 +40,8 @@ public sealed partial class BreakVm : ObservableObject
         State = d.BreakState ?? "";
         Script = d.Script ?? "";
         Error = d.Error;
-        Info = string.Join(" · ", new[] { d.ScriptSource, d.Voice }.Where(x => !string.IsNullOrEmpty(x)));
+        string? extra = d.Extra switch { "weather" => "weer", "news" => "nieuws", "note" => "bericht", _ => null };
+        Info = string.Join(" · ", new[] { d.ScriptSource, d.Voice, extra }.Where(x => !string.IsNullOrEmpty(x)));
         if (!nowWaiting) Busy = State == "rendering";
     }
 }
@@ -82,6 +83,87 @@ public sealed partial class PresenterTool : StudioTool
 
     public ObservableCollection<Choice> BedChoices { get; } = [];
     public ObservableCollection<Choice> VoiceChoices { get; } = [];
+
+    // weather, news, notes and outro
+    [ObservableProperty] private Choice? _outro;
+    [ObservableProperty] private bool _weatherEnabled;
+    [ObservableProperty] private string _place = "";
+    [ObservableProperty] private decimal? _latitude;
+    [ObservableProperty] private decimal? _longitude;
+    [ObservableProperty] private decimal? _weatherEvery = 30;
+    [ObservableProperty] private bool _newsEnabled;
+    [ObservableProperty] private string _newsFeeds = "";
+    [ObservableProperty] private decimal? _newsEvery = 60;
+    [ObservableProperty] private string _extrasPreview = "";
+    public ObservableCollection<PresenterNoteDto> Notes { get; } = [];
+    [ObservableProperty] private string _noteText = "";
+    [ObservableProperty] private DateTime? _noteUntil;
+    [ObservableProperty] private decimal? _noteUses = 1;
+
+    private async Task LoadExtrasAsync()
+    {
+        if (await Hub.Client.GetAsync<PresenterExtrasDto>("/api/presenter/extras") is { } e)
+        {
+            Outro = BedChoices.FirstOrDefault(c => c.Id == e.OutroCategoryId) ?? BedChoices.FirstOrDefault();
+            WeatherEnabled = e.WeatherEnabled;
+            Place = e.Place;
+            Latitude = (decimal)e.Latitude;
+            Longitude = (decimal)e.Longitude;
+            WeatherEvery = e.WeatherEveryMinutes;
+            NewsEnabled = e.NewsEnabled;
+            NewsFeeds = e.NewsFeeds;
+            NewsEvery = e.NewsEveryMinutes;
+        }
+        await LoadNotesAsync();
+    }
+
+    [RelayCommand]
+    private async Task SaveExtras()
+    {
+        var d = new PresenterExtrasDto(Outro?.Id, WeatherEnabled, Place, (double)(Latitude ?? 0), (double)(Longitude ?? 0),
+            (int)(WeatherEvery ?? 30), NewsEnabled, NewsFeeds, (int)(NewsEvery ?? 60));
+        if (await Hub.Client.PutAsync("/api/presenter/extras", d)) Hub.Status = "AI-presentator: weer, nieuws en outro opgeslagen";
+    }
+
+    /// <summary>Saves, then shows what the presenter would say about the weather and the news right now.</summary>
+    [RelayCommand]
+    private async Task PreviewExtras()
+    {
+        ExtrasPreview = "ophalen…";
+        await SaveExtras();
+        var r = await Hub.Client.GetAsync<ExtrasPreviewDto>("/api/presenter/extras/preview");
+        ExtrasPreview = r is null ? "geen antwoord" : string.Join("\n", new[]
+        {
+            r.Weather is null ? null : "Weer: " + r.Weather,
+            r.Headline is null ? null : "Nieuws: " + r.Headline,
+            r.Error,
+        }.Where(x => x is not null));
+    }
+
+    private async Task LoadNotesAsync()
+    {
+        if (await Hub.Client.GetAsync<List<PresenterNoteDto>>("/api/presenter/notes") is not { } list) return;
+        Notes.Clear();
+        foreach (var n in list) Notes.Add(n);
+    }
+
+    [RelayCommand]
+    private async Task AddNote()
+    {
+        if (string.IsNullOrWhiteSpace(NoteText)) return;
+        var until = NoteUntil is DateTime d ? d.Date.AddDays(1).AddSeconds(-1) : (DateTime?)null;   // through the chosen day
+        if (await Hub.Client.PostAsync("/api/presenter/notes", new AddNoteRequest(NoteText.Trim(), until, (int)(NoteUses ?? 1))))
+        {
+            NoteText = "";
+            await LoadNotesAsync();
+        }
+    }
+
+    [RelayCommand]
+    private async Task DeleteNote(PresenterNoteDto? n)
+    {
+        if (n is not null && await Hub.Client.DeleteAsync($"/api/presenter/notes/{n.Id}")) await LoadNotesAsync();
+    }
 
     // personas per daypart
     public ObservableCollection<PersonaDto> Personas { get; } = [];
@@ -172,6 +254,7 @@ public sealed partial class PresenterTool : StudioTool
         await LoadChoicesAsync();
         await LoadSettingsAsync();
         await LoadPersonasAsync(null);
+        await LoadExtrasAsync();
     }
 
     protected override void OnState(StateDto s)

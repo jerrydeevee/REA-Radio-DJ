@@ -104,11 +104,34 @@ public sealed class PresenterOptions
     public bool PostProcess { get; set; } = true;
     /// <summary>Library category with music beds to lay under every break; null = no bed. A persona can choose its own.</summary>
     public long? BedCategoryId { get; set; }
+    /// <summary>Jingle category of which one item is played straight after every AI break; null = none.</summary>
+    public long? OutroCategoryId { get; set; }
+    public WeatherOptions Weather { get; set; } = new();
+    public NewsOptions News { get; set; } = new();
     public LlmOptions Llm { get; set; } = new();
     public TtsOptions Tts { get; set; } = new();
 }
 
 /// <summary>Any OpenAI-compatible chat completion endpoint (Ollama, LM Studio, vLLM, OpenAI, ...).</summary>
+/// <summary>Weather from Open-Meteo (free, no key). Default location: Gieten, gemeente Aa en Hunze.</summary>
+public sealed class WeatherOptions
+{
+    public bool Enabled { get; set; } = false;
+    public string Place { get; set; } = "Aa en Hunze";
+    public double Latitude { get; set; } = 53.006;
+    public double Longitude { get; set; } = 6.763;
+    /// <summary>Mention the weather at most once per this many minutes.</summary>
+    public int EveryMinutes { get; set; } = 30;
+}
+
+/// <summary>News headlines from RSS or Atom feeds; each headline is mentioned once.</summary>
+public sealed class NewsOptions
+{
+    public bool Enabled { get; set; } = false;
+    public List<string> Feeds { get; set; } = [];
+    public int EveryMinutes { get; set; } = 60;
+}
+
 public sealed class LlmOptions
 {
     /// <summary>Empty = no language model; template texts are used instead.</summary>

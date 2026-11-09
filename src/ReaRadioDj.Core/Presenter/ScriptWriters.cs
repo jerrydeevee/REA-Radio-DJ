@@ -10,7 +10,7 @@ namespace ReaRadioDj.Core.Presenter;
 /// <summary>What the presenter knows when writing a break.</summary>
 /// <param name="Character">Persona instructions for the language model; null = the general ones.</param>
 public sealed record BreakContext(string StationName, string PresenterName, DateTime Time, MediaItem? Previous, MediaItem? Next,
-    string? Character = null, int? MaxWords = null);
+    string? Character = null, int? MaxWords = null, BreakExtra? Extra = null);
 
 public interface IScriptWriter
 {
@@ -51,6 +51,12 @@ public sealed class TemplateScriptWriter(Random? random = null) : IScriptWriter
             .Replace("{station}", c.StationName)
             .Replace("{presenter}", c.PresenterName)
             .Replace("{time}", SpokenTime(c.Time));
+        if (c.Extra is { } extra)
+        {
+            // weather/news/note between the station line and the next song; for notes the text is read as written
+            int cut = text.LastIndexOf(". ", StringComparison.Ordinal);
+            text = cut > 0 ? $"{text[..(cut + 1)]} {extra.Spoken} {text[(cut + 2)..]}" : $"{extra.Spoken} {text}";
+        }
         return Task.FromResult(text);
     }
 
@@ -164,6 +170,7 @@ public sealed class OpenAiScriptWriter(HttpClient http, PresenterOptions options
             Het is {TemplateScriptWriter.SpokenTime(c.Time)} ({c.Time:HH:mm}).
             Net gedraaid: {(previous.Length > 0 ? previous : "(niets)")}.
             Hierna: {(next.Length > 0 ? next : "(nog niet bekend)")}.
+            {(c.Extra is { } x ? $"Verwerk dit er kort en natuurlijk in, vóór je het volgende nummer aankondigt:\n{x.Fact}" : "")}
             Schrijf de presentatie.
             """;
         return (system, user);

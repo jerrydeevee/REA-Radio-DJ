@@ -110,6 +110,9 @@ public sealed class LogItem
     public BreakState BreakState { get; set; } = BreakState.Pending;
     /// <summary>Name of the persona chosen for the break's air time (null = general settings).</summary>
     public string? Persona { get; set; }
+    /// <summary>What the break mentions besides the music: "weather", "news", "note" or null.</summary>
+    public string? Extra { get; set; }
+    public bool OutroAdded { get; set; }
     public string? Script { get; set; }
     public string? ScriptSource { get; set; }
     public string? Voice { get; set; }

@@ -1,3 +1,5 @@
+using System.Text.Json;
+using ReaRadioDj.Core;
 using ReaRadioDj.Core.Data;
 using ReaRadioDj.Core.Model;
 using ReaRadioDj.Core.Scheduling;
@@ -108,5 +110,82 @@ public sealed class PersonaStoreTests : IDisposable
         Assert.Equal("Ochtend", st.For(new DateTime(2026, 11, 9, 10, 15, 0))?.Name);
         Assert.True(st.Delete(o.Id));
         Assert.Equal(2, st.All().Count);
+    }
+}
+
+public sealed class BreakExtrasTests : IDisposable
+{
+    private readonly string _dir = Path.Combine(Path.GetTempPath(), "rea-radio-dj-extras-" + Guid.NewGuid().ToString("N"));
+    private readonly StationDb _db;
+
+    public BreakExtrasTests()
+    {
+        Directory.CreateDirectory(_dir);
+        _db = new StationDb(Path.Combine(_dir, "station.db"));
+    }
+
+    public void Dispose()
+    {
+        Microsoft.Data.Sqlite.SqliteConnection.ClearAllPools();
+        try { Directory.Delete(_dir, true); } catch (IOException) { } catch (UnauthorizedAccessException) { }
+    }
+
+    [Fact]
+    public void Weather_from_open_meteo_reads_as_plain_dutch()
+    {
+        using var doc = JsonDocument.Parse("""
+            {"current":{"temperature_2m":7.6,"weather_code":61,"wind_speed_10m":6.1},
+             "daily":{"temperature_2m_max":[10.2],"precipitation_probability_max":[80]}}
+            """);
+        var w = BreakExtras.WeatherExtra(doc.RootElement, "Gieten");
+        Assert.Equal("Het weer in Gieten: regen en 8 graden, vandaag tot 10 graden.", w.Spoken);
+        Assert.Contains("wind kracht 4", w.Fact);
+        Assert.Contains("kans op regen 80 procent", w.Fact);
+        Assert.Equal(0, BreakExtras.Beaufort(0.1));
+        Assert.Equal(6, BreakExtras.Beaufort(12));
+    }
+
+    [Fact]
+    public void Rss_and_atom_feeds_give_titles()
+    {
+        var rss = BreakExtras.ParseFeed("""
+            <rss version="2.0"><channel><title>Dorpsnieuws</title>
+              <item><title>Nieuwe brug in Annen open</title></item><item><title> </title></item></channel></rss>
+            """).ToList();
+        Assert.Equal([("Nieuwe brug in Annen open", "Dorpsnieuws")], rss);
+        var atom = BreakExtras.ParseFeed("""
+            <feed xmlns="http://www.w3.org/2005/Atom"><title>Gemeente</title><entry><title>Raad vergadert</title></entry></feed>
+            """).Single();
+        Assert.Equal(("Raad vergadert", "Gemeente"), atom);
+    }
+
+    [Fact]
+    public async Task A_note_comes_first_and_is_read_only_as_often_as_allowed()
+    {
+        var notes = new NoteStore(_db);
+        notes.Add("Groeten aan Jan uit Gieten, 80 jaar!", null, 2);
+        notes.Add("Verlopen bericht", DateTime.Now.AddHours(-1), 1);
+        var extras = new BreakExtras(new HttpClient(), new PresenterOptions(), notes);   // weather and news off: no internet
+
+        for (int i = 0; i < 2; i++)
+        {
+            var e = await extras.PickAsync(DateTime.Now, CancellationToken.None);
+            Assert.Equal("note", e?.Kind);
+            Assert.Equal("Groeten aan Jan uit Gieten, 80 jaar!", e!.Spoken);
+            extras.Used(e, DateTime.Now);
+        }
+        Assert.Null(await extras.PickAsync(DateTime.Now, CancellationToken.None));
+        Assert.Equal(2, notes.CleanUp(DateTime.Now.AddDays(2)));
+    }
+
+    [Fact]
+    public async Task Template_puts_the_extra_before_the_next_song()
+    {
+        var next = new MediaItem { Path = "y", Kind = MediaKind.Song, Artist = "Golden Earring", Title = "Radar Love" };
+        var c = new BreakContext("Radio Aa en Hunze", "Sam", new DateTime(2026, 11, 9, 8, 0, 0), null, next,
+            Extra: new BreakExtra("weather", "", "Het weer: zonnig en 12 graden."));
+        var text = await new TemplateScriptWriter(new Random(1)).WriteAsync(c, CancellationToken.None);
+        Assert.Contains("Het weer: zonnig en 12 graden.", text);
+        Assert.True(text.IndexOf("zonnig", StringComparison.Ordinal) < text.IndexOf("Radar Love", StringComparison.Ordinal), text);
     }
 }

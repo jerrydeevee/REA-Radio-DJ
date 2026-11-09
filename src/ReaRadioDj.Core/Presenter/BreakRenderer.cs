@@ -19,7 +19,8 @@ public sealed class BreakRenderer(
     ISpeechEngine primaryVoice,
     ISpeechEngine? fallbackVoice,
     ILogger<BreakRenderer>? logger = null,
-    PersonaStore? personas = null)
+    PersonaStore? personas = null,
+    BreakExtras? extras = null)
 {
     private readonly ILogger _log = (ILogger?)logger ?? NullLogger.Instance;
     private readonly TemplateScriptWriter _template = new();
@@ -46,7 +47,13 @@ public sealed class BreakRenderer(
             var airTime = EstimateAirTime(item);
             var persona = personas?.For(airTime);
             item.Persona = persona?.Name;
-            var (script, source) = await WriteScriptAsync(Context(airTime, previous, next, persona), ct);
+            var extra = extras is null ? null : await extras.PickAsync(airTime, ct);
+            var (script, source) = await WriteScriptAsync(Context(airTime, previous, next, persona) with { Extra = extra }, ct);
+            if (extra is not null)
+            {
+                extras!.Used(extra, airTime);
+                item.Extra = extra.Kind;
+            }
             item.Script = script;
             item.ScriptSource = source;
             if (options.Presenter.RequireApproval)
@@ -113,7 +120,7 @@ public sealed class BreakRenderer(
             raw = await _template.WriteAsync(context, ct);
             source = _template.Name;
         }
-        int maxWords = context.MaxWords ?? options.Presenter.MaxWords;
+        int maxWords = (context.MaxWords ?? options.Presenter.MaxWords) + (context.Extra is null ? 0 : 25);
         var script = ScriptSanitizer.Clean(raw, maxWords);
         if (script.Length == 0)
         {
@@ -182,8 +189,28 @@ public sealed class BreakRenderer(
         item.Voice = persona is null ? voice : $"{persona.Name}: {voice}";
         item.Media = media;
         item.BreakState = BreakState.Ready;
+        AddOutro(item);
         _log.LogInformation("AI break {Id} ready ({Source} + {Voice}, {Duration:0.0}s): {Script}",
             item.Id, item.ScriptSource, voice, media.CueOut - media.CueIn, script);
+    }
+
+    /// <summary>Puts one jingle of the outro category straight after the break (once; not when a jingle already follows).</summary>
+    private void AddOutro(LogItem item)
+    {
+        if (options.Presenter.OutroCategoryId is not long category || item.OutroAdded) return;
+        var jingles = library.InCategory(category);
+        if (jingles.Count == 0) return;
+        var upcoming = log.Upcoming;
+        int index = upcoming.ToList().FindIndex(i => i.Id == item.Id);
+        if (index < 0) return;
+        if (index + 1 < upcoming.Count && upcoming[index + 1].Type == LogItemType.Jingle) return;
+        log.Insert(index + 1, new LogItem
+        {
+            Type = LogItemType.Jingle,
+            Media = jingles[Random.Shared.Next(jingles.Count)],
+            Origin = "AI-break outro",
+        });
+        item.OutroAdded = true;
     }
 
     private void Fail(LogItem item, Exception ex)

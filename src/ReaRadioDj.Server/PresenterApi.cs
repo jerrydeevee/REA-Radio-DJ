@@ -52,6 +52,47 @@ public sealed record PresenterSettings(bool Enabled, string PresenterName, strin
         LlmApiKey.Length > 0 ? Mask : "", Temperature, RequireApproval, PostProcess, BedCategoryId);
 }
 
+/// <summary>Weather, news and outro settings made in the studio.</summary>
+public sealed record PresenterExtrasSettings(long? OutroCategoryId, bool WeatherEnabled, string Place, double Latitude, double Longitude,
+    int WeatherEveryMinutes, bool NewsEnabled, string NewsFeeds, int NewsEveryMinutes)
+{
+    public const string Key = "presenter-extras";
+
+    public static PresenterExtrasSettings From(ReaRadioDjOptions o)
+    {
+        var p = o.Presenter;
+        return new(p.OutroCategoryId, p.Weather.Enabled, p.Weather.Place, p.Weather.Latitude, p.Weather.Longitude, p.Weather.EveryMinutes,
+            p.News.Enabled, string.Join("\n", p.News.Feeds), p.News.EveryMinutes);
+    }
+
+    public void ApplyTo(ReaRadioDjOptions o)
+    {
+        var p = o.Presenter;
+        p.OutroCategoryId = OutroCategoryId is > 0 ? OutroCategoryId : null;
+        p.Weather.Enabled = WeatherEnabled;
+        p.Weather.Place = Place.Trim();
+        p.Weather.Latitude = Math.Clamp(Latitude, -90, 90);
+        p.Weather.Longitude = Math.Clamp(Longitude, -180, 180);
+        p.Weather.EveryMinutes = Math.Clamp(WeatherEveryMinutes, 5, 24 * 60);
+        p.News.Enabled = NewsEnabled;
+        p.News.Feeds = NewsFeeds.Split(['\n', '\r', ' '], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Where(f => Uri.TryCreate(f, UriKind.Absolute, out var u) && (u.Scheme == "https" || u.Scheme == "http")).Distinct().ToList();
+        p.News.EveryMinutes = Math.Clamp(NewsEveryMinutes, 5, 24 * 60);
+    }
+
+    public static void Load(StationDb db, ReaRadioDjOptions o)
+    {
+        if (db.GetSetting(Key) is not { } json) return;
+        try { JsonSerializer.Deserialize<PresenterExtrasSettings>(json, JsonSerializerOptions.Web)?.ApplyTo(o); }
+        catch (JsonException) { }
+    }
+
+    public void Save(StationDb db) => db.SetSetting(Key, JsonSerializer.Serialize(this, JsonSerializerOptions.Web));
+
+    public PresenterExtrasDto Dto() => new(OutroCategoryId, WeatherEnabled, Place, Latitude, Longitude, WeatherEveryMinutes, NewsEnabled,
+        NewsFeeds, NewsEveryMinutes);
+}
+
 public static class PresenterApi
 {
     public static void Map(RouteGroupBuilder api, ReaRadioDjOptions options)
@@ -95,6 +136,44 @@ public static class PresenterApi
             return new ScriptTryDto(script, source, Math.Round(sw.Elapsed.TotalSeconds, 1),
                 script.Split(' ', StringSplitOptions.RemoveEmptyEntries).Length, (persona ?? personas.For(DateTime.Now))?.Name);
         });
+
+        p.MapGet("/extras", () => PresenterExtrasSettings.From(options).Dto());
+        p.MapPut("/extras", (PresenterExtrasDto d, StationDb db) =>
+        {
+            new PresenterExtrasSettings(d.OutroCategoryId, d.WeatherEnabled, d.Place ?? "", d.Latitude, d.Longitude, d.WeatherEveryMinutes,
+                d.NewsEnabled, d.NewsFeeds ?? "", d.NewsEveryMinutes).ApplyTo(options);
+            var saved = PresenterExtrasSettings.From(options);
+            saved.Save(db);
+            return saved.Dto();
+        });
+        // Fetches what the presenter would say about the weather and the news now (ignores the "every N minutes" pause).
+        p.MapGet("/extras/preview", async (IHttpClientFactory http, CancellationToken ct) =>
+        {
+            var probe = new PresenterOptions
+            {
+                Weather = { Enabled = options.Presenter.Weather.Enabled, Place = options.Presenter.Weather.Place,
+                    Latitude = options.Presenter.Weather.Latitude, Longitude = options.Presenter.Weather.Longitude, EveryMinutes = 5 },
+                News = { Enabled = false },
+            };
+            var extras = new BreakExtras(http.CreateClient("extras"), probe, null);
+            string? weather = null, headline = null, error = null;
+            if (probe.Weather.Enabled) weather = (await extras.PickAsync(DateTime.Now, ct))?.Spoken ?? "weer niet opgehaald (zie log)";
+            if (options.Presenter.News.Enabled && options.Presenter.News.Feeds.Count > 0)
+            {
+                var newsOnly = new PresenterOptions { News = { Enabled = true, Feeds = options.Presenter.News.Feeds, EveryMinutes = 5 } };
+                headline = (await new BreakExtras(http.CreateClient("extras"), newsOnly, null).PickAsync(DateTime.Now, ct))?.Spoken
+                    ?? "geen kop gevonden (zie log)";
+            }
+            if (weather is null && headline is null) error = "weer en nieuws staan uit";
+            return new ExtrasPreviewDto(weather, headline, error);
+        });
+
+        var notes = p.MapGroup("/notes");
+        notes.MapGet("", (NoteStore st) => st.All().Select(n => new PresenterNoteDto(n.Id, n.Text, n.Until, n.MaxUses, n.Used)));
+        notes.MapPost("", (AddNoteRequest r, NoteStore st) => string.IsNullOrWhiteSpace(r.Text)
+            ? Results.BadRequest(new { error = "lege tekst" })
+            : Results.Ok(new { id = st.Add(r.Text, r.Until, r.MaxUses <= 0 ? 1 : r.MaxUses) }));
+        notes.MapDelete("/{id:long}", (long id, NoteStore st) => st.Delete(id) ? Results.Ok() : Results.NotFound());
 
         var ps = p.MapGroup("/personas");
         ps.MapGet("", (PersonaStore st) =>
