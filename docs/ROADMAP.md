@@ -14,12 +14,15 @@ Legenda: ✅ klaar · 🟡 deels · ⬜ open
 | ✅ Studio-UX | Aftelbalk (oranje 20 s, rood knipperend 10 s), intro-teller, aanraakknoppen, weergaven Automatisering/Live-assist |
 | ✅ Studioklok | Studio-, analoge en digitale klok, schaalbaar; grote tellers met flitskleur aan het einde |
 | ✅ Stem (Higgs TTS 3) | Stemprofielen (Higgs of Windows), stuurtags, variatie, klonen alleen met vastgelegde toestemming, proefopname op PFL, GPU- en serverstatus, server starten/stoppen vanuit de studio |
+| ✅ Higgs op de GPU | Installatie in WSL (`tools/higgs/install.sh`, `start.sh`), model `bosonai/higgs-tts-3-4b`, CUDA-toolchain vastgezet; render getest |
+| ✅ Studio-layout | Spelers met golfvorm en grote teller, cartwall-tegels die leeglopen en knipperen, planner met Dag- en Weekoverzicht, Live-decks A/B/C met eigen kleurenpalet en deckkleuren in de log |
+| ✅ Wensenlijst (Spotify) | Openbare Spotify-playlist inlezen (alleen gegevens), koppelen aan de bibliotheek op ISRC of artiest + titel, in de log zetten, ontbrekende nummers exporteren; nooit audio uit Spotify |
+| ✅ Muziekrapport | Rechtengegevens per nummer (ISRC, componist, label, jaar) uit tags en wensenlijst; rapport per periode voor Buma/Stemra en Sena (elke uitzending + overzicht per nummer) |
 
 ## AI-presentator en stem — vervolg
 
 | Status | Onderdeel |
 |---|---|
-| ⬜ | Higgs-server installeren op de GPU (WSL + SGLang-Omni of vLLM-Omni, model ~4B downloaden) en koppelen via `ServerCommand` |
 | ⬜ | Taalmodel koppelen (Ollama/LM Studio lokaal of een API) voor de scripts; nu alleen sjabloonteksten |
 | ⬜ | Nabewerking: 24 → 48 kHz, hoogdoorlaat, compressie, loudness op stationsnorm |
 | ⬜ | Music bed onder de break, outro-element, talk-up tot de zang |
@@ -46,7 +49,7 @@ Legenda: ✅ klaar · 🟡 deels · ⬜ open
 | ⬜ | Database-bibliotheken (ODBC) en metadata-opzoeking |
 | ⬜ | Reclamebeheer: adverteerders, campagnes, blokken, bewijs van uitzending |
 | 🟡 | Hardware-bediening: commandobus staat; MIDI, serieel, GPIO-kaarten, Ember+, Livewire+ en mengtafels nog koppelen |
-| ⬜ | Rapportage auteursrechten (Buma/Stemra, Sena) |
+| 🟡 | Rapportage auteursrechten: CSV staat; kolomindeling nog afstemmen op het sjabloon van de NLPO / Buma/Stemra / Sena |
 
 ## Ronde 4 — Meerdere studio's en op afstand
 
