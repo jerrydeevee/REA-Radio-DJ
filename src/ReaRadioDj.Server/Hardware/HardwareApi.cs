@@ -21,10 +21,15 @@ public static class HardwareApi
 
         g.MapPost("/devices", (HwDeviceDto d, HardwareStore store, HardwareService service) =>
         {
-            var kind = d.Kind switch { "serial" => HwKind.Serial, "livewire" => HwKind.Livewire, _ => HwKind.Midi };
+            var kind = d.Kind switch { "serial" => HwKind.Serial, "livewire" => HwKind.Livewire, "ember" => HwKind.Ember, _ => HwKind.Midi };
             long id = store.Save(new HwDevice(d.Id, d.Name, d.Enabled, kind, d.Port, d.Baud, d.Password ?? ""));
             return Results.Ok(Dto(store.Devices().First(x => x.Id == id), service));
         });
+        g.MapGet("/devices/{id:long}/ember", async (long id, string? path, HardwareService service, CancellationToken ct) =>
+            await service.BrowseEmberAsync(id, path?.Trim() ?? "", ct) is { } items
+                ? Results.Ok(items.Select(e => new HwEmberItemDto(e.Path, e.Identifier ?? "", e.Description ?? "", !e.IsParameter,
+                    e.ValueText, e.IsParameter ? e.EffectiveType.ToString().ToLowerInvariant() : e.Kind, e.Writable)).ToList())
+                : Results.Conflict(new { error = "apparaat niet verbonden" }));
         g.MapDelete("/devices/{id:long}", (long id, HardwareStore store) => store.DeleteDevice(id) ? Results.Ok() : Results.NotFound());
 
         g.MapPost("/inputs", (HwInputDto d, HardwareStore store) =>
@@ -51,7 +56,7 @@ public static class HardwareApi
     private static HwDeviceDto Dto(HwDevice d, HardwareService service)
     {
         var (connected, status) = service.StatusOf(d.Id);
-        return new HwDeviceDto(d.Id, d.Name, d.Enabled, d.Kind switch { HwKind.Serial => "serial", HwKind.Livewire => "livewire", _ => "midi" },
+        return new HwDeviceDto(d.Id, d.Name, d.Enabled, d.Kind switch { HwKind.Serial => "serial", HwKind.Livewire => "livewire", HwKind.Ember => "ember", _ => "midi" },
             d.Port, d.Baud, d.Password, connected, d.Enabled ? status : "uit");
     }
 }

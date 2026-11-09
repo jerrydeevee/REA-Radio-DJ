@@ -26,6 +26,16 @@ public sealed record HwOutputRow(HwOutputDto Output, string Device)
     public string Does => Output.Target.Length > 0 ? Output.Target : $"aan: {Output.OnText}   uit: {Output.OffText}";
 }
 
+/// <summary>A node or parameter in the Ember+ tree of a device.</summary>
+public sealed record HwEmberRow(HwEmberItemDto Item)
+{
+    public string Title => (Item.Identifier.Length > 0 ? Item.Identifier : "(zonder naam)")
+        + (Item.Description.Length > 0 && Item.Description != Item.Identifier ? " — " + Item.Description : "");
+    public string Detail => Item.IsNode ? $"{Item.Path} · {Item.Type}" : $"{Item.Path} · {Item.Type}{(Item.Writable ? " · schrijfbaar" : "")} = {Item.Value}";
+    public bool IsNode => Item.IsNode && Item.Type == "node";
+    public bool IsParameter => !Item.IsNode;
+}
+
 /// <summary>A signal a device sent lately.</summary>
 public sealed record HwEventRow(HwEventDto E)
 {
@@ -34,7 +44,7 @@ public sealed record HwEventRow(HwEventDto E)
 }
 
 /// <summary>
-/// Hardware control: MIDI controllers, serial ports (GPIO boxes, relay cards, desks) and Livewire nodes. Buttons and
+/// Hardware control: MIDI controllers, serial ports (GPIO boxes, relay cards, desks), Livewire nodes and Ember+ devices. Buttons and
 /// contacts start commands on the command bus; lamps and tallies show whether the microphone is open, something is on
 /// air, and whether automation runs.
 /// </summary>
@@ -42,8 +52,8 @@ public sealed partial class HardwareTool : StudioTool
 {
     public HardwareTool() : base("hardware", "Hardware") { }
 
-    public static readonly string[] KindNames = ["MIDI", "Serieel (COM-poort)", "Livewire (GPIO via LWRP)"];
-    private static readonly string[] KindValues = ["midi", "serial", "livewire"];
+    public static readonly string[] KindNames = ["MIDI", "Serieel (COM-poort)", "Livewire (GPIO via LWRP)", "Ember+ (Lawo-mengtafel e.a.)"];
+    private static readonly string[] KindValues = ["midi", "serial", "livewire", "ember"];
     public static readonly string[] StateNames = ["Microfoon open", "Op de lucht (er speelt iets)", "Automatisch"];
     private static readonly string[] StateValues = ["mic", "onair", "auto"];
     public static string StateLabel(string state) => StateNames[Math.Max(0, Array.IndexOf(StateValues, state))];
@@ -57,6 +67,10 @@ public sealed partial class HardwareTool : StudioTool
     public ObservableCollection<HwInputRow> Inputs { get; } = [];
     public ObservableCollection<HwOutputRow> Outputs { get; } = [];
     public ObservableCollection<HwEventRow> Events { get; } = [];
+    public ObservableCollection<HwEmberRow> EmberItems { get; } = [];
+
+    /// <summary>The tab shown: 0 devices, 1 buttons, 2 tallies.</summary>
+    [ObservableProperty] private int _tab;
 
     [ObservableProperty] private string _stateLine = "";
     private HwPortsDto? _ports;
@@ -126,17 +140,24 @@ public sealed partial class HardwareTool : StudioTool
 
     public bool IsSerial => Kind == 1;
     public bool IsLivewire => Kind == 2;
+    public bool IsEmber => Kind == 3;
+    public bool HasPortList => Kind < 2;
+    public bool CanBrowseEmber => IsEmber && Id > 0;
     public string PortHint => Kind switch
     {
         0 => "naam van het MIDI-apparaat (kies hieronder)",
         1 => "COM-poort, bijv. COM3 (kies hieronder)",
-        _ => "IP-adres of naam van de Livewire-node (poort 93)",
+        2 => "IP-adres of naam van de Livewire-node (poort 93)",
+        _ => "IP-adres van het apparaat, bijv. 192.168.1.50 (poort 9000, anders :poort erachter)",
     };
 
     partial void OnKindChanged(int value)
     {
         OnPropertyChanged(nameof(IsSerial));
         OnPropertyChanged(nameof(IsLivewire));
+        OnPropertyChanged(nameof(IsEmber));
+        OnPropertyChanged(nameof(HasPortList));
+        OnPropertyChanged(nameof(CanBrowseEmber));
         OnPropertyChanged(nameof(PortHint));
         Ports.Clear();
         foreach (var p in value switch { 0 => _ports?.Midi ?? [], 1 => _ports?.Serial ?? [], _ => [] }) Ports.Add(p);
@@ -157,6 +178,10 @@ public sealed partial class HardwareTool : StudioTool
         Baud = value.Baud;
         Password = value.Password;
         DeviceStatus = StatusText(value);
+        EmberItems.Clear();
+        EmberPath = "";
+        EmberProblem = null;
+        OnPropertyChanged(nameof(CanBrowseEmber));
     }
 
     [RelayCommand]
@@ -191,6 +216,54 @@ public sealed partial class HardwareTool : StudioTool
         await Hub.Client.DeleteAsync($"/api/hardware/devices/{Id}");
         Selected = null;
         await LoadAsync();
+    }
+
+    // ---------------------------------------------------------------- Ember+ tree
+
+    [ObservableProperty] private string _emberPath = "";
+    [ObservableProperty] private string? _emberProblem;
+    public string EmberWhere => EmberPath.Length == 0 ? "bovenaan" : EmberPath;
+    partial void OnEmberPathChanged(string value) => OnPropertyChanged(nameof(EmberWhere));
+
+    [RelayCommand] private Task EmberTop() => BrowseAsync("");
+    [RelayCommand] private Task EmberRefresh() => BrowseAsync(EmberPath);
+    [RelayCommand] private Task EmberUp() => BrowseAsync(EmberPath.Contains('.') ? EmberPath[..EmberPath.LastIndexOf('.')] : "");
+    [RelayCommand] private Task EmberOpen(HwEmberRow? row) => row is { IsNode: true } ? BrowseAsync(row.Item.Path) : Task.CompletedTask;
+
+    private async Task BrowseAsync(string path)
+    {
+        if (Id <= 0) return;
+        EmberProblem = "bezig…";
+        var items = await Hub.Client.GetAsync<List<HwEmberItemDto>>($"/api/hardware/devices/{Id}/ember?path={Uri.EscapeDataString(path)}");
+        if (items is null) { EmberProblem = "Niet verbonden: sla het apparaat op en wacht tot het verbonden is."; return; }
+        EmberPath = path;
+        EmberItems.Clear();
+        foreach (var i in items) EmberItems.Add(new HwEmberRow(i));
+        EmberProblem = items.Count == 0 ? "Hier staat niets (of het apparaat antwoordt niet)." : null;
+    }
+
+    /// <summary>A parameter becomes the trigger of a new button on this device.</summary>
+    [RelayCommand]
+    private void EmberAsButton(HwEmberRow? row)
+    {
+        if (row is null) return;
+        NewInput();
+        InputDevice = DeviceChoices.FirstOrDefault(d => d.Id == Id);
+        Trigger = "ember " + row.Item.Path + (row.Item.Type == "real" ? " > -40" : "");
+        OnCommand = "PLAYER 1 PLAY";
+        OffCommand = "";
+        Tab = 1;
+    }
+
+    /// <summary>A parameter becomes the target of a new tally on this device.</summary>
+    [RelayCommand]
+    private void EmberAsTally(HwEmberRow? row)
+    {
+        if (row is null) return;
+        NewOutput();
+        OutputDevice = DeviceChoices.FirstOrDefault(d => d.Id == Id);
+        Target = "ember " + row.Item.Path;
+        Tab = 2;
     }
 
     // ---------------------------------------------------------------- buttons

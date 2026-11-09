@@ -44,6 +44,10 @@ public sealed class HardwareService(HardwareStore store, CommandBus bus, Playout
         [HwState.Auto] = engine.AutoPlay,
     };
 
+    /// <summary>The children of a node of a connected Ember+ device; null when it is not connected.</summary>
+    public async Task<IReadOnlyList<EmberElement>?> BrowseEmberAsync(long deviceId, string path, CancellationToken ct) =>
+        _open.TryGetValue(deviceId, out var c) && c is EmberConnection { Alive: true } ember ? await ember.BrowseAsync(path, ct) : null;
+
     /// <summary>Shows a tally by hand (the Test buttons).</summary>
     public bool Test(long outputId, bool on)
     {
@@ -88,7 +92,7 @@ public sealed class HardwareService(HardwareStore store, CommandBus bus, Playout
         }
         foreach (var (id, c) in _open)
         {
-            if (devices.TryGetValue(id, out var d) && d == c.Device && (c.Alive || c is LivewireConnection { Status: "verbinden…" })) continue;
+            if (devices.TryGetValue(id, out var d) && d == c.Device && (c.Alive || c.Status == "verbinden…")) continue;
             c.Dispose();
             _open.TryRemove(id, out _);
         }
@@ -99,13 +103,20 @@ public sealed class HardwareService(HardwareStore store, CommandBus bus, Playout
             {
                 HwKind.Midi => new MidiConnection(d, Report),
                 HwKind.Serial => new SerialConnection(d, Report),
+                HwKind.Ember => new EmberConnection(d, Report),
                 _ => new LivewireConnection(d, Report),
             };
             _open[d.Id] = c;
             opened = true;
-            if (!c.Alive && c is not LivewireConnection) logger.LogInformation("Hardware {Name}: {Status}", d.Name, c.Status);
+            if (!c.Alive && c.Status != "verbinden…") logger.LogInformation("Hardware {Name}: {Status}", d.Name, c.Status);
         }
-        if (opened || changed) ShowStates(force: true);
+        if (opened || changed)
+        {
+            foreach (var ember in _open.Values.OfType<EmberConnection>())
+                ember.Watch(_inputs.Where(i => i.DeviceId == ember.Device.Id).Select(i => i.Trigger),
+                    _outputs.Where(o => o.DeviceId == ember.Device.Id).Select(o => o.Target));
+            ShowStates(force: true);
+        }
     }
 
     private void ShowStates(bool force)

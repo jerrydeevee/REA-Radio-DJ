@@ -178,18 +178,21 @@ public sealed record NewsBlockDto(long Id, string Name, bool Enabled, int Days, 
     long? OpenerId, long? CloserId, string Source, string Folder, int MaxAgeMinutes, long? CategoryId, string Feeds, int MaxHeadlines,
     string? When = null, DateTime? Next = null);
 
-/// <summary>A hardware device. Kind "midi", "serial" or "livewire"; Port is the MIDI name, COM port or host.</summary>
+/// <summary>A hardware device. Kind "midi", "serial", "livewire" or "ember"; Port is the MIDI name, COM port or host[:port].</summary>
 public sealed record HwDeviceDto(long Id, string Name, bool Enabled, string Kind, string Port, int Baud, string Password,
     bool Connected = false, string Status = "");
 
-/// <summary>A trigger ("note 60", "cc 7", "gpi 3.1" or a serial line) and the commands for on and off.</summary>
+/// <summary>A trigger ("note 60", "cc 7", "gpi 3.1", "ember 1.2.3 > -40" or a serial line) and the commands for on and off.</summary>
 public sealed record HwInputDto(long Id, long DeviceId, string Trigger, string OnCommand, string OffCommand);
 
-/// <summary>A tally: State "mic", "onair" or "auto"; Target "note 60", "cc 20" or "gpo 4.2"; serial texts for on and off.</summary>
+/// <summary>A tally: State "mic", "onair" or "auto"; Target "note 60", "cc 20", "gpo 4.2" or "ember 1.2.3"; texts (serial) or values (Ember+) for on and off.</summary>
 public sealed record HwOutputDto(long Id, long DeviceId, string State, string Target, string OnText, string OffText);
 
 /// <summary>Something a device reported, and what it started.</summary>
 public sealed record HwEventDto(DateTime Time, long DeviceId, string Device, string Key, bool On, string Result);
+
+/// <summary>A node or parameter of an Ember+ device, for browsing its tree.</summary>
+public sealed record HwEmberItemDto(string Path, string Identifier, string Description, bool IsNode, string Value, string Type, bool Writable);
 
 public sealed record HwPortsDto(List<string> Midi, List<string> Serial);
 

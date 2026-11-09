@@ -6,7 +6,7 @@
              x:DataType="vm:HardwareTool">
   <DockPanel Margin="4">
     <TextBlock DockPanel.Dock="Bottom" Classes="muted" FontSize="11" Text="{Binding StateLine}" Margin="2,4,0,0" />
-    <TabControl Classes="compact">
+    <TabControl Classes="compact" SelectedIndex="{Binding Tab}">
 
       <!-- devices -->
       <TabItem Header="Apparaten">
@@ -35,7 +35,7 @@
                   <ComboBox ItemsSource="{Binding Kinds}" SelectedIndex="{Binding Kind}" HorizontalAlignment="Stretch" />
                   <TextBox Text="{Binding Port}" Watermark="{Binding PortHint}" />
                   <ComboBox ItemsSource="{Binding Ports}" SelectedItem="{Binding PickPort}" HorizontalAlignment="Stretch"
-                            PlaceholderText="gevonden op deze computer" IsVisible="{Binding !IsLivewire}" />
+                            PlaceholderText="gevonden op deze computer" IsVisible="{Binding HasPortList}" />
                   <StackPanel Orientation="Horizontal" Spacing="6" IsVisible="{Binding IsSerial}">
                     <TextBlock Text="snelheid" VerticalAlignment="Center" />
                     <NumericUpDown Value="{Binding Baud}" Minimum="300" Maximum="921600" Increment="9600" FormatString="0" Width="130" />
@@ -51,6 +51,43 @@
               <TextBlock Text="{Binding DeviceStatus}" TextWrapping="Wrap" />
               <TextBlock Classes="muted" FontSize="11" TextWrapping="Wrap"
                          Text="De engine houdt elk actief apparaat verbonden en probeert het elke 5 seconden opnieuw als de verbinding wegvalt." />
+              <Border Classes="card" IsVisible="{Binding CanBrowseEmber}">
+                <StackPanel Spacing="5">
+                  <DockPanel>
+                    <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="4">
+                      <Button Classes="small" Content="Bovenaan" Command="{Binding EmberTopCommand}" />
+                      <Button Classes="small" Content="Omhoog" Command="{Binding EmberUpCommand}" />
+                      <Button Classes="small" Content="Vernieuwen" Command="{Binding EmberRefreshCommand}" />
+                    </StackPanel>
+                    <TextBlock VerticalAlignment="Center" FontWeight="SemiBold">
+                      <Run Text="Ember+-boom: " /><Run Text="{Binding EmberWhere}" FontFamily="Consolas" />
+                    </TextBlock>
+                  </DockPanel>
+                  <ListBox ItemsSource="{Binding EmberItems}" MaxHeight="260">
+                    <ListBox.ItemTemplate>
+                      <DataTemplate x:DataType="vm:HwEmberRow">
+                        <DockPanel>
+                          <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+                            <Button Classes="small" Content="Openen" IsVisible="{Binding IsNode}"
+                                    Command="{Binding $parent[ListBox].((vm:HardwareTool)DataContext).EmberOpenCommand}" CommandParameter="{Binding}" />
+                            <Button Classes="small" Content="Als knop" IsVisible="{Binding IsParameter}"
+                                    Command="{Binding $parent[ListBox].((vm:HardwareTool)DataContext).EmberAsButtonCommand}" CommandParameter="{Binding}" />
+                            <Button Classes="small" Content="Als lampje" IsVisible="{Binding IsParameter}"
+                                    Command="{Binding $parent[ListBox].((vm:HardwareTool)DataContext).EmberAsTallyCommand}" CommandParameter="{Binding}" />
+                          </StackPanel>
+                          <StackPanel>
+                            <TextBlock Text="{Binding Title}" TextTrimming="CharacterEllipsis" />
+                            <TextBlock Classes="muted" FontSize="11" FontFamily="Consolas" Text="{Binding Detail}" TextTrimming="CharacterEllipsis" />
+                          </StackPanel>
+                        </DockPanel>
+                      </DataTemplate>
+                    </ListBox.ItemTemplate>
+                  </ListBox>
+                  <TextBlock Foreground="#F0B429" TextWrapping="Wrap" Text="{Binding EmberProblem}" IsVisible="{Binding EmberProblem, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                  <TextBlock Classes="muted" FontSize="11" TextWrapping="Wrap"
+                             Text="Klik Bovenaan om de boom van het apparaat op te halen. Open knooppunten tot je de parameter vindt (bijv. de faderstand of de microfoonknop van een kanaal) en maak er een knop of lampje van." />
+                </StackPanel>
+              </Border>
             </StackPanel>
           </ScrollViewer>
         </Grid>
@@ -77,7 +114,7 @@
               <StackPanel Spacing="5">
                 <ComboBox ItemsSource="{Binding DeviceChoices}" SelectedItem="{Binding InputDevice}" HorizontalAlignment="Stretch" PlaceholderText="apparaat" />
                 <TextBox Text="{Binding Trigger}" FontFamily="Consolas"
-                         Watermark="wat het stuurt: note 60, cc 7, ch2 note 36, pc 5, gpi 3.1, of een regel tekst" />
+                         Watermark="wat het stuurt: note 60, cc 7, ch2 note 36, pc 5, gpi 3.1, ember 1.3.5 &gt; -40, of een regel tekst" />
                 <TextBox Text="{Binding OnCommand}" FontFamily="Consolas" Watermark="commando bij aan, bijv. NEXT, CART 1 5, MIC ON, PLAYER 1 PLAY" />
                 <TextBox Text="{Binding OffCommand}" FontFamily="Consolas" Watermark="commando bij uit (mag leeg), bijv. MIC OFF of PLAYER 1 STOP" />
                 <WrapPanel>
@@ -86,7 +123,7 @@
                 </WrapPanel>
                 <TextBlock Foreground="#F0B429" TextWrapping="Wrap" Text="{Binding InputProblem}" IsVisible="{Binding InputProblem, Converter={x:Static ObjectConverters.IsNotNull}}" />
                 <TextBlock Classes="muted" FontSize="11" TextWrapping="Wrap"
-                           Text="Aan/uit: een noot aan of uit, een controller vanaf 64, een Livewire-contact dicht of open (faderstart). Een seriële regel en een programmawissel zijn altijd 'aan'. Alle commando's: zie het venster Bediening." />
+                           Text="Aan/uit: een noot aan of uit, een controller vanaf 64, een Livewire-contact dicht of open (faderstart), een Ember+-parameter waar of niet nul (of met een grens: ember 1.3.5 &gt; -40 is aan boven -40 dB). Een seriële regel en een programmawissel zijn altijd 'aan'. Alle commando's: zie het venster Bediening." />
               </StackPanel>
             </ScrollViewer>
           </Grid>
@@ -128,8 +165,8 @@
             <StackPanel Spacing="5">
               <ComboBox ItemsSource="{Binding States}" SelectedIndex="{Binding OutputState}" HorizontalAlignment="Stretch" />
               <ComboBox ItemsSource="{Binding DeviceChoices}" SelectedItem="{Binding OutputDevice}" HorizontalAlignment="Stretch" PlaceholderText="apparaat" />
-              <TextBox Text="{Binding Target}" FontFamily="Consolas" Watermark="MIDI: note 60 of cc 20 · Livewire: gpo 4.2 (poort 4, pin 2)" />
-              <TextBlock Classes="muted" FontSize="11" Text="Voor een seriële poort: de tekst bij aan en bij uit (\r, \n en \xNN mogen)." TextWrapping="Wrap" />
+              <TextBox Text="{Binding Target}" FontFamily="Consolas" Watermark="MIDI: note 60 of cc 20 · Livewire: gpo 4.2 (poort 4, pin 2) · Ember+: ember 1.2.3" />
+              <TextBlock Classes="muted" FontSize="11" Text="Seriële poort: de tekst bij aan en bij uit (\r, \n en \xNN mogen). Ember+: de waarde bij aan en uit (leeg = waar/onwaar of 1/0)." TextWrapping="Wrap" />
               <TextBox Text="{Binding OnText}" FontFamily="Consolas" Watermark="aan, bijv. RELAY1 ON\r" />
               <TextBox Text="{Binding OffText}" FontFamily="Consolas" Watermark="uit, bijv. RELAY1 OFF\r" />
               <WrapPanel>

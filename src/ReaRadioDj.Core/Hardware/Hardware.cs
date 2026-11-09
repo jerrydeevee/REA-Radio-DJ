@@ -6,17 +6,18 @@ using ReaRadioDj.Core.Data;
 namespace ReaRadioDj.Core.Hardware;
 
 /// <summary>How a device is connected.</summary>
-public enum HwKind { Midi = 0, Serial = 1, Livewire = 2 }
+public enum HwKind { Midi = 0, Serial = 1, Livewire = 2, Ember = 3 }
 
 /// <summary>
-/// A piece of hardware. <see cref="Port"/> is the MIDI device name, the COM port, or the host name of a Livewire node.
+/// A piece of hardware. <see cref="Port"/> is the MIDI device name, the COM port, or the host name (with an optional
+/// ":port") of a Livewire node or an Ember+ provider.
 /// <see cref="Baud"/> is only for serial ports, <see cref="Password"/> only for Livewire (sent as LOGIN when set).
 /// </summary>
 public sealed record HwDevice(long Id, string Name, bool Enabled, HwKind Kind, string Port, int Baud = 9600, string Password = "")
 {
     public HwDevice Checked() => this with
     {
-        Name = string.IsNullOrWhiteSpace(Name) ? Kind switch { HwKind.Midi => "MIDI", HwKind.Serial => "Serieel", _ => "Livewire" } : Name.Trim(),
+        Name = string.IsNullOrWhiteSpace(Name) ? Kind switch { HwKind.Midi => "MIDI", HwKind.Serial => "Serieel", HwKind.Ember => "Ember+", _ => "Livewire" } : Name.Trim(),
         Port = Port?.Trim() ?? "",
         Baud = Baud is >= 300 and <= 921600 ? Baud : 9600,
         Password = Password ?? "",
@@ -66,6 +67,7 @@ public static partial class HwSignals
     public static bool Matches(HwInput input, HwEvent e)
     {
         if (input.DeviceId != e.DeviceId) return false;
+        if (EmberAddress.Parse(input.Trigger) is { } ember) return ember.Equals(EmberAddress.Parse(e.Key));
         if (Parse(input.Trigger) is { } a)
             return Parse(e.Key) is { } k && k.Kind == a.Kind && k.Number == a.Number && k.Sub == a.Sub && (a.Channel == 0 || a.Channel == e.Channel);
         return string.Equals(input.Trigger.Trim(), e.Key.Trim(), StringComparison.OrdinalIgnoreCase); // a serial line
@@ -78,7 +80,7 @@ public static partial class HwSignals
     /// </summary>
     public static bool IsChange(IDictionary<(long, string), bool> last, HwEvent e)
     {
-        if (Parse(e.Key) is not { Kind: "note" or "cc" or "gpi" }) return true;
+        if (Parse(e.Key) is not { Kind: "note" or "cc" or "gpi" } && EmberAddress.Parse(e.Key) is null) return true;
         var key = (e.DeviceId, (e.Channel > 0 ? $"ch{e.Channel} " : "") + e.Key);
         if (last.TryGetValue(key, out bool was) && was == e.On) return false;
         last[key] = e.On;
