@@ -119,6 +119,15 @@ public sealed class TtsOptions
     public int TimeoutSeconds { get; set; } = 120;
     /// <summary>Use Windows speech when the configured provider fails.</summary>
     public bool FallbackToSapi { get; set; } = true;
+    /// <summary>
+    /// Optional command that starts the Higgs server on the GPU (e.g. a script in WSL), so the studio can start and
+    /// stop it. Empty = the server is started outside REA-Radio-DJ.
+    /// </summary>
+    public string ServerCommand { get; set; } = "";
+    public string ServerArguments { get; set; } = "";
+    public string ServerWorkingDirectory { get; set; } = "";
+    /// <summary>Start the Higgs server together with the engine.</summary>
+    public bool StartServer { get; set; } = false;
 }
 
 public sealed class StreamOptions

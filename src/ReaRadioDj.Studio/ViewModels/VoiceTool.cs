@@ -1,0 +1,222 @@
+using System.Collections.ObjectModel;
+using Avalonia.Threading;
+using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
+using ReaRadioDj.Contracts;
+
+namespace ReaRadioDj.Studio.ViewModels;
+
+/// <summary>
+/// The presenter voice: status of the GPU and the Higgs TTS 3 server, voice profiles (Higgs with an optional cloned
+/// reference voice and control tags, or a Windows voice) and a test console that renders a sentence and plays it on PFL.
+/// </summary>
+public sealed partial class VoiceTool : StudioTool
+{
+    public static readonly string[] EngineNames = ["Higgs TTS 3 (GPU)", "Windows-spraak"];
+    /// <summary>Quick tags for Higgs; the text field accepts any tag the server understands.</summary>
+    public static readonly string[] QuickTags =
+        ["<|emotion:happy|>", "<|emotion:excited|>", "<|emotion:calm|>", "<|emotion:serious|>", "<|emotion:warm|>"];
+
+    private readonly DispatcherTimer _poll;
+
+    public VoiceTool() : base("voice", "Stem (Higgs TTS 3)")
+    {
+        _poll = new DispatcherTimer(TimeSpan.FromSeconds(3), DispatcherPriority.Background, async (_, _) => await RefreshStatusAsync());
+    }
+
+    public IReadOnlyList<string> Engines => EngineNames;
+    public IReadOnlyList<string> Tags => QuickTags;
+    public ObservableCollection<VoiceProfileDto> Profiles { get; } = [];
+    public ObservableCollection<string> SapiVoices { get; } = [];
+    public ObservableCollection<string> Results { get; } = [];
+    public ObservableCollection<string> ServerLog { get; } = [];
+
+    // status
+    [ObservableProperty] private string _gpuName = "geen NVIDIA-GPU gevonden";
+    [ObservableProperty] private string _gpuDetail = "";
+    [ObservableProperty] private double _gpuMemory;
+    [ObservableProperty] private double _gpuLoad;
+    [ObservableProperty] private bool _serverOnline;
+    [ObservableProperty] private string _serverText = "Higgs-server: controleren…";
+    [ObservableProperty] private string _serverDetail = "";
+    [ObservableProperty] private bool _serverManaged;
+    [ObservableProperty] private bool _serverRunning;
+    [ObservableProperty] private string _activeVoice = "";
+    [ObservableProperty] private bool _showLog;
+
+    // editor
+    [ObservableProperty] private VoiceProfileDto? _selected;
+    [ObservableProperty] private string _name = "";
+    [ObservableProperty] private int _engine;
+    [ObservableProperty] private string _referenceAudio = "";
+    [ObservableProperty] private string _referenceText = "";
+    [ObservableProperty] private string _profileTags = "";
+    [ObservableProperty] private double _temperature = 0.8;
+    [ObservableProperty] private string? _sapiVoice;
+    [ObservableProperty] private bool _consent;
+    [ObservableProperty] private string _consentNote = "";
+
+    // test console
+    [ObservableProperty] private string _testText = "Goedemiddag! Je luistert naar REA-Radio-DJ. Straks hoor je meer muziek, maar eerst het weer: zonnig en zeventien graden.";
+    [ObservableProperty] private bool _busy;
+    [ObservableProperty] private string _lastResult = "";
+
+    public bool IsHiggs => Engine == 0;
+    public bool IsSapi => Engine == 1;
+    public bool IsClone => IsHiggs && !string.IsNullOrWhiteSpace(ReferenceAudio);
+    public string TemperatureText => $"{Temperature:0.00}";
+    public string ServerButtonText => ServerRunning ? "Server stoppen" : "Server starten";
+
+    partial void OnEngineChanged(int value) { OnPropertyChanged(nameof(IsHiggs)); OnPropertyChanged(nameof(IsSapi)); OnPropertyChanged(nameof(IsClone)); }
+    partial void OnReferenceAudioChanged(string value) => OnPropertyChanged(nameof(IsClone));
+    partial void OnTemperatureChanged(double value) => OnPropertyChanged(nameof(TemperatureText));
+    partial void OnServerRunningChanged(bool value) => OnPropertyChanged(nameof(ServerButtonText));
+
+    partial void OnSelectedChanged(VoiceProfileDto? value)
+    {
+        if (value is not { } p) return;
+        Name = p.Name ?? "";
+        Engine = p.Engine == "sapi" ? 1 : 0;
+        ReferenceAudio = p.ReferenceAudio ?? "";
+        ReferenceText = p.ReferenceText ?? "";
+        ProfileTags = p.Tags ?? "";
+        Temperature = p.Temperature;
+        SapiVoice = SapiVoices.FirstOrDefault(v => !string.IsNullOrEmpty(p.SapiVoice) && v.StartsWith(p.SapiVoice, StringComparison.OrdinalIgnoreCase));
+        Consent = p.Consent;
+        ConsentNote = p.ConsentNote ?? "";
+    }
+
+    protected override void OnFirstShow()
+    {
+        _ = ReloadAsync();
+        _poll.Start();
+    }
+
+    [RelayCommand]
+    private async Task ReloadAsync()
+    {
+        await RefreshStatusAsync();
+        var list = await Hub.Client.GetAsync<List<VoiceProfileDto>>("/api/voice/profiles");
+        if (list is null) return;
+        var keep = Selected?.Id;
+        Profiles.Clear();
+        foreach (var p in list) Profiles.Add(p);
+        Selected = Profiles.FirstOrDefault(p => p.Id == keep) ?? Profiles.FirstOrDefault(p => p.IsDefault) ?? Profiles.FirstOrDefault();
+    }
+
+    private async Task RefreshStatusAsync()
+    {
+        var s = await Hub.Client.GetAsync<VoiceStatusDto>("/api/voice/status");
+        if (s is null) return;
+        if (s.Gpu is { } g)
+        {
+            GpuName = g.Name;
+            GpuMemory = g.MemoryTotalMb > 0 ? g.MemoryUsedMb / g.MemoryTotalMb * 100 : 0;
+            GpuLoad = g.UtilizationPercent;
+            GpuDetail = $"{g.MemoryUsedMb / 1024:0.0} / {g.MemoryTotalMb / 1024:0.0} GB · {g.UtilizationPercent:0}% belast · {g.TemperatureC:0} °C · driver {g.Driver}";
+        }
+        ServerOnline = s.ServerOnline;
+        ServerText = s.ServerOnline ? $"Higgs-server online · {s.LatencyMs:0} ms" : "Higgs-server offline";
+        ServerDetail = s.ServerOnline
+            ? $"{s.BaseUrl} · {(s.Models.Count > 0 ? string.Join(", ", s.Models) : s.Model)}"
+            : $"{s.BaseUrl} · {s.ServerError}{(s.FallbackToSapi ? " · reserve: Windows-spraak" : "")}";
+        ServerManaged = s.ServerManaged;
+        ServerRunning = s.ServerRunning;
+        ActiveVoice = s.DefaultVoice is null ? "geen stemprofiel" : $"Presentatorstem: {s.DefaultVoice} ({(s.Engine == "higgs" ? "Higgs" : "Windows")})";
+        if (SapiVoices.Count == 0) foreach (var v in s.SapiVoices) SapiVoices.Add(v);
+        if (ShowLog)
+        {
+            var log = await Hub.Client.GetAsync<List<string>>("/api/voice/server/log") ?? [];
+            ServerLog.Clear();
+            foreach (var l in log.TakeLast(80)) ServerLog.Add(l);
+        }
+    }
+
+    private VoiceProfileDto Current(long id, bool isDefault) => new(id, Name, Engine == 1 ? "sapi" : "higgs", ReferenceAudio, ReferenceText, ProfileTags,
+        Math.Round(Temperature, 2), SapiVoice is { } v ? v.Split(" (")[0] : "", Consent, ConsentNote, isDefault);
+
+    [RelayCommand]
+    private void NewHiggs()
+    {
+        Selected = null;
+        Name = "Nieuwe Higgs-stem"; Engine = 0; ReferenceAudio = ""; ReferenceText = ""; ProfileTags = "<|emotion:happy|>";
+        Temperature = 0.8; Consent = false; ConsentNote = "";
+    }
+
+    [RelayCommand]
+    private void NewSapi()
+    {
+        Selected = null;
+        Name = "Windows-stem"; Engine = 1; ProfileTags = ""; ReferenceAudio = ""; ReferenceText = ""; Consent = false; ConsentNote = "";
+        SapiVoice = SapiVoices.FirstOrDefault(v => v.Contains("nl-", StringComparison.OrdinalIgnoreCase)) ?? SapiVoices.FirstOrDefault();
+    }
+
+    [RelayCommand]
+    private void AddTag(string? tag)
+    {
+        if (string.IsNullOrEmpty(tag) || ProfileTags.Contains(tag, StringComparison.Ordinal)) return;
+        // one emotion at a time: replace an existing emotion tag
+        ProfileTags = System.Text.RegularExpressions.Regex.Replace(ProfileTags, @"<\|emotion:[^|]*\|>", "") + tag;
+    }
+
+    [RelayCommand]
+    private async Task Save()
+    {
+        if (IsClone && !Consent) { Hub.Status = "gekloonde stem: vink eerst aan dat er schriftelijke toestemming is"; return; }
+        var dto = Current(Selected?.Id ?? 0, Selected?.IsDefault ?? Profiles.Count == 0);
+        bool ok = Selected is { } s ? await Hub.Client.PutAsync($"/api/voice/profiles/{s.Id}", dto) : await Hub.Client.PostAsync("/api/voice/profiles", dto);
+        if (!ok) return;
+        Hub.Status = $"stem '{Name}' opgeslagen";
+        var keepName = Name;
+        await ReloadAsync();
+        Selected = Profiles.FirstOrDefault(p => p.Name == keepName) ?? Selected;
+    }
+
+    [RelayCommand]
+    private async Task MakeDefault()
+    {
+        if (Selected is not { } s) return;
+        if (await Hub.Client.PostAsync($"/api/voice/profiles/{s.Id}/default")) { Hub.Status = $"'{s.Name}' is nu de presentatorstem"; await ReloadAsync(); }
+    }
+
+    [RelayCommand]
+    private async Task Delete()
+    {
+        if (Selected is { } s && await Hub.Client.DeleteAsync($"/api/voice/profiles/{s.Id}")) { Selected = null; await ReloadAsync(); }
+    }
+
+    [RelayCommand]
+    private async Task Test()
+    {
+        if (Busy) return;
+        Busy = true;
+        LastResult = IsHiggs ? "bezig met renderen op de GPU…" : "bezig…";
+        try
+        {
+            // Test what is in the editor: unsaved tags are sent along.
+            var r = await Hub.Client.SendForAsync<VoiceTestResultDto>(HttpMethod.Post, "/api/voice/test",
+                new VoiceTestRequest(TestText, Selected?.Id, ProfileTags, true));
+            if (r is null) { LastResult = "geen antwoord van de engine"; return; }
+            LastResult = r.Ok
+                ? $"✓ {(r.Engine == "higgs" ? "Higgs" : "Windows")} · {r.AudioSeconds:0.0} s audio in {r.RenderSeconds:0.0} s ({(r.RenderSeconds > 0 ? r.AudioSeconds / r.RenderSeconds : 0):0.0}× realtime) · speelt op PFL"
+                : $"✕ {r.Error}";
+            Results.Insert(0, $"{DateTime.Now:HH:mm:ss}  {Name}  {LastResult}");
+            while (Results.Count > 30) Results.RemoveAt(Results.Count - 1);
+        }
+        finally { Busy = false; }
+    }
+
+    [RelayCommand]
+    private async Task ToggleServer()
+    {
+        await Hub.Client.PostAsync(ServerRunning ? "/api/voice/server/stop" : "/api/voice/server/start");
+        await RefreshStatusAsync();
+    }
+
+    [RelayCommand]
+    private async Task ToggleLog()
+    {
+        ShowLog = !ShowLog;
+        await RefreshStatusAsync();
+    }
+}

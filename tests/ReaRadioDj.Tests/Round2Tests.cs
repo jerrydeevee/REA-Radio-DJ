@@ -3,6 +3,7 @@ using ReaRadioDj.Core;
 using ReaRadioDj.Core.Data;
 using ReaRadioDj.Core.Library;
 using ReaRadioDj.Core.Model;
+using ReaRadioDj.Core.Presenter;
 using ReaRadioDj.Core.Remote;
 using ReaRadioDj.Core.Scheduling;
 
@@ -191,7 +192,7 @@ public sealed class PlannerRound2DbTests : IDisposable
     }
 
     [Fact]
-    public void Schema_is_at_version_2() => Assert.Equal(2L, _db.Scalar<long>("PRAGMA user_version"));
+    public void Schema_is_at_current_version() => Assert.Equal((long)StationDb.SchemaVersion, _db.Scalar<long>("PRAGMA user_version"));
 
     [Fact]
     public void Event_text_rules_and_watches_round_trip()
@@ -214,5 +215,59 @@ public sealed class PlannerRound2DbTests : IDisposable
         Assert.Equal(WatchMode.Overlay, w.Mode);
         Assert.True(w.InWindow(new DateTime(2026, 11, 10, 19, 0, 0)));  // Tuesday 19:00 (days 3 = Mon+Tue)
         Assert.False(w.InWindow(new DateTime(2026, 11, 11, 19, 0, 0))); // Wednesday
+    }
+}
+
+public sealed class VoiceProfileTests : IDisposable
+{
+    private readonly string _dir = Path.Combine(Path.GetTempPath(), "rea-radio-dj-voice-" + Guid.NewGuid().ToString("N"));
+    private readonly StationDb _db;
+
+    public VoiceProfileTests()
+    {
+        Directory.CreateDirectory(_dir);
+        _db = new StationDb(Path.Combine(_dir, "station.db"));
+    }
+
+    public void Dispose()
+    {
+        Microsoft.Data.Sqlite.SqliteConnection.ClearAllPools();
+        try { Directory.Delete(_dir, true); } catch (IOException) { } catch (UnauthorizedAccessException) { }
+    }
+
+    private static VoiceProfile Clone(bool consent) =>
+        new(0, "Kloon", "higgs", "/mnt/c/voices/sam.wav", "Hallo, dit is Sam.", "", 0.8, "", consent, "", false);
+
+    [Fact]
+    public void A_clone_without_consent_is_refused()
+    {
+        Assert.NotNull(Clone(false).Problem());
+        Assert.Null(Clone(true).Problem());
+        Assert.Null((Clone(false) with { ReferenceAudio = "" }).Problem()); // the plain Higgs voice needs no consent
+    }
+
+    [Fact]
+    public void One_default_voice_and_a_profile_per_row()
+    {
+        var store = new VoiceStore(_db);
+        Assert.True(store.EnsureDefault(new TtsOptions { Provider = "higgs" }));
+        Assert.False(store.EnsureDefault(new TtsOptions()));
+        long clone = store.Save(Clone(true));
+        store.SetDefault(clone);
+        var again = new VoiceStore(_db);
+        Assert.Equal(2, again.Profiles.Count);
+        Assert.Equal(clone, again.Default!.Id);
+        Assert.Single(again.Profiles, p => p.IsDefault);
+        Assert.True(again.Delete(clone));
+    }
+
+    [Fact]
+    public async Task The_router_refuses_a_clone_without_consent()
+    {
+        var store = new VoiceStore(_db);
+        var tts = new TtsOptions();
+        var router = new ProfileSpeechEngine(store, new HiggsSpeechEngine(new HttpClient(), tts), new SapiSpeechEngine(tts, "nl"), tts);
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            router.SynthesizeAsync("test", Path.Combine(_dir, "x.wav"), Clone(false), CancellationToken.None));
     }
 }

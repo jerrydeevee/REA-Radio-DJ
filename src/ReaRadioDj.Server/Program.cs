@@ -55,17 +55,28 @@ builder.Services.AddSingleton<AsRunLog>();
 builder.Services.AddSingleton<PlayoutEngine>();
 builder.Services.AddSingleton(sp => new IcecastStreamer(options.Stream, options.StationName, sp.GetService<ILogger<IcecastStreamer>>()));
 builder.Services.AddHttpClient();
+// Presenter voice: the default voice profile chooses Higgs TTS 3 (GPU server) or Windows speech.
+builder.Services.AddSingleton<VoiceStore>();
+builder.Services.AddSingleton(sp =>
+{
+    var http = sp.GetRequiredService<IHttpClientFactory>().CreateClient("tts");
+    http.Timeout = Timeout.InfiniteTimeSpan; // per-call timeouts come from the options
+    return new HiggsSpeechEngine(http, options.Presenter.Tts);
+});
+builder.Services.AddSingleton(_ => new SapiSpeechEngine(options.Presenter.Tts, options.Presenter.Language));
+builder.Services.AddSingleton(sp => new ProfileSpeechEngine(sp.GetRequiredService<VoiceStore>(), sp.GetRequiredService<HiggsSpeechEngine>(),
+    sp.GetRequiredService<SapiSpeechEngine>(), options.Presenter.Tts));
+builder.Services.AddSingleton<VoiceService>();
+builder.Services.AddHostedService(sp => sp.GetRequiredService<VoiceService>());
 builder.Services.AddSingleton(sp =>
 {
     var http = sp.GetRequiredService<IHttpClientFactory>().CreateClient("ai");
     http.Timeout = Timeout.InfiniteTimeSpan; // per-call timeouts come from the options
     var p = options.Presenter;
     IScriptWriter? llm = string.IsNullOrWhiteSpace(p.Llm.BaseUrl) ? null : new OpenAiScriptWriter(http, p);
-    ISpeechEngine sapi = new SapiSpeechEngine(p.Tts, p.Language);
-    ISpeechEngine primary = p.Tts.Provider.Equals("higgs", StringComparison.OrdinalIgnoreCase) ? new HiggsSpeechEngine(http, p.Tts) : sapi;
-    ISpeechEngine? fallback = primary != sapi && p.Tts.FallbackToSapi ? sapi : null;
+    ISpeechEngine? fallback = p.Tts.FallbackToSapi ? sp.GetRequiredService<SapiSpeechEngine>() : null;
     return new BreakRenderer(options, sp.GetRequiredService<PlayoutLog>(), sp.GetRequiredService<MediaLibrary>(),
-        llm, primary, fallback, sp.GetService<ILogger<BreakRenderer>>());
+        llm, sp.GetRequiredService<ProfileSpeechEngine>(), fallback, sp.GetService<ILogger<BreakRenderer>>());
 });
 builder.Services.AddSingleton<AutomationService>();
 builder.Services.AddHostedService(sp => sp.GetRequiredService<AutomationService>());
@@ -95,6 +106,7 @@ json.Converters.Add(new JsonStringEnumConverter(JsonNamingPolicy.CamelCase));
 
 var api = app.MapGroup("/api");
 StudioApi.Map(api, options);
+VoiceApi.Map(api);
 api.MapGet("/commands", () => CommandBus.Commands);
 api.MapPost("/watches/stop", (StreamWatchService w) => w.StopLive() ? Results.Ok() : Results.NotFound());
 api.MapPost("/command", (CommandRequest body, CommandBus bus) =>

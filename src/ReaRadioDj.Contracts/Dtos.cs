@@ -149,3 +149,20 @@ public sealed record AsRunDto(long Id, DateTime Started, DateTime? Ended, string
     string? Artist, string? Title, string? Category, double? Planned, double? Played, bool Ai, string? Note);
 
 public sealed record MessageDto(long Id, DateTime Time, string Level, string Text);
+
+// ---------------------------------------------------------------- presenter voice
+
+/// <summary>Engine: higgs or sapi. Problem: why the profile cannot be used (e.g. a clone without consent).</summary>
+public sealed record VoiceProfileDto(long Id, string? Name, string? Engine, string? ReferenceAudio, string? ReferenceText, string? Tags,
+    double Temperature, string? SapiVoice, bool Consent, string? ConsentNote, bool IsDefault, string? Problem = null);
+
+public sealed record GpuDto(string Name, double MemoryTotalMb, double MemoryUsedMb, double UtilizationPercent, double TemperatureC, string Driver);
+
+public sealed record VoiceStatusDto(GpuDto? Gpu, bool ServerOnline, IReadOnlyList<string> Models, double LatencyMs, string? ServerError,
+    string BaseUrl, string Model, bool ServerManaged, bool ServerRunning, string? DefaultVoice, string Engine, bool FallbackToSapi,
+    IReadOnlyList<string> SapiVoices);
+
+/// <summary>ProfileId null = the default voice. Tags: try other Higgs tags without saving them. Play: listen on PFL.</summary>
+public sealed record VoiceTestRequest(string? Text, long? ProfileId, string? Tags, bool Play);
+
+public sealed record VoiceTestResultDto(bool Ok, string Engine, double RenderSeconds, double AudioSeconds, string? File, string? Error);

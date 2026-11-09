@@ -32,6 +32,7 @@ public sealed class DockFactory : Factory
         ("stream", "Stream", () => new StreamTool()),
         ("messages", "Berichten", () => new MessagesTool()),
         ("control", "Bediening en sneltoetsen", () => new ControlTool()),
+        ("voice", "Stem (Higgs TTS 3)", () => new VoiceTool()),
     ];
 
     public static StudioTool Create(string id) => Windows.First(w => w.Id == id).Create();
@@ -84,7 +85,7 @@ public sealed class DockFactory : Factory
             VisibleDockables = CreateList<IDockable>(
                 Tools("dock-log", "log", "asrun"),
                 new ProportionalDockSplitter(),
-                Tools("dock-editor", "cues", "presenter", "messages", "control")),
+                Tools("dock-editor", "cues", "presenter", "voice", "messages", "control")),
         };
         var right = new ProportionalDock
         {
