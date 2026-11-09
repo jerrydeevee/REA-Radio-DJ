@@ -32,6 +32,7 @@ public sealed class AutomationService(
     private readonly EventRunner _events = new();
     private readonly ConcurrentDictionary<string, long> _asRunIds = new();
     private CancellationToken _ct;
+    private readonly LogStore _store = new(Path.Combine(options.DataFolder, "log.json"));
 
     /// <summary>When true (start with --demo) an hourly news event is created on an empty station.</summary>
     public static bool SeedDemoEvents { get; set; }
@@ -55,6 +56,7 @@ public sealed class AutomationService(
         players.Overlays.Started += (key, m) => Begin("overlay:" + key, "overlay", Kind(m), m, m.CueOut - m.CueIn);
         players.Overlays.Ended += (key, _, played) => End("overlay:" + key, played);
 
+        RestoreLog();
         engine.Start();
         if (options.Stream.Enabled) streamer.Start(engine.MixerHandle);
         messages.Info(engine.AutoPlay ? "Automatisering gestart" : "Gestart in live-assist");
@@ -75,6 +77,7 @@ public sealed class AutomationService(
             {
                 _scheduler.Fill(log, planner, DateTime.Now, engine.GetState().SecondsToNext);
                 if (options.Presenter.Enabled) await breaks.RenderPendingAsync(ct);
+                SaveLog();
                 if (DateTime.Now - lastCleanup > TimeSpan.FromHours(1)) { breaks.CleanUp(); lastCleanup = DateTime.Now; }
             }
             catch (OperationCanceledException) when (ct.IsCancellationRequested) { break; }
@@ -82,6 +85,26 @@ public sealed class AutomationService(
             await Task.Delay(1000, ct).ContinueWith(_ => { }, CancellationToken.None);
         }
         await eventLoop.ContinueWith(_ => { }, CancellationToken.None);
+        SaveLog();
+    }
+
+    private void RestoreLog()
+    {
+        try
+        {
+            if (_store.Restore(log) is not { } r) return;
+            var text = $"Log teruggezet: {r.Upcoming} items";
+            if (r.Replanned > 0) text += $", {r.Replanned} klokitems opnieuw gepland (log was ouder dan een uur)";
+            if (r.Missing > 0) text += $", {r.Missing} items overgeslagen (audiobestand niet gevonden)";
+            messages.Info(text);
+        }
+        catch (Exception ex) { logger.LogError(ex, "Restoring the log failed"); messages.Warning($"Log terugzetten mislukt: {ex.Message}"); }
+    }
+
+    private void SaveLog()
+    {
+        try { _store.Save(log); }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { logger.LogWarning(ex, "Saving the log failed"); }
     }
 
     /// <summary>Checks the fixed-time events ten times a second, so they start on the second.</summary>

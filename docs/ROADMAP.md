@@ -37,7 +37,8 @@ Legenda: ✅ klaar · 🟡 deels · ⬜ open
 
 | Status | Onderdeel |
 |---|---|
-| ✅ | Voicetracking: opnemen tussen twee logitems in drie stappen (start, volgende, stop) via PFL, los van de microfoonknop. Stilte eraf, timing blijft: de stem begint over de outro (muziek zachter), het volgende nummer start waar je Volgende drukte. Beluisteren, opnieuw of in de log; de nummers eromheen blijven staan bij herplannen. Nog niet: de log wordt niet bewaard bij een herstart van de engine (geldt ook voor AI-breaks) |
+| ✅ | Voicetracking: opnemen tussen twee logitems in drie stappen (start, volgende, stop) via PFL, los van de microfoonknop. Stilte eraf, timing blijft: de stem begint over de outro (muziek zachter), het volgende nummer start waar je Volgende drukte. Beluisteren, opnieuw of in de log; de nummers eromheen blijven staan bij herplannen. |
+| ✅ | Log bewaard bij herstart: de engine schrijft de log (komende items en recente geschiedenis) elke seconde naar `log.json` in de datamap als er iets veranderd is, en zet hem terug bij het starten. Voicetracks, handmatige items en gemaakte AI-breaks komen terug; een break waarvan het bestand weg is wordt opnieuw gemaakt, items zonder audiobestand vallen weg. Is de log ouder dan een uur, dan worden alleen de klokitems opnieuw gepland. Getest met een harde kill: alle 9 items terug in dezelfde volgorde. Het nummer dat op dat moment liep, begint niet opnieuw |
 | ⬜ | Overgangseditor met golfvormen, inserts en volume-envelopes |
 | ⬜ | Nieuwsbeheer: blokken, RSS-bronnen, opener/sluiter als vaste tijd |
 

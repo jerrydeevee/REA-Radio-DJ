@@ -40,6 +40,19 @@ public sealed class PlayoutLog
         return item;
     }
 
+    /// <summary>Replaces the whole log with saved items (at start-up, before anything plays).</summary>
+    public void Restore(IEnumerable<LogItem> upcoming, IEnumerable<LogItem> history)
+    {
+        lock (_gate)
+        {
+            _upcoming.Clear();
+            _upcoming.AddRange(upcoming);
+            _history.Clear();
+            _history.AddRange(history.Take(HistorySize));
+        }
+        Changed?.Invoke();
+    }
+
     public LogItem? PeekNext() { lock (_gate) return _upcoming.Count > 0 ? _upcoming[0] : null; }
 
     public LogItem? Find(long id) { lock (_gate) return _upcoming.FirstOrDefault(i => i.Id == id); }
