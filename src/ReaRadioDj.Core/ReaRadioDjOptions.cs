@@ -98,6 +98,10 @@ public sealed class PresenterOptions
     /// <summary>Extra persona instruction for the language model.</summary>
     public string Persona { get; set; } = "Je bent een vriendelijke, energieke radiopresentator. Je praat kort en natuurlijk.";
     public int MaxWords { get; set; } = 45;
+    /// <summary>Scripts wait for a person to approve (and possibly edit) them before they are spoken.</summary>
+    public bool RequireApproval { get; set; } = false;
+    /// <summary>High-pass, compressor, silence trim and peak level on every rendered break.</summary>
+    public bool PostProcess { get; set; } = true;
     public LlmOptions Llm { get; set; } = new();
     public TtsOptions Tts { get; set; } = new();
 }

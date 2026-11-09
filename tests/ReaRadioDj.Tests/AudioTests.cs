@@ -280,6 +280,47 @@ public sealed class AudioTests : IDisposable
         Assert.NotNull(brk.Media);
         Assert.True(brk.Media!.CueOut - brk.Media.CueIn > 1, "the spoken break should last more than a second");
     }
+    private sealed class FixedWriter(string text) : IScriptWriter
+    {
+        public string Name => "llm:test";
+        public Task<string> WriteAsync(BreakContext context, CancellationToken ct) => Task.FromResult(text);
+    }
+
+    private sealed class ToneVoice : ISpeechEngine
+    {
+        public string Name => "toon";
+        public Task SynthesizeAsync(string text, string wavPath, CancellationToken ct)
+        {
+            File.WriteAllBytes(wavPath, VoiceProcessor.Write(24000, 1, VoiceProcessorTests.Voice()));
+            return Task.CompletedTask;
+        }
+    }
+
+    [BassFact]
+    public async Task Break_waits_for_approval_then_speaks_the_edited_script_post_processed()
+    {
+        var options = Options();
+        options.Presenter.RequireApproval = true;
+        var library = new MediaLibrary(options, Db());
+        var log = new PlayoutLog();
+        var brk = new LogItem { Type = LogItemType.AiBreak };
+        log.Append(brk);
+        var renderer = new BreakRenderer(options, log, library, new FixedWriter("**Hallo** (lacht) daar is de muziek!"), new ToneVoice(), null);
+
+        await renderer.RenderAsync(brk, CancellationToken.None);
+        Assert.Equal(BreakState.AwaitingApproval, brk.BreakState);
+        Assert.Equal("Hallo daar is de muziek!", brk.Script);
+        Assert.Equal("llm:test", brk.ScriptSource);
+        Assert.Null(brk.Media);
+
+        Assert.True(await renderer.ApproveAsync(brk, "Goedemorgen Aa en Hunze!", CancellationToken.None));
+        Assert.Equal(BreakState.Ready, brk.BreakState);
+        Assert.Equal("bewerkt", brk.ScriptSource);
+        Assert.Equal("Goedemorgen Aa en Hunze!", brk.Script);
+        Assert.InRange(brk.Media!.Duration, 1.0, 1.25);   // the 2 s render lost its silence
+        Assert.False(await renderer.ApproveAsync(brk, null, CancellationToken.None));   // already done
+    }
+
     [BassFact]
     public async Task Library_scan_makes_categories_from_folders_and_keeps_edited_cues()
     {

@@ -13,6 +13,8 @@ public sealed record BreakContext(string StationName, string PresenterName, Date
 public interface IScriptWriter
 {
     string Name { get; }
+    /// <summary>False when the writer has no settings yet; the renderer then uses the template.</summary>
+    bool Configured => true;
     Task<string> WriteAsync(BreakContext context, CancellationToken ct);
 }
 
@@ -83,25 +85,37 @@ public sealed class TemplateScriptWriter(Random? random = null) : IScriptWriter
 public sealed class OpenAiScriptWriter(HttpClient http, PresenterOptions options) : IScriptWriter
 {
     public string Name => $"llm:{options.Llm.Model}";
+    public bool Configured => !string.IsNullOrWhiteSpace(options.Llm.BaseUrl) && !string.IsNullOrWhiteSpace(options.Llm.Model);
+
+    /// <summary>The server root without a trailing "/v1", so both "http://localhost:11434" and ".../v1" work.</summary>
+    internal static string Root(string baseUrl)
+    {
+        var u = baseUrl.Trim().TrimEnd('/');
+        return u.EndsWith("/v1", StringComparison.OrdinalIgnoreCase) ? u[..^3] : u;
+    }
+
+    /// <summary>Model names the server offers (OpenAI-compatible /v1/models; Ollama and LM Studio both have it).</summary>
+    public static async Task<IReadOnlyList<string>> ListModelsAsync(HttpClient http, string baseUrl, string apiKey, CancellationToken ct)
+    {
+        using var request = new HttpRequestMessage(HttpMethod.Get, Root(baseUrl) + "/v1/models");
+        if (!string.IsNullOrWhiteSpace(apiKey)) request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", apiKey);
+        using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        cts.CancelAfter(TimeSpan.FromSeconds(10));
+        using var response = await http.SendAsync(request, cts.Token);
+        response.EnsureSuccessStatusCode();
+        using var doc = JsonDocument.Parse(await response.Content.ReadAsStringAsync(cts.Token));
+        return doc.RootElement.TryGetProperty("data", out var data)
+            ? data.EnumerateArray().Select(m => m.TryGetProperty("id", out var id) ? id.GetString() : null)
+                .Where(id => !string.IsNullOrEmpty(id)).Select(id => id!).Order(StringComparer.OrdinalIgnoreCase).ToList()
+            : [];
+    }
 
     public async Task<string> WriteAsync(BreakContext c, CancellationToken ct)
     {
         var llm = options.Llm;
-        var system = $"""
-            {options.Persona}
-            Je heet {c.PresenterName} en presenteert op {c.StationName}. Taal: {options.Language}.
-            Schrijf ALLEEN de gesproken tekst voor één korte presentatie tussen twee nummers, maximaal {options.MaxWords} woorden.
-            Geen aanhalingstekens, geen opsommingen, geen regieaanwijzingen, geen emoji. Verzin geen feiten over artiesten.
-            """;
-        string previous = TemplateScriptWriter.Describe(c.Previous), next = TemplateScriptWriter.Describe(c.Next);
-        var user = $"""
-            Tijd: {c.Time:HH:mm} ({TemplateScriptWriter.SpokenTime(c.Time)}).
-            Vorig nummer: {(previous.Length > 0 ? previous : "(geen)")}.
-            Volgend nummer: {(next.Length > 0 ? next : "(geen)")}.
-            Kondig het volgende nummer aan.
-            """;
+        var (system, user) = Prompt(options, c);
 
-        using var request = new HttpRequestMessage(HttpMethod.Post, llm.BaseUrl.TrimEnd('/') + "/v1/chat/completions")
+        using var request = new HttpRequestMessage(HttpMethod.Post, Root(llm.BaseUrl) + "/v1/chat/completions")
         {
             Content = JsonContent.Create(new ChatRequest(llm.Model,
                 [new ChatMessage("system", system), new ChatMessage("user", user)], llm.Temperature, 200)),
@@ -117,6 +131,39 @@ public sealed class OpenAiScriptWriter(HttpClient http, PresenterOptions options
         var text = body?.Choices?.FirstOrDefault()?.Message?.Content;
         if (string.IsNullOrWhiteSpace(text)) throw new InvalidOperationException("Language model returned no text");
         return text;
+    }
+
+    /// <summary>
+    /// The instructions for one break. Small local models write much better Dutch with firm rules and two examples of
+    /// the style than with a bare request; the examples use made-up songs so they are never copied literally.
+    /// </summary>
+    internal static (string System, string User) Prompt(PresenterOptions options, BreakContext c)
+    {
+        var system = $"""
+            {options.Persona}
+            Je heet {c.PresenterName} en presenteert op {c.StationName}.
+            Je schrijft ALLEEN de tekst die je hardop zegt tussen twee nummers, in correct en natuurlijk Nederlands,
+            zoals een ervaren presentator het live zou zeggen.
+
+            Regels:
+            - Hoogstens {options.MaxWords} woorden, één tot drie korte zinnen.
+            - Noem titels en artiesten precies zoals ze gegeven worden; vertaal of verbuig ze niet.
+            - Verzin geen feiten over artiesten, nummers, het weer of het nieuws.
+            - Geen aanhalingstekens, opsommingen, regieaanwijzingen, emoji of Engelse zinnen.
+            - Wissel af: begin niet altijd met "Dat was" of "Hier is".
+
+            Voorbeelden van de toon (andere nummers):
+            Dat was Zomeravond van De Kustband. Het is kwart over vier, je luistert naar {c.StationName}. Nu Lisa Mol met Nooit Meer Alleen!
+            Op {c.StationName} is het tien voor half negen. Na Regen in Mei van Tom Brink zet ik er eentje op om lekker mee te zingen: Licht Aan van De Fietsers.
+            """;
+        string previous = TemplateScriptWriter.Describe(c.Previous), next = TemplateScriptWriter.Describe(c.Next);
+        var user = $"""
+            Het is {TemplateScriptWriter.SpokenTime(c.Time)} ({c.Time:HH:mm}).
+            Net gedraaid: {(previous.Length > 0 ? previous : "(niets)")}.
+            Hierna: {(next.Length > 0 ? next : "(nog niet bekend)")}.
+            Schrijf de presentatie.
+            """;
+        return (system, user);
     }
 
     private sealed record ChatRequest(

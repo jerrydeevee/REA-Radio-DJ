@@ -85,7 +85,8 @@ public sealed record MediaItem
     public string DisplayName => string.IsNullOrWhiteSpace(Artist) ? Title : $"{Artist} - {Title}";
 }
 
-public enum BreakState { Pending, Rendering, Ready, Failed }
+/// <summary>Pending → Rendering → (AwaitingApproval →) Ready, or Failed. Anything but Ready is skipped on air.</summary>
+public enum BreakState { Pending, Rendering, Ready, Failed, AwaitingApproval }
 
 public enum LogItemType { Song, Jingle, AiBreak }
 

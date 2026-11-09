@@ -148,30 +148,6 @@ public sealed partial class ClockTool : StudioTool
     }
 }
 
-/// <summary>The AI presenter: the planned breaks with their state and script.</summary>
-public sealed partial class PresenterTool : StudioTool
-{
-    private string _key = "";
-    public PresenterTool() : base("presenter", "AI-presentator") { }
-
-    public ObservableCollection<LogItemDto> Breaks { get; } = [];
-    [ObservableProperty] private string _nowScript = "";
-
-    protected override void OnState(StateDto s)
-    {
-        NowScript = s.Engine.Current is { Type: "voice" } c ? c.Script ?? c.Title : "";
-        var breaks = s.Upcoming.Where(u => u.Type == "aiBreak").ToList();
-        var key = string.Join("|", breaks.Select(b => $"{b.Id}{b.BreakState}{b.StartsAt:HHmm}"));
-        if (key == _key) return;
-        _key = key;
-        Breaks.Clear();
-        foreach (var b in breaks) Breaks.Add(b);
-    }
-
-    [RelayCommand] private Task AddNext() => Hub.Client.PostAsync("/api/log/break", new AddBreakRequest(0));
-    [RelayCommand] private Task Remove(LogItemDto? b) => b is null ? Task.CompletedTask : Hub.Client.DeleteAsync($"/api/log/{b.Id}");
-}
-
 /// <summary>Overlays: jingles and beds on top of the automation, which dims while they play.</summary>
 public sealed partial class OverlaysTool : StudioTool
 {

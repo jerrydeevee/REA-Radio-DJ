@@ -41,6 +41,7 @@ if (!BassRuntime.IsAvailable)
 
 var db = new StationDb(Path.Combine(options.DataFolder, "station.db"));
 RoutingSettings.Load(db, options);
+PresenterSettings.Load(db, options);
 
 builder.Services.AddSingleton(options);
 builder.Services.AddSingleton(db);
@@ -77,7 +78,7 @@ builder.Services.AddSingleton(sp =>
     var http = sp.GetRequiredService<IHttpClientFactory>().CreateClient("ai");
     http.Timeout = Timeout.InfiniteTimeSpan; // per-call timeouts come from the options
     var p = options.Presenter;
-    IScriptWriter? llm = string.IsNullOrWhiteSpace(p.Llm.BaseUrl) ? null : new OpenAiScriptWriter(http, p);
+    IScriptWriter llm = new OpenAiScriptWriter(http, p);   // settings can change at runtime; unconfigured → template
     ISpeechEngine? fallback = p.Tts.FallbackToSapi ? sp.GetRequiredService<SapiSpeechEngine>() : null;
     return new BreakRenderer(options, sp.GetRequiredService<PlayoutLog>(), sp.GetRequiredService<MediaLibrary>(),
         llm, sp.GetRequiredService<ProfileSpeechEngine>(), fallback, sp.GetService<ILogger<BreakRenderer>>());
@@ -111,6 +112,7 @@ json.Converters.Add(new JsonStringEnumConverter(JsonNamingPolicy.CamelCase));
 var api = app.MapGroup("/api");
 StudioApi.Map(api, options);
 VoiceApi.Map(api);
+PresenterApi.Map(api, options);
 WishlistApi.Map(api, options);
 api.MapGet("/commands", () => CommandBus.Commands);
 api.MapPost("/watches/stop", (StreamWatchService w) => w.StopLive() ? Results.Ok() : Results.NotFound());

@@ -182,3 +182,13 @@ public sealed record WishImportRequest(string? Link);
 public sealed record WishImportResultDto(bool Ok, string Playlist, int Total, int Added, int InLibrary, string? Error);
 
 public sealed record MusicReportSummaryDto(int Tracks, double Seconds, int WithoutIsrc, int WithoutComposer);
+
+/// <summary>AI presenter settings changed in the studio. ApiKey comes back masked; sending the mask keeps the stored key.</summary>
+public sealed record PresenterSettingsDto(bool Enabled, string PresenterName, string Persona, int MaxWords, string LlmBaseUrl,
+    string LlmModel, string LlmApiKey, double Temperature, bool RequireApproval, bool PostProcess);
+
+public sealed record LlmModelsDto(bool Ok, IReadOnlyList<string> Models, string? Error);
+
+public sealed record ScriptTryDto(string Script, string Source, double Seconds, int Words);
+
+public sealed record ApproveBreakRequest(string? Script);

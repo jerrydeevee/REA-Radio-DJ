@@ -23,11 +23,11 @@ Legenda: ✅ klaar · 🟡 deels · ⬜ open
 
 | Status | Onderdeel |
 |---|---|
-| ⬜ | Taalmodel koppelen (Ollama/LM Studio lokaal of een API) voor de scripts; nu alleen sjabloonteksten |
-| ⬜ | Nabewerking: 24 → 48 kHz, hoogdoorlaat, compressie, loudness op stationsnorm |
+| ✅ | Taalmodel koppelen: elke OpenAI-compatibele server (Ollama, LM Studio, online dienst), instelbaar in de studio met proefscript; getest met Ollama `gemma3:12b` (goed Nederlands) |
+| ✅ | Nabewerking: stilte weg, hoogdoorlaat 80 Hz, compressor, piek -1 dBFS; loudness op stationsnorm en samplerate doet de playout zelf |
 | ⬜ | Music bed onder de break, outro-element, talk-up tot de zang |
 | ⬜ | Persona's en dayparts (stem + stijl per tijdvak in een rooster) |
-| ⬜ | Script goedkeuren of bewerken vóór het renderen |
+| ✅ | Script goedkeuren, bewerken of opnieuw laten schrijven vóór het inspreken (niet op tijd goedgekeurd = jingle) |
 | ⬜ | Controle met Whisper: klopt de gesproken tekst met het script |
 | ⬜ | Variabelen: weer, RSS/nieuws, luisteraarsberichten |
 | ⬜ | Referentiecodes per stem vooraf berekenen (sneller klonen) |

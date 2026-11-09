@@ -1,38 +1,102 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:ReaRadioDj.Studio.ViewModels"
-             xmlns:c="using:ReaRadioDj.Contracts"
              x:Class="ReaRadioDj.Studio.Views.PresenterView"
              x:DataType="vm:PresenterTool">
-  <DockPanel Margin="6">
-    <StackPanel DockPanel.Dock="Top" Spacing="6" Margin="0,0,0,6">
-      <Button Content="AI-break als volgende (Ctrl+B)" Command="{Binding AddNextCommand}" />
+  <ScrollViewer HorizontalScrollBarVisibility="Disabled">
+    <StackPanel Margin="6" Spacing="6">
+      <WrapPanel>
+        <Button Content="AI-break als volgende (Ctrl+B)" Command="{Binding AddNextCommand}" Margin="0,0,6,0" />
+        <CheckBox Content="Script eerst goedkeuren" IsChecked="{Binding RequireApproval}" Command="{Binding SaveCommand}"
+                  ToolTip.Tip="Een AI-break wordt pas ingesproken na goedkeuring. Niet op tijd goedgekeurd: een jingle in de plaats." />
+      </WrapPanel>
+
       <Border Classes="card" IsVisible="{Binding NowScript, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
         <StackPanel>
           <TextBlock Classes="muted" Text="Nu op de radio" />
           <TextBlock Text="{Binding NowScript}" TextWrapping="Wrap" FontStyle="Italic" />
         </StackPanel>
       </Border>
+
+      <!-- upcoming breaks -->
+      <ItemsControl ItemsSource="{Binding Breaks}">
+        <ItemsControl.ItemTemplate>
+          <DataTemplate x:DataType="vm:BreakVm">
+            <Border Classes="card" Margin="0,0,0,4">
+              <StackPanel Spacing="4">
+                <DockPanel>
+                  <Button DockPanel.Dock="Right" Classes="small" Content="✕" ToolTip.Tip="Uit de log"
+                          Command="{Binding $parent[UserControl].DataContext.RemoveCommand}" CommandParameter="{Binding}" />
+                  <TextBlock VerticalAlignment="Center">
+                    <Run Text="{Binding StartsAt, StringFormat='{}{0:HH:mm:ss}'}" FontWeight="SemiBold" />
+                    <Run Text="  " /><Run Text="{Binding StateText}" Foreground="#A78BFA" />
+                    <Run Text="  " /><Run Text="{Binding Info}" Foreground="#8B95A5" />
+                  </TextBlock>
+                </DockPanel>
+                <TextBlock Text="{Binding Script}" TextWrapping="Wrap" Classes="muted" IsVisible="{Binding !Waiting}" />
+                <StackPanel Spacing="4" IsVisible="{Binding Waiting}">
+                  <TextBox Text="{Binding EditScript}" TextWrapping="Wrap" MinHeight="54" />
+                  <WrapPanel>
+                    <Button Classes="small" Content="✓ Goedkeuren en inspreken" IsEnabled="{Binding !Busy}" Margin="0,0,4,0"
+                            Command="{Binding $parent[UserControl].DataContext.ApproveCommand}" CommandParameter="{Binding}" />
+                    <Button Classes="small" Content="↻ Opnieuw schrijven" IsEnabled="{Binding !Busy}"
+                            Command="{Binding $parent[UserControl].DataContext.RewriteCommand}" CommandParameter="{Binding}" />
+                  </WrapPanel>
+                </StackPanel>
+                <TextBlock Text="{Binding Error}" Foreground="#E5484D" FontSize="11" TextWrapping="Wrap"
+                           IsVisible="{Binding Error, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+              </StackPanel>
+            </Border>
+          </DataTemplate>
+        </ItemsControl.ItemTemplate>
+      </ItemsControl>
+
+      <!-- settings -->
+      <Expander Header="Instellingen: taalmodel en persona" HorizontalAlignment="Stretch" IsExpanded="True">
+        <StackPanel Spacing="6">
+          <CheckBox Content="AI-presentator aan" IsChecked="{Binding Enabled}" />
+          <Grid ColumnDefinitions="110,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto">
+            <TextBlock Grid.Row="0" Text="Naam" VerticalAlignment="Center" />
+            <TextBox Grid.Row="0" Grid.Column="1" Text="{Binding PresenterName}" Margin="0,0,0,4" />
+
+            <TextBlock Grid.Row="1" Text="Taalmodel" VerticalAlignment="Center" />
+            <DockPanel Grid.Row="1" Grid.Column="1" Margin="0,0,0,4">
+              <Button DockPanel.Dock="Right" Classes="small" Content="Ollama op deze pc" Command="{Binding UseOllamaCommand}" Margin="4,0,0,0" />
+              <TextBox Text="{Binding LlmBaseUrl}" Watermark="leeg = sjabloonteksten · Ollama: http://localhost:11434 · LM Studio: http://localhost:1234" />
+            </DockPanel>
+
+            <TextBlock Grid.Row="2" Text="Model" VerticalAlignment="Center" />
+            <DockPanel Grid.Row="2" Grid.Column="1" Margin="0,0,0,4">
+              <Button DockPanel.Dock="Right" Classes="small" Content="↻" ToolTip.Tip="Modellen opnieuw ophalen" Command="{Binding RefreshModelsCommand}" Margin="4,0,0,0" />
+              <ComboBox ItemsSource="{Binding Models}" SelectedItem="{Binding LlmModel}" HorizontalAlignment="Stretch" />
+            </DockPanel>
+
+            <TextBlock Grid.Row="3" Text="API-sleutel" VerticalAlignment="Center" />
+            <TextBox Grid.Row="3" Grid.Column="1" Text="{Binding LlmApiKey}" PasswordChar="•" Watermark="alleen voor een online dienst" Margin="0,0,0,4" />
+
+            <TextBlock Grid.Row="4" Text="Lengte" VerticalAlignment="Center" />
+            <WrapPanel Grid.Row="4" Grid.Column="1" Margin="0,0,0,4">
+              <NumericUpDown Value="{Binding MaxWords}" Minimum="10" Maximum="150" Increment="5" FormatString="0" Width="120" Margin="0,0,4,0" />
+              <TextBlock Classes="muted" Text="woorden" VerticalAlignment="Center" Margin="0,0,12,0" />
+              <NumericUpDown Value="{Binding Temperature}" Minimum="0" Maximum="1.5" Increment="0.1" FormatString="0.0" Width="120" Margin="0,0,4,0" />
+              <TextBlock Classes="muted" Text="variatie (temperatuur)" VerticalAlignment="Center" />
+            </WrapPanel>
+
+            <TextBlock Grid.Row="5" Text="Persona" VerticalAlignment="Top" Margin="0,6,0,0" />
+            <TextBox Grid.Row="5" Grid.Column="1" Text="{Binding Persona}" TextWrapping="Wrap" AcceptsReturn="True" MinHeight="70" />
+          </Grid>
+          <TextBlock Classes="muted" Text="{Binding LlmStatus}" TextWrapping="Wrap" />
+          <CheckBox Content="Nabewerking van de stem (stilte weg, hoogdoorlaat, compressie, piekniveau)" IsChecked="{Binding PostProcess}" />
+          <WrapPanel>
+            <Button Classes="small" Content="Opslaan" Command="{Binding SaveCommand}" Margin="0,0,4,0" />
+            <Button Classes="small" Content="Proefscript schrijven" Command="{Binding TryCommand}" IsEnabled="{Binding !Trying}"
+                    ToolTip.Tip="Slaat op en laat het taalmodel een tekst schrijven voor de volgende twee nummers. Er wordt niets ingesproken of uitgezonden." />
+          </WrapPanel>
+          <Border Classes="card" IsVisible="{Binding Trial, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+            <SelectableTextBlock Text="{Binding Trial}" TextWrapping="Wrap" FontStyle="Italic" />
+          </Border>
+        </StackPanel>
+      </Expander>
     </StackPanel>
-    <ListBox ItemsSource="{Binding Breaks}">
-      <ListBox.ItemTemplate>
-        <DataTemplate x:DataType="c:LogItemDto">
-          <DockPanel>
-            <Button DockPanel.Dock="Right" Classes="small" Content="✕" VerticalAlignment="Top"
-                    Command="{Binding $parent[ListBox].DataContext.RemoveCommand}" CommandParameter="{Binding}" />
-            <StackPanel>
-              <TextBlock>
-                <Run Text="{Binding StartsAt, StringFormat='{}{0:HH:mm:ss}'}" FontWeight="SemiBold" />
-                <Run Text="  " /><Run Text="{Binding BreakState}" Foreground="#A78BFA" />
-                <Run Text="  " /><Run Text="{Binding Voice}" Foreground="#8B95A5" />
-                <Run Text=" " /><Run Text="{Binding ScriptSource}" Foreground="#8B95A5" />
-              </TextBlock>
-              <TextBlock Text="{Binding Script}" TextWrapping="Wrap" Classes="muted" />
-              <TextBlock Text="{Binding Error}" Foreground="#E5484D" FontSize="11" />
-            </StackPanel>
-          </DockPanel>
-        </DataTemplate>
-      </ListBox.ItemTemplate>
-    </ListBox>
-  </DockPanel>
+  </ScrollViewer>
 </UserControl>
