@@ -33,6 +33,10 @@ public sealed class AutomationService(
     private readonly ConcurrentDictionary<string, long> _asRunIds = new();
     private CancellationToken _ct;
     private readonly LogStore _store = new(Path.Combine(options.DataFolder, "log.json"));
+    private readonly ResumeStore _resume = new(Path.Combine(options.DataFolder, "on-air.json"));
+
+    /// <summary>Set before a restart that should carry on as after a crash (restore of a backup, restart from the studio).</summary>
+    public static bool KeepOnAirState { get; set; }
 
     /// <summary>When true (start with --demo) an hourly news event is created on an empty station.</summary>
     public static bool SeedDemoEvents { get; set; }
@@ -67,9 +71,14 @@ public sealed class AutomationService(
         players.Overlays.Ended += (key, _, played) => End("overlay:" + key, played);
 
         RestoreLog();
+        var resumed = _resume.Take();
+        var again = resumed is null ? null : ResumeStore.ContinueItem(resumed, DateTime.Now);
+        if (again is not null) log.Insert(0, again);
         engine.Start();
+        if (resumed is { AutoPlay: true }) engine.Play();
+        ReportRestart(resumed, again);
         if (options.Stream.Enabled) streamer.Start(engine.MixerHandle);
-        messages.Info(engine.AutoPlay ? "Automatisering gestart" : "Gestart in live-assist");
+        if (resumed is null) messages.Info(engine.AutoPlay ? "Automatisering gestart" : "Gestart in live-assist");
 
         try { await library.ScanAsync(ct); }
         catch (Exception ex) when (!ct.IsCancellationRequested) { logger.LogError(ex, "Library scan failed"); messages.Error($"Inlezen mislukt: {ex.Message}"); }
@@ -88,6 +97,7 @@ public sealed class AutomationService(
                 _scheduler.Fill(log, planner, DateTime.Now, engine.GetState().SecondsToNext);
                 if (options.Presenter.Enabled) await breaks.RenderPendingAsync(ct);
                 SaveLog();
+                SaveOnAir();
                 if (DateTime.Now - lastCleanup > TimeSpan.FromHours(1)) { breaks.CleanUp(); lastCleanup = DateTime.Now; }
             }
             catch (OperationCanceledException) when (ct.IsCancellationRequested) { break; }
@@ -96,6 +106,7 @@ public sealed class AutomationService(
         }
         await eventLoop.ContinueWith(_ => { }, CancellationToken.None);
         SaveLog();
+        if (KeepOnAirState) SaveOnAir(); else _resume.Clear();
     }
 
     private void RestoreLog()
@@ -109,6 +120,30 @@ public sealed class AutomationService(
             messages.Info(text);
         }
         catch (Exception ex) { logger.LogError(ex, "Restoring the log failed"); messages.Warning($"Log terugzetten mislukt: {ex.Message}"); }
+    }
+
+    /// <summary>Tells the studio why the engine came back, when it did not start the normal way.</summary>
+    private void ReportRestart(ResumeState? resumed, LogItem? again)
+    {
+        var reason = Environment.GetEnvironmentVariable(Watchdog.ReasonVariable);
+        if (resumed is null && string.IsNullOrEmpty(reason)) return;
+        var text = string.IsNullOrEmpty(reason) ? "De engine is niet netjes afgesloten en weer gestart" : $"De bewaking heeft de engine opnieuw gestart: {reason}";
+        if (resumed is { AutoPlay: true })
+            text += again is not null
+                ? $"; {again.Media?.DisplayName} gaat verder op {TimeSpan.FromSeconds(again.Media!.CueIn):m\\:ss}"
+                : "; de automatisering gaat verder met de log";
+        if (string.IsNullOrEmpty(reason) || reason.StartsWith("herstart gevraagd")) messages.Info(text); else messages.Warning(text);
+    }
+
+    private void SaveOnAir()
+    {
+        try
+        {
+            var onAir = engine.OnAir();
+            _resume.Save(new ResumeState(DateTime.Now, engine.AutoPlay, onAir?.Item.Type, onAir?.Item.Media, onAir?.Position ?? 0,
+                onAir?.Item.Origin ?? ""));
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { logger.LogWarning(ex, "Saving the on-air state failed"); }
     }
 
     private void SaveLog()

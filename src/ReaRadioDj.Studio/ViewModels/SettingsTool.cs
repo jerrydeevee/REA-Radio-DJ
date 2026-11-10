@@ -74,6 +74,18 @@ public sealed partial class SettingsTool : StudioTool
     [ObservableProperty] private string _controlPasswordHint = "";
     [ObservableProperty] private bool _clearControlPassword;
 
+    // Keeping the station running
+    [ObservableProperty] private bool _systemLoaded;
+    [ObservableProperty] private bool _watched;
+    [ObservableProperty] private bool _autoStart;
+    [ObservableProperty] private bool _detailedLog;
+    [ObservableProperty] private string _watchText = "";
+    [ObservableProperty] private string _autoStartCommand = "";
+    [ObservableProperty] private string _watchdogLog = "";
+    [ObservableProperty] private string _backupStatus = "";
+    [ObservableProperty] private bool _showInfoLines;
+    public ObservableCollection<SystemLogEntryDto> SystemLines { get; } = [];
+
     // This studio computer
     [ObservableProperty] private string _engineUrl = "";
     [ObservableProperty] private bool _startEngine;
@@ -98,6 +110,7 @@ public sealed partial class SettingsTool : StudioTool
             return;
         }
         Show(s);
+        await LoadSystemAsync();
         Outputs.Clear();
         Outputs.Add(new DeviceDto(-1, "Standaard geluidskaart van Windows", true, false));
         foreach (var d in outs) Outputs.Add(d);
@@ -112,6 +125,62 @@ public sealed partial class SettingsTool : StudioTool
         OverlayDuck = Percent(r.OverlayDuckLevel);
         Loaded = true;
         Status = "";
+    }
+
+    private async Task LoadSystemAsync()
+    {
+        var sys = await Hub.Client.GetAsync<SystemDto>("/api/system");
+        SystemLoaded = sys is not null;
+        if (sys is null) { WatchText = "De engine kent deze instellingen nog niet: werk hem bij."; return; }
+        Watched = sys.Watched;
+        AutoStart = sys.AutoStart;
+        DetailedLog = sys.DetailedLog;
+        AutoStartCommand = sys.AutoStartCommand ?? "";
+        WatchText = sys.Watched
+            ? "De engine draait met bewaking: na een crash of vastloper start hij binnen enkele seconden opnieuw en gaat hij verder waar hij was."
+            : "De engine draait zonder bewaking. Start hem met --watchdog (de studio doet dat zelf als zij de engine start), of zet hieronder starten bij aanmelden aan.";
+        WatchdogLog = sys.WatchdogLog.Count == 0 ? "(nog niets)" : string.Join(Environment.NewLine, sys.WatchdogLog.Reverse());
+        if (sys.RestorePending) BackupStatus = "Er staat een reservekopie klaar die bij de volgende start van de engine wordt teruggezet.";
+        await RefreshLog();
+    }
+
+    [RelayCommand]
+    private async Task RefreshLog()
+    {
+        var lines = await Hub.Client.GetAsync<List<SystemLogEntryDto>>($"/api/system/log?detailed={(ShowInfoLines ? "true" : "false")}");
+        SystemLines.Clear();
+        if (lines is null) return;
+        foreach (var l in Enumerable.Reverse(lines).Take(500)) SystemLines.Add(l);
+    }
+
+    partial void OnShowInfoLinesChanged(bool value) => _ = RefreshLog();
+
+    [RelayCommand]
+    private async Task RestartEngine()
+    {
+        BackupStatus = await Hub.Client.PostAsync("/api/system/restart")
+            ? "De engine start opnieuw; de studio maakt vanzelf weer verbinding."
+            : "Opnieuw starten kan alleen als de engine met bewaking draait.";
+    }
+
+    /// <summary>Fetches a backup of the whole station from the engine.</summary>
+    public async Task<byte[]?> FetchBackupAsync()
+    {
+        BackupStatus = "reservekopie maken…";
+        var data = await Hub.Client.GetBytesAsync("/api/backup");
+        if (data is null) BackupStatus = "De engine maakte geen reservekopie.";
+        return data;
+    }
+
+    /// <summary>Sends a backup to the engine; it is put back when the engine starts again.</summary>
+    public async Task RestoreBackupAsync(byte[] data)
+    {
+        BackupStatus = "reservekopie versturen…";
+        var (r, error) = await Hub.Client.PostBytesAsync<BackupStagedDto>("/api/backup", data);
+        BackupStatus = r is null
+            ? $"Niet teruggezet: {error}"
+            : $"Reservekopie van {r.Station} ({r.Created:d-M-yyyy HH:mm}, {r.Machine}) "
+              + (r.Restarting ? "wordt nu teruggezet; de engine start opnieuw." : "wordt teruggezet als je de engine opnieuw start.");
     }
 
     private static decimal Percent(double level) => Math.Round((decimal)level * 100);
@@ -148,6 +217,12 @@ public sealed partial class SettingsTool : StudioTool
             StreamEnabled, StreamServer, StreamPassword, false, StreamBitrate, StreamGenre, StreamUrl,
             ControlBindAddress, (int)ControlTcpPort, (int)ControlOscPort, ControlPassword, false, ClearControlPassword,
             SilenceEnabled, (double)SilenceDb, (double)SilenceSeconds, SilenceAction == 0 ? "warn" : "autoplay"));
+
+        if (SystemLoaded)
+        {
+            var sys = await Hub.Client.SendForAsync<SystemDto>(HttpMethod.Put, "/api/system", new SystemSettingsRequest(AutoStart, DetailedLog));
+            if (sys is not null) { AutoStart = sys.AutoStart; AutoStartCommand = sys.AutoStartCommand ?? ""; }
+        }
 
         // This computer: the engine address is used the next time the studio starts.
         Hub.Settings.EngineUrl = string.IsNullOrWhiteSpace(EngineUrl) ? Hub.Settings.EngineUrl : EngineUrl.Trim();

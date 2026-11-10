@@ -16,6 +16,11 @@ using ReaRadioDj.Core.Studio;
 using ReaRadioDj.Server;
 using ReaRadioDj.Server.Remote;
 
+// "--workdir <folder>": start in that folder (Windows starts programs at logon in another folder).
+args = Watchdog.ApplyWorkDir(args);
+// "--watchdog": this process only watches; the engine runs in a child process that is restarted after a crash.
+if (args.Contains("--watchdog")) return Watchdog.Run(args.Where(a => a != "--watchdog").ToArray());
+
 // appsettings.json and the browser studio live next to the executable; media and data folders are relative to the
 // working directory. "--demo" is our own switch and is kept away from the configuration parser.
 var builder = WebApplication.CreateBuilder(new WebApplicationOptions
@@ -39,7 +44,15 @@ if (!BassRuntime.IsAvailable)
     return 1;
 }
 
+// A backup that was sent to the engine is put back before the database is opened.
+string? restoredFrom = null;
+try { restoredFrom = ReaRadioDj.Core.Data.Backup.ApplyPending(options.DataFolder); }
+catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidDataException)
+{
+    Console.Error.WriteLine($"Terugzetten van de reservekopie mislukt: {ex.Message}");
+}
 var db = new StationDb(Path.Combine(options.DataFolder, "station.db"));
+SystemApi.Load(db);
 RoutingSettings.Load(db, options);
 GeneralSettings.Load(db, options);
 PresenterSettings.Load(db, options);
@@ -70,6 +83,7 @@ builder.Services.AddSingleton(new DjStore(Path.Combine(options.DataFolder, "dj.j
 builder.Services.AddSingleton<DjMixer>();
 builder.Services.AddSingleton<DjHandover>();
 builder.Services.AddSingleton<SilenceWatch>();
+builder.Logging.AddProvider(SystemLog.Instance);
 builder.Services.AddHostedService(sp => sp.GetRequiredService<SilenceWatch>());
 builder.Services.AddSingleton(sp => new VoiceTracker(sp.GetRequiredService<PlayoutLog>(), new BassVoiceCapture(),
     new PflVoicePreview(sp.GetRequiredService<StudioPlayers>()), path => sp.GetRequiredService<MediaLibrary>().Load(path, ReaRadioDj.Core.Model.MediaKind.Voice),
@@ -133,6 +147,8 @@ builder.Services.ConfigureHttpJsonOptions(o =>
 });
 
 var app = builder.Build();
+if (restoredFrom is not null)
+    app.Services.GetRequiredService<MessageCenter>().Info($"Reservekopie teruggezet; de vorige gegevens staan in {restoredFrom}");
 app.UseWebSockets();
 app.UseDefaultFiles();
 // The browser studio changes with the code; always let the browser revalidate it.
@@ -144,6 +160,7 @@ json.Converters.Add(new JsonStringEnumConverter(JsonNamingPolicy.CamelCase));
 var api = app.MapGroup("/api");
 StudioApi.Map(api, options);
 DjApi.Map(api);
+SystemApi.Map(api, options, args);
 VoiceApi.Map(api);
 PresenterApi.Map(api, options);
 VoiceTrackApi.Map(api, options);
@@ -208,6 +225,6 @@ api.Map("/ws", async (HttpContext http, IServiceProvider sp) =>
 });
 
 app.Run();
-return 0;
+return SystemApi.ExitCode;
 
 internal sealed record CommandRequest(string? Text);

@@ -39,7 +39,13 @@ public sealed partial class MainWindowViewModel : ObservableObject
         CurrentLayout = _settings.LastLayout;
         // --show <window id> (repeatable): bring windows to the front at start; --cues <media id>: open in the cue editor.
         for (int i = 0; i < args.Length - 1; i++)
-            if (args[i] == "--show") ShowWindow(args[i + 1]);
+            if (args[i] == "--show")
+            {
+                // "--show settings:Systeem" opens a window on one of its tabs.
+                var parts = args[i + 1].Split(':', 2);
+                if (parts.Length == 2) Views.SettingsView.StartTab = parts[1];
+                ShowWindow(parts[0]);
+            }
             else if (args[i] == "--float") FloatWindow(args[i + 1]);
         int ca = Array.IndexOf(args, "--cues");
         if (ca >= 0 && ca + 1 < args.Length && long.TryParse(args[ca + 1], out var cueId))

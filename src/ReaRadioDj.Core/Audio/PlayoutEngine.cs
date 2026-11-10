@@ -44,6 +44,21 @@ public sealed class PlayoutEngine : IDisposable
     /// <summary>True = automatic (the next item starts at the mix point); false = live-assist.</summary>
     public bool AutoPlay { get; private set; }
 
+    private long _lastTick = Environment.TickCount64;
+
+    /// <summary>
+    /// False when the control loop has not gone round for five seconds (the engine hangs). Before the engine has started
+    /// there is nothing to hang, so it counts as healthy.
+    /// </summary>
+    public bool Healthy => !_running || Environment.TickCount64 - Interlocked.Read(ref _lastTick) < 5000;
+
+    /// <summary>The log item on air and its position in the file, or null when nothing plays.</summary>
+    public (LogItem Item, double Position)? OnAir()
+    {
+        lock (_gate)
+            return _decks.LastOrDefault() is { } d ? (d.Item, d.Position) : null;
+    }
+
     /// <summary>Handle of the on-air bus (for the stream encoder).</summary>
     public int MixerHandle => _router.Program.Handle;
 
@@ -61,6 +76,7 @@ public sealed class PlayoutEngine : IDisposable
         _router.Start();
         _mixer = _router.Strip(AudioRouter.LogStrip).Handle;
         AutoPlay = _options.StartAutomation;
+        Interlocked.Exchange(ref _lastTick, Environment.TickCount64);
         _running = true;
         _thread = new Thread(Loop) { IsBackground = true, Name = "REA-Radio-DJ engine", Priority = ThreadPriority.AboveNormal };
         _thread.Start();
@@ -147,6 +163,7 @@ public sealed class PlayoutEngine : IDisposable
                 while (_events.TryDequeue(out var raise)) raise();
             }
             catch (Exception ex) { _logger.LogError(ex, "Engine tick failed"); }
+            Interlocked.Exchange(ref _lastTick, Environment.TickCount64);
             Thread.Sleep(10);
         }
     }

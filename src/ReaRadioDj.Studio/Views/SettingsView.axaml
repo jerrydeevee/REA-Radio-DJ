@@ -43,7 +43,7 @@
       </DockPanel>
     </Border>
 
-    <TabControl TabStripPlacement="Left" Classes="compact">
+    <TabControl x:Name="Tabs" TabStripPlacement="Left" Classes="compact">
       <TabItem Header="Station">
         <ScrollViewer><StackPanel Classes="page">
           <TextBlock Classes="title" Text="Station" />
@@ -174,6 +174,48 @@
           <TextBlock Classes="help" Text="{Binding ControlPasswordHint}" />
           <CheckBox Content="Wachtwoord verwijderen" IsChecked="{Binding ClearControlPassword}" Margin="0,8,0,0" />
           <TextBlock Classes="help" Text="Adres en poorten worden actief na een herstart van de engine. Zet een wachtwoord als je op het hele netwerk luistert." />
+        </StackPanel></ScrollViewer>
+      </TabItem>
+
+      <TabItem Header="Systeem">
+        <ScrollViewer><StackPanel Classes="page" MaxWidth="900">
+          <TextBlock Classes="title" Text="Bewaking" />
+          <TextBlock Classes="help" Text="{Binding WatchText}" />
+          <CheckBox Content="Engine met bewaking starten als ik me aanmeld op deze pc" IsChecked="{Binding AutoStart}" IsEnabled="{Binding SystemLoaded}" Margin="0,12,0,0" />
+          <TextBlock Classes="help" Text="Geldt voor de pc waarop de engine draait en wordt actief na Opslaan. Na een herstart van de pc speelt het station dan zonder dat iemand iets doet." />
+          <TextBox Text="{Binding AutoStartCommand}" IsReadOnly="True" FontSize="11" TextWrapping="Wrap" Margin="0,6,0,0" IsVisible="{Binding AutoStart}" />
+          <Button Classes="bar" Content="Engine opnieuw starten" Command="{Binding RestartEngineCommand}" IsEnabled="{Binding Watched}" Margin="0,12,0,0"
+                  ToolTip.Tip="Stopt de engine en laat de bewaking hem meteen weer starten; wat op de lucht is gaat verder" />
+          <TextBlock Classes="field" Text="Laatste meldingen van de bewaking" />
+          <TextBox Text="{Binding WatchdogLog}" IsReadOnly="True" Background="{DynamicResource CardBrush}" Foreground="{DynamicResource TextBrush}" FontFamily="Consolas" FontSize="11" Height="110" TextWrapping="NoWrap" />
+
+          <TextBlock Classes="title" Text="Reservekopie" Margin="0,24,0,4" />
+          <TextBlock Classes="help" Text="Eén bestand met alle instellingen, klokken, planning, gebeurtenissen, cartwalls, hardware, reclame, nieuws, presentatoren en de cuepunten van de bibliotheek. De audiobestanden zelf zitten er niet in. Terugzetten vervangt alles; wat er stond, blijft bewaard in een map in de datamap." />
+          <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,10,0,0">
+            <Button Classes="bar" Content="Reservekopie maken…" Click="OnBackup" IsEnabled="{Binding SystemLoaded}" />
+            <Button Classes="bar danger" Content="Reservekopie terugzetten…" Click="OnRestore" IsEnabled="{Binding SystemLoaded}" />
+          </StackPanel>
+          <TextBlock Classes="help" Text="{Binding BackupStatus}" Margin="0,8,0,0" />
+
+          <TextBlock Classes="title" Text="Systeemlog van de engine" Margin="0,24,0,4" />
+          <TextBlock Classes="help" Text="Fouten en waarschuwingen van de engine zelf. Uitgebreid bewaart ook de gewone meldingen; zet dat alleen aan als je een probleem zoekt." />
+          <StackPanel Orientation="Horizontal" Spacing="16" Margin="0,8,0,0">
+            <CheckBox Content="Uitgebreid bijhouden" IsChecked="{Binding DetailedLog}" IsEnabled="{Binding SystemLoaded}" ToolTip.Tip="Actief na Opslaan" />
+            <CheckBox Content="Gewone meldingen tonen" IsChecked="{Binding ShowInfoLines}" />
+            <Button Classes="bar" Content="Vernieuwen" Command="{Binding RefreshLogCommand}" />
+          </StackPanel>
+          <ListBox ItemsSource="{Binding SystemLines}" Height="260" Margin="0,8,0,0" x:DataType="vm:SettingsTool">
+            <ListBox.ItemTemplate>
+              <DataTemplate x:DataType="c:SystemLogEntryDto">
+                <Grid ColumnDefinitions="70,100,140,*">
+                  <TextBlock Text="{Binding Time, StringFormat='{}{0:HH:mm:ss}'}" FontFamily="Consolas" FontSize="11" />
+                  <TextBlock Grid.Column="1" Text="{Binding Level}" FontSize="11" />
+                  <TextBlock Grid.Column="2" Text="{Binding Source}" FontSize="11" Foreground="{DynamicResource MutedTextBrush}" TextTrimming="CharacterEllipsis" />
+                  <TextBlock Grid.Column="3" Text="{Binding Text}" FontSize="11" TextWrapping="Wrap" />
+                </Grid>
+              </DataTemplate>
+            </ListBox.ItemTemplate>
+          </ListBox>
         </StackPanel></ScrollViewer>
       </TabItem>
 

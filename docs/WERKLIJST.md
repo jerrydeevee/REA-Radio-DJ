@@ -26,6 +26,16 @@ Legenda: ✅ klaar · 🟡 deels · ⬜ open
 | Venster Instellingen | ✅ zeven tabbladen |
 | Verbindingen (codec, VoIP) | ⬜ alleen ontwerp |
 
+## Beantwoorde vragen (10 november 2026)
+
+| Vraag | Antwoord | Gevolg voor de bouw |
+|---|---|---|
+| 2. Waar draait de engine? | Op dezelfde pc als de studio | Engine start bij aanmelden met een watchdog naast zich; geen aparte dienst-pc nodig. Een Windows-dienst blijft mogelijk voor later |
+| 3/4. Geluidskaarten | Alles moet instelbaar zijn in het configuratiescherm: Windows-geluid en ASIO | Per uitgang kiezen tussen Windows (WASAPI/DirectSound) en ASIO, met buffer, samplerate en testtoon |
+| 6. Schermen | 3 tot 4 schermen, er kan een aanraakscherm bij | Indelingen voor 1 tot 4 schermen; aanraakmodus met grote knoppen per scherm instelbaar |
+| 8. DJ-controller | Hercules en Pioneer | Standaardtoewijzingen voor een Hercules DJControl- en een Pioneer DDJ-controller (MIDI), aan te passen in Instellingen |
+| 10/11. VoIP | Een SIP-account kan; LUCI Live moet ook kunnen | SIP-registratie bij een aanbieder; LUCI Live verbindt op een open codec (Opus/G.722) via SIP of RTP |
+
 ## Proof of concept
 
 De proof of concept is af na **stap 1 tot en met 5**: een station dat niet stilvalt, geluid dat naar de juiste kaarten
@@ -39,15 +49,15 @@ Eerst zorgen dat de zender niet stil kan vallen; alles daarna bouwt daarop.
 | Status | Werk | Af als |
 |---|---|---|
 | 🟡 | Stiltedetectie op de zender: drempel, duur en actie (melden, of ook de automatisering starten) staan, in te stellen bij Instellingen › Bewaking. Nog open: een noodcategorie spelen | stilte van de ingestelde duur geeft een alarm en de gekozen actie; getest met een stille engine |
-| ⬜ | Watchdog: de engine schrijft een hartslag; een klein bewakingsproces start hem opnieuw na een crash of vastloper, en hij gaat verder waar de log was | engine geforceerd stoppen → binnen 15 s weer op de lucht met dezelfde log |
-| ⬜ | Engine als Windows-dienst of bij aanmelden starten, los van de studio | na herstart van de pc speelt het station zonder dat iemand iets doet |
-| ⬜ | Reservekopie van instellingen, klokken, planning, cartwalls en hardware in één bestand; terugzetten | kopie terugzetten op een lege datamap geeft hetzelfde station |
-| ⬜ | Systeemlog van de engine in de studio, met niveau gewoon of uitgebreid | fouten zijn in de studio terug te lezen zonder in bestanden te zoeken |
+| ✅ | Watchdog: de engine schrijft een hartslag; een klein bewakingsproces start hem opnieuw na een crash of vastloper, en hij gaat verder waar de log was | engine geforceerd stoppen → binnen 15 s weer op de lucht met dezelfde log. Getest: na 1,4 s terug, hetzelfde nummer op dezelfde plek. Een vastloper (engine reageert niet meer) is gebouwd maar niet nagebootst |
+| 🟡 | Engine bij aanmelden starten op de studio-pc, los van de studio (dienst later): Instellingen › Systeem | na herstart van de pc speelt het station zonder dat iemand iets doet. Aan- en uitzetten getest; een echte herstart van de pc nog niet |
+| ✅ | Reservekopie van instellingen, klokken, planning, cartwalls en hardware in één bestand; terugzetten | kopie terugzetten op een lege datamap geeft hetzelfde station |
+| ✅ | Systeemlog van de engine in de studio, met niveau gewoon of uitgebreid | fouten zijn in de studio terug te lezen zonder in bestanden te zoeken |
 
 Vragen bij stap 1:
 
 1. Wat moet er bij stilte gebeuren: alleen melden, de automatisering starten, of een vaste noodcategorie spelen? (Standaard: automatisering starten na 20 s onder -45 dB, en melden.)
-2. Draait de engine straks op dezelfde pc als de studio, of op een aparte pc zonder scherm?
+2. ~~Draait de engine straks op dezelfde pc als de studio?~~ **Ja, dezelfde pc.**
 
 ## Stap 2 — Geluid en mengpaneel
 
@@ -62,7 +72,7 @@ Vragen bij stap 1:
 
 Vragen bij stap 2:
 
-3. Welke geluidskaart(en) komen er in de studio, en hebben die een ASIO-driver? Hoeveel uitgangen gaan naar de mengtafel?
+3. ~~Welke geluidskaart(en)?~~ **Instelbaar: Windows-geluid en ASIO.** Nog open: hoeveel uitgangen gaan naar de mengtafel?
 4. Mengt de studio straks in de software (alles op één uitgang) of op een fysieke mengtafel (elke speler een eigen fader)? Welk merk en type tafel?
 5. Zijn VST-plug-ins nodig voor de proof of concept, of is de ingebouwde equalizer, compressor en begrenzer genoeg? (Standaard: ingebouwd; VST later.)
 
@@ -73,14 +83,14 @@ Vragen bij stap 2:
 | ⬜ | Spelers en cartwall in de nieuwe stijl: toestand als woord en vorm, cartknoppen van 96 px | gelijk aan het ontwerp "Spelers" |
 | ⬜ | Programmalog in de nieuwe stijl | gelijk aan het ontwerp "1 scherm" |
 | ⬜ | Werkruimtes Productie, Planning en Rapportage naast Live, DJ en Automatisering | elke werkruimte opent zijn eigen indeling |
-| ⬜ | Responsive gedrag en indelingen voor 2 en 3 schermen | op 1, 2 en 3 schermen staat alles op zijn plek en blijft dat na een herstart |
+| ⬜ | Responsive gedrag en indelingen voor 1 tot 4 schermen, aanraakmodus voor een aanraakscherm | op 1 tot 4 schermen staat alles op zijn plek en blijft dat na een herstart |
 | ⬜ | Overige vensters nalopen (planner, bibliotheek, mixer, beheer) | geen venster meer in de oude stijl |
 | ⬜ | Uiterlijk instelbaar: lettergrootte, aanraakmodus, licht thema, kleuren per soort item | in Instellingen te kiezen, direct zichtbaar |
 | ⬜ | Eigen knoppen, regiekamer-venster (weer, nieuwskoppen, berichten), itemgegevens, verkenner | vensters aanwezig en te docken |
 
 Vragen bij stap 3:
 
-6. Hoeveel schermen heeft de studio, en is er een aanraakscherm bij?
+6. ~~Hoeveel schermen?~~ **3 tot 4, met eventueel een aanraakscherm.**
 7. Moet er een licht thema komen, of is donker genoeg?
 
 ## Stap 4 — DJ-modus afmaken
@@ -101,7 +111,7 @@ Vragen bij stap 3:
 
 Vragen bij stap 4:
 
-8. Welke dj-controller wil je gebruiken (merk en type)? Daar maak ik dan een standaardtoewijzing voor.
+8. ~~Welke dj-controller?~~ **Hercules en Pioneer.** Nog open: welk type precies (bijvoorbeeld DJControl Inpulse 300, DDJ-400)?
 9. Moet de automatisering doorlopen (onhoorbaar) terwijl de DJ op de lucht is, zodat zij het weer kan overnemen? Nu stopt zij bij het overnemen.
 
 ## Stap 5 — Verbindingen (codec, VoIP)
@@ -117,8 +127,8 @@ Vragen bij stap 4:
 
 Vragen bij stap 5:
 
-10. Is er een SIP-account of telefooncentrale waar de studio zich bij aanmeldt? Zo ja, welke aanbieder?
-11. Waarmee belt een verslaggever in: de LUCI Live-app ingesteld op een open codec, of een andere app?
+10. ~~Is er een SIP-account?~~ **Ja, dat kan.** Nog open: welke aanbieder?
+11. ~~Waarmee belt een verslaggever in?~~ **Ook LUCI Live** (op een open codec).
 12. Is de studio van buiten bereikbaar (vast IP-adres of doorgestuurde poorten), of loopt alles via een SIP-server?
 
 ## Stap 6 — Opnemen en uitzenden

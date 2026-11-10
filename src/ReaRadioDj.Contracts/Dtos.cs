@@ -359,3 +359,13 @@ public sealed record ExtrasPreviewDto(string? Weather, string? Headline, string?
 public sealed record PresenterNoteDto(long Id, string Text, DateTime? Until, int MaxUses, int Used);
 
 public sealed record AddNoteRequest(string Text, DateTime? Until, int MaxUses);
+
+/// <summary>Keeping the station running: watchdog, start at logon, system log and backups.</summary>
+public sealed record SystemDto(bool Watched, bool AutoStart, string? AutoStartCommand, bool DetailedLog, bool RestorePending,
+    string DataFolder, string WatchdogLogPath, IReadOnlyList<string> WatchdogLog);
+
+public sealed record SystemSettingsRequest(bool AutoStart, bool DetailedLog);
+
+public sealed record SystemLogEntryDto(long Id, DateTime Time, string Level, string Source, string Text);
+
+public sealed record BackupStagedDto(string Station, DateTime Created, string Machine, bool Restarting);

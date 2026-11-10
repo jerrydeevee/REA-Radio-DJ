@@ -119,6 +119,20 @@ public sealed class EngineClient : IDisposable
         catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException) { Error?.Invoke($"{path}: {ex.Message}"); return false; }
     }
 
+    /// <summary>Sends a file to the engine and reads the answer; the engine's refusal text comes back as the error.</summary>
+    public async Task<(T? Result, string? Error)> PostBytesAsync<T>(string path, byte[] data)
+    {
+        try
+        {
+            using var content = new ByteArrayContent(data);
+            content.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("application/octet-stream");
+            using var response = await _http.PostAsync(path, content);
+            if (!response.IsSuccessStatusCode) return (default, (await response.Content.ReadAsStringAsync()).Trim('"'));
+            return (await response.Content.ReadFromJsonAsync<T>(Wire.Json), null);
+        }
+        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or JsonException) { return (default, ex.Message); }
+    }
+
     public async Task<byte[]?> GetBytesAsync(string path)
     {
         try { return await _http.GetByteArrayAsync(path); }
@@ -132,7 +146,8 @@ public sealed class EngineClient : IDisposable
         if (string.IsNullOrWhiteSpace(exe) || !File.Exists(exe)) exe = FindEngine();
         if (exe is null) return "REA-Radio-DJ.exe niet gevonden; stel het pad in bij Instellingen.";
         var dir = string.IsNullOrWhiteSpace(settings.EngineWorkingDirectory) ? Path.GetDirectoryName(exe)! : settings.EngineWorkingDirectory;
-        Process.Start(new ProcessStartInfo(exe, $"--urls {settings.EffectiveEngineUrl}") { WorkingDirectory = dir, UseShellExecute = true, WindowStyle = ProcessWindowStyle.Hidden });
+        // With the watchdog: the engine is started again after a crash, also when the studio is closed.
+        Process.Start(new ProcessStartInfo(exe, $"--watchdog --urls {settings.EffectiveEngineUrl}") { WorkingDirectory = dir, UseShellExecute = true, WindowStyle = ProcessWindowStyle.Hidden });
         return null;
     }
 
