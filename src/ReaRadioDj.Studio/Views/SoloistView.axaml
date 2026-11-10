@@ -19,11 +19,14 @@
                 ToolTip.Tip="De officiële downloads van Spotify Soloist; een versie werkt 90 dagen" />
       </WrapPanel>
       <TextBlock Classes="muted" FontSize="13" TextWrapping="Wrap"
-                 Text="2. Kies het apparaat de eerste keer in de Spotify-app op hetzelfde netwerk (koppelen). 3. Verbind hier:" />
+                 Text="2. Kies het apparaat de eerste keer in de Spotify-app op hetzelfde netwerk (koppelen). 3. Verbind hier. Tip: stel Soloist in bij Instellingen → Spotify, dan start de studio het en verbindt dit venster vanzelf." />
       <WrapPanel>
         <TextBox Text="{Binding Address}" Width="180" Margin="0,0,8,6" Watermark="127.0.0.1:9090" IsEnabled="{Binding !Connected}" />
         <Button Classes="bar" Content="{Binding ConnectText}" Command="{Binding ConnectCommand}" Margin="0,0,8,6" />
-        <Button Classes="bar" Content="Vernieuwen" Command="{Binding RefreshCommand}" IsEnabled="{Binding LoggedIn}" Margin="0,0,0,6" />
+        <Button Classes="bar" Content="Vernieuwen" Command="{Binding RefreshCommand}" IsEnabled="{Binding LoggedIn}" Margin="0,0,8,6" />
+        <Button Classes="bar" Content="Soloist starten" Command="{Binding StartSoloistCommand}" Margin="0,0,8,6"
+                IsVisible="{Binding Configured}" IsEnabled="{Binding !LauncherRunning}" ToolTip.Tip="Start soloist.exe met de instellingen uit Instellingen → Spotify" />
+        <Button Classes="bar" Content="Soloist stoppen" Command="{Binding StopSoloistCommand}" Margin="0,0,0,6" IsVisible="{Binding LauncherRunning}" />
       </WrapPanel>
       <TextBlock Text="{Binding State}" TextWrapping="Wrap" FontWeight="SemiBold" Foreground="{DynamicResource OkBrush}" IsVisible="{Binding StateOk}" />
       <TextBlock Text="{Binding State}" TextWrapping="Wrap" FontWeight="SemiBold" Foreground="{DynamicResource WarnBrush}" IsVisible="{Binding StateBad}" />

@@ -303,6 +303,35 @@
             <TextBlock Classes="muted" Text="{Binding SpotifyStatus}" TextWrapping="Wrap" Margin="0,8,0,0" IsVisible="{Binding SpotifyBusy}" />
             <TextBlock Classes="help" Text="Opslaan (onderaan) bewaart de gegevens ook. Ze staan in de stationsdatabase van de engine en gaan voor op appsettings.json; het Client Secret wordt nooit teruggestuurd naar de studio." />
 
+            <TextBlock Classes="title" Text="Soloist (ontwikkeltest)" Margin="0,24,0,0" />
+            <TextBlock Classes="help" TextWrapping="Wrap"
+                       Text="Spotify Soloist op deze computer: de studio start het met je eigen API-sleutel en het venster Soloist (ontwikkeltest) verbindt er vanzelf mee. Het geluid gaat van Soloist rechtstreeks naar Windows, nooit via de engine, de stream of een opname. Download Soloist zelf; een versie werkt 90 dagen." />
+            <TextBlock Classes="field" Text="soloist.exe" />
+            <DockPanel>
+              <Button DockPanel.Dock="Right" Classes="bar" Content="Bladeren…" Click="OnBrowseSoloist" Margin="6,0,0,0" />
+              <TextBox Text="{Binding SoloistPath}" Watermark="C:\…\soloist.exe" />
+            </DockPanel>
+            <TextBlock Classes="field" Text="Apparaatnaam (zoals hij in de Spotify-app verschijnt)" />
+            <TextBox Text="{Binding SoloistDevice}" />
+            <TextBlock Classes="field" Text="Poort (WebSocket, alleen op deze computer)" />
+            <NumericUpDown Value="{Binding SoloistPort}" Minimum="1024" Maximum="65535" Increment="1" FormatString="0" Width="150" HorizontalAlignment="Left" />
+            <TextBlock Classes="field" Text="Soloist-API-sleutel" />
+            <TextBox Text="{Binding SoloistKey}" PasswordChar="●" Watermark="nieuwe sleutel (van Spotify for Developers)" />
+            <TextBlock Classes="help" Text="{Binding SoloistKeyHint}" />
+            <TextBlock Classes="help" TextWrapping="Wrap"
+                       Text="De sleutel wordt versleuteld bewaard voor jouw Windows-account op deze computer en nergens anders heen gestuurd. Leeg laten = de opgeslagen sleutel houden; zonder opgeslagen sleutel gebruikt de studio SOLOIST_API_KEY." />
+            <CheckBox Content="Soloist starten met de studio (en stoppen bij afsluiten)" IsChecked="{Binding SoloistStartWithStudio}" Margin="0,8,0,0" />
+            <CheckBox Content="Het venster Soloist verbindt vanzelf" IsChecked="{Binding SoloistAutoConnect}" />
+            <WrapPanel Margin="0,10,0,0">
+              <Button Classes="bar" Content="Opslaan en Soloist starten" Command="{Binding StartSoloistCommand}" Margin="0,0,8,6" />
+              <Button Classes="bar" Content="Soloist stoppen" Command="{Binding StopSoloistCommand}" IsEnabled="{Binding SoloistRunning}" Margin="0,0,8,6" />
+              <Button Classes="bar" Content="Sleutel wissen" Command="{Binding ClearSoloistKeyCommand}" Margin="0,0,8,6" />
+              <Button Classes="bar" Content="Logboek" Command="{Binding OpenSoloistLogCommand}" Margin="0,0,0,6" ToolTip.Tip="soloist.log in de map van de studio-instellingen" />
+            </WrapPanel>
+            <TextBlock Text="{Binding SoloistStatus}" TextWrapping="Wrap" FontWeight="SemiBold" />
+            <TextBlock Classes="help" TextWrapping="Wrap"
+                       Text="De eerste keer koppel je het apparaat door het in de Spotify-app (op hetzelfde netwerk) te kiezen. Deze instellingen horen bij deze studiecomputer; Opslaan onderaan bewaart ze ook." />
+
             <TextBlock Classes="title" Text="Web Playback (ontwikkeltest)" Margin="0,24,0,0" />
             <TextBlock Classes="help" TextWrapping="Wrap"
                        Text="Test de Web Playback SDK in je browser. Het geluid speelt alleen in de browser, via de luidsprekers van deze computer: niet via de engine, de DJ-tafel, de stream of een opname (Spotify staat uitzenden niet toe). Je hebt Spotify Premium nodig. Zet dit adres bij je app onder Redirect URIs:" />

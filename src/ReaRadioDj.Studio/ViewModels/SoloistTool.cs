@@ -39,6 +39,54 @@ public sealed partial class SoloistTool : StudioTool
 
     public SoloistTool() : base("soloist", "Soloist (ontwikkeltest)") { }
 
+    private ReaRadioDj.Studio.Services.SoloistSettings Settings => Hub.Settings.Soloist;
+
+    /// <summary>The address and automatic connection come from Instellingen → Spotify (this computer).</summary>
+    protected override void OnFirstShow()
+    {
+        Address = Settings.Address;
+        Configured = Settings.ExePath.Length > 0;
+        ReaRadioDj.Studio.Services.SoloistLauncher.Changed += () => Dispatcher.UIThread.Post(() =>
+        {
+            LauncherRunning = ReaRadioDj.Studio.Services.SoloistLauncher.Running;
+            if (ReaRadioDj.Studio.Services.SoloistLauncher.LastMessage.Length > 0) Note(ReaRadioDj.Studio.Services.SoloistLauncher.LastMessage);
+            if (LauncherRunning && Settings.AutoConnect && !Connected && !Connecting) _ = AutoConnectAsync();
+        });
+        LauncherRunning = ReaRadioDj.Studio.Services.SoloistLauncher.Running;
+        if (Settings.AutoConnect) _ = AutoConnectAsync();
+    }
+
+    /// <summary>Soloist may still be starting: try a few times, quietly.</summary>
+    private async Task AutoConnectAsync()
+    {
+        for (int i = 0; i < 8 && !Connected; i++)
+        {
+            if (!Connecting) await Connect();
+            if (Connected) return;
+            SetState(i < 7 ? "Wachten op Soloist…" : $"Geen Soloist op {Address}: start hem bij Instellingen → Spotify of zelf.", bad: i == 7);
+            await Task.Delay(2000);
+        }
+    }
+
+    [ObservableProperty] private bool _configured;
+    [ObservableProperty] private bool _launcherRunning;
+
+    [RelayCommand]
+    private async Task StartSoloist()
+    {
+        if (ReaRadioDj.Studio.Services.SoloistLauncher.Start(Settings) is { } problem) { SetState(problem, bad: true); return; }
+        Address = Settings.Address;
+        await AutoConnectAsync();
+    }
+
+    [RelayCommand]
+    private void StopSoloist()
+    {
+        Disconnect();
+        ReaRadioDj.Studio.Services.SoloistLauncher.Stop();
+        SetState("Soloist gestopt.");
+    }
+
     public ObservableCollection<SoloistQueueRow> Queue { get; } = [];
     public ObservableCollection<string> Log { get; } = [];
 

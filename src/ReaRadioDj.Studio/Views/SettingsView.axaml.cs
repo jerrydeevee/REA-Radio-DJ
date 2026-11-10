@@ -22,6 +22,17 @@ public partial class SettingsView : UserControl
     /// <summary>Tab to open the next time the window appears (from the command line).</summary>
     public static string? StartTab { get; set; }
 
+    private async void OnBrowseSoloist(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is not SettingsTool vm || TopLevel.GetTopLevel(this)?.StorageProvider is not { } storage) return;
+        var files = await storage.OpenFilePickerAsync(new FilePickerOpenOptions
+        {
+            Title = "Waar staat soloist.exe?",
+            FileTypeFilter = [new FilePickerFileType("Spotify Soloist") { Patterns = ["soloist.exe"] }],
+        });
+        if (files.Count > 0 && files[0].TryGetLocalPath() is { } path) vm.SoloistPath = path;
+    }
+
     private static readonly FilePickerFileType BackupType = new("Reservekopie REA-Radio-DJ") { Patterns = ["*.rea-backup"] };
 
     private async void OnBackup(object? sender, RoutedEventArgs e)

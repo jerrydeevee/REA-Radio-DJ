@@ -31,6 +31,11 @@ public partial class App : Application
                 var window = new MainWindow { DataContext = vm };
                 window.Closing += (_, _) => vm.SaveOnExit();
                 desktop.MainWindow = window;
+                // Spotify Soloist (developer test): started with the studio when set, and always stopped with it.
+                var soloist = Services.StudioHub.Current.Settings.Soloist;
+                if (soloist.StartWithStudio && Services.SoloistLauncher.Start(soloist) is { } problem)
+                    Services.StudioHub.Current.Status = "Soloist: " + problem;
+                desktop.Exit += (_, _) => Services.SoloistLauncher.Stop();
                 return window;
             }
 

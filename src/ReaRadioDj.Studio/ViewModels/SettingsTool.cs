@@ -99,6 +99,17 @@ public sealed partial class SettingsTool : StudioTool
     [ObservableProperty] private bool _spotifyBusy;
     private SpotifySettingsDto? _spotify;
 
+    // Spotify Soloist on this computer (studio settings, not the engine)
+    [ObservableProperty] private string _soloistPath = "";
+    [ObservableProperty] private string _soloistDevice = "REA ontwikkeltest";
+    [ObservableProperty] private decimal _soloistPort = 9090;
+    [ObservableProperty] private string _soloistKey = "";
+    [ObservableProperty] private string _soloistKeyHint = "";
+    [ObservableProperty] private bool _soloistStartWithStudio;
+    [ObservableProperty] private bool _soloistAutoConnect = true;
+    [ObservableProperty] private string _soloistStatus = "";
+    [ObservableProperty] private bool _soloistRunning;
+
     // Remote control
     [ObservableProperty] private string _controlBindAddress = "127.0.0.1";
     [ObservableProperty] private decimal _controlTcpPort = 8601;
@@ -295,6 +306,7 @@ public sealed partial class SettingsTool : StudioTool
         await LoadDeskModeAsync();
         await LoadAudioAsync();
         await LoadSpotifyAsync();
+        LoadSoloist();
         if (await Hub.Client.GetAsync<MasterDto>("/api/master") is { } m) { LimiterOn = m.LimiterOn; LimiterCeiling = (decimal)m.CeilingDb; _masterLoaded = true; }
         Outputs.Clear();
         Outputs.Add(new DeviceDto(-1, "Standaard geluidskaart van Windows", true, false));
@@ -466,6 +478,7 @@ public sealed partial class SettingsTool : StudioTool
         }
 
         if (SpotifyLoaded && SpotifyChanged) await SaveSpotifyAsync();
+        StoreSoloist();
 
         if (SystemLoaded)
         {
@@ -575,6 +588,84 @@ public sealed partial class SettingsTool : StudioTool
     {
         if (!SpotifyPlayerLocal) { SpotifyResult(false, "De testpagina werkt alleen op de computer waar de engine draait."); return; }
         try { System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(SpotifyPlayerUrl) { UseShellExecute = true }); }
+        catch (System.ComponentModel.Win32Exception) { }
+    }
+
+    // ---------------------------------------------------------------- Spotify Soloist (this computer)
+
+    private bool _soloistWatching;
+
+    private void LoadSoloist()
+    {
+        var s = Hub.Settings.Soloist;
+        SoloistPath = s.ExePath;
+        SoloistDevice = s.DeviceName;
+        SoloistPort = s.Port;
+        SoloistKey = "";
+        SoloistStartWithStudio = s.StartWithStudio;
+        SoloistAutoConnect = s.AutoConnect;
+        if (!_soloistWatching)
+        {
+            _soloistWatching = true;
+            SoloistLauncher.Changed += () => Avalonia.Threading.Dispatcher.UIThread.Post(ShowSoloist);
+        }
+        ShowSoloist();
+    }
+
+    private void ShowSoloist()
+    {
+        SoloistKeyHint = "Sleutel: " + SoloistLauncher.KeySource(Hub.Settings.Soloist) + ".";
+        SoloistRunning = SoloistLauncher.Running;
+        SoloistStatus = SoloistLauncher.LastMessage.Length > 0 ? SoloistLauncher.LastMessage
+            : SoloistRunning ? "Soloist draait." : "Soloist is niet door de studio gestart.";
+    }
+
+    /// <summary>Puts the fields into the studio settings (a new key is encrypted; an empty field keeps the stored key).</summary>
+    private void StoreSoloist()
+    {
+        var s = Hub.Settings.Soloist;
+        s.ExePath = SoloistPath.Trim().Trim('"');
+        s.DeviceName = string.IsNullOrWhiteSpace(SoloistDevice) ? "REA ontwikkeltest" : SoloistDevice.Trim();
+        s.Port = (int)Math.Clamp(SoloistPort, 1024, 65535);
+        if (SoloistKey.Trim().Length > 0) s.ApiKeyProtected = SoloistLauncher.Protect(SoloistKey.Trim());
+        s.StartWithStudio = SoloistStartWithStudio;
+        s.AutoConnect = SoloistAutoConnect;
+        Hub.Settings.Save();
+        SoloistKey = "";
+        ShowSoloist();
+    }
+
+    [RelayCommand]
+    private void StartSoloist()
+    {
+        StoreSoloist();
+        if (SoloistLauncher.Running) SoloistLauncher.Stop();
+        if (SoloistLauncher.Start(Hub.Settings.Soloist) is { } problem) { SoloistStatus = problem; return; }
+        ShowSoloist();
+    }
+
+    [RelayCommand]
+    private void StopSoloist()
+    {
+        SoloistLauncher.Stop();
+        ShowSoloist();
+    }
+
+    [RelayCommand]
+    private void ClearSoloistKey()
+    {
+        Hub.Settings.Soloist.ApiKeyProtected = "";
+        Hub.Settings.Save();
+        SoloistKey = "";
+        ShowSoloist();
+        SoloistStatus = "De opgeslagen Soloist-sleutel is gewist.";
+    }
+
+    [RelayCommand]
+    private static void OpenSoloistLog()
+    {
+        if (!File.Exists(SoloistLauncher.LogPath)) return;
+        try { System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(SoloistLauncher.LogPath) { UseShellExecute = true }); }
         catch (System.ComponentModel.Win32Exception) { }
     }
 

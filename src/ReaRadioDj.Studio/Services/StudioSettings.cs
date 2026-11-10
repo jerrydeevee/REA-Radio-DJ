@@ -35,6 +35,9 @@ public sealed class StudioSettings
     public bool ClockSeconds { get; set; } = true;
     public string FlashColor { get; set; } = "#E5484D";
 
+    /// <summary>Spotify Soloist on this computer (developer test): program, device name, port and the encrypted key.</summary>
+    public SoloistSettings Soloist { get; set; } = new();
+
     /// <summary>Standby/PFL players: "wave" (waveform, cue markers, big counter) or "compact".</summary>
     public string PlayerStyle { get; set; } = "wave";
 
