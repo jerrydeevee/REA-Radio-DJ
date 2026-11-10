@@ -106,7 +106,14 @@ public sealed partial class VstSlotVm : ObservableObject
         finally { _sending.Release(); }
     }
 
-    internal static string Format(VstParamDto p) => string.IsNullOrWhiteSpace(p.Unit) ? p.Display : $"{p.Display} {p.Unit}";
+    internal static string Format(VstParamDto p)
+    {
+        // Many plugins print numbers like "0.000000"; show at most two decimals.
+        string d = p.Display.Trim();
+        if (double.TryParse(d, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var n))
+            d = Math.Round(n, 2).ToString("0.##", System.Globalization.CultureInfo.CurrentCulture);
+        return string.IsNullOrWhiteSpace(p.Unit) ? d : $"{d} {p.Unit.Trim()}";
+    }
 }
 
 /// <summary>A parameter of a VST plugin as a slider (0..100 %) with the value as the plugin shows it.</summary>
