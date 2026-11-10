@@ -178,7 +178,7 @@ Vragen bij stap 6:
 | ⬜ | Overgangen en mixpunten per soort item en per nummer |
 | ⬜ | Centrale bibliotheek voor meerdere studio's |
 | 🟡 | Rapportage auteursrechten in een eigen indeling (CSV en PDF); er is geen voorgeschreven sjabloon |
-| ⬜ | Reclame-afspeelrapport per adverteerder en campagne, als bewijs voor klanten en stichtingen; export als CSV en JSON om later te koppelen |
+| ✅ | Reclame-afspeelrapport per adverteerder en campagne, als bewijs voor klanten en stichtingen; export als CSV en JSON om later te koppelen: Reclame › Uitzendbewijs filtert op periode, adverteerder of campagne, toont totalen (gepland, uitgezonden, volledig, gemist, zendtijd) en exporteert het uitzendbewijs (CSV), het overzicht (CSV) en alles samen (JSON) |
 
 ### Bibliotheek: slimmer en gebruiksvriendelijker
 

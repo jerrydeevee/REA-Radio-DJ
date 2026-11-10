@@ -1,5 +1,6 @@
 using System.Globalization;
 using ReaRadioDj.Contracts;
+using ReaRadioDj.Core;
 using ReaRadioDj.Core.Ads;
 using ReaRadioDj.Core.Library;
 using ReaRadioDj.Core.Scheduling;
@@ -40,17 +41,48 @@ public static class AdsApi
         g.MapGet("/breaks/{id:long}/preview", (long id, AdStore store, AdService ads) =>
             ads.Preview(id, store.Break(id)?.ToEvent().NextOccurrence(DateTime.Now) ?? DateTime.Now));
 
-        g.MapGet("/plays", (AdStore store, string? from, string? to, long? campaign) =>
+        g.MapGet("/plays", (AdStore store, string? from, string? to, long? campaign, string? advertiser) =>
         {
             var (f, t) = Range(from, to);
-            return store.Plays(f, t, campaign).Select(p => new AdPlayDto(p.Id, p.Advertiser, p.Campaign, p.Spot, p.Break, p.Scheduled, p.Started,
+            return store.Plays(f, t, campaign, advertiser).Select(p => new AdPlayDto(p.Id, p.Advertiser, p.Campaign, p.Spot, p.Break, p.Scheduled, p.Started,
                 p.Length, p.Played, p.Complete));
         });
-        g.MapGet("/proof.csv", (AdStore store, string? from, string? to, long? campaign) =>
+        g.MapGet("/proof.csv", (AdStore store, string? from, string? to, long? campaign, string? advertiser) =>
         {
             var (f, t) = Range(from, to);
-            var csv = System.Text.Encoding.UTF8.GetPreamble().Concat(System.Text.Encoding.UTF8.GetBytes(AdStore.ProofCsv(store.Plays(f, t, campaign)))).ToArray();
+            var csv = System.Text.Encoding.UTF8.GetPreamble().Concat(System.Text.Encoding.UTF8.GetBytes(AdStore.ProofCsv(store.Plays(f, t, campaign, advertiser)))).ToArray();
             return Results.File(csv, "text/csv", $"uitzendbewijs-{f:yyyy-MM-dd}-{t.AddDays(-1):yyyy-MM-dd}.csv");
+        });
+        // The playout report: totals per advertiser and campaign.
+        g.MapGet("/report", (AdStore store, string? from, string? to, long? campaign, string? advertiser) =>
+        {
+            var (f, t) = Range(from, to);
+            return AdStore.Report(store.Plays(f, t, campaign, advertiser), DateTime.Now);
+        });
+        g.MapGet("/report.csv", (AdStore store, string? from, string? to, long? campaign, string? advertiser) =>
+        {
+            var (f, t) = Range(from, to);
+            var csv = System.Text.Encoding.UTF8.GetPreamble().Concat(System.Text.Encoding.UTF8.GetBytes(
+                AdStore.ReportCsv(AdStore.Report(store.Plays(f, t, campaign, advertiser), DateTime.Now)))).ToArray();
+            return Results.File(csv, "text/csv", $"reclamerapport-{f:yyyy-MM-dd}-{t.AddDays(-1):yyyy-MM-dd}.csv");
+        });
+        // Everything in one file, for a later link with bookkeeping or a customer portal.
+        g.MapGet("/proof.json", (AdStore store, ReaRadioDjOptions options, string? from, string? to, long? campaign, string? advertiser) =>
+        {
+            var (f, t) = Range(from, to);
+            var plays = store.Plays(f, t, campaign, advertiser);
+            var doc = new
+            {
+                station = options.StationName,
+                from = f.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
+                to = t.AddDays(-1).ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
+                advertiser = string.IsNullOrWhiteSpace(advertiser) ? null : advertiser,
+                created = DateTime.Now,
+                summary = AdStore.Report(plays, DateTime.Now),
+                plays = plays.Select(p => new { p.Advertiser, p.Campaign, p.Spot, p.Break, p.Scheduled, p.Started, p.Length, p.Played, p.Complete }),
+            };
+            var bytes = System.Text.Json.JsonSerializer.SerializeToUtf8Bytes(doc, new System.Text.Json.JsonSerializerOptions(System.Text.Json.JsonSerializerDefaults.Web) { WriteIndented = true });
+            return Results.File(bytes, "application/json", $"uitzendbewijs-{f:yyyy-MM-dd}-{t.AddDays(-1):yyyy-MM-dd}.json");
         });
     }
 

@@ -485,3 +485,10 @@ public sealed record TitleLogDto(string TitleFormat, List<string> TitleKinds, st
     string LogFolder, string LogFormat, int LogKeepDays, string? LastTitle = null, string? TodayFile = null);
 
 public sealed record TitleLogTestDto(string Title, string LogLine, bool? UrlOk);
+
+/// <summary>Playout report: one campaign of one advertiser over a period.</summary>
+public sealed record AdReportLineDto(string Advertiser, string Campaign, int Planned, int Aired, int Complete, int Missed,
+    double SecondsOnAir, DateTime? First, DateTime? Last)
+{
+    public string Text => $"{Aired}× uitgezonden ({Complete} volledig){(Missed > 0 ? $", {Missed} gemist" : "")} · {SecondsOnAir / 60:0.0} min";
+}

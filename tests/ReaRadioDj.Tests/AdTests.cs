@@ -159,6 +159,43 @@ public sealed class AdStoreTests : IDisposable
         Assert.Contains("niet uitgezonden", csv);
     }
 
+    [Fact]
+    public void The_playout_report_totals_per_advertiser_and_campaign_and_filters_on_advertiser()
+    {
+        var store = new AdStore(_db);
+        long spot = Media("spot2");
+        AdCampaign Make(string advertiser, string name) => store.Campaign(store.Save(new AdCampaign(0, advertiser, name, true,
+            new DateOnly(2026, 11, 1), new DateOnly(2026, 11, 30), TimedEvent.AllDays, "*", 4, 1, AdPosition.Any, [spot])))!;
+        var bakker = Make("Bakker Jansen", "Kerststol");
+        var garage = Make("Garage", "APK");
+        var day = new DateTime(2026, 11, 5);
+        void Air(AdCampaign c, int hour, double played)
+        {
+            long id = store.Planned(new AdPick(c, spot, 20), "spot", "Reclame", day.AddHours(hour));
+            store.Started(id, day.AddHours(hour));
+            store.Ended(id, played);
+        }
+        Air(bakker, 8, 20); Air(bakker, 12, 20); Air(bakker, 17, 9);   // the last one was cut short
+        Air(garage, 9, 20);
+        store.Planned(new AdPick(garage, spot, 20), "spot", "Reclame", day.AddHours(10));   // never aired
+
+        var all = AdStore.Report(store.Plays(day, day.AddDays(1)), day.AddDays(1));
+        Assert.Equal(["Bakker Jansen", "Garage"], all.Select(l => l.Advertiser));
+        var b = all[0];
+        Assert.Equal((3, 3, 2, 0, 49.0), (b.Planned, b.Aired, b.Complete, b.Missed, b.SecondsOnAir));
+        Assert.Equal(day.AddHours(8), b.First);
+        Assert.Equal(day.AddHours(17), b.Last);
+        Assert.Equal((2, 1, 1), (all[1].Planned, all[1].Aired, all[1].Missed));
+
+        var onlyBakker = store.Plays(day, day.AddDays(1), advertiser: "bakker jansen");   // not case sensitive
+        Assert.Equal(3, onlyBakker.Count);
+        Assert.All(onlyBakker, p => Assert.Equal("Bakker Jansen", p.Advertiser));
+
+        var csv = AdStore.ReportCsv(all);
+        Assert.StartsWith("Adverteerder;Campagne;Gepland;Uitgezonden;Volledig;Gemist;Zendtijd (s)", csv);
+        Assert.Contains("Bakker Jansen;Kerststol;3;3;2;0;49,0;2026-11-05 08:00:00;2026-11-05 17:00:00", csv);
+    }
+
     private sealed class Sink(IReadOnlyList<LogItem>? items) : IEventSink
     {
         public List<string> Calls { get; } = [];

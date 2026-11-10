@@ -6,8 +6,8 @@ using ReaRadioDj.Contracts;
 
 namespace ReaRadioDj.Studio.ViewModels;
 
-/// <summary>A campaign in the filter of the proof of broadcast (null id = all).</summary>
-public sealed record AdCampaignChoice(long? Id, string Name)
+/// <summary>A campaign or a whole advertiser in the filter of the proof of broadcast (both null = all).</summary>
+public sealed record AdCampaignChoice(long? Id, string Name, string? Advertiser = null)
 {
     public override string ToString() => Name;
 }
@@ -142,6 +142,8 @@ public sealed partial class AdsTool : StudioTool
         if (Campaign is null) NewCampaign();
         ProofCampaigns.Clear();
         ProofCampaigns.Add(new AdCampaignChoice(null, "alle campagnes"));
+        foreach (var a in list.Select(c => c.Advertiser).Distinct(StringComparer.CurrentCultureIgnoreCase).Order(StringComparer.CurrentCultureIgnoreCase))
+            ProofCampaigns.Add(new AdCampaignChoice(null, $"{a} (alle campagnes)", a));
         foreach (var c in list) ProofCampaigns.Add(new AdCampaignChoice(c.Id, $"{c.Advertiser} – {c.Name}"));
         ProofCampaign ??= ProofCampaigns[0];
     }
@@ -248,9 +250,17 @@ public sealed partial class AdsTool : StudioTool
     [ObservableProperty] private string _proofSummary = "";
 
     private string ProofQuery => $"from={ProofFrom ?? DateTime.Today:yyyy-MM-dd}&to={ProofTo ?? DateTime.Today:yyyy-MM-dd}"
-        + (ProofCampaign?.Id is long id ? $"&campaign={id}" : "");
+        + (ProofCampaign?.Id is long id ? $"&campaign={id}" : "")
+        + (ProofCampaign?.Advertiser is { } a ? "&advertiser=" + Uri.EscapeDataString(a) : "");
+    private string ProofName => $"{ProofFrom ?? DateTime.Today:yyyy-MM-dd}-{ProofTo ?? DateTime.Today:yyyy-MM-dd}"
+        + (ProofCampaign?.Advertiser is { } a ? "-" + string.Concat(a.Split(Path.GetInvalidFileNameChars())) : "");
     public string ProofUrl => "/api/ads/proof.csv?" + ProofQuery;
-    public string ProofFileName => $"uitzendbewijs-{ProofFrom ?? DateTime.Today:yyyy-MM-dd}-{ProofTo ?? DateTime.Today:yyyy-MM-dd}.csv";
+    public string ProofFileName => $"uitzendbewijs-{ProofName}.csv";
+    public string ReportUrl => "/api/ads/report.csv?" + ProofQuery;
+    public string ReportFileName => $"reclamerapport-{ProofName}.csv";
+    public string JsonUrl => "/api/ads/proof.json?" + ProofQuery;
+    public string JsonFileName => $"uitzendbewijs-{ProofName}.json";
+    public ObservableCollection<AdReportLineDto> Report { get; } = [];
 
     [RelayCommand]
     private async Task LoadProof()
@@ -263,6 +273,9 @@ public sealed partial class AdsTool : StudioTool
         int waiting = list.Count(p => p.Started is null && p.Scheduled > DateTime.Now.AddMinutes(-10));
         ProofSummary = string.Format(Nl, "{0} uitgezonden, waarvan {1} volledig{2}", aired, complete,
             waiting > 0 ? $" · {waiting} gepland in een komend blok" : "");
+        Report.Clear();
+        if (await Hub.Client.GetAsync<List<AdReportLineDto>>("/api/ads/report?" + ProofQuery) is { } report)
+            foreach (var l in report) Report.Add(l);
     }
 
     partial void OnProofCampaignChanged(AdCampaignChoice? value) => _ = LoadProof();

@@ -61,6 +61,10 @@ public sealed record AdPlay(long Id, long CampaignId, long MediaId, string Adver
     public bool Complete => Played is double p && p >= Length - 1.0;
 }
 
+/// <summary>One line of the playout report: one campaign of one advertiser over a period.</summary>
+public sealed record AdReportLine(string Advertiser, string Campaign, int Planned, int Aired, int Complete, int Missed,
+    double SecondsOnAir, DateTime? First, DateTime? Last);
+
 /// <summary>What the planner needs to know about a campaign's plays so far.</summary>
 public sealed record AdCounts(int Today, int ThisHour, IReadOnlyDictionary<long, int> PerSpot);
 
@@ -254,12 +258,38 @@ public sealed class AdStore(StationDb db)
     public int ForgetMissed(DateTime now) => db.Execute("DELETE FROM ad_plays WHERE started IS NULL AND scheduled < $t",
         ("$t", StationDb.Iso(now.AddMinutes(-10))));
 
-    public IReadOnlyList<AdPlay> Plays(DateTime from, DateTime to, long? campaignId = null) => db.Query(
+    public IReadOnlyList<AdPlay> Plays(DateTime from, DateTime to, long? campaignId = null, string? advertiser = null) => db.Query(
         "SELECT id, campaign_id, media_id, advertiser, campaign, spot, break, scheduled, started, length, played FROM ad_plays " +
-        "WHERE scheduled >= $f AND scheduled < $t AND ($c IS NULL OR campaign_id = $c) ORDER BY scheduled, id",
+        "WHERE scheduled >= $f AND scheduled < $t AND ($c IS NULL OR campaign_id = $c) AND ($a IS NULL OR advertiser = $a COLLATE NOCASE) " +
+        "ORDER BY scheduled, id",
         r => new AdPlay(r.GetInt64(0), r.GetInt64(1), r.GetInt64(2), r.GetString(3), r.GetString(4), r.GetString(5), r.GetString(6),
             StationDb.ParseIso(r.GetString(7)) ?? default, StationDb.ParseIso(r.GetStringOrNull(8)), r.GetDouble(9), r.IsDBNull(10) ? null : r.GetDouble(10)),
-        ("$f", StationDb.Iso(from)), ("$t", StationDb.Iso(to)), ("$c", campaignId));
+        ("$f", StationDb.Iso(from)), ("$t", StationDb.Iso(to)), ("$c", campaignId), ("$a", string.IsNullOrWhiteSpace(advertiser) ? null : advertiser.Trim()));
+
+    /// <summary>
+    /// The playout report: per advertiser and campaign how often a spot was planned, aired, aired in full and missed
+    /// (planned in a break that has passed without it), the seconds on air and the first and last time.
+    /// </summary>
+    public static IReadOnlyList<AdReportLine> Report(IEnumerable<AdPlay> plays, DateTime now) =>
+        plays.GroupBy(p => (p.Advertiser, p.Campaign))
+            .Select(g => new AdReportLine(g.Key.Advertiser, g.Key.Campaign, g.Count(), g.Count(p => p.Started is not null), g.Count(p => p.Complete),
+                g.Count(p => p.Started is null && p.Scheduled < now.AddMinutes(-10)), Math.Round(g.Sum(p => p.Played ?? 0), 1),
+                g.Where(p => p.Started is not null).Min(p => p.Started), g.Where(p => p.Started is not null).Max(p => p.Started)))
+            .OrderBy(l => l.Advertiser, StringComparer.CurrentCultureIgnoreCase).ThenBy(l => l.Campaign, StringComparer.CurrentCultureIgnoreCase)
+            .ToList();
+
+    /// <summary>The report as CSV (semicolon, for Excel in Dutch).</summary>
+    public static string ReportCsv(IEnumerable<AdReportLine> lines)
+    {
+        var nl = CultureInfo.GetCultureInfo("nl-NL");
+        var sb = new StringBuilder("Adverteerder;Campagne;Gepland;Uitgezonden;Volledig;Gemist;Zendtijd (s);Eerste keer;Laatste keer\r\n");
+        static string Q(string s) => s.Contains(';') || s.Contains('"') ? $"\"{s.Replace("\"", "\"\"")}\"" : s;
+        static string T(DateTime? t) => t?.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture) ?? "";
+        foreach (var l in lines)
+            sb.Append(CultureInfo.InvariantCulture, $"{Q(l.Advertiser)};{Q(l.Campaign)};{l.Planned};{l.Aired};{l.Complete};{l.Missed};")
+              .Append(l.SecondsOnAir.ToString("0.0", nl)).Append(';').Append(T(l.First)).Append(';').Append(T(l.Last)).Append("\r\n");
+        return sb.ToString();
+    }
 
     /// <summary>Plays today and this hour per campaign, and per spot overall, counting spots that are planned but not yet on air.</summary>
     public AdCounts Counts(AdCampaign c, DateTime at)

@@ -178,9 +178,21 @@
           <CalendarDatePicker SelectedDate="{Binding ProofTo}" FirstDayOfWeek="Monday" Margin="0,0,8,4" />
           <ComboBox ItemsSource="{Binding ProofCampaigns}" SelectedItem="{Binding ProofCampaign}" MinWidth="200" Margin="0,0,8,4" />
           <Button Classes="small" Content="Vernieuwen" Command="{Binding LoadProofCommand}" Margin="0,0,4,4" />
-          <Button Classes="small go" x:Name="Export" Content="Exporteer CSV…" Margin="0,0,4,4" />
+          <Button Classes="small go" x:Name="Export" Content="Uitzendbewijs CSV…" Margin="0,0,4,4" ToolTip.Tip="Elke uitzending apart" />
+          <Button Classes="small" x:Name="ExportReport" Content="Overzicht CSV…" Margin="0,0,4,4" ToolTip.Tip="Totalen per adverteerder en campagne" />
+          <Button Classes="small" x:Name="ExportJson" Content="JSON…" Margin="0,0,4,4" ToolTip.Tip="Overzicht en alle uitzendingen in één bestand, om te koppelen" />
         </WrapPanel>
         <TextBlock DockPanel.Dock="Top" Text="{Binding ProofSummary}" Margin="0,0,0,4" />
+        <ItemsControl DockPanel.Dock="Top" ItemsSource="{Binding Report}" Margin="0,0,0,6">
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="c:AdReportLineDto">
+              <Grid ColumnDefinitions="*,Auto">
+                <TextBlock TextTrimming="CharacterEllipsis"><Run Text="{Binding Advertiser}" FontWeight="SemiBold" /><Run Text=" – " /><Run Text="{Binding Campaign}" /></TextBlock>
+                <TextBlock Grid.Column="1" Classes="muted" Text="{Binding Text}" />
+              </Grid>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
         <ListBox ItemsSource="{Binding Plays}">
           <ListBox.ItemTemplate>
             <DataTemplate x:DataType="c:AdPlayDto">

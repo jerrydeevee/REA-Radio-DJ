@@ -13,5 +13,13 @@ public partial class AdsView : UserControl
         {
             if (DataContext is AdsTool t) await FileSave.FromEngineAsync(this, "Uitzendbewijs opslaan", t.ProofFileName, t.ProofUrl);
         };
+        ExportReport.Click += async (_, _) =>
+        {
+            if (DataContext is AdsTool t) await FileSave.FromEngineAsync(this, "Reclamerapport opslaan", t.ReportFileName, t.ReportUrl);
+        };
+        ExportJson.Click += async (_, _) =>
+        {
+            if (DataContext is AdsTool t) await FileSave.FromEngineAsync(this, "Uitzendbewijs als JSON opslaan", t.JsonFileName, t.JsonUrl);
+        };
     }
 }
