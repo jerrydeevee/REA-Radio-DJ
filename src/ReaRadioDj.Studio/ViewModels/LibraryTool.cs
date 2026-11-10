@@ -64,6 +64,52 @@ public sealed partial class LibraryTool : StudioTool
         new("Dubbelklik: voorluisteren", "pfl"), new("Dubbelklik: als volgende", "next"), new("Dubbelklik: achteraan", "end"),
         new("Dubbelklik: standby 1", "standby1"), new("Dubbelklik: cues", "cues"),
     ];
+    // ---- own columns: which fields show under the title, in which order
+    public ObservableCollection<FieldChoice> Fields { get; } = [];
+    [ObservableProperty] private bool _showFields;
+    [ObservableProperty] private FieldChoice? _field;
+
+    private void LoadFields()
+    {
+        var chosen = Hub.Settings.LibraryFields is { Count: > 0 } f ? f : [.. LibraryColumns.Default];
+        Fields.Clear();
+        // Chosen fields first in their own order, then the rest in the standard order.
+        foreach (var key in chosen)
+            if (LibraryColumns.All.FirstOrDefault(a => a.Key == key) is { Key: not null } a) Fields.Add(new FieldChoice(a.Key, a.Label, true, FieldsChanged));
+        foreach (var a in LibraryColumns.All.Where(a => !chosen.Contains(a.Key))) Fields.Add(new FieldChoice(a.Key, a.Label, false, FieldsChanged));
+        LibraryColumns.Current = chosen;
+    }
+
+    private void FieldsChanged()
+    {
+        var chosen = Fields.Where(f => f.IsOn).Select(f => f.Key).ToList();
+        LibraryColumns.Current = chosen;
+        Hub.Settings.LibraryFields = chosen;
+        Hub.Settings.Save();
+        Refresh();   // the rows are drawn again with the new fields
+    }
+
+    [RelayCommand] private void ToggleFields() => ShowFields = !ShowFields;
+
+    [RelayCommand]
+    private void MoveField(string? direction)
+    {
+        if (Field is not { } f) return;
+        int i = Fields.IndexOf(f), to = direction == "up" ? i - 1 : i + 1;
+        if (i < 0 || to < 0 || to >= Fields.Count) return;
+        Fields.Move(i, to);
+        Field = f;
+        FieldsChanged();
+    }
+
+    [RelayCommand]
+    private void ResetFields()
+    {
+        Hub.Settings.LibraryFields = null;
+        LoadFields();
+        FieldsChanged();
+    }
+
     [ObservableProperty] private SortChoice? _sort;
     [ObservableProperty] private ClickChoice? _doubleClick;
     [ObservableProperty] private bool _showDetails = true;
@@ -337,6 +383,7 @@ public sealed partial class LibraryTool : StudioTool
         Chips.Add(new FilterChip(this, "Aandacht nodig", "is:aandacht", "Kwaliteitscontrole: te zacht of te hard, clipping, stilte, lage bitrate of dubbel"));
         Chips.Add(new FilterChip(this, "Ontbreekt", "is:ontbreekt", "Het bestand staat niet meer in de map"));
         Decade = Decades[0];
+        LoadFields();
         _showDetails = Hub.Settings.LibraryDetails;
         _largeRows = Hub.Settings.LibraryLarge;
         OnPropertyChanged(nameof(ShowDetails)); OnPropertyChanged(nameof(LargeRows)); OnPropertyChanged(nameof(DetailVisible));

@@ -51,7 +51,26 @@
         <ToggleButton Classes="chip" Content="Details" IsChecked="{Binding ShowDetails}" Margin="0,0,4,4"
                       ToolTip.Tip="Detailpaneel naast de lijst (verschijnt zodra het paneel breed genoeg is)" />
         <ToggleButton Classes="chip" Content="Grote regels" IsChecked="{Binding LargeRows}" Margin="0,0,4,4" ToolTip.Tip="Grotere regels voor het touchscreen" />
+        <ToggleButton Classes="chip" Content="Velden ▾" IsChecked="{Binding ShowFields}" Margin="0,0,4,4"
+                      ToolTip.Tip="Kiezen welke gegevens onder de titel staan, en in welke volgorde" />
       </WrapPanel>
+      <Border IsVisible="{Binding ShowFields}" Classes="card" Padding="6" Margin="0,0,0,4">
+        <DockPanel>
+          <StackPanel DockPanel.Dock="Right" Spacing="4" Margin="6,0,0,0">
+            <Button Classes="small" Content="▲ omhoog" Command="{Binding MoveFieldCommand}" CommandParameter="up" HorizontalAlignment="Stretch" />
+            <Button Classes="small" Content="▼ omlaag" Command="{Binding MoveFieldCommand}" CommandParameter="down" HorizontalAlignment="Stretch" />
+            <Button Classes="small" Content="Standaard" Command="{Binding ResetFieldsCommand}" HorizontalAlignment="Stretch" />
+            <Button Classes="small" Content="Klaar" Command="{Binding ToggleFieldsCommand}" HorizontalAlignment="Stretch" />
+          </StackPanel>
+          <ListBox ItemsSource="{Binding Fields}" SelectedItem="{Binding Field}" MaxHeight="190">
+            <ListBox.ItemTemplate>
+              <DataTemplate x:DataType="vm:FieldChoice">
+                <CheckBox Content="{Binding Label}" IsChecked="{Binding IsOn}" />
+              </DataTemplate>
+            </ListBox.ItemTemplate>
+          </ListBox>
+        </DockPanel>
+      </Border>
       <ItemsControl ItemsSource="{Binding Chips}" Margin="0,0,0,4">
         <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
         <ItemsControl.ItemTemplate>
@@ -275,9 +294,7 @@
                     ToolTip.Tip="Voorluisteren (PFL); nog eens klikken stopt" />
             <StackPanel Grid.Column="2" Margin="6,0">
               <TextBlock Text="{Binding Title}" TextTrimming="CharacterEllipsis" />
-              <TextBlock Classes="muted" TextTrimming="CharacterEllipsis">
-                <Run Text="{Binding Artist}" /><Run Text=" · " /><Run Text="{Binding Category}" /><Run Text="{Binding Year, StringFormat=' · {0}', TargetNullValue=''}" /><Run Text="{Binding Bpm, StringFormat=' · {0:0} BPM', TargetNullValue=''}" /><Run Text="{Binding Camelot, StringFormat=' · {0}', TargetNullValue=''}" />
-              </TextBlock>
+              <TextBlock Classes="muted" TextTrimming="CharacterEllipsis" Text="{Binding Converter={x:Static vm:LibraryColumns.Text}}" />
               <TextBlock Text="{Binding Block, StringFormat='⚠ {0}'}" Foreground="#F0B429" FontSize="11" TextTrimming="CharacterEllipsis"
                          IsVisible="{Binding !Allowed}" ToolTip.Tip="Waarom dit nu niet ingepland wordt" />
               <TextBlock Text="{Binding IssueText, StringFormat='⚑ {0}'}" Foreground="#E58A4D" FontSize="11" TextTrimming="CharacterEllipsis"

@@ -32,6 +32,8 @@ public sealed class StudioSettings
     public bool LibraryLarge { get; set; }
     public string LibrarySort { get; set; } = "relevance";
     public string LibraryDoubleClick { get; set; } = "pfl";
+    /// <summary>The fields under the title of a library row, in this order (null = the default set).</summary>
+    public List<string>? LibraryFields { get; set; }
 
     /// <summary>Key (Avalonia gesture text, e.g. "F5", "Ctrl+B", "Shift+F1") → engine command.</summary>
     public Dictionary<string, string> Hotkeys { get; set; } = DefaultHotkeys();
