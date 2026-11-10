@@ -48,6 +48,49 @@ public sealed class RelocateTests : IDisposable
     }
 
     [BassFact]
+    public async Task All_tags_and_a_cover_go_into_the_file_and_read_back()
+    {
+        var options = new ReaRadioDj.Core.ReaRadioDjOptions
+        {
+            DataFolder = Path.Combine(_dir, "data"), MusicFolder = Path.Combine(_dir, "music"), JingleFolder = Path.Combine(_dir, "jingles"),
+            WatchLibrary = false, NightlyScanHour = -1,
+        };
+        Directory.CreateDirectory(Path.Combine(options.MusicFolder, "Pop"));
+        Directory.CreateDirectory(options.JingleFolder);
+        var file = Path.Combine(options.MusicFolder, "Pop", "A - Walk.wav");
+        DemoContent.WriteSong(file, 330, seconds: 20, intro: 2);
+        var library = new MediaLibrary(options, new ReaRadioDj.Core.Data.StationDb(Path.Combine(options.DataFolder, "station.db")));
+        await library.ScanAsync();
+        long id = Assert.Single(library.Songs).Id;
+
+        Assert.True(library.UpdateTags(id, "Artiest", "Lopen", "Plaat", "Pop", 1999, "nl", "vrolijk", 4));
+        Assert.Equal("", library.WriteAllTags(id));
+        using (var f = TagLib.File.Create(file))
+        {
+            Assert.Equal("Artiest", f.Tag.FirstPerformer);
+            Assert.Equal("Lopen", f.Tag.Title);
+            Assert.Equal("Plaat", f.Tag.Album);
+            Assert.Equal(1999u, f.Tag.Year);
+        }
+
+        // a 1x1 PNG
+        byte[] png = Convert.FromBase64String("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==");
+        Assert.Equal("image/png", MediaLibrary.CoverMime(png));
+        Assert.NotEqual("", library.SetCover(id, [1, 2, 3, 4]));     // not a picture
+        Assert.Equal("", library.SetCover(id, png));
+        var cover = library.Cover(id);
+        Assert.NotNull(cover);
+        Assert.Equal(png, cover!.Value.Data);
+        Assert.Equal("", library.SetCover(id, null));
+        Assert.Null(library.Cover(id));
+        Assert.Null(library.WriteAllTags(999_999));
+
+        // writing into the file is not seen as a changed file: a new scan keeps the library tags
+        await library.ScanAsync();
+        Assert.Equal("Lopen", library.Get(id)!.Title);
+    }
+
+    [BassFact]
     public async Task A_moved_share_plays_from_its_replacement_and_can_be_moved_for_good()
     {
         var options = new ReaRadioDj.Core.ReaRadioDjOptions

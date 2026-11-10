@@ -105,6 +105,42 @@ public static class StudioApi
             asrun.ForMedia(id, Math.Clamp(limit ?? 10, 1, 100)).Select(e => new PlayedDto(e.Started, e.Played, e.Source)));
         api.MapPost("/media/{id:long}/markers/write", (long id, MediaLibrary library) =>
             library.WriteMarkers(id) ? Results.Ok() : Results.BadRequest("Schrijven in het bestand lukte niet (formaat of alleen-lezen)."));
+        // Everything the library knows goes into the file itself (tags, key, BPM, rights, ReplayGain), on request.
+        api.MapPost("/media/{id:long}/tags/write", (long id, MediaLibrary library) => library.WriteAllTags(id) switch
+        {
+            null => Results.NotFound(),
+            "" => Results.Ok(new { written = true }),
+            var error => Results.BadRequest(error),
+        });
+        api.MapPost("/media/tags/write", (MediaIdsRequest r, MediaLibrary library) =>
+        {
+            int ok = 0; var failed = new List<string>();
+            foreach (var id in r.Ids.Distinct().Take(5000))
+                switch (library.WriteAllTags(id))
+                {
+                    case "": ok++; break;
+                    case { } error: failed.Add($"{library.Get(id)?.DisplayName}: {error}"); break;
+                }
+            return Results.Ok(new { written = ok, failed });
+        });
+        // A new cover in the file (the request body is the picture), or no pictures at all.
+        api.MapPost("/media/{id:long}/cover", async (long id, HttpRequest request, MediaLibrary library) =>
+        {
+            using var ms = new MemoryStream();
+            await request.Body.CopyToAsync(ms);
+            return library.SetCover(id, ms.ToArray()) switch
+            {
+                null => Results.NotFound(),
+                "" => Results.Ok(new { written = true }),
+                var error => Results.BadRequest(error),
+            };
+        });
+        api.MapDelete("/media/{id:long}/cover", (long id, MediaLibrary library) => library.SetCover(id, null) switch
+        {
+            null => Results.NotFound(),
+            "" => Results.Ok(new { written = true }),
+            var error => Results.BadRequest(error),
+        });
         api.MapPost("/library/scan", (MediaLibrary library) => { _ = library.ScanAsync(); return Results.Accepted(); });
         api.MapGet("/media/{id:long}", (long id, MediaLibrary library) =>
             library.GetDetails(id) is { } d ? Results.Ok(Media(d)) : Results.NotFound());

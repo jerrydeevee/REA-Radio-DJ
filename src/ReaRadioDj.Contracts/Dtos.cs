@@ -111,6 +111,9 @@ public sealed record SearchHelpDto(string Example, string Meaning);
 public sealed record LibraryFolderDto(long Id, string Path, string Kind, string Category, bool Watch, bool WriteTags, bool Enabled,
     bool Fixed, int? Files, bool? Reachable, string Error, DateTime? Scanned);
 
+/// <summary>A selection of library items.</summary>
+public sealed record MediaIdsRequest(IReadOnlyList<long> Ids);
+
 public sealed record MediaBulkRequest(IReadOnlyList<long> Ids, long? CategoryId = null, bool? Enabled = null, bool ClearDates = false,
     DateTime? ValidFrom = null, DateTime? ValidUntil = null);
 

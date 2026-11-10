@@ -111,11 +111,7 @@ public sealed partial class MediaDetailVm : ObservableObject
             History.Add($"{h.Started:ddd d-M HH:mm}" + (h.Played is double p ? $"  ({StudioHub.Time(p)})" : "") + (h.Source != "log" ? $"  {h.Source}" : ""));
         HistoryText = History.Count == 0 ? "Nog niet uitgezonden." : "";
 
-        if (await hub.Client.GetBytesQuietAsync($"/api/media/{Id}/cover") is { Length: > 0 } image)
-        {
-            try { Cover = Avalonia.Media.Imaging.Bitmap.DecodeToWidth(new MemoryStream(image), 168); }
-            catch (Exception) { Cover = null; }   // not an image Avalonia can read
-        }
+        await LoadCoverAsync();
         var peaks = await hub.Client.GetAsync<PeaksDto>($"/api/media/{Id}/peaks");
         if (peaks is not null)
         {
@@ -146,6 +142,42 @@ public sealed partial class MediaDetailVm : ObservableObject
     }
 
     [RelayCommand] private void EditCues() => StudioHub.Current.RequestCueEditor(Id);
+
+    private sealed record WrittenDto(bool Written);
+
+    /// <summary>Everything the library knows (tags, key, BPM, rights, ReplayGain) into the file itself.</summary>
+    [RelayCommand]
+    private async Task WriteAllTags()
+    {
+        var (r, error) = await StudioHub.Current.Client.SendWithErrorAsync<WrittenDto>(HttpMethod.Post, $"/api/media/{Id}/tags/write", null);
+        SaveText = r is not null ? "Alle tags staan nu ook in het bestand." : error ?? "Schrijven lukte niet.";
+    }
+
+    /// <summary>Puts this picture into the file as its cover.</summary>
+    public async Task SetCoverAsync(byte[] image)
+    {
+        var (r, error) = await StudioHub.Current.Client.PostBytesAsync<WrittenDto>($"/api/media/{Id}/cover", image);
+        SaveText = r is not null ? "Hoes staat in het bestand." : error ?? "Hoes zetten lukte niet.";
+        if (r is not null) await LoadCoverAsync();
+    }
+
+    [RelayCommand]
+    private async Task RemoveCover()
+    {
+        var (r, error) = await StudioHub.Current.Client.SendWithErrorAsync<WrittenDto>(HttpMethod.Delete, $"/api/media/{Id}/cover", null);
+        SaveText = r is not null ? "Afbeeldingen uit het bestand gehaald." : error ?? "Weghalen lukte niet.";
+        if (r is not null) await LoadCoverAsync();
+    }
+
+    private async Task LoadCoverAsync()
+    {
+        Cover = null;
+        if (await StudioHub.Current.Client.GetBytesQuietAsync($"/api/media/{Id}/cover?t={DateTime.Now.Ticks}") is { Length: > 0 } image)
+        {
+            try { Cover = Avalonia.Media.Imaging.Bitmap.DecodeToWidth(new MemoryStream(image), 168); }
+            catch (Exception) { Cover = null; }   // not an image Avalonia can read
+        }
+    }
 
     [RelayCommand]
     private async Task WriteMarkers()

@@ -965,6 +965,107 @@ public sealed class MediaLibrary
         return true;
     }
 
+    /// <summary>
+    /// Writes everything the library knows about an item into its audio file, on request and whatever the folder setting:
+    /// artist, title, album, genre, year, language, mood, rating, BPM, key, ISRC, composer, label and the ReplayGain
+    /// track gain. Null when the item is unknown; otherwise an error text, or "" when it worked.
+    /// </summary>
+    public string? WriteAllTags(long id)
+    {
+        var d = GetDetails(id);
+        if (d is null) return null;
+        var path = MediaPaths.Resolve(d.Media.Path);
+        if (!File.Exists(path)) return "Het bestand is niet te vinden.";
+        var rights = new RightsStore(_db).Get(id);
+        try
+        {
+            using (var f = TagLib.File.Create(path))
+            {
+                var m = d.Media;
+                f.Tag.Performers = m.Artist.Trim().Length > 0 ? [m.Artist.Trim()] : [];
+                f.Tag.Title = m.Title.Trim();
+                f.Tag.Album = d.Album.Trim();
+                f.Tag.Genres = d.Genre.Trim().Length > 0 ? [d.Genre.Trim()] : [];
+                int? year = rights?.Year ?? d.Year;
+                f.Tag.Year = year is int y and > 0 ? (uint)y : 0;
+                if (d.Bpm is double bpm and > 0) f.Tag.BeatsPerMinute = (uint)Math.Round(bpm);
+                if (d.MusicalKey is { } key) f.Tag.InitialKey = key.Name;
+                if (rights is not null)
+                {
+                    if (rights.Isrc.Length > 0) f.Tag.ISRC = rights.Isrc;
+                    if (rights.Composer.Length > 0) f.Tag.Composers = [rights.Composer];
+                    if (rights.Label.Length > 0) f.Tag.Publisher = rights.Label;
+                }
+                if (ReplayGain.TrackGain(m.Lufs) is double gain) f.Tag.ReplayGainTrackGain = Math.Round(gain, 2);
+                WriteExtraTags(f, d.Language.Trim(), d.Mood.Trim(), d.Rating);
+                f.Save();
+            }
+            KeepFileState(id, path);
+            return "";
+        }
+        catch (Exception ex)
+        {
+            _log.LogWarning(ex, "Could not write tags into {File}", path);
+            return $"Schrijven lukte niet: {ex.Message}";
+        }
+    }
+
+    /// <summary>
+    /// Puts a picture into the file as its front cover (replacing other front covers), or removes all pictures when
+    /// <paramref name="image"/> is null. Null when the item is unknown; otherwise an error text, or "" when it worked.
+    /// </summary>
+    public string? SetCover(long id, byte[]? image)
+    {
+        var d = GetDetails(id);
+        if (d is null) return null;
+        var path = MediaPaths.Resolve(d.Media.Path);
+        if (!File.Exists(path)) return "Het bestand is niet te vinden.";
+        if (image is { Length: 0 or > 8_000_000 }) return "Een hoes moet een afbeelding tot 8 MB zijn.";
+        string? mimeType = image is null ? null : CoverMime(image);
+        if (image is not null && mimeType is null) return "Alleen JPEG-, PNG-, GIF- en WebP-afbeeldingen.";
+        try
+        {
+            using (var f = TagLib.File.Create(path))
+            {
+                if (image is null) f.Tag.Pictures = [];
+                else
+                {
+                    var front = new TagLib.Picture(new TagLib.ByteVector(image))
+                    {
+                        Type = TagLib.PictureType.FrontCover, MimeType = mimeType!, Description = "",
+                    };
+                    f.Tag.Pictures = [front, .. f.Tag.Pictures.Where(p => p.Type != TagLib.PictureType.FrontCover)];
+                }
+                f.Save();
+            }
+            KeepFileState(id, path);
+            Changed?.Invoke();
+            return "";
+        }
+        catch (Exception ex)
+        {
+            _log.LogWarning(ex, "Could not write the cover into {File}", path);
+            return $"Schrijven lukte niet: {ex.Message}";
+        }
+    }
+
+    /// <summary>The image type from the first bytes; null when it is not a picture a tag can carry.</summary>
+    public static string? CoverMime(byte[] b) => b switch
+    {
+        [0xFF, 0xD8, 0xFF, ..] => "image/jpeg",
+        [0x89, 0x50, 0x4E, 0x47, ..] => "image/png",
+        [0x47, 0x49, 0x46, 0x38, ..] => "image/gif",
+        [0x52, 0x49, 0x46, 0x46, _, _, _, _, 0x57, 0x45, 0x42, 0x50, ..] => "image/webp",
+        _ => null,
+    };
+
+    // After writing into a file: remember its new size and time, so the next scan does not read it as a changed file.
+    private void KeepFileState(long id, string path)
+    {
+        var info = new FileInfo(path);
+        _db.Execute("UPDATE media SET size = $s, modified = $m WHERE id = $id", ("$s", info.Length), ("$m", info.LastWriteTimeUtc.Ticks), ("$id", id));
+    }
+
     public void MarkPlayed(long id) =>
         _db.Execute("UPDATE media SET play_count = play_count + 1, last_played = $t WHERE id = $id",
             ("$t", StationDb.Iso(DateTime.Now)), ("$id", id));

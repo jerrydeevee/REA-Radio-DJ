@@ -121,7 +121,9 @@
           <Button Classes="small" Content="Aan" Command="{Binding BulkOnCommand}" Margin="0,0,4,0" />
           <Button Classes="small" Content="Uit" Command="{Binding BulkOffCommand}" Margin="0,0,4,0" ToolTip.Tip="Niet meer inplannen" />
           <Button Classes="small" Content="Geldigheid wissen" Command="{Binding BulkClearDatesCommand}" Margin="0,0,4,0" />
-          <Button Classes="small" Content="Allemaal achteraan in de log" Command="{Binding BulkToLogCommand}" Margin="0,0,12,0" />
+          <Button Classes="small" Content="Allemaal achteraan in de log" Command="{Binding BulkToLogCommand}" Margin="0,0,4,0" />
+          <Button Classes="small" Content="Tags in de bestanden" Command="{Binding BulkWriteTagsCommand}" Margin="0,0,12,0"
+                  ToolTip.Tip="Alles wat de bibliotheek weet (tags, toonsoort, BPM, rechten, ReplayGain) in de bestanden van de selectie zetten" />
         </WrapPanel>
       </Border>
     </StackPanel>
@@ -280,6 +282,13 @@
                 <Button Classes="small" Content="Cues bewerken" Command="{Binding EditCuesCommand}" Margin="0,0,4,4" />
                 <Button Classes="small" Content="Markers in het bestand" Command="{Binding WriteMarkersCommand}" Margin="0,0,4,4"
                         ToolTip.Tip="Cues, beatgrid en BPM nu in de tags van dit bestand zetten" />
+                <Button Classes="small" Content="Alle tags in het bestand" Command="{Binding WriteAllTagsCommand}" Margin="0,0,4,4"
+                        ToolTip.Tip="Artiest, titel, album, genre, jaar, taal, sfeer, waardering, BPM, toonsoort, ISRC, componist, label en ReplayGain in het bestand zetten" />
+                <Button Classes="small" Content="Hoes kiezen…" Click="ChooseCover" Margin="0,0,4,4"
+                        ToolTip.Tip="Een afbeelding (JPEG, PNG) als hoes in het bestand zetten" />
+                <Button Classes="small" Content="Hoes weghalen" Command="{Binding RemoveCoverCommand}" Margin="0,0,4,4"
+                        IsVisible="{Binding Cover, Converter={x:Static ObjectConverters.IsNotNull}}"
+                        ToolTip.Tip="Alle afbeeldingen uit het bestand halen (een cover.jpg naast het bestand blijft)" />
               </WrapPanel>
               <TextBlock Classes="muted" Text="{Binding SaveText}" />
               <TextBlock Classes="h" Text="Uitgezonden" Margin="0,4,0,0" />

@@ -95,4 +95,20 @@ public partial class LibraryView : UserControl
             }
         };
     }
+
+    // Picks a picture and puts it into the file of the item in the detail pane as its cover.
+    private async void ChooseCover(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    {
+        if ((sender as Control)?.DataContext is not MediaDetailVm detail || TopLevel.GetTopLevel(this)?.StorageProvider is not { } sp) return;
+        var picked = await sp.OpenFilePickerAsync(new Avalonia.Platform.Storage.FilePickerOpenOptions
+        {
+            Title = "Hoes kiezen", AllowMultiple = false,
+            FileTypeFilter = [new("Afbeeldingen") { Patterns = ["*.jpg", "*.jpeg", "*.png", "*.gif", "*.webp"] }],
+        });
+        if (picked.Count == 0) return;
+        await using var stream = await picked[0].OpenReadAsync();
+        using var ms = new MemoryStream();
+        await stream.CopyToAsync(ms);
+        await detail.SetCoverAsync(ms.ToArray());
+    }
 }

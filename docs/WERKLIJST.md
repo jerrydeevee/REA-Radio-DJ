@@ -174,7 +174,7 @@ Vragen bij stap 6:
 | Status | Werk |
 |---|---|
 | ✅ | Meer dan twee bibliotheekmappen, automatisch opnieuw inlezen, vervangende locaties — Zelf mappen en shares toevoegen, bewaken en verwijderen; vervangende locaties (ontbreekt een bestand, dan zoekt de engine het onder de vervangende map, bij spelen, voorluisteren, hoezen en hervatten) en paden definitief omzetten met behoud van alle gegevens (Bibliotheek → Mappen en shares). |
-| 🟡 | Tags lezen en terugschrijven, hoezen — Markers, beatgrid en BPM gaan per map optioneel het bestand in (ID3v2 TXXX "REA-RADIO-DJ" of Vorbis-commentaar REA_RADIO_DJ, plus de gewone BPM-tag) en worden bij het inlezen teruggelezen; overige tags terugschrijven en hoezen nog open. |
+| ✅ | Tags lezen en terugschrijven, hoezen — Markers, beatgrid en BPM gaan per map optioneel het bestand in (ID3v2 TXXX "REA-RADIO-DJ" of Vorbis-commentaar REA_RADIO_DJ, plus de gewone BPM-tag) en worden bij het inlezen teruggelezen; Op verzoek gaat alles wat de bibliotheek weet het bestand in (artiest, titel, album, genre, jaar, taal, sfeer, waardering, BPM, toonsoort, ISRC, componist, label, ReplayGain), per nummer of voor een selectie; hoes kiezen of weghalen in het detailvenster. |
 | ⬜ | Overgangen en mixpunten per soort item en per nummer |
 | ⬜ | Centrale bibliotheek voor meerdere studio's |
 | 🟡 | Rapportage auteursrechten in een eigen indeling (CSV en PDF); er is geen voorgeschreven sjabloon |

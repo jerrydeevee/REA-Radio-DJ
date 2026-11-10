@@ -162,6 +162,20 @@ public sealed partial class LibraryTool : StudioTool
     [RelayCommand] private Task BulkOff() => Bulk(new MediaBulkRequest(SelectedIds, Enabled: false), "{0} nummers uitgezet (worden niet meer ingepland).");
     [RelayCommand] private Task BulkClearDates() => Bulk(new MediaBulkRequest(SelectedIds, ClearDates: true), "Geldigheid van {0} nummers gewist.");
 
+    private sealed record WrittenDto(int Written, List<string> Failed);
+
+    /// <summary>Writes all known tags into the files of the selection.</summary>
+    [RelayCommand]
+    private async Task BulkWriteTags()
+    {
+        var ids = SelectedIds;
+        if (ids.Count == 0) return;
+        BulkText = $"Tags schrijven in {ids.Count} bestanden…";
+        var r = await Hub.Client.SendForAsync<WrittenDto>(HttpMethod.Post, "/api/media/tags/write", new MediaIdsRequest(ids));
+        BulkText = r is null ? "Schrijven mislukt."
+            : $"Tags staan nu in {r.Written} bestanden." + (r.Failed.Count > 0 ? $" Niet gelukt: {string.Join("; ", r.Failed.Take(3))}" : "");
+    }
+
     [RelayCommand]
     private async Task BulkToLog()
     {
