@@ -45,10 +45,11 @@ public sealed partial class SoloistTool : StudioTool
     protected override void OnFirstShow()
     {
         Address = Settings.Address;
-        Configured = Settings.ExePath.Length > 0;
+        Configured = ReaRadioDj.Studio.Services.SoloistLauncher.FindExe(Settings) is not null;
         ReaRadioDj.Studio.Services.SoloistLauncher.Changed += () => Dispatcher.UIThread.Post(() =>
         {
             LauncherRunning = ReaRadioDj.Studio.Services.SoloistLauncher.Running;
+            Configured = ReaRadioDj.Studio.Services.SoloistLauncher.FindExe(Settings) is not null;
             if (ReaRadioDj.Studio.Services.SoloistLauncher.LastMessage.Length > 0) Note(ReaRadioDj.Studio.Services.SoloistLauncher.LastMessage);
             if (LauncherRunning && Settings.AutoConnect && !Connected && !Connecting) _ = AutoConnectAsync();
         });

@@ -33,6 +33,17 @@ public partial class SettingsView : UserControl
         if (files.Count > 0 && files[0].TryGetLocalPath() is { } path) vm.SoloistPath = path;
     }
 
+    private async void OnInstallSoloistZip(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is not SettingsTool vm || TopLevel.GetTopLevel(this)?.StorageProvider is not { } storage) return;
+        var files = await storage.OpenFilePickerAsync(new FilePickerOpenOptions
+        {
+            Title = "Soloist-zip voor Windows (soloist_release_windows_x86_64.zip)",
+            FileTypeFilter = [new FilePickerFileType("Zip") { Patterns = ["*.zip"] }],
+        });
+        if (files.Count > 0 && files[0].TryGetLocalPath() is { } path) vm.InstallSoloistZip(path);
+    }
+
     private static readonly FilePickerFileType BackupType = new("Reservekopie REA-Radio-DJ") { Patterns = ["*.rea-backup"] };
 
     private async void OnBackup(object? sender, RoutedEventArgs e)

@@ -306,11 +306,22 @@
             <TextBlock Classes="title" Text="Soloist (ontwikkeltest)" Margin="0,24,0,0" />
             <TextBlock Classes="help" TextWrapping="Wrap"
                        Text="Spotify Soloist op deze computer: de studio start het met je eigen API-sleutel en het venster Soloist (ontwikkeltest) verbindt er vanzelf mee. Het geluid gaat van Soloist rechtstreeks naar Windows, nooit via de engine, de stream of een opname. Download Soloist zelf; een versie werkt 90 dagen." />
-            <TextBlock Classes="field" Text="soloist.exe" />
-            <DockPanel>
-              <Button DockPanel.Dock="Right" Classes="bar" Content="Bladeren…" Click="OnBrowseSoloist" Margin="6,0,0,0" />
-              <TextBox Text="{Binding SoloistPath}" Watermark="C:\…\soloist.exe" />
-            </DockPanel>
+            <TextBlock Classes="field" Text="Programma" />
+            <TextBlock Classes="help" TextWrapping="Wrap"
+                       Text="Soloist staat in de map van REA-Radio-DJ; een pad kiezen is niet nodig. Spotify staat niet toe dat programma's Soloist meeleveren, dus download de Windows-zip zelf (met je Spotify for Developers-account) en installeer hem hier. Een nieuwe versie (elke 90 dagen) installeer je op dezelfde manier." />
+            <WrapPanel Margin="0,6,0,0">
+              <Button Classes="bar" Content="Downloadpagina openen" Command="{Binding OpenSoloistDownloadsCommand}" Margin="0,0,8,6" />
+              <Button Classes="bar" Content="Installeren uit zip…" Click="OnInstallSoloistZip" Margin="0,0,8,6"
+                      ToolTip.Tip="Kies soloist_release_windows_x86_64.zip; hij wordt uitgepakt in de map van REA-Radio-DJ" />
+              <Button Classes="bar" Content="Map openen" Command="{Binding OpenSoloistFolderCommand}" Margin="0,0,0,6" />
+            </WrapPanel>
+            <TextBlock Classes="mono" FontSize="12" Text="{Binding SoloistFound}" TextWrapping="Wrap" />
+            <Expander Header="Eigen pad (alleen als Soloist ergens anders staat)" Margin="0,6,0,0">
+              <DockPanel>
+                <Button DockPanel.Dock="Right" Classes="bar" Content="Bladeren…" Click="OnBrowseSoloist" Margin="6,0,0,0" />
+                <TextBox Text="{Binding SoloistPath}" Watermark="leeg = de map van REA-Radio-DJ" />
+              </DockPanel>
+            </Expander>
             <TextBlock Classes="field" Text="Apparaatnaam (zoals hij in de Spotify-app verschijnt)" />
             <TextBox Text="{Binding SoloistDevice}" />
             <TextBlock Classes="field" Text="Poort (WebSocket, alleen op deze computer)" />

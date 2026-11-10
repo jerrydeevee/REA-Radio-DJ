@@ -109,6 +109,7 @@ public sealed partial class SettingsTool : StudioTool
     [ObservableProperty] private bool _soloistAutoConnect = true;
     [ObservableProperty] private string _soloistStatus = "";
     [ObservableProperty] private bool _soloistRunning;
+    [ObservableProperty] private string _soloistFound = "";
 
     // Remote control
     [ObservableProperty] private string _controlBindAddress = "127.0.0.1";
@@ -616,6 +617,11 @@ public sealed partial class SettingsTool : StudioTool
     {
         SoloistKeyHint = "Sleutel: " + SoloistLauncher.KeySource(Hub.Settings.Soloist) + ".";
         SoloistRunning = SoloistLauncher.Running;
+        var probe = new SoloistSettings { ExePath = SoloistPath };
+        SoloistFound = SoloistLauncher.FindExe(probe) is { } exe
+            ? "Gevonden: " + exe
+            : SoloistPath.Trim().Length > 0 ? "Op het eigen pad staat geen soloist.exe."
+            : "Nog niet geïnstalleerd in " + SoloistLauncher.ManagedFolder + ".";
         SoloistStatus = SoloistLauncher.LastMessage.Length > 0 ? SoloistLauncher.LastMessage
             : SoloistRunning ? "Soloist draait." : "Soloist is niet door de studio gestart.";
     }
@@ -649,6 +655,32 @@ public sealed partial class SettingsTool : StudioTool
     {
         SoloistLauncher.Stop();
         ShowSoloist();
+    }
+
+    /// <summary>Unpacks a Soloist zip the user downloaded into the Soloist folder of REA-Radio-DJ.</summary>
+    public void InstallSoloistZip(string zipPath)
+    {
+        SoloistStatus = "installeren…";
+        var problem = SoloistLauncher.InstallZip(zipPath);
+        if (problem is not null && problem != "restart") { SoloistStatus = problem; return; }
+        if (SoloistPath.Trim().Length > 0) SoloistPath = ""; // the REA-Radio-DJ folder takes over from an own path
+        StoreSoloist();
+        if (problem == "restart") StartSoloist();
+    }
+
+    [RelayCommand]
+    private static void OpenSoloistFolder()
+    {
+        Directory.CreateDirectory(SoloistLauncher.ManagedFolder);
+        try { System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(SoloistLauncher.ManagedFolder) { UseShellExecute = true }); }
+        catch (System.ComponentModel.Win32Exception) { }
+    }
+
+    [RelayCommand]
+    private static void OpenSoloistDownloads()
+    {
+        try { System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(SoloistTool.DownloadsUrl) { UseShellExecute = true }); }
+        catch (System.ComponentModel.Win32Exception) { }
     }
 
     [RelayCommand]

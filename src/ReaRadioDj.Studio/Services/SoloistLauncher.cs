@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.IO.Compression;
 using System.Runtime.InteropServices;
 using System.Text;
 
@@ -10,6 +11,7 @@ namespace ReaRadioDj.Studio.Services;
 /// </summary>
 public sealed class SoloistSettings
 {
+    /// <summary>Own path of soloist.exe; empty = the Soloist folder of REA-Radio-DJ (see <see cref="SoloistLauncher.FindExe"/>).</summary>
     public string ExePath { get; set; } = "";
     public string DeviceName { get; set; } = "REA ontwikkeltest";
     public int Port { get; set; } = 9090;
@@ -30,6 +32,74 @@ public static class SoloistLauncher
     private static readonly object Gate = new();
 
     public static bool Running { get { lock (Gate) return _process is { HasExited: false }; } }
+
+    /// <summary>The Soloist folder of REA-Radio-DJ: %AppData%\REA-Radio-DJ\soloist (always writable, kept across updates).</summary>
+    public static string ManagedFolder => Path.Combine(StudioSettings.Folder, "soloist");
+
+    /// <summary>Also looked at: a soloist folder next to the studio program (placed there by an administrator).</summary>
+    public static string ProgramFolder => Path.Combine(AppContext.BaseDirectory, "soloist");
+
+    /// <summary>
+    /// Where soloist.exe is: the own path when one is set, otherwise the Soloist folder of REA-Radio-DJ, otherwise the
+    /// soloist folder next to the program. Null when it is nowhere.
+    /// </summary>
+    public static string? FindExe(SoloistSettings s)
+    {
+        string own = s.ExePath.Trim().Trim('"');
+        if (own.Length > 0) return File.Exists(own) ? own : null;
+        foreach (var folder in new[] { ManagedFolder, ProgramFolder })
+        {
+            if (!Directory.Exists(folder)) continue;
+            string direct = Path.Combine(folder, "soloist.exe");
+            if (File.Exists(direct)) return direct;
+            // A zip may hold a folder of its own.
+            var found = Directory.EnumerateFiles(folder, "soloist.exe", SearchOption.AllDirectories).FirstOrDefault();
+            if (found is not null) return found;
+        }
+        return null;
+    }
+
+    /// <summary>
+    /// Unpacks the official Soloist zip (downloaded by the user from Spotify for Developers) into the Soloist folder of
+    /// REA-Radio-DJ, replacing an older version. Returns a problem in plain Dutch, or null.
+    /// </summary>
+    public static string? InstallZip(string zipPath)
+    {
+        if (!File.Exists(zipPath)) return "Dat bestand bestaat niet.";
+        bool wasRunning = Running;
+        Stop();
+        string target = ManagedFolder, staging = target + ".nieuw";
+        try
+        {
+            if (Directory.Exists(staging)) Directory.Delete(staging, true);
+            Directory.CreateDirectory(staging);
+            string root = Path.GetFullPath(staging) + Path.DirectorySeparatorChar;
+            using (var zip = System.IO.Compression.ZipFile.OpenRead(zipPath))
+            {
+                if (!zip.Entries.Any(e => string.Equals(e.Name, "soloist.exe", StringComparison.OrdinalIgnoreCase)))
+                    return "In deze zip zit geen soloist.exe: kies de Windows-versie (soloist_release_windows_x86_64.zip).";
+                foreach (var entry in zip.Entries)
+                {
+                    string dest = Path.GetFullPath(Path.Combine(staging, entry.FullName));
+                    if (!dest.StartsWith(root, StringComparison.OrdinalIgnoreCase)) return "Deze zip bevat ongeldige paden.";
+                    if (entry.FullName.EndsWith('/') || entry.FullName.EndsWith('\\')) { Directory.CreateDirectory(dest); continue; }
+                    Directory.CreateDirectory(Path.GetDirectoryName(dest)!);
+                    entry.ExtractToFile(dest, overwrite: true);
+                }
+            }
+            if (Directory.Exists(target)) Directory.Delete(target, true);
+            Directory.Move(staging, target);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidDataException)
+        {
+            try { if (Directory.Exists(staging)) Directory.Delete(staging, true); } catch (IOException) { } catch (UnauthorizedAccessException) { }
+            return "Installeren mislukt: " + ex.Message;
+        }
+        LastMessage = "Soloist is geïnstalleerd in de map van REA-Radio-DJ.";
+        WriteLog("--- geïnstalleerd uit " + Path.GetFileName(zipPath), "");
+        Changed?.Invoke();
+        return wasRunning ? "restart" : null;
+    }
     public static string LogPath => Path.Combine(StudioSettings.Folder, "soloist.log");
 
     /// <summary>What happened last (started, stopped, or why it stopped).</summary>
@@ -73,8 +143,9 @@ public static class SoloistLauncher
         lock (Gate)
         {
             if (_process is { HasExited: false }) return null;
-            string exe = s.ExePath.Trim().Trim('"');
-            if (exe.Length == 0 || !File.Exists(exe)) return "Kies eerst waar soloist.exe staat.";
+            if (FindExe(s) is not { } exe)
+                return s.ExePath.Trim().Length > 0 ? "Op het eigen pad staat geen soloist.exe."
+                    : "Soloist is nog niet geïnstalleerd: download de Windows-zip en kies Installeren uit zip.";
             if (!string.Equals(Path.GetFileName(exe), "soloist.exe", StringComparison.OrdinalIgnoreCase)) return "Dat is niet soloist.exe.";
             if (s.Port is < 1024 or > 65535) return "Kies een poort tussen 1024 en 65535.";
             string key = ApiKey(s);
