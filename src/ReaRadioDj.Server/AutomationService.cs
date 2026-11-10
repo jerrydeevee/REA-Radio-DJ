@@ -58,10 +58,19 @@ public sealed class AutomationService(
         _ct = ct;
         engine.FallbackProvider = Fallback;
         engine.BeatProvider = m => m.Id > 0 && library.GetDetails(m.Id) is { Bpm: > 0 } d ? (d.Bpm!.Value, d.FirstBeat ?? 0) : null;
-        engine.ItemStarted += OnItemStarted;
         var adService = services.GetRequiredService<AdService>();
-        engine.ItemStarted += adService.OnStarted;
-        engine.ItemEnded += (item, played) => { End("log:" + item.Id, played); adService.OnEnded(item, played); };
+        // While the DJ desk is on air the automation runs on unheard: what nobody heard is no broadcast (as-run, proof of broadcast).
+        engine.ItemStarted += item =>
+        {
+            if (Unheard) { _unheard[item.Id] = 0; return; }
+            OnItemStarted(item);
+            adService.OnStarted(item);
+        };
+        engine.ItemEnded += (item, played) =>
+        {
+            End("log:" + item.Id, played);
+            if (!_unheard.TryRemove(item.Id, out _)) adService.OnEnded(item, played);
+        };
         foreach (var p in players.Standby)
         {
             p.Started += (pl, m) => Begin($"player:{pl.Id}", pl.Name, Kind(m), m, m.CueOut - m.CueIn);
@@ -233,6 +242,23 @@ public sealed class AutomationService(
         if (!_asRunIds.TryRemove(key, out var id)) return;
         try { asRun.End(id, played); }
         catch (Exception ex) { logger.LogError(ex, "As-run write failed"); }
+    }
+
+    /// <summary>Log items that started while the DJ desk was on air (not broadcast).</summary>
+    private readonly ConcurrentDictionary<long, byte> _unheard = new();
+
+    /// <summary>True while the DJ desk is on air: the automation plays on, but only the desk is heard.</summary>
+    private bool Unheard => services.GetService<DjMixer>()?.OnAir == true;
+
+    /// <summary>
+    /// The automation is heard again (the DJ gave back): the item on air goes into the as-run from now on. An ad that
+    /// started unheard keeps no proof of broadcast.
+    /// </summary>
+    public void Heard()
+    {
+        if (engine.OnAir() is not { Item: var item } || !_unheard.TryRemove(item.Id, out _)) return;
+        if (item.AdPlayId is not null) { _unheard[item.Id] = 0; return; }
+        OnItemStarted(item);
     }
 
     private void OnItemStarted(LogItem item)

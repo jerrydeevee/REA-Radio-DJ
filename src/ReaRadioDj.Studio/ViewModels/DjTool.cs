@@ -274,6 +274,17 @@ public sealed partial class DjTool : StudioTool
     partial void OnAvailableChanged(bool value) => OnPropertyChanged(nameof(CanFollow));
     [ObservableProperty] private string _onAirText = "DJ-tafel is OFF AIR: je hoort de decks alleen op PFL";
     [ObservableProperty] private bool _quantize;
+    /// <summary>The DJ is on air while the automation runs on unheard underneath.</summary>
+    [ObservableProperty] private bool _shadow;
+    [ObservableProperty] private string _shadowText = "";
+    [ObservableProperty] private string _shadowNext = "";
+
+    /// <summary>Back to the automation: the desk goes off air and the automation is heard where it is now.</summary>
+    [RelayCommand]
+    private async Task GiveBack()
+    {
+        if (await Hub.Client.PostAsync("/api/dj/mixer", new DjMixerRequest(OnAir: false))) Hub.Status = "Teruggegeven aan de automatisering";
+    }
     [ObservableProperty] private bool _limiter = true;
     /// <summary>Headphones: 0 = cue (decks with PFL) .. 100 = master mix of the desk.</summary>
     [ObservableProperty] private double _cueMix;
@@ -339,6 +350,12 @@ public sealed partial class DjTool : StudioTool
             if ((DateTime.UtcNow - _cueMixTouched).TotalMilliseconds > 500) CueMix = dj.CueMix * 100;
             Quantize = dj.Quantize;
             Limiter = dj.Limiter;
+            var now = s.Engine.Current;
+            Shadow = dj.OnAir;
+            ShadowText = now is null
+                ? "Automatisering staat stil. Teruggeven start hem weer."
+                : $"Automatisering loopt onhoorbaar mee: {now.Label}  ·  nog {TimeSpan.FromSeconds(Math.Max(0, now.To - now.Position)):m\\:ss}";
+            ShadowNext = s.Upcoming.FirstOrDefault() is { } next ? $"Daarna: {next.Label}" : "";
         }
         finally { _fromEngine = false; }
         foreach (var d in dj.Decks)

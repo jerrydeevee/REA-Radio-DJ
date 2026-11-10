@@ -12,9 +12,9 @@
         <Border Grid.Column="0" BorderBrush="{DynamicResource ControlBorderBrush}" BorderThickness="1" CornerRadius="{DynamicResource Radius8}" ClipToBounds="True" VerticalAlignment="Center">
           <StackPanel Orientation="Horizontal">
             <ToggleButton Classes="seg" Content="Alleen PFL" IsChecked="{Binding !OnAir, Mode=OneWay}" Command="{Binding SetOnAirCommand}" CommandParameter="off"
-                          ToolTip.Tip="De DJ-tafel gaat niet de zender op; de automatisering loopt gewoon door" />
+                          ToolTip.Tip="De DJ-tafel gaat niet de zender op; de automatisering is hoorbaar" />
             <ToggleButton Classes="seg onair" Content="DJ ON AIR" IsChecked="{Binding OnAir, Mode=OneWay}" Command="{Binding SetOnAirCommand}" CommandParameter="on"
-                          ToolTip.Tip="Wat je mixt gaat de zender op. De automatisering stop je zelf met Stop of Assist in de balk bovenin." />
+                          ToolTip.Tip="Wat je mixt gaat de zender op. De automatisering loopt onhoorbaar mee, zodat je hem met één knop terug kunt geven." />
           </StackPanel>
         </Border>
         <TextBlock Grid.Column="1" Classes="muted" FontSize="13" Text="{Binding OnAirText}" VerticalAlignment="Center" Margin="12,0" TextTrimming="CharacterEllipsis" />
@@ -32,6 +32,31 @@
           </StackPanel>
         </Border>
       </Grid>
+    </Border>
+
+    <!-- On air: the automation runs on unheard; one button gives the broadcast back -->
+    <Border DockPanel.Dock="Top" Classes="shadow" IsVisible="{Binding Shadow}" Padding="12,8" Margin="0,0,0,8"
+            CornerRadius="{DynamicResource Radius10}" BorderThickness="2" BorderBrush="{DynamicResource WarnBrush}" Background="#33F5A524">
+      <Border.Styles>
+        <Style Selector="Border.shadow">
+          <Style.Animations>
+            <Animation Duration="0:0:1.6" IterationCount="INFINITE" PlaybackDirection="Alternate">
+              <KeyFrame Cue="0%"><Setter Property="Opacity" Value="1" /></KeyFrame>
+              <KeyFrame Cue="100%"><Setter Property="Opacity" Value="0.72" /></KeyFrame>
+            </Animation>
+          </Style.Animations>
+        </Style>
+      </Border.Styles>
+      <DockPanel>
+        <Button DockPanel.Dock="Right" Classes="bar" MinHeight="40" FontWeight="Bold" Content="↩ Teruggeven aan automatisering"
+                Command="{Binding GiveBackCommand}" VerticalAlignment="Center"
+                ToolTip.Tip="De DJ-tafel gaat van de lucht en de automatisering is meteen hoorbaar, op de plek waar hij nu is" />
+        <StackPanel VerticalAlignment="Center" Margin="0,0,12,0" Spacing="2">
+          <TextBlock Text="{Binding ShadowText}" FontWeight="SemiBold" FontSize="14" TextTrimming="CharacterEllipsis" />
+          <TextBlock Classes="muted" FontSize="12" Text="{Binding ShadowNext}" TextTrimming="CharacterEllipsis"
+                     IsVisible="{Binding ShadowNext, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+        </StackPanel>
+      </DockPanel>
     </Border>
 
     <!-- All decks as scrolling waveforms above each other: synced beats line up under the playhead -->

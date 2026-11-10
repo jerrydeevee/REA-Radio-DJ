@@ -4,29 +4,39 @@ using ReaRadioDj.Core.Library;
 namespace ReaRadioDj.Server;
 
 /// <summary>
-/// Hands the broadcast over from the automation to the DJ desk without a gap. While the desk is off air, deck A can
-/// follow the automation: it plays the same track at the same place, silently (the desk is off air), so that the DJ
-/// sees it running and can prepare deck B. Putting the desk on air then stops the automation at that moment; deck A
-/// already plays, so the listener hears the track go on.
+/// Hands the broadcast over from the automation to the DJ desk and back without a gap. While the desk is off air, deck
+/// A can follow the automation: it plays the same track at the same place, silently, so that the DJ sees it running and
+/// can prepare deck B. Putting the desk on air closes the automation (log and overlays) instead of stopping it: it runs
+/// on unheard, so giving back brings it in at the right place. When it was stopped meanwhile, giving back starts it. Deck A already plays, so the listener hears the track go on.
 /// </summary>
 public sealed class DjHandover : IDisposable
 {
+    /// <summary>The duck reason on the automation strips while the DJ desk is on air.</summary>
+    public const string DjOnAir = "dj on air";
+
     private readonly DjMixer _dj;
     private readonly PlayoutEngine _engine;
     private readonly MediaLibrary _library;
+    private readonly AudioRouter _router;
+    private readonly IServiceProvider _services;
     private readonly ILogger<DjHandover> _logger;
     private readonly Timer _timer;
     private readonly object _gate = new();
     private long _logId;
 
-    public DjHandover(DjMixer dj, PlayoutEngine engine, MediaLibrary library, ILogger<DjHandover> logger)
+    public DjHandover(DjMixer dj, PlayoutEngine engine, MediaLibrary library, AudioRouter router, IServiceProvider services, ILogger<DjHandover> logger)
     {
         _dj = dj;
         _engine = engine;
         _library = library;
+        _router = router;
+        _services = services;
         _logger = logger;
         _timer = new Timer(_ => Tick(), null, 500, 500);
     }
+
+    /// <summary>The strips the automation plays on: they go quiet while the DJ is on air.</summary>
+    private IEnumerable<MixerStrip> AutomationStrips => [_router.Strip(AudioRouter.LogStrip), _router.Strip(AudioRouter.OverlayStrip)];
 
     /// <summary>True while deck A copies what the automation plays.</summary>
     public bool Following { get; private set; }
@@ -52,19 +62,35 @@ public sealed class DjHandover : IDisposable
     public void Release() { lock (_gate) Following = false; }
 
     /// <summary>
-    /// The desk goes on air. When deck A follows a playing track, the automation stops here and now, so the track is
-    /// not heard twice. Returns whether the broadcast was taken over.
+    /// The desk goes on air: the automation goes quiet at the same moment and runs on unheard. Returns whether deck A
+    /// was following (it carries on with the track, seamlessly).
     /// </summary>
-    public bool TakeOver()
+    public bool GoOnAir()
     {
         lock (_gate)
         {
-            if (!Following) return false;
+            bool took = Following && DeckA.Playing;
             Following = false;
-            if (!DeckA.Playing) return false;
-            _engine.Stop(0.05);
-            return true;
+            foreach (var s in AutomationStrips) s.Duck(DjOnAir, 0f, 60);
+            _dj.SetOnAir(true);
+            return took;
         }
+    }
+
+    /// <summary>
+    /// Back to the automation: the desk goes off air and the automation is heard again where it is now (started again
+    /// when somebody stopped it meanwhile).
+    /// </summary>
+    public void GiveBack()
+    {
+        lock (_gate)
+        {
+            _dj.SetOnAir(false);
+            foreach (var s in AutomationStrips) s.Duck(DjOnAir, null, 400);
+            // Nothing plays any more (stopped meanwhile): start the automation. Assist mode with an item on air stays assist.
+            if (_engine.OnAir() is null) _engine.Play();
+        }
+        _services.GetService<AutomationService>()?.Heard();
     }
 
     private void Tick()

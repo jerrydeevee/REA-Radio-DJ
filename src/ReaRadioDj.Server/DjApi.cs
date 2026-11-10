@@ -43,11 +43,18 @@ public static class DjApi
                 try { dj.SetLimiter(r.Limiter ?? now.Limiter, r.LimiterDb ?? now.LimiterDb); }
                 catch (BassException ex) { return Results.BadRequest($"Begrenzer niet beschikbaar: {ex.Message}"); }
             }
-            if (r.OnAir is bool on)
+            if (r.OnAir is bool on && on != dj.OnAir)
             {
-                // On air while deck A follows: the automation stops at this moment and deck A carries on.
-                if (on && !dj.OnAir && handover.TakeOver()) messages.Info("DJ-tafel heeft de uitzending overgenomen; de automatisering is gestopt");
-                dj.SetOnAir(on);
+                // On air: the automation goes quiet and runs on unheard; off air: it is heard again where it is.
+                if (on)
+                    messages.Info(handover.GoOnAir()
+                        ? "DJ-tafel heeft de uitzending naadloos overgenomen; de automatisering loopt onhoorbaar mee"
+                        : "DJ-tafel is op de lucht; de automatisering loopt onhoorbaar mee");
+                else
+                {
+                    handover.GiveBack();
+                    messages.Info("Teruggegeven aan de automatisering");
+                }
             }
             return Results.Ok(Dto(dj.Info, handover.Following, dj.Automix.Info));
         });
