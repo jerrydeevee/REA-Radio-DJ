@@ -46,7 +46,7 @@ public sealed record GeneralSettings(
         ControlOscPort = Port(ControlOscPort, current.ControlOscPort),
         ControlPassword = clearControlPassword ? "" : string.IsNullOrEmpty(ControlPassword) ? current.ControlPassword : ControlPassword,
         SilenceDb = Math.Clamp(SilenceDb, -80, -10), SilenceSeconds = Math.Clamp(SilenceSeconds, 3, 600),
-        SilenceAction = SilenceAction is "warn" or "category" ? SilenceAction : "autoplay",
+        SilenceAction = SilenceAction is "warn" or "category" or "random" ? SilenceAction : "autoplay",
     };
 
     public static readonly int[] Bitrates = [64, 96, 128, 160, 192, 256, 320];

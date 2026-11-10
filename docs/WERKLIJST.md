@@ -36,6 +36,24 @@ Legenda: ✅ klaar · 🟡 deels · ⬜ open
 | 8. DJ-controller | Hercules en Pioneer | Standaardtoewijzingen voor een Hercules DJControl- en een Pioneer DDJ-controller (MIDI), aan te passen in Instellingen |
 | 10/11. VoIP | Een SIP-account kan; LUCI Live moet ook kunnen | SIP-registratie bij een aanbieder; LUCI Live verbindt op een open codec (Opus/G.722) via SIP of RTP |
 
+## Beantwoorde vragen (10 november 2026, tweede ronde)
+
+| Vraag | Antwoord | Gevolg voor de bouw |
+|---|---|---|
+| 1. Stilte | Een aparte reserve-afspeellijst, of vrij willekeurig uit de muziekbibliotheek | Naast "noodcategorie" ook de actie "willekeurig uit de hele muziekbibliotheek"; is de noodcategorie leeg, dan valt hij daarop terug in plaats van op de automatisering |
+| 3. Uitgangen naar de tafel | 4 tot 6, waarvan 2 voor VoIP | Uitgangen per kanaal blijven zoals ze zijn; VoIP krijgt twee eigen mengkanalen met elk een eigen uitgang |
+| 4. Software of tafel | Beide moeten kunnen: normaal mengt de tafel live, bij automatisering mengt de software | Twee werkwijzen: "mengtafel" (elk kanaal op vol naar een eigen uitgang) en "software" (de engine mengt naar de zender-uitgang); omschakelen zonder herstart |
+| 5. VST | Ja, nodig voor de proof of concept | VST-plekken per kanaal horen bij stap 2 |
+| 7. Thema | Ja, meerdere thema's, ook licht, met afgeronde vormen, goede bedienbaarheid en kleuren | Stap 3: themakeuze (donker, licht en meer), afronding en kleuren instelbaar |
+| 8. DJ-controller | Ook oudere typen van Hercules en Pioneer | Algemene MIDI-toewijzing met "leren" (knop aanraken = koppelen) en voorinstellingen per controller, niet vast op één type |
+| 9. Automatisering onder de DJ | Ja, onhoorbaar doorlopen, en duidelijk tonen met een oplichtende knop of veld | De automatisering loopt stil mee terwijl de DJ op de lucht is; een opvallend veld "automatisering loopt mee" met één knop om terug te geven |
+| 10. SIP-aanbieder | Een PortaOne-centrale, nu voip.sipnl.net; moet flexibel instelbaar zijn | SIP-account met alle gangbare velden: registrar, proxy, outbound proxy, domein, gebruikers- en authenticatienaam, transport (UDP/TCP/TLS), poort, STUN, codecvolgorde, DTMF-methode, herregistratietijd |
+| 12. Bereikbaarheid | Externe telefonie loopt via de SIP-server van voip.sipnl.net | Geen open poorten nodig: registreren en bellen via de aanbieder, met NAT-ondersteuning (STUN, keep-alive, rport) |
+| 13. Streams | Alle bekende formaten van gangbare stream-encoders | Icecast en SHOUTcast (v1 en v2) met MP3, AAC/HE-AAC, Ogg Vorbis, Opus en FLAC; meerdere servers tegelijk; HLS |
+| 14. Bewaren | Instelbaar, normaal een jaar | Bewaartermijn van opnames instelbaar, standaard 365 dagen |
+| 15. Rapportsjabloon | Geen voorbeeld; zelf iets maken. Voor reclame ook een los afspeelrapport | Eigen rapportindeling (CSV en PDF); apart reclame-afspeelrapport per adverteerder en campagne als bewijs voor klanten en stichtingen, ook als export (CSV/JSON) om later aan een ander systeem te koppelen |
+| 16. Hardware | D&R Airence en D&R Webstation; het moet voor meerdere fabrikanten werken | Eerst D&R Airence en Webstation, via een algemene laag voor tafels zodat andere fabrikanten erbij kunnen |
+
 ## Proof of concept
 
 De proof of concept is af na **stap 1 tot en met 5**: een station dat niet stilvalt, geluid dat naar de juiste kaarten
@@ -48,6 +66,7 @@ Eerst zorgen dat de zender niet stil kan vallen; alles daarna bouwt daarop.
 
 | Status | Werk | Af als |
 |---|---|---|
+| ✅ | Stilte: ook "willekeurig uit de hele muziekbibliotheek" als actie en als terugval bij een lege noodcategorie (vraag 1). Getest: na 5 s stilte speelt een willekeurig nummer, ook bij een noodcategorie die niet bestaat | stilte speelt direct een willekeurig nummer, ook zonder noodcategorie |
 | ✅ | Stiltedetectie op de zender: drempel, duur en actie (melden, de automatisering starten, of direct iets uit een noodcategorie spelen), in te stellen bij Instellingen › Bewaking | stilte van de ingestelde duur geeft een alarm en de gekozen actie; getest met een stille engine |
 | ✅ | Watchdog: de engine schrijft een hartslag; een klein bewakingsproces start hem opnieuw na een crash of vastloper, en hij gaat verder waar de log was | engine geforceerd stoppen → binnen 15 s weer op de lucht met dezelfde log. Getest: na 1,4 s terug, hetzelfde nummer op dezelfde plek. Een vastloper (engine reageert niet meer) is gebouwd maar niet nagebootst |
 | 🟡 | Engine bij aanmelden starten op de studio-pc, los van de studio (dienst later): Instellingen › Systeem | na herstart van de pc speelt het station zonder dat iemand iets doet. Aan- en uitzetten getest; een echte herstart van de pc nog niet |
@@ -56,7 +75,7 @@ Eerst zorgen dat de zender niet stil kan vallen; alles daarna bouwt daarop.
 
 Vragen bij stap 1:
 
-1. Wat moet er bij stilte gebeuren: alleen melden, de automatisering starten, of een vaste noodcategorie spelen? (Standaard: automatisering starten na 20 s onder -45 dB, en melden.)
+1. ~~Wat moet er bij stilte gebeuren?~~ **Reserve-afspeellijst of willekeurig uit de muziekbibliotheek.**
 2. ~~Draait de engine straks op dezelfde pc als de studio?~~ **Ja, dezelfde pc.**
 
 ## Stap 2 — Geluid en mengpaneel
@@ -68,14 +87,15 @@ Vragen bij stap 1:
 | 🟡 | ASIO-uitvoer en instelbare buffer en samplerate, met testtoon per uitgang: klaar in Instellingen › Geluid (uitzending, voorluisteren en elk mengkanaal via ASIO; 44,1 of 48 kHz; buffer). Een stuurprogramma dat niet start wordt geweigerd en de Windows-kaart blijft in gebruik. Getest met Realtek ASIO; nog niet beluisterd en niet met een studiokaart | ASIO-kaart speelt zonder haperen; testtoon klinkt op de gekozen uitgang |
 | ✅ | Kanaalstrip per mengkanaal: gain, balans, equalizer, compressor, automatische niveauregeling, dempen, naar de zender, opnemen — klaar via ⚙ op elk kanaal in de Mixer (gemeten op de zender: gain +6 dB, balans, midden -12 dB, compressor, niveauregeling; bewaard na herstart). Opnemen: REC-knop op elk kanaal, WAV in de map Opnamen van de engine, na de kanaalstrip en voor de fader (getest: testtoon met fader dicht en gedempt staat er precies op -18 dBFS / 1 kHz in) | instellingen per kanaal hoorbaar en bewaard |
 | ✅ | Master: begrenzer en loudness-meter op de zender | pieken boven de grens worden begrensd; LUFS zichtbaar — eigen look-ahead-begrenzer (plafond instelbaar, Geluid-tab), LUFS kort/geïntegreerd en true peak bij de meter; getest: plafond -12 dB → true peak -11,5 (zonder -7) |
-| ⬜ | Plekken voor VST-effecten per kanaal | één VST-plug-in laadt en werkt op een kanaal |
+| ⬜ | Plekken voor VST-effecten per kanaal (nodig voor de proof of concept, vraag 5) | één VST-plug-in laadt en werkt op een kanaal |
+| ⬜ | Werkwijze mengtafel of software: bij "mengtafel" gaat elk kanaal op vol naar zijn eigen uitgang, bij "software" mengt de engine (vraag 4) | omschakelen werkt zonder herstart en blijft bewaard |
 | ✅ | DSP-effect op een fader: per mengkanaal een ingebouwd effect kiezen (bijv. galm, echo, filter, stemvervorming), met aan/uit en mengverhouding, vanuit de kanaalstrip in de Mixer (verzoek studio, 10-11-2026) — galm, echo, chorus, flanger, telefoon, stem lager/hoger; FX-knop op de fader. Gemeten: echo 0,126 → 0,24, telefoon dempt 100 Hz en 8 kHz sterk, stem hoger maakt van 1 kHz 1260 Hz | een gekozen effect is hoorbaar op dat kanaal, is aan en uit te zetten en blijft bewaard na een herstart |
 
 Vragen bij stap 2:
 
-3. ~~Welke geluidskaart(en)?~~ **Instelbaar: Windows-geluid en ASIO.** Nog open: hoeveel uitgangen gaan naar de mengtafel?
-4. Mengt de studio straks in de software (alles op één uitgang) of op een fysieke mengtafel (elke speler een eigen fader)? Welk merk en type tafel?
-5. Zijn VST-plug-ins nodig voor de proof of concept, of is de ingebouwde equalizer, compressor en begrenzer genoeg? (Standaard: ingebouwd; VST later.)
+3. ~~Welke geluidskaart(en)?~~ **Instelbaar: Windows-geluid en ASIO; 4 tot 6 uitgangen naar de tafel, waarvan 2 voor VoIP.**
+4. ~~Software of mengtafel?~~ **Beide: live mengt de tafel (D&R Airence of Webstation), bij automatisering de software.**
+5. ~~VST nodig?~~ **Ja, voor de proof of concept.**
 
 ## Stap 3 — Eén stijl in de hele studio
 
@@ -86,13 +106,13 @@ Vragen bij stap 2:
 | ⬜ | Werkruimtes Productie, Planning en Rapportage naast Live, DJ en Automatisering | elke werkruimte opent zijn eigen indeling |
 | ⬜ | Responsive gedrag en indelingen voor 1 tot 4 schermen, aanraakmodus voor een aanraakscherm | op 1 tot 4 schermen staat alles op zijn plek en blijft dat na een herstart |
 | ⬜ | Overige vensters nalopen (planner, bibliotheek, mixer, beheer) | geen venster meer in de oude stijl |
-| ⬜ | Uiterlijk instelbaar: lettergrootte, aanraakmodus, licht thema, kleuren per soort item | in Instellingen te kiezen, direct zichtbaar |
+| ⬜ | Uiterlijk instelbaar: meerdere thema's (donker, licht en meer), afgeronde vormen, lettergrootte, aanraakmodus, kleuren per soort item (vraag 7) | in Instellingen te kiezen, direct zichtbaar |
 | ⬜ | Eigen knoppen, regiekamer-venster (weer, nieuwskoppen, berichten), itemgegevens, verkenner | vensters aanwezig en te docken |
 
 Vragen bij stap 3:
 
 6. ~~Hoeveel schermen?~~ **3 tot 4, met eventueel een aanraakscherm.**
-7. Moet er een licht thema komen, of is donker genoeg?
+7. ~~Licht thema?~~ **Ja, meerdere thema's met afgeronde vormen en goede bedienbaarheid.**
 
 ## Stap 4 — DJ-modus afmaken
 
@@ -105,15 +125,16 @@ Vragen bij stap 3:
 | ⬜ | Effecten per deck (echo, flanger, reverb) op de beat | — |
 | ⬜ | Sampler: cartwall als pads in de DJ-werkruimte | — |
 | ⬜ | Automix in de DJ-modus met overgangstypes; tempo-overgang ook in de automatisering | een lijst van tien nummers mixt zichzelf |
-| ⬜ | Bediening van decks en mengpaneel via de commandobus (MIDI-controller, sneltoetsen) | een controller bedient start, cue, tempo, EQ en crossfader |
+| ⬜ | Automatisering loopt onhoorbaar door terwijl de DJ op de lucht is, met een oplichtend veld en één knop om terug te geven (vraag 9) | DJ van de lucht → automatisering is meteen hoorbaar op de juiste plek |
+| ⬜ | Bediening van decks en mengpaneel via de commandobus: MIDI leren en voorinstellingen voor Hercules en Pioneer, ook oudere typen (vraag 8) | een controller bedient start, cue, tempo, EQ en crossfader |
 | ⬜ | Mix opnemen | opname staat als bestand in de bibliotheek |
 | ⬜ | Draaiknoppen in plaats van schuiven, en het geheel passend op 1920 × 1080 zonder scrollen | — |
 | ⬜ | Stems (zang, instrumenten, bas, drums) | later; grootste onderdeel, niet nodig voor de proof of concept |
 
 Vragen bij stap 4:
 
-8. ~~Welke dj-controller?~~ **Hercules en Pioneer.** Nog open: welk type precies (bijvoorbeeld DJControl Inpulse 300, DDJ-400)?
-9. Moet de automatisering doorlopen (onhoorbaar) terwijl de DJ op de lucht is, zodat zij het weer kan overnemen? Nu stopt zij bij het overnemen.
+8. ~~Welke dj-controller?~~ **Hercules en Pioneer, ook oudere typen: dus leren en voorinstellingen.**
+9. ~~Automatisering laten doorlopen?~~ **Ja, onhoorbaar, met een oplichtend veld.**
 
 ## Stap 5 — Verbindingen (codec, VoIP)
 
@@ -121,30 +142,31 @@ Vragen bij stap 4:
 |---|---|---|
 | ⬜ | Mengkanaal VoIP met eigen fader, voorluisteren en terugkanaal zonder zichzelf | — |
 | ⬜ | RTP in twee richtingen met Opus, G.722, G.711 en PCM; jitterbuffer met meting | twee engines praten met elkaar over het netwerk |
-| ⬜ | SIP volgens EBU N/ACIP: bellen, gebeld worden, registreren | een verbinding met een telefoon-app op een open codec |
+| ⬜ | SIP volgens EBU N/ACIP: bellen, gebeld worden, registreren bij een PortaOne-centrale (nu voip.sipnl.net), alle accountvelden instelbaar, met NAT-ondersteuning (vraag 10 en 12) | registreren bij de aanbieder en een telefoongesprek op de zender |
+| ⬜ | Twee VoIP-mengkanalen, elk met een eigen uitgang naar de tafel (vraag 3) | — |
 | ⬜ | Venster Verbindingen volgens het ontwerp, met stations en presets | — |
 | ⬜ | Bediening en status op de commandobus (knoppen, lampjes, Ember+) | — |
 | ⬜ | Later: SRT, twee netwerken tegelijk, Icecast als bron, NDI- of ASIO-ingang, tekstberichten, opname | — |
 
 Vragen bij stap 5:
 
-10. ~~Is er een SIP-account?~~ **Ja, dat kan.** Nog open: welke aanbieder?
+10. ~~Is er een SIP-account?~~ **Ja: PortaOne-centrale, nu voip.sipnl.net; flexibel instelbaar.**
 11. ~~Waarmee belt een verslaggever in?~~ **Ook LUCI Live** (op een open codec).
-12. Is de studio van buiten bereikbaar (vast IP-adres of doorgestuurde poorten), of loopt alles via een SIP-server?
+12. ~~Bereikbaarheid?~~ **Via de SIP-server van voip.sipnl.net.**
 
 ## Stap 6 — Opnemen en uitzenden
 
 | Status | Werk |
 |---|---|
-| ⬜ | Opnemen van programma en microfoon; automatisch per uur met bewaartermijn; direct opnemen naar de bibliotheek |
-| ⬜ | Meerdere streamservers tegelijk, AAC en Opus naast MP3, HLS |
+| ⬜ | Opnemen van programma en microfoon; automatisch per uur met bewaartermijn (instelbaar, standaard een jaar); direct opnemen naar de bibliotheek |
+| ⬜ | Meerdere streamservers tegelijk: Icecast en SHOUTcast v1/v2; MP3, AAC/HE-AAC, Ogg Vorbis, Opus en FLAC; HLS |
 | ⬜ | Titelupdates: eigen opmaak, soorten uitsluiten, ook naar een bestand of webadres |
 | ⬜ | Programmalog als tekstbestand met eigen opmaak en bewaartermijn |
 
 Vragen bij stap 6:
 
-13. Naar welke streamservers moet het station, en in welk formaat?
-14. Hoe lang moeten uitzendingen bewaard blijven voor de toezichthouder?
+13. ~~Streamservers?~~ **Alle gangbare servers en formaten.**
+14. ~~Bewaren?~~ **Instelbaar, standaard een jaar.**
 
 ## Stap 7 — Bibliotheek en planning
 
@@ -154,11 +176,12 @@ Vragen bij stap 6:
 | ⬜ | Tags lezen en terugschrijven, hoezen |
 | ⬜ | Overgangen en mixpunten per soort item en per nummer |
 | ⬜ | Centrale bibliotheek voor meerdere studio's |
-| 🟡 | Rapportage auteursrechten afstemmen op het sjabloon van NLPO, Buma/Stemra en Sena |
+| 🟡 | Rapportage auteursrechten in een eigen indeling (CSV en PDF); er is geen voorgeschreven sjabloon |
+| ⬜ | Reclame-afspeelrapport per adverteerder en campagne, als bewijs voor klanten en stichtingen; export als CSV en JSON om later te koppelen |
 
 Vraag bij stap 7:
 
-15. Is er een voorbeeld van het rapportagesjabloon dat het station moet inleveren?
+15. ~~Sjabloon?~~ **Geen; eigen indeling, plus een los reclame-afspeelrapport.**
 
 ## Stap 8 — Bediening en hardware
 
@@ -168,12 +191,12 @@ Vraag bij stap 7:
 | ⬜ | Bediening via een webadres per knop en een UDP-poort; sneltoetsen die ook buiten de studio werken |
 | ⬜ | OSC uitsturen |
 | ⬜ | USB-GPIO-kaarten, joystickpoort, tweede Ember+- en Livewire-apparaat als reserve |
-| ⬜ | Mengtafels: D&R, AxelTech, Wheatstone, elk met het openbare protocol van de fabrikant |
+| ⬜ | Mengtafels: eerst D&R Airence en D&R Webstation, via een algemene laag zodat AxelTech, Wheatstone en andere fabrikanten erbij kunnen; elk met het openbare protocol van de fabrikant |
 | 🟡 | Ember+ testen tegen LUCI Studio en een Lawo-tafel |
 
 Vraag bij stap 8:
 
-16. Welke van deze apparaten staan er werkelijk in de studio? Alleen daarvoor bouw ik een koppeling.
+16. ~~Welke apparaten?~~ **D&R Airence en D&R Webstation; uitbreidbaar naar andere fabrikanten.**
 
 ## Stap 9 — Gebruikers en meerdere studio's
 

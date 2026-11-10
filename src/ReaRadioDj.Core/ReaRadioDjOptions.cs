@@ -35,7 +35,8 @@ public sealed class SilenceOptions
     public double ThresholdDb { get; set; } = -45;
     public double Seconds { get; set; } = 20;
     /// <summary>"warn" = only an alarm in the studio, "autoplay" = also start the automation, "category" = play an item
-    /// from <see cref="CategoryId"/> right away and start the automation.</summary>
+    /// from <see cref="CategoryId"/> right away (a random song when it is empty) and start the automation, "random" = play
+    /// a random song from the music library right away and start the automation.</summary>
     public string Action { get; set; } = "autoplay";
     /// <summary>Emergency category for the action "category" (an emergency playlist, station IDs, ...).</summary>
     public long? CategoryId { get; set; }

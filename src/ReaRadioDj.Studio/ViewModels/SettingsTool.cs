@@ -64,13 +64,13 @@ public sealed partial class SettingsTool : StudioTool
     [ObservableProperty] private bool _silenceEnabled = true;
     [ObservableProperty] private decimal _silenceDb = -45;
     [ObservableProperty] private decimal _silenceSeconds = 20;
-    /// <summary>0 = only warn, 1 = also start the automation, 2 = play from the emergency category.</summary>
+    /// <summary>0 = only warn, 1 = also start the automation, 2 = play from the emergency category, 3 = a random song.</summary>
     [ObservableProperty] [NotifyPropertyChangedFor(nameof(UsesEmergencyCategory))] private int _silenceAction = 1;
-    public IReadOnlyList<string> SilenceActions { get; } = ["Alleen melden in de studio", "Melden en de automatisering starten", "Melden en direct iets uit de noodcategorie spelen"];
+    public IReadOnlyList<string> SilenceActions { get; } = ["Alleen melden in de studio", "Melden en de automatisering starten", "Melden en direct iets uit de noodcategorie spelen (lege categorie: willekeurig nummer)", "Melden en direct een willekeurig nummer uit de muziekbibliotheek spelen"];
     [ObservableProperty] private CategoryDto? _silenceCategory;
     public ObservableCollection<CategoryDto> Categories => Hub.Categories;
     public bool UsesEmergencyCategory => SilenceAction == 2;
-    private static readonly string[] SilenceActionNames = ["warn", "autoplay", "category"];
+    private static readonly string[] SilenceActionNames = ["warn", "autoplay", "category", "random"];
 
     // Rotation
     [ObservableProperty] private decimal _artistSeparation = 3;
@@ -292,7 +292,7 @@ public sealed partial class SettingsTool : StudioTool
             (int)ArtistSeparation, (int)SongSeparation, (int)LookAhead,
             StreamEnabled, StreamServer, StreamPassword, false, StreamBitrate, StreamGenre, StreamUrl,
             ControlBindAddress, (int)ControlTcpPort, (int)ControlOscPort, ControlPassword, false, ClearControlPassword,
-            SilenceEnabled, (double)SilenceDb, (double)SilenceSeconds, SilenceActionNames[Math.Clamp(SilenceAction, 0, 2)], SilenceCategory?.Id));
+            SilenceEnabled, (double)SilenceDb, (double)SilenceSeconds, SilenceActionNames[Math.Clamp(SilenceAction, 0, SilenceActionNames.Length - 1)], SilenceCategory?.Id));
 
         if (_masterLoaded) await Hub.Client.PutAsync("/api/master", new MasterDto(LimiterOn, (double)LimiterCeiling));
 

@@ -1,15 +1,12 @@
 # Overzicht: wat er staat en wat nog moet
 
-Stand van 10 november 2026. Dit overzicht is opgebouwd uit de werklijst ([WERKLIJST.md](WERKLIJST.md)), het
-rondeplan ([ROADMAP.md](ROADMAP.md)) en alle commits sinds de start. Waar die twee elkaar tegenspreken, is de
-werklijst leidend.
+Stand van 10 november 2026. Dit overzicht is opgebouwd uit de werklijst ([WERKLIJST.md](WERKLIJST.md)), het rondeplan ([ROADMAP.md](ROADMAP.md)) en alle commits sinds de start. Waar die twee elkaar tegenspreken, is de werklijst leidend.
 
 Legenda: ✅ klaar en getest · 🟡 werkt, maar een deel of de echte test ontbreekt · ⬜ nog te bouwen
 
 ## Waar we begonnen
 
-Op 8 november 2026 begon REA-Radio-DJ als proof of concept: een eigen playoutsysteem voor Radio Aa en Hunze,
-open source (GPL-3.0), in C# met de BASS-geluidsbibliotheek. Het bestaat uit twee delen:
+Op 8 november 2026 begon REA-Radio-DJ als proof of concept: een eigen playoutsysteem voor Radio Aa en Hunze, open source (GPL-3.0), in C# met de BASS-geluidsbibliotheek. Het bestaat uit twee delen:
 
 - een **engine** die het geluid en de automatisering doet;
 - een **studio** waarmee je de engine bedient. Die kan op 1 tot 4 schermen staan.
@@ -20,8 +17,7 @@ Bij de start zijn de volgende pakketten bekeken als **controlelijst van functies
 - VirtualDJ (dj-tafel);
 - LUCI (codec en live-verbindingen).
 
-Van die pakketten is niets overgenomen: geen namen, schermen, teksten, skins of bestandsformaten. Er is niets uit
-gedecompileerd. Er worden alleen open protocollen en codecs gebruikt.
+Van die pakketten is niets overgenomen: geen namen, schermen, teksten, skins of bestandsformaten. Er is niets uit gedecompileerd. Er worden alleen open protocollen en codecs gebruikt.
 
 Bewust **niet** op de lijst:
 
@@ -35,8 +31,8 @@ In drie dagen zijn er 51 commits gemaakt. Er zijn 226 geautomatiseerde tests, en
 
 ### Automatisering en planning
 
-| | Onderdeel |
-|---|---|
+|  | Onderdeel |
+| --- | --- |
 | ✅ | Engine als achtergronddienst met tray-icoon, REST- en WebSocket-koppeling |
 | ✅ | Bibliotheek met automatische cuepunten en LUFS-meting per nummer, rotatieregels |
 | ✅ | Klokken, weekrooster, vaste tijden; planner met dag- en weekoverzicht |
@@ -50,8 +46,8 @@ In drie dagen zijn er 51 commits gemaakt. Er zijn 226 geautomatiseerde tests, en
 
 ### Studio
 
-| | Onderdeel |
-|---|---|
+|  | Onderdeel |
+| --- | --- |
 | ✅ | Dockbare vensters, indelingen per scherm |
 | ✅ | Standby- en PFL-spelers met golfvorm en grote teller |
 | ✅ | Twee cartwalls; Live-decks A/B/C met eigen kleuren |
@@ -63,8 +59,8 @@ In drie dagen zijn er 51 commits gemaakt. Er zijn 226 geautomatiseerde tests, en
 
 ### AI-presentator
 
-| | Onderdeel |
-|---|---|
+|  | Onderdeel |
+| --- | --- |
 | ✅ | Higgs TTS 3 op de GPU (in WSL), Windows-spraak, ElevenLabs en Azure als reservestemmen |
 | ✅ | Taalmodel naar keuze (Ollama, LM Studio of online), persona's per dagdeel |
 | ✅ | Script goedkeuren of bewerken voor het inspreken |
@@ -75,8 +71,8 @@ In drie dagen zijn er 51 commits gemaakt. Er zijn 226 geautomatiseerde tests, en
 
 ### Geluid en mengpaneel
 
-| | Onderdeel |
-|---|---|
+|  | Onderdeel |
+| --- | --- |
 | ✅ | Mixer met ducking (praten over muziek) en mengkanalen voor automatisering, standby, cartwall, overlays, DJ, microfoon en PFL |
 | ✅ | Elk mengkanaal kan naar een eigen Windows-geluidskaart of kanaalpaar, met een testtoon per uitgang |
 | ✅ | Ingangen als mengkanaal (meer microfoons, lijn-in), met een ZENDER-knop |
@@ -89,8 +85,8 @@ In drie dagen zijn er 51 commits gemaakt. Er zijn 226 geautomatiseerde tests, en
 
 ### Bedrijfszekerheid
 
-| | Onderdeel |
-|---|---|
+|  | Onderdeel |
+| --- | --- |
 | ✅ | Stiltedetectie met alarm, en daarna de automatisering starten of iets uit een noodcategorie spelen |
 | ✅ | Watchdog: na een crash is de engine binnen 1,4 s terug, met hetzelfde nummer op dezelfde plek |
 | ✅ | Reservekopie en terugzetten van alle instellingen, klokken, planning, cartwalls en hardware |
@@ -98,16 +94,16 @@ In drie dagen zijn er 51 commits gemaakt. Er zijn 226 geautomatiseerde tests, en
 
 ### Bediening en hardware
 
-| | Onderdeel |
-|---|---|
+|  | Onderdeel |
+| --- | --- |
 | ✅ | Commandobus via HTTP, TCP en OSC; sneltoetsen; scriptregels; externe streams bewaken |
 | ✅ | MIDI (knoppen, faders, lampjes), seriële GPIO en relais, Livewire GPIO |
 | 🟡 | Ember+ (Lawo, LUCI Studio): gebouwd, maar nog niet getest tegen een echt apparaat |
 
 ### DJ-modus
 
-| | Onderdeel |
-|---|---|
+|  | Onderdeel |
+| --- | --- |
 | ✅ | Vier decks op een eigen mengkanaal |
 | ✅ | Tempo met en zonder toonhoogtebehoud; sync op tempo en beat |
 | ✅ | Overnemen van de automatisering zonder gat |
@@ -124,9 +120,9 @@ Gerangschikt naar de stappen van de werklijst. De proof of concept is af na stap
 
 - ⬜ Plekken voor VST-effecten per kanaal
 - ⬜ Echte tests (alleen met jouw toestemming):
-  - een lijn-in;
-  - ASIO beluisteren;
-  - kanaalpaar 3/4 op een meerkanaalskaart.
+    - een lijn-in;
+    - ASIO beluisteren;
+    - kanaalpaar 3/4 op een meerkanaalskaart.
 
 ### Stap 3 — Eén stijl in de hele studio
 
@@ -136,10 +132,10 @@ Gerangschikt naar de stappen van de werklijst. De proof of concept is af na stap
 - ⬜ Overige vensters nalopen (planner, bibliotheek, mixer, beheer)
 - ⬜ Uiterlijk instelbaar: lettergrootte, licht thema, kleuren per soort item
 - ⬜ Nieuwe vensters:
-  - eigen knoppen;
-  - regiekamervenster (weer, nieuws, berichten);
-  - itemgegevens;
-  - verkenner.
+    - eigen knoppen;
+    - regiekamervenster (weer, nieuws, berichten);
+    - itemgegevens;
+    - verkenner.
 
 ### Stap 4 — DJ-modus afmaken
 
@@ -169,17 +165,17 @@ Dit is het grootste open blok van de proof of concept.
 ### Stap 6 tot en met 10 — Van proof of concept naar product
 
 | Stap | Wat nog moet |
-|---|---|
+| --- | --- |
 | 6 Opnemen en uitzenden | Programma en microfoon automatisch per uur opnemen, met een bewaartermijn<br>Direct opnemen naar de bibliotheek<br>Meer streamservers tegelijk; AAC, Opus en HLS<br>Titelupdates met eigen opmaak, ook naar RDS of de website<br>Programmalog als tekstbestand |
 | 7 Bibliotheek en planning | Meer mappen en automatisch opnieuw inlezen<br>Tags terugschrijven, hoezen<br>Overgangen per soort item<br>Centrale bibliotheek<br>Rapportage op het officiële sjabloon |
-| 8 Bediening en hardware | Gebeurtenissen koppelen aan commando's<br>Bediening via een webadres per knop en via UDP<br>OSC uitsturen<br>USB-GPIO<br>Mengtafels van D&R, AxelTech en Wheatstone<br>Ember+ testen |
+| 8 Bediening en hardware | Gebeurtenissen koppelen aan commando's<br>Bediening via een webadres per knop en via UDP<br>OSC uitsturen<br>USB-GPIO<br>Mengtafels van D\&R, AxelTech en Wheatstone<br>Ember+ testen |
 | 9 Gebruikers en studio's | Rollen en rechten, studio vergrendelen<br>Meerdere studio's met automatische overname<br>Voicetracking op afstand<br>Remote-app voor tablet en telefoon |
 | 10 Afwerking | Inrichthulp bij de eerste start<br>Installatieprogramma, controle op nieuwe versies, pagina Over<br>Handleidingen |
 
 ## Vergeleken met de bekeken pakketten
 
 | Gebied (zoals in de andere pakketten gezien) | Stand bij ons |
-|---|---|
+| --- | --- |
 | Playout en automatisering: klokken, log, cartwalls, voicetracking, nieuws, reclame, rapportage | ✅ Grotendeels klaar. Het meeste werk zit nog in de stijl en in schermindelingen (stap 3) |
 | Mengpaneel met kanaalstrips, effecten, master en uitgangen per kanaal | ✅ Klaar. Alleen VST ontbreekt |
 | Opnemen | 🟡 Per kanaal klaar. Automatische opname per uur en opnemen naar de bibliotheek ontbreken |
@@ -190,21 +186,25 @@ Dit is het grootste open blok van de proof of concept.
 | Gebruikers, meerdere studio's, remote-app | ⬜ Nog niet begonnen |
 | Iets wat de bekeken pakketten niet hebben | ✅ AI-presentator met eigen stem, Whisper-controle en persona's |
 
-## Open vragen aan het station
+## Antwoorden van het station (10 november 2026)
 
-1. Wat moet er bij stilte gebeuren? Nu: na 20 s onder -45 dB de automatisering starten en melden.
-2. Hoeveel uitgangen gaan naar de mengtafel?
-3. Mengt de studio in de software of op een fysieke tafel? Zo ja, welk merk en type?
-4. Zijn VST-plug-ins nodig voor de proof of concept?
-5. Moet er een licht thema komen?
-6. Welk type DJ-controller precies (bijvoorbeeld DJControl Inpulse 300 of DDJ-400)?
-7. Moet de automatisering onhoorbaar doorlopen terwijl de DJ op de lucht is?
-8. Welke SIP-aanbieder?
-9. Is de studio van buiten bereikbaar, of loopt alles via een SIP-server?
-10. Naar welke streamservers moet het station, en in welk formaat?
-11. Hoe lang moeten uitzendingen bewaard blijven?
-12. Is er een voorbeeld van het rapportagesjabloon?
-13. Welke hardware staat er werkelijk in de studio?
+Alle vragen zijn beantwoord. De gevolgen staan als werk in de [werklijst](WERKLIJST.md).
+
+| Vraag | Antwoord |
+|---|---|
+| Wat bij stilte? | Een aparte reserve-afspeellijst, of willekeurig uit de muziekbibliotheek |
+| Uitgangen naar de mengtafel | 4 tot 6, waarvan 2 voor VoIP |
+| Software of mengtafel? | Beide: normaal mengt de tafel live, bij automatisering de software |
+| VST nodig? | Ja, voor de proof of concept |
+| Licht thema? | Ja, meerdere thema's, met afgeronde vormen, goede bedienbaarheid en kleuren |
+| DJ-controller | Hercules en Pioneer, ook oudere typen |
+| Automatisering onder de DJ | Onhoorbaar laten doorlopen, en duidelijk tonen met een oplichtende knop of veld |
+| SIP-aanbieder | PortaOne-centrale, nu voip.sipnl.net; flexibel instelbaar |
+| Bereikbaarheid van buiten | Externe telefonie via de SIP-server van voip.sipnl.net |
+| Streamservers en formaten | Alle gangbare servers en formaten van bekende stream-encoders |
+| Bewaren van uitzendingen | Instelbaar, normaal een jaar |
+| Rapportagesjabloon | Geen voorbeeld; een eigen indeling. Voor reclame ook een los afspeelrapport als bewijs voor klanten en stichtingen, later te koppelen aan een eigen systeem |
+| Hardware in de studio | D&R Airence en D&R Webstation; geschikt maken voor meerdere fabrikanten |
 
 ## Nog niet op echte apparatuur getest
 
