@@ -91,6 +91,14 @@ public sealed unsafe partial class ChannelProcessor
     /// <summary>Applies the settings; throws <see cref="BassException"/> or <see cref="DllNotFoundException"/> when an effect cannot be added.</summary>
     public void Apply(ChannelSettings settings)
     {
+        // Requests from the studio can arrive at the same time; two at once would each add an effect and lose one.
+        lock (_gate) ApplyLocked(settings);
+    }
+
+    private readonly object _gate = new();
+
+    private void ApplyLocked(ChannelSettings settings)
+    {
         var s = settings.Clamped();
         Settings = s;
         _gain.Configure((float)Math.Pow(10, s.GainDb / 20), s.AgcOn, BassRuntime.SampleRate);

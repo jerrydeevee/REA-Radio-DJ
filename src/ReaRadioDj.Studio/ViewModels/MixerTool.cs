@@ -251,7 +251,23 @@ public sealed partial class ChannelEditor : ObservableObject
         CompressorOn = AgcOn = EffectOn = false;
     }
 
+    private readonly SemaphoreSlim _sending = new(1, 1);
+    private int _version;
+
+    // One request at a time and in order; when the operator moves faster than the engine answers, only the latest is sent.
     private async Task SendAsync()
+    {
+        int version = Interlocked.Increment(ref _version);
+        await _sending.WaitAsync();
+        try
+        {
+            if (version != _version) return;
+            await SendNowAsync();
+        }
+        finally { _sending.Release(); }
+    }
+
+    private async Task SendNowAsync()
     {
         var dto = new ChannelSettingsDto(Math.Round(GainDb, 1), Math.Round(Pan, 2), Math.Round(EqLowDb, 1), Math.Round(EqMidDb, 1), Math.Round(EqHighDb, 1),
             CompressorOn, Math.Round(CompressorThresholdDb), Math.Round(CompressorRatio, 1), AgcOn, OnAir,
