@@ -112,6 +112,59 @@ public sealed partial class SettingsTool : StudioTool
 
     protected override void OnFirstShow() => _ = LoadAsync();
 
+    // ---- transitions per kind of item and category
+    public ObservableCollection<TransitionRuleRow> TransitionRules { get; } = [];
+    public ObservableCollection<KeyChoice> RuleSides { get; } = [];
+    public ObservableCollection<KeyChoice> RuleModes { get; } = [];
+    [ObservableProperty] private string _ruleStatus = "";
+
+    private sealed record RuleWire(string From, string To, string Mode, double Seconds, bool Enabled);
+    private sealed record RuleEnvelope(List<RuleWire> Rules, List<KeyChoice> Sides, List<KeyChoice> Modes);
+
+    private async Task LoadRulesAsync()
+    {
+        if (await Hub.Client.GetAsync<RuleEnvelope>("/api/transition-rules") is not { } e) return;
+        RuleSides.Clear(); foreach (var c in e.Sides) RuleSides.Add(c);
+        RuleModes.Clear(); foreach (var c in e.Modes) RuleModes.Add(c);
+        TransitionRules.Clear();
+        foreach (var r in e.Rules)
+            TransitionRules.Add(new TransitionRuleRow
+            {
+                From = Side(r.From), To = Side(r.To), Mode = RuleModes.FirstOrDefault(m => m.Key == r.Mode),
+                Seconds = (decimal)r.Seconds, Enabled = r.Enabled,
+            });
+    }
+
+    // A category that no longer exists still shows, so the rule is not lost unnoticed.
+    private KeyChoice Side(string key) => RuleSides.FirstOrDefault(s => s.Key == key) ?? AddSide(key);
+    private KeyChoice AddSide(string key) { var c = new KeyChoice(key, key + " (bestaat niet meer)"); RuleSides.Add(c); return c; }
+
+    [RelayCommand]
+    private void AddRule() => TransitionRules.Add(new TransitionRuleRow
+    {
+        From = RuleSides.FirstOrDefault(s => s.Key == "jingle"), To = RuleSides.FirstOrDefault(s => s.Key == "song"),
+        Mode = RuleModes.FirstOrDefault(m => m.Key == "cut"), Seconds = 2,
+    });
+
+    [RelayCommand] private void RemoveRule(TransitionRuleRow? row) { if (row is not null) TransitionRules.Remove(row); }
+
+    [RelayCommand]
+    private void MoveRuleUp(TransitionRuleRow? row)
+    {
+        if (row is null || TransitionRules.IndexOf(row) is not (> 0 and var i)) return;
+        TransitionRules.Move(i, i - 1);
+    }
+
+    [RelayCommand]
+    private async Task SaveRules()
+    {
+        var body = TransitionRules.Where(r => r.From is not null && r.To is not null && r.Mode is not null)
+            .Select(r => new RuleWire(r.From!.Key, r.To!.Key, r.Mode!.Key, (double)r.Seconds, r.Enabled)).ToList();
+        var saved = await Hub.Client.SendForAsync<List<RuleWire>>(HttpMethod.Put, "/api/transition-rules", body);
+        RuleStatus = saved is null ? "Opslaan mislukt." : $"{saved.Count} overgangsregels bewaard; ze gelden vanaf het volgende item.";
+        await LoadRulesAsync();
+    }
+
     [RelayCommand] private Task Reload() => LoadAsync();
 
     private async Task LoadAsync()
@@ -130,6 +183,7 @@ public sealed partial class SettingsTool : StudioTool
             return;
         }
         Show(s);
+        await LoadRulesAsync();
         await LoadSystemAsync();
         await LoadOutputsAsync();
         await LoadAudioAsync();
@@ -322,4 +376,21 @@ public sealed partial class SettingsTool : StudioTool
         if (saved.NeedsRestart.Count > 0) notes.Add("Actief na een herstart van de engine: " + string.Join(", ", saved.NeedsRestart) + ".");
         Status = string.Join(" ", notes);
     }
+}
+
+/// <summary>A choice with a key for the engine and a Dutch label.</summary>
+public sealed record KeyChoice(string Key, string Label)
+{
+    public override string ToString() => Label;
+}
+
+/// <summary>One transition rule in the settings: from this kind or category into that one, this way.</summary>
+public sealed partial class TransitionRuleRow : ObservableObject
+{
+    [ObservableProperty] private KeyChoice? _from;
+    [ObservableProperty] private KeyChoice? _to;
+    [ObservableProperty] [NotifyPropertyChangedFor(nameof(HasSeconds))] private KeyChoice? _mode;
+    [ObservableProperty] private decimal _seconds = 2;
+    [ObservableProperty] private bool _enabled = true;
+    public bool HasSeconds => Mode?.Key is "overlap" or "fade";
 }

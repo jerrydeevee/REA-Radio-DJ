@@ -158,6 +158,33 @@
           <NumericUpDown Value="{Binding FadeOut}" Minimum="0" Maximum="15" Increment="0.5" FormatString="0.0" />
           <TextBlock Classes="field" Text="Muziek onder een stem die over het einde praat (% van het volume)" />
           <NumericUpDown Value="{Binding DuckLevel}" Minimum="0" Maximum="100" Increment="5" FormatString="0" />
+          <TextBlock Classes="title" Text="Overgangen per soort en categorie" Margin="0,20,0,4" />
+          <TextBlock Classes="help" Text="Bijvoorbeeld: van een jingle naar een nummer achter elkaar, of van categorie Klassiek naar alles met 6 seconden overlap. De bovenste regel die past telt; zonder regel geldt het gemeten mixpunt. Een overgang die je met de hand maakte gaat altijd voor. Deze regels worden direct opgeslagen met de knop hieronder, los van Opslaan bovenaan." />
+          <ItemsControl ItemsSource="{Binding TransitionRules}" Margin="0,6,0,0">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="vm:TransitionRuleRow">
+                <WrapPanel Margin="0,0,0,4">
+                  <CheckBox IsChecked="{Binding Enabled}" ToolTip.Tip="Aan of uit" VerticalAlignment="Center" />
+                  <TextBlock Text="van" VerticalAlignment="Center" Margin="0,0,4,0" />
+                  <ComboBox Width="170" ItemsSource="{Binding $parent[ItemsControl].DataContext.RuleSides}" SelectedItem="{Binding From}" />
+                  <TextBlock Text="naar" VerticalAlignment="Center" Margin="6,0,4,0" />
+                  <ComboBox Width="170" ItemsSource="{Binding $parent[ItemsControl].DataContext.RuleSides}" SelectedItem="{Binding To}" />
+                  <ComboBox Width="210" Margin="6,0,0,0" ItemsSource="{Binding $parent[ItemsControl].DataContext.RuleModes}" SelectedItem="{Binding Mode}" />
+                  <NumericUpDown Width="110" Margin="6,0,0,0" Value="{Binding Seconds}" Minimum="0" Maximum="30" Increment="0.5" FormatString="0.0"
+                                 IsVisible="{Binding HasSeconds}" ToolTip.Tip="seconden" />
+                  <Button Classes="small" Content="▲" Margin="6,0,0,0" ToolTip.Tip="Hoger in de lijst (gaat voor)"
+                          Command="{Binding $parent[ItemsControl].DataContext.MoveRuleUpCommand}" CommandParameter="{Binding}" />
+                  <Button Classes="small" Content="✕" Margin="4,0,0,0"
+                          Command="{Binding $parent[ItemsControl].DataContext.RemoveRuleCommand}" CommandParameter="{Binding}" />
+                </WrapPanel>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+          <StackPanel Orientation="Horizontal" Spacing="4">
+            <Button Classes="small" Content="+ regel" Command="{Binding AddRuleCommand}" />
+            <Button Classes="small" Content="Regels opslaan" Command="{Binding SaveRulesCommand}" />
+            <TextBlock Classes="muted" Text="{Binding RuleStatus}" VerticalAlignment="Center" />
+          </StackPanel>
         </StackPanel></ScrollViewer>
       </TabItem>
 

@@ -151,6 +151,42 @@ public sealed class AudioTests : IDisposable
     }
 
     [BassFact]
+    public async Task A_cut_rule_plays_a_song_to_its_end_before_the_next_starts()
+    {
+        var options = Options();
+        var library = new MediaLibrary(options, Db());
+        var a = Path.Combine(_dir, "A - One.wav");
+        var b = Path.Combine(_dir, "B - Two.wav");
+        DemoContent.WriteSong(a, 261.63, seconds: 6, intro: 1);
+        DemoContent.WriteSong(b, 329.63, seconds: 6, intro: 1);
+        var first = library.Load(a, MediaKind.Song);
+
+        var log = new PlayoutLog();
+        log.Append(new LogItem { Type = LogItemType.Song, Media = first });
+        log.Append(new LogItem { Type = LogItemType.Song, Media = library.Load(b, MediaKind.Song) });
+
+        var started = new List<DateTime>();
+        using var engine = new PlayoutEngine(options, log, Router(options));
+        engine.TransitionRules = [new TransitionRule("song", "song", "cut")];
+        engine.ItemStarted += _ => { lock (started) started.Add(DateTime.UtcNow); };
+        engine.Start();
+        var deadline = DateTime.UtcNow.AddSeconds(20);
+        while (DateTime.UtcNow < deadline)
+        {
+            await Task.Delay(100);
+            lock (started) if (started.Count == 2) break;
+        }
+        lock (started)
+        {
+            Assert.Equal(2, started.Count);
+            // no overlap: the second starts when the first reaches its end (cue out), not at its earlier mix point
+            double expected = first.CueOut - first.CueIn;
+            Assert.True(first.MixPoint < first.CueOut - 0.3, "the test song needs a mix point before its end");
+            Assert.InRange((started[1] - started[0]).TotalSeconds, expected - 0.25, expected + 0.6);
+        }
+    }
+
+    [BassFact]
     public async Task Engine_plays_a_fallback_when_a_break_is_not_ready()
     {
         var options = Options();

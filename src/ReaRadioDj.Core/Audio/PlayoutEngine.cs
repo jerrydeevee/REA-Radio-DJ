@@ -212,7 +212,10 @@ public sealed class PlayoutEngine : IDisposable
         // A hand-made transition into the next item takes over the mix point, the fades and an optional insert.
         var upcoming = _log.PeekNext();
         if (!current.NextStarted)
+        {
             current.Apply(upcoming?.MixIn is { } t && t.AfterPath == current.Media.Path ? t : null);
+            if (current.Transition is null) current.ApplyRule(Audio.TransitionRules.Find(_transitionRules, current.Item, upcoming));
+        }
         foreach (var d in _decks)
         {
             d.Update();
@@ -277,6 +280,15 @@ public sealed class PlayoutEngine : IDisposable
         catch (BassException ex) { _logger.LogError(ex, "Cannot play insert {Path}", media.Path); }
     }
 
+    private volatile IReadOnlyList<TransitionRule> _transitionRules = [];
+
+    /// <summary>Transitions per kind of item and category (top of the list first); a hand-made transition wins.</summary>
+    public IReadOnlyList<TransitionRule> TransitionRules
+    {
+        get => _transitionRules;
+        set => _transitionRules = Audio.TransitionRules.Clean(value);
+    }
+
     internal float LoudnessGain(MediaItem media) => AudioRouter.LoudnessGain(media, _options.Mix.TargetLufs);
 
     public void Dispose()
@@ -308,7 +320,11 @@ public sealed class PlayoutEngine : IDisposable
         public double MixAt { get; private set; }
         private readonly double _autoMixAt;
         /// <summary>Fade length used at the mix point when the track has no fade-out cue.</summary>
-        public double FadeLength { get; }
+        public double FadeLength { get; private set; }
+        private readonly double _autoFade;
+        /// <summary>Only an ordinary item (not a hook, voice or recorded voicetrack) follows the transition rules.</summary>
+        private readonly bool _ruleable;
+        private TransitionRule? _rule;
         /// <summary>Position where a scheduled fade-out starts (fade-out cue or the end of a hook).</summary>
         public double? FadeAt { get; }
         private readonly double _scheduledFade;
@@ -375,9 +391,11 @@ public sealed class PlayoutEngine : IDisposable
                 MixAt = cues.Mix > From ? cues.Mix : To;
                 FadeLength = Math.Clamp(Math.Min(mix.FadeOut, To - MixAt), 0.3, 10);
                 if (cues.FadeOut is double fo && fo > From && fo < To) { FadeAt = fo; _scheduledFade = To - fo; }
+                _ruleable = true;
             }
 
             _autoMixAt = MixAt;
+            _autoFade = FadeLength;
             Breakpoints();
             BassRuntime.Check(BASS_Mixer_StreamAddChannel(engine._mixer, _handle, BASS_MIXER_CHAN_NORAMPIN | BASS_STREAM_AUTOFREE),
                 "BASS_Mixer_StreamAddChannel");
@@ -422,12 +440,22 @@ public sealed class PlayoutEngine : IDisposable
             bool had = Transition is not null;
             Transition = t;
             MixAt = t is null ? _autoMixAt : Math.Clamp(t.StartAt, From, To);
+            _rule = null;
+            FadeLength = _autoFade;
             _out = t?.Out ?? [];
             _insert = t?.Insert;
             _insertAt = t?.InsertAt ?? 0;
             _stopAt = _out.Count > 0 && _out[^1].Gain < 0.001 ? Math.Min(To, _out[^1].Seconds + 0.05) : null;
             Breakpoints();
             if (had && t is null && _in.Count == 0) BASS_ChannelSlideAttribute(_handle, BASS_ATTRIB_VOL, _gain, 300);
+        }
+
+        /// <summary>Follows a transition rule (null = the automatic mix) until the next item has started.</summary>
+        public void ApplyRule(TransitionRule? rule)
+        {
+            if (!_ruleable || _fading || ReferenceEquals(rule, _rule)) return;
+            _rule = rule;
+            (MixAt, FadeLength) = Audio.TransitionRules.Apply(rule, From, To, _autoMixAt, _autoFade);
         }
 
         /// <summary>The insert to start now, once.</summary>

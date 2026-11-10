@@ -176,6 +176,7 @@ SystemApi.Map(api, options, args);
 OutputsApi.Map(api, options);
 TitleLogApi.Map(api, options);
 PathsApi.Map(api, app.Services.GetRequiredService<StationDb>());
+TransitionRulesApi.Map(api, app.Services.GetRequiredService<StationDb>(), app.Services.GetRequiredService<PlayoutEngine>());
 ChannelsApi.Map(api, options);
 VoiceApi.Map(api);
 PresenterApi.Map(api, options);
