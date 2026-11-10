@@ -12,11 +12,25 @@ public sealed record Category(long Id, string Name, MediaKind Kind, string Color
 
 /// <summary>A library entry with the fields that are only needed for editing and reporting.</summary>
 public sealed record MediaDetails(MediaItem Media, string Album, bool Enabled, bool CuesManual, DateTime? ValidFrom,
-    DateTime? ValidUntil, int PlayCount, DateTime? LastPlayed, bool Missing, int? Year = null, DateTime? Added = null)
+    DateTime? ValidUntil, int PlayCount, DateTime? LastPlayed, bool Missing, int? Year = null, DateTime? Added = null,
+    string Genre = "", double? Bpm = null, double? FirstBeat = null, double? EstIntro = null, double? EstOutro = null)
 {
     public bool IsPlayable(DateTime now) => Enabled && !Missing
         && (ValidFrom is not DateTime f || f <= now) && (ValidUntil is not DateTime u || u >= now);
 }
+
+/// <summary>
+/// A folder the library reads from: one of the two fixed folders from the settings (music and jingles, negative id) or a
+/// folder the operator added, local or on a share. <see cref="Category"/> empty = every sub folder becomes a category.
+/// </summary>
+public sealed record LibraryFolder(long Id, string Path, MediaKind Kind, string Category, bool Watch, bool WriteTags, bool Enabled,
+    bool Fixed)
+{
+    public const long MusicId = -1, JingleId = -2;
+}
+
+/// <summary>What the last scan of a folder found.</summary>
+public sealed record FolderState(DateTime Scanned, int Files, bool Reachable, string Error);
 
 /// <summary>
 /// The media library, stored in the station database. Scans the music and jingle folders (each sub folder becomes a
@@ -42,6 +56,8 @@ public sealed class MediaLibrary
     private Timer? _nightly;
     private DateTime _lastNightly = DateTime.Today;
     private volatile bool _rescanWanted;
+    private readonly Dictionary<string, FolderState> _folderState = new(StringComparer.OrdinalIgnoreCase);
+    private int _recognised;
 
     public MediaLibrary(ReaRadioDjOptions options, StationDb db, ILogger<MediaLibrary>? log = null)
     {
@@ -68,12 +84,15 @@ public sealed class MediaLibrary
         try
         {
             Status = "Inlezen...";
-            int songs = await Task.Run(() => ScanFolder(_options.MusicFolder, MediaKind.Song, "Muziek", ct), ct);
-            int jingles = await Task.Run(() => ScanFolder(_options.JingleFolder, MediaKind.Jingle, "Jingles", ct), ct);
+            _recognised = 0;
+            int files = 0;
+            foreach (var folder in Folders().Where(f => f.Enabled))
+                files += await Task.Run(() => ScanFolder(folder, ct), ct);
             RetireLegacyCache();
+            await Task.Run(() => MeasureMissing(ct), ct);
             Reload();
-            Status = $"{Songs.Count} nummers, {Jingles.Count} jingles";
-            _log.LogInformation("Library: {Songs} songs and {Jingles} jingles scanned", songs, jingles);
+            Status = $"{Songs.Count} nummers, {Jingles.Count} jingles" + (_recognised > 0 ? $", {_recognised} herkend" : "");
+            _log.LogInformation("Library: {Files} files scanned, {Recognised} recognised", files, _recognised);
         }
         finally { _scanLock.Release(); }
         Watch();
@@ -81,6 +100,94 @@ public sealed class MediaLibrary
         // Files that were still being copied are picked up once they are complete.
         if (_rescanWanted) { _rescanWanted = false; Poke(); }
     }
+
+    // ---------------------------------------------------------------- folders
+
+    /// <summary>The fixed folders from the settings, then the folders the operator added.</summary>
+    public IReadOnlyList<LibraryFolder> Folders()
+    {
+        var list = new List<LibraryFolder>
+        {
+            new(LibraryFolder.MusicId, Full(_options.MusicFolder), MediaKind.Song, "", _options.WatchLibrary, false, true, true),
+            new(LibraryFolder.JingleId, Full(_options.JingleFolder), MediaKind.Jingle, "", _options.WatchLibrary, false, true, true),
+        };
+        list.AddRange(_db.Query("SELECT id, path, kind, category, watch, write_tags, enabled FROM library_folders ORDER BY path",
+            r => new LibraryFolder(r.GetInt64(0), r.GetString(1), (MediaKind)r.GetInt64(2), r.GetString(3), r.GetInt64(4) != 0,
+                r.GetInt64(5) != 0, r.GetInt64(6) != 0, false)));
+        return list;
+    }
+
+    public FolderState? StateOf(LibraryFolder f) { lock (_folderState) return _folderState.GetValueOrDefault(f.Path); }
+
+    /// <summary>Adds a folder (local or a share such as \\server\muziek). Null error = added; a scan starts right away.</summary>
+    public (LibraryFolder? Folder, string? Error) AddFolder(string path, MediaKind kind, string category, bool watch, bool writeTags)
+    {
+        string full;
+        try { full = Path.GetFullPath(path.Trim().Trim('"')).TrimEnd('\\', '/'); }
+        catch (Exception) { return (null, "Dit is geen geldige map."); }
+        if (full.EndsWith(':')) full += "\\";
+        if (!Directory.Exists(full)) return (null, $"Map niet gevonden of niet bereikbaar: {full}");
+        foreach (var f in Folders())
+        {
+            if (string.Equals(f.Path, full, StringComparison.OrdinalIgnoreCase)) return (null, "Deze map staat al in de bibliotheek.");
+            if (Inside(full, f.Path)) return (null, $"Deze map valt al onder {f.Path}.");
+            if (Inside(f.Path, full)) return (null, $"In deze map staat al de bibliotheekmap {f.Path}; kies een andere map of verwijder die eerst.");
+        }
+        long id = _db.Insert("INSERT INTO library_folders(path, kind, category, watch, write_tags, enabled, added) VALUES($p, $k, $c, $w, $t, 1, $a)",
+            ("$p", full), ("$k", (int)kind), ("$c", category.Trim()), ("$w", watch ? 1 : 0), ("$t", writeTags ? 1 : 0), ("$a", StationDb.Iso(DateTime.Now)));
+        _ = ScanQuietly("map toegevoegd");
+        return (Folders().First(f => f.Id == id), null);
+    }
+
+    public LibraryFolder? UpdateFolder(long id, string category, bool watch, bool writeTags, bool enabled)
+    {
+        var old = Folders().FirstOrDefault(f => f.Id == id && !f.Fixed);
+        if (old is null) return null;
+        _db.Execute("UPDATE library_folders SET category = $c, watch = $w, write_tags = $t, enabled = $e WHERE id = $id",
+            ("$c", category.Trim()), ("$w", watch ? 1 : 0), ("$t", writeTags ? 1 : 0), ("$e", enabled ? 1 : 0), ("$id", id));
+        if (!enabled && old.Enabled) Retire(old.Path);
+        if (category.Trim() != old.Category) RecategoriseLater(old.Path);
+        _ = ScanQuietly("map gewijzigd");
+        return Folders().First(f => f.Id == id);
+    }
+
+    /// <summary>
+    /// Removes a folder from the library. Its items are kept (hidden) with all their data, so they come back complete when
+    /// the folder is added again, or when the same track turns up somewhere else. Returns the number of items kept.
+    /// </summary>
+    public int RemoveFolder(long id)
+    {
+        var f = Folders().FirstOrDefault(x => x.Id == id && !x.Fixed);
+        if (f is null) return -1;
+        _db.Execute("DELETE FROM library_folders WHERE id = $id", ("$id", id));
+        int kept = Retire(f.Path);
+        lock (_folderState) _folderState.Remove(f.Path);
+        Reload();
+        Watch();
+        Changed?.Invoke();
+        return kept;
+    }
+
+    private int Retire(string root)
+    {
+        var ids = _db.Query("SELECT id, path FROM media WHERE retired = 0", r => (Id: r.GetInt64(0), Path: r.GetString(1)))
+            .Where(x => Inside(x.Path, root)).Select(x => x.Id).ToList();
+        foreach (var id in ids) _db.Execute("UPDATE media SET retired = 1 WHERE id = $id", ("$id", id));
+        return ids.Count;
+    }
+
+    // A new fixed category for a folder: let the next scan assign it to the items of that folder.
+    private void RecategoriseLater(string root)
+    {
+        var ids = _db.Query("SELECT id, path FROM media", r => (Id: r.GetInt64(0), Path: r.GetString(1)))
+            .Where(x => Inside(x.Path, root)).Select(x => x.Id).ToList();
+        foreach (var id in ids) _db.Execute("UPDATE media SET category_id = NULL WHERE id = $id", ("$id", id));
+    }
+
+    private static bool Inside(string path, string root) =>
+        path.StartsWith(root.EndsWith('\\') ? root : root + "\\", StringComparison.OrdinalIgnoreCase);
+
+    private LibraryFolder? FolderOf(string path) => Folders().FirstOrDefault(f => f.Enabled && Inside(path, f.Path));
 
     // ---------------------------------------------------------------- watching
 
@@ -94,13 +201,14 @@ public sealed class MediaLibrary
         lock (_watchGate)
         {
             _nightly ??= new Timer(_ => Nightly(), null, TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(5));
-            string want = _options.WatchLibrary ? $"{Full(_options.MusicFolder)}|{Full(_options.JingleFolder)}" : "";
+            var folders = Folders().Where(f => f.Enabled && f.Watch).Select(f => f.Path).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+            string want = string.Join('|', folders);
             if (want == _watching) return;
             foreach (var w in _watchers) w.Dispose();
             _watchers.Clear();
             _watching = want;
             if (want.Length == 0) return;
-            foreach (var folder in new[] { _options.MusicFolder, _options.JingleFolder }.Select(Full).Distinct(StringComparer.OrdinalIgnoreCase))
+            foreach (var folder in folders)
             {
                 if (!Directory.Exists(folder)) continue;
                 try
@@ -181,25 +289,44 @@ public sealed class MediaLibrary
         catch (UnauthorizedAccessException) { return false; }
     }
 
-    private int ScanFolder(string folder, MediaKind kind, string defaultCategory, CancellationToken ct)
+    private void SetState(LibraryFolder f, int files, bool reachable, string error)
     {
-        if (!Directory.Exists(folder))
+        lock (_folderState) _folderState[f.Path] = new FolderState(DateTime.Now, files, reachable, error);
+    }
+
+    private int ScanFolder(LibraryFolder folder, CancellationToken ct)
+    {
+        var root = folder.Path;
+        // A share that is offline must not make its tracks "missing": they are simply not looked at this time.
+        if (!Directory.Exists(root))
         {
-            _log.LogWarning("Folder {Folder} does not exist", folder);
+            _log.LogWarning("Folder {Folder} is not reachable", root);
+            SetState(folder, 0, false, "niet bereikbaar; de nummers blijven bewaard");
             return 0;
         }
-        var root = Path.GetFullPath(folder);
-        var files = Directory.EnumerateFiles(root, "*.*", SearchOption.AllDirectories)
-            .Where(f => Extensions.Contains(Path.GetExtension(f).ToLowerInvariant()))
-            .OrderBy(f => f, StringComparer.OrdinalIgnoreCase)
-            .ToList();
+        List<string> files;
+        try
+        {
+            files = Directory.EnumerateFiles(root, "*.*", SearchOption.AllDirectories)
+                .Where(f => Extensions.Contains(Path.GetExtension(f).ToLowerInvariant()))
+                .OrderBy(f => f, StringComparer.OrdinalIgnoreCase)
+                .ToList();
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            _log.LogWarning(ex, "Folder {Folder} could not be read", root);
+            SetState(folder, 0, false, $"niet te lezen: {ex.Message}");
+            return 0;
+        }
+        string fallback = folder.Fixed ? (folder.Kind == MediaKind.Song ? "Muziek" : "Jingles") : Path.GetFileName(root.TrimEnd('\\')) is { Length: > 0 } n ? n : root;
 
         var known = _db.Query("""
                 SELECT m.path, m.size, m.modified, m.cues_manual, m.id, r.media_id IS NOT NULL
-                FROM media m LEFT JOIN media_rights r ON r.media_id = m.id WHERE m.kind = $k
+                FROM media m LEFT JOIN media_rights r ON r.media_id = m.id
                 """,
                 r => (Path: r.GetString(0), Size: r.GetInt64(1), Modified: r.GetInt64(2), Manual: r.GetInt64(3) != 0, Id: r.GetInt64(4),
-                      HasRights: r.GetInt64(5) != 0), ("$k", (int)kind))
+                      HasRights: r.GetInt64(5) != 0))
+            .Where(x => Inside(x.Path, root))
             .ToDictionary(x => x.Path, StringComparer.OrdinalIgnoreCase);
 
         int done = 0;
@@ -210,30 +337,33 @@ public sealed class MediaLibrary
             try
             {
                 var info = new FileInfo(file);
-                long categoryId = EnsureCategory(CategoryName(root, file, defaultCategory), kind);
-                if (known.TryGetValue(info.FullName, out var k) && k.Size == info.Length && k.Modified == info.LastWriteTimeUtc.Ticks)
+                long categoryId = EnsureCategory(folder.Category.Length > 0 ? folder.Category : CategoryName(root, file, fallback), folder.Kind);
+                bool isNew = !known.TryGetValue(info.FullName, out var k);
+                if (!isNew && k.Size == info.Length && k.Modified == info.LastWriteTimeUtc.Ticks)
                 {
-                    _db.Execute("UPDATE media SET missing = 0, category_id = COALESCE(category_id, $c) WHERE path = $p",
+                    _db.Execute("UPDATE media SET missing = 0, retired = 0, category_id = COALESCE(category_id, $c) WHERE path = $p",
                         ("$c", categoryId), ("$p", info.FullName));
                     if (!k.HasRights) StoreRights(k.Id, info.FullName); // files from before rights metadata existed
                     continue;
                 }
                 if (StillBeingWritten(info)) { _rescanWanted = true; continue; }
-                Import(info, kind, categoryId, keepCues: k.Manual);
+                Import(info, folder.Kind, categoryId, keepCues: k.Manual, isNew, folder.WriteTags, fixedCategory: folder.Category.Length > 0);
             }
             catch (Exception ex) { _log.LogWarning(ex, "Skipping {File}", file); }
         }
 
         // Files that disappeared stay in the database (as-run and cartwalls refer to them) but are not played.
         var present = files.ToHashSet(StringComparer.OrdinalIgnoreCase);
-        foreach (var path in known.Keys.Where(p => !present.Contains(p) && p.StartsWith(root, StringComparison.OrdinalIgnoreCase)))
+        foreach (var path in known.Keys.Where(p => !present.Contains(p)))
             _db.Execute("UPDATE media SET missing = 1 WHERE path = $p", ("$p", path));
+        SetState(folder, files.Count, true, "");
         return files.Count;
     }
 
-    private void Import(FileInfo info, MediaKind kind, long categoryId, bool keepCues)
+    private void Import(FileInfo info, MediaKind kind, long categoryId, bool keepCues, bool isNew = false, bool writeTags = false,
+        bool fixedCategory = false)
     {
-        var (artist, title, album) = ReadTags(info.FullName);
+        var tags = ReadTags(info.FullName);
         double duration; double? lufs; CueSet cues; ushort[]? peaks = null;
 
         if (Legacy().TryGetValue(info.FullName, out var old) && old.Size == info.Length && old.Modified == info.LastWriteTimeUtc.Ticks)
@@ -250,36 +380,135 @@ public sealed class MediaLibrary
             peaks = analysis.Peaks;
             cues = new CueSet { CueIn = analysis.Cues.CueIn, Mix = analysis.Cues.MixPoint, CueOut = analysis.Cues.CueOut };
         }
-        cues = (cues with { Intro = ReadSidecarIntro(info.FullName) }).Normalize(duration);
+        cues = cues with { Intro = ReadSidecarIntro(info.FullName) };
 
+        // Markers stored in the file by this or another station win over the automatic ones.
+        var inFile = FileMarkers.Read(info.FullName);
+        if (inFile is not null) cues = inFile.ToCues(cues);
+        cues = cues.Normalize(duration);
+
+        // The course of the track, the estimated markers and the beat.
+        byte[]? energy = peaks is null ? null : TrackProfile.Energy(peaks);
+        var (estIntro, estOutro) = energy is null ? (null, null) : TrackProfile.Markers(energy);
+        double? bpm = inFile?.Bpm, firstBeat = inFile?.FirstBeat;
+        if (bpm is null && kind == MediaKind.Song && peaks is not null && Beat(info.FullName) is { } beat) { bpm = beat.Bpm; firstBeat = beat.FirstBeat; }
+        bpm ??= tags.Bpm;
+
+        // A new path may be a track the library knew before (moved, renamed, or its folder removed and added again).
+        if (isNew && energy is not null && Recognise(energy, duration) is { } knownId)
+        {
+            // A folder with its own category puts the track there; otherwise it keeps the category it had.
+            _db.Execute(fixedCategory ? "UPDATE media SET path = $p, category_id = $c WHERE id = $id" : "UPDATE media SET path = $p WHERE id = $id",
+                ("$p", info.FullName), ("$c", categoryId), ("$id", knownId));
+            _recognised++;
+            _log.LogInformation("Recognised {File} as a known track (id {Id}); its data is kept", info.Name, knownId);
+        }
+
+        long mediaId = 0;
         _db.Transaction((c, tx) =>
         {
             using var cmd = StationDb.Command(c, """
                 INSERT INTO media(path, kind, category_id, artist, title, album, size, modified, duration, lufs,
-                                  cue_in, intro, mix, cue_out, added, missing)
-                VALUES($path, $kind, $cat, $artist, $title, $album, $size, $mod, $dur, $lufs, $in, $intro, $mix, $out, $added, 0)
+                                  cue_in, intro, outro, mix, cue_out, hook_in, hook_out, cues_manual, added, missing,
+                                  genre, album_artist, bpm, first_beat, est_intro, est_outro, energy, measured, retired)
+                VALUES($path, $kind, $cat, $artist, $title, $album, $size, $mod, $dur, $lufs, $in, $intro, $outro, $mix, $out,
+                       $hi, $ho, $manual, $added, 0, $genre, $aa, $bpm, $fb, $ei, $eo, $energy, $measured, 0)
                 ON CONFLICT(path) DO UPDATE SET
                     kind = excluded.kind, artist = excluded.artist, title = excluded.title, album = excluded.album,
                     size = excluded.size, modified = excluded.modified, duration = excluded.duration, lufs = excluded.lufs,
-                    category_id = COALESCE(media.category_id, excluded.category_id), missing = 0,
+                    category_id = COALESCE(media.category_id, excluded.category_id), missing = 0, retired = 0,
+                    genre = excluded.genre, album_artist = excluded.album_artist,
+                    bpm = COALESCE(excluded.bpm, media.bpm), first_beat = COALESCE(excluded.first_beat, media.first_beat),
+                    est_intro = excluded.est_intro, est_outro = excluded.est_outro,
+                    energy = COALESCE(excluded.energy, media.energy), measured = MAX(media.measured, excluded.measured),
                     cue_in = CASE WHEN media.cues_manual = 1 THEN media.cue_in ELSE excluded.cue_in END,
                     intro = CASE WHEN media.cues_manual = 1 THEN media.intro ELSE excluded.intro END,
+                    outro = CASE WHEN media.cues_manual = 1 THEN media.outro ELSE excluded.outro END,
                     mix = CASE WHEN media.cues_manual = 1 THEN media.mix ELSE excluded.mix END,
-                    cue_out = CASE WHEN media.cues_manual = 1 THEN media.cue_out ELSE excluded.cue_out END;
+                    cue_out = CASE WHEN media.cues_manual = 1 THEN media.cue_out ELSE excluded.cue_out END,
+                    hook_in = CASE WHEN media.cues_manual = 1 THEN media.hook_in ELSE excluded.hook_in END,
+                    hook_out = CASE WHEN media.cues_manual = 1 THEN media.hook_out ELSE excluded.hook_out END,
+                    cues_manual = MAX(media.cues_manual, excluded.cues_manual);
                 SELECT id FROM media WHERE path = $path;
                 """,
-                ("$path", info.FullName), ("$kind", (int)kind), ("$cat", categoryId), ("$artist", artist), ("$title", title),
-                ("$album", album), ("$size", info.Length), ("$mod", info.LastWriteTimeUtc.Ticks), ("$dur", duration),
-                ("$lufs", lufs), ("$in", cues.CueIn), ("$intro", cues.Intro), ("$mix", cues.Mix), ("$out", cues.CueOut),
-                ("$added", StationDb.Iso(DateTime.Now)));
+                ("$path", info.FullName), ("$kind", (int)kind), ("$cat", categoryId), ("$artist", tags.Artist), ("$title", tags.Title),
+                ("$album", tags.Album), ("$size", info.Length), ("$mod", info.LastWriteTimeUtc.Ticks), ("$dur", duration),
+                ("$lufs", lufs), ("$in", cues.CueIn), ("$intro", cues.Intro), ("$outro", cues.Outro), ("$mix", cues.Mix), ("$out", cues.CueOut),
+                ("$hi", cues.HookIn), ("$ho", cues.HookOut), ("$manual", inFile?.Manual == true ? 1 : 0),
+                ("$added", StationDb.Iso(DateTime.Now)), ("$genre", tags.Genre), ("$aa", tags.AlbumArtist), ("$bpm", bpm), ("$fb", firstBeat),
+                ("$ei", estIntro), ("$eo", estOutro), ("$energy", energy), ("$measured", energy is null ? 0 : 1));
             cmd.Transaction = tx;
-            long id = (long)cmd.ExecuteScalar()!;
+            long id = mediaId = (long)cmd.ExecuteScalar()!;
             if (peaks is not null) StorePeaks(c, tx, id, peaks);
             var rights = ReadRights(info.FullName);
             if (rights.Isrc.Length + rights.Composer.Length + rights.Label.Length > 0 || rights.Year is not null)
                 RightsStore.FromTags(c, tx, id, rights.Isrc, rights.Composer, rights.Label, rights.Year);
         });
         if (keepCues) _log.LogInformation("Kept manual cue points of {File}", info.Name);
+        if (writeTags && energy is not null) WriteMarkers(mediaId);
+    }
+
+    /// <summary>The best earlier track (missing or of a removed folder) with the same course, or null.</summary>
+    private long? Recognise(byte[] energy, double duration)
+    {
+        var candidates = _db.Query("""
+            SELECT id, duration, energy FROM media
+            WHERE (missing = 1 OR retired = 1) AND energy IS NOT NULL AND ABS(duration - $d) <= 2
+            """, r => (Id: r.GetInt64(0), Duration: r.GetDouble(1), Energy: (byte[])r.GetValue(2)), ("$d", duration));
+        long? best = null; double bestDiff = TrackProfile.SameTrack;
+        foreach (var c in candidates)
+        {
+            if (TrackProfile.Difference(energy, duration, c.Energy, c.Duration) is double d && d < bestDiff) { bestDiff = d; best = c.Id; }
+        }
+        return best;
+    }
+
+    private BeatInfo? Beat(string path)
+    {
+        try { return BeatAnalyzer.Analyze(path); }
+        catch (Exception ex) when (ex is DllNotFoundException or EntryPointNotFoundException) { return null; }
+    }
+
+    /// <summary>
+    /// Measures what older items lack: the course of the track (from the stored waveform), the estimated markers and,
+    /// for songs, the beat. Runs after a scan, in the background of the scan lock.
+    /// </summary>
+    private void MeasureMissing(CancellationToken ct)
+    {
+        var todo = _db.Query("SELECT id, path, kind, bpm FROM media WHERE measured = 0 AND missing = 0 AND retired = 0",
+            r => (Id: r.GetInt64(0), Path: r.GetString(1), Kind: (MediaKind)r.GetInt64(2), Bpm: r.GetDoubleOrNull(3)));
+        int done = 0;
+        foreach (var t in todo)
+        {
+            ct.ThrowIfCancellationRequested();
+            Status = $"Beat en verloop meten {++done}/{todo.Count}: {Path.GetFileName(t.Path)}";
+            try
+            {
+                if (!File.Exists(t.Path)) continue;
+                var energy = TrackProfile.Energy(GetPeaks(t.Id));
+                var (intro, outro) = TrackProfile.Markers(energy);
+                double? bpm = t.Bpm, firstBeat = null;
+                if (bpm is null && t.Kind == MediaKind.Song && Beat(t.Path) is { } b) { bpm = b.Bpm; firstBeat = b.FirstBeat; }
+                _db.Execute("""
+                    UPDATE media SET energy = $e, est_intro = $i, est_outro = $o, bpm = COALESCE($b, bpm),
+                                     first_beat = COALESCE($fb, first_beat), measured = 1 WHERE id = $id
+                    """, ("$e", energy), ("$i", intro), ("$o", outro), ("$b", bpm), ("$fb", firstBeat), ("$id", t.Id));
+                if (FolderOf(t.Path) is { WriteTags: true }) WriteMarkers(t.Id);
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException) { _log.LogWarning(ex, "Could not measure {File}", t.Path); }
+        }
+    }
+
+    /// <summary>Writes the markers and the beat of an item into its file, and remembers the new size and date.</summary>
+    public bool WriteMarkers(long id)
+    {
+        var d = GetDetails(id);
+        if (d is null || !File.Exists(d.Media.Path)) return false;
+        bool ok = FileMarkers.From(d.Media.Cues, d.CuesManual, d.Bpm, d.FirstBeat, d.Media.Lufs).Write(d.Media.Path);
+        if (!ok) { _log.LogWarning("Could not write markers into {File}", d.Media.Path); return false; }
+        var info = new FileInfo(d.Media.Path);
+        _db.Execute("UPDATE media SET size = $s, modified = $m WHERE id = $id", ("$s", info.Length), ("$m", info.LastWriteTimeUtc.Ticks), ("$id", id));
+        return true;
     }
 
     /// <summary>
@@ -325,7 +554,7 @@ public sealed class MediaLibrary
                     bool isNew = !known.TryGetValue(info.FullName, out var k);
                     if (isNew || k.Size != info.Length || k.Modified != info.LastWriteTimeUtc.Ticks)
                     {
-                        Import(info, kind, categoryId, keepCues: !isNew && k.Manual);
+                        Import(info, kind, categoryId, keepCues: !isNew && k.Manual, isNew);
                         if (isNew) added++; else updated++;
                     }
                     // The database is the catalogue: its values win, empty fields keep what the tags said.
@@ -386,7 +615,7 @@ public sealed class MediaLibrary
     {
         _categories = _db.Query("SELECT id, name, kind, color FROM categories ORDER BY kind, name",
             r => new Category(r.GetInt64(0), r.GetString(1), (MediaKind)r.GetInt64(2), r.GetString(3)));
-        _all = _db.Query(SelectMedia + " ORDER BY m.artist, m.title", MapDetails);
+        _all = _db.Query(SelectMedia + " WHERE m.retired = 0 ORDER BY m.artist, m.title", MapDetails);
         var now = DateTime.Now;
         var playable = _all.Where(d => d.IsPlayable(now)).Select(d => d.Media).ToList();
         Songs = playable.Where(m => m.Kind == MediaKind.Song).ToList();
@@ -423,13 +652,13 @@ public sealed class MediaLibrary
     {
         var info = new FileInfo(path);
         var analysis = AudioAnalyzer.Analyze(info.FullName, _options.Mix);
-        var (artist, title, _) = ReadTags(info.FullName);
+        var tags = ReadTags(info.FullName);
         return new MediaItem
         {
             Path = info.FullName,
             Kind = kind,
-            Artist = artist,
-            Title = title,
+            Artist = tags.Artist,
+            Title = tags.Title,
             Duration = analysis.Duration,
             Lufs = analysis.Lufs,
             Cues = new CueSet { CueIn = analysis.Cues.CueIn, Mix = analysis.Cues.MixPoint, CueOut = analysis.Cues.CueOut }
@@ -451,6 +680,7 @@ public sealed class MediaLibrary
             """,
             ("$in", c.CueIn), ("$fl", c.FullLevel), ("$i1", c.Intro), ("$i2", c.Intro2), ("$ou", c.Outro), ("$fo", c.FadeOut),
             ("$mix", c.Mix), ("$out", c.CueOut), ("$hi", c.HookIn), ("$ho", c.HookOut), ("$id", id));
+        if (FolderOf(d.Media.Path) is { WriteTags: true }) WriteMarkers(id);
         Reload();
         Changed?.Invoke();
         return Get(id);
@@ -469,6 +699,7 @@ public sealed class MediaLibrary
             UPDATE media SET cue_in=$in, full_level=NULL, intro=$i1, intro2=NULL, outro=NULL, fade_out=NULL, mix=$mix,
                              cue_out=$out, hook_in=NULL, hook_out=NULL, cues_manual=0 WHERE id=$id
             """, ("$in", c.CueIn), ("$i1", c.Intro), ("$mix", c.Mix), ("$out", c.CueOut), ("$id", id));
+        if (FolderOf(d.Media.Path) is { WriteTags: true }) WriteMarkers(id);
         Reload();
         Changed?.Invoke();
         return Get(id);
@@ -549,7 +780,7 @@ public sealed class MediaLibrary
         SELECT m.id, m.path, m.kind, m.category_id, COALESCE(c.name, ''), m.artist, m.title, m.duration, m.lufs,
                m.cue_in, m.full_level, m.intro, m.intro2, m.outro, m.fade_out, m.mix, m.cue_out, m.hook_in, m.hook_out,
                m.album, m.enabled, m.cues_manual, m.valid_from, m.valid_until, m.play_count, m.last_played, m.missing,
-               r.year, m.added
+               r.year, m.added, m.genre, m.bpm, m.first_beat, m.est_intro, m.est_outro
         FROM media m LEFT JOIN categories c ON c.id = m.category_id LEFT JOIN media_rights r ON r.media_id = m.id
         """;
 
@@ -576,18 +807,26 @@ public sealed class MediaLibrary
         return new MediaDetails(media, r.GetString(19), r.GetInt64(20) != 0, r.GetInt64(21) != 0,
             StationDb.ParseIso(r.GetStringOrNull(22)), StationDb.ParseIso(r.GetStringOrNull(23)), (int)r.GetInt64(24),
             StationDb.ParseIso(r.GetStringOrNull(25)), r.GetInt64(26) != 0,
-            r.GetInt64OrNull(27) is long y and > 0 ? (int)y : null, StationDb.ParseIso(r.GetStringOrNull(28)));
+            r.GetInt64OrNull(27) is long y and > 0 ? (int)y : null, StationDb.ParseIso(r.GetStringOrNull(28)),
+            r.GetString(29), r.GetDoubleOrNull(30), r.GetDoubleOrNull(31), r.GetDoubleOrNull(32), r.GetDoubleOrNull(33));
     }
 
-    private static (string Artist, string Title, string Album) ReadTags(string path)
+    private sealed record Tags(string Artist, string Title, string Album, string Genre, string AlbumArtist, double? Bpm);
+
+    private static Tags ReadTags(string path)
     {
-        string artist = "", title = "", album = "";
+        string artist = "", title = "", album = "", genre = "", albumArtist = "";
+        double? bpm = null;
         try
         {
             using var tagFile = TagLib.File.Create(path);
-            artist = tagFile.Tag.FirstPerformer ?? tagFile.Tag.FirstAlbumArtist ?? "";
-            title = tagFile.Tag.Title ?? "";
-            album = tagFile.Tag.Album ?? "";
+            var t = tagFile.Tag;
+            artist = t.FirstPerformer ?? t.FirstAlbumArtist ?? "";
+            title = t.Title ?? "";
+            album = t.Album ?? "";
+            genre = t.FirstGenre ?? "";
+            albumArtist = t.FirstAlbumArtist ?? "";
+            if (t.BeatsPerMinute is > 0 and < 300) bpm = t.BeatsPerMinute;
         }
         catch (Exception) { /* untagged or unsupported: fall back to the file name */ }
 
@@ -598,7 +837,7 @@ public sealed class MediaLibrary
             if (dash > 0 && string.IsNullOrWhiteSpace(artist)) { artist = name[..dash].Trim(); title = name[(dash + 3)..].Trim(); }
             else title = name;
         }
-        return (artist.Trim(), title.Trim(), album.Trim());
+        return new Tags(artist.Trim(), title.Trim(), album.Trim(), genre.Trim(), albumArtist.Trim(), bpm);
     }
 
     /// <summary>Reads the rights tags of one file and stores them (an empty record marks "looked, nothing there").</summary>

@@ -120,7 +120,7 @@ Vragen bij stap 3:
 |---|---|---|
 | ⬜ | Luistertest van wat er staat: tempo, sync, loops, overnemen; bijstellen van vertraging en overgang | overnemen is onhoorbaar; een loop van 4 beats loopt strak |
 | ⬜ | Twee doorlopende golfvormen boven elkaar met beatstrepen | beats van twee decks zijn op het oog gelijk te leggen |
-| ⬜ | Toonsoort meten; BPM, toonsoort en ReplayGain al bij het inlezen, zichtbaar in de bibliotheek | bibliotheek sorteert op BPM en toonsoort |
+| 🟡 | Toonsoort meten; BPM, toonsoort en ReplayGain al bij het inlezen, zichtbaar in de bibliotheek BPM en beatgrid worden nu bij het inlezen gemeten en zijn zichtbaar en doorzoekbaar (`bpm:120-128`); toonsoort en ReplayGain nog open. | bibliotheek sorteert op BPM en toonsoort |
 | ⬜ | Quantize, loop-roll, cue-mix op de koptelefoon, begrenzer op de DJ-uitgang | — |
 | ⬜ | Effecten per deck (echo, flanger, reverb) op de beat | — |
 | ⬜ | Sampler: cartwall als pads in de DJ-werkruimte | — |
@@ -172,8 +172,8 @@ Vragen bij stap 6:
 
 | Status | Werk |
 |---|---|
-| ⬜ | Meer dan twee bibliotheekmappen, automatisch opnieuw inlezen, vervangende locaties |
-| ⬜ | Tags lezen en terugschrijven, hoezen |
+| 🟡 | Meer dan twee bibliotheekmappen, automatisch opnieuw inlezen, vervangende locaties — Zelf mappen en shares toevoegen, bewaken en verwijderen is klaar (zie hieronder); vervangende locaties nog open. |
+| 🟡 | Tags lezen en terugschrijven, hoezen — Markers, beatgrid en BPM gaan per map optioneel het bestand in (ID3v2 TXXX "REA-RADIO-DJ" of Vorbis-commentaar REA_RADIO_DJ, plus de gewone BPM-tag) en worden bij het inlezen teruggelezen; overige tags terugschrijven en hoezen nog open. |
 | ⬜ | Overgangen en mixpunten per soort item en per nummer |
 | ⬜ | Centrale bibliotheek voor meerdere studio's |
 | 🟡 | Rapportage auteursrechten in een eigen indeling (CSV en PDF); er is geen voorgeschreven sjabloon |
@@ -222,10 +222,15 @@ Daar willen we beter in zijn. We nemen geen namen, schermen, teksten of bestands
 | ⬜ | **Snelle bediening:** rechtsklikmenu met alle acties; sneltoetsen (Enter = volgende in de log, spatie = voorluisteren, Ctrl+Enter = achteraan); wat dubbelklikken doet is instelbaar | alles kan zonder muis |
 | ⬜ | **Voorluisteren in de lijst:** een kleine afspeelknop per regel op de PFL, en klikken in de mini-golfvorm springt naar dat punt | een refrein beluisteren zonder het nummer te laden |
 | ✅ | **Mappen bewaken:** nieuwe, gewijzigde en verwijderde bestanden worden vanzelf verwerkt, zonder knop; daarnaast elke nacht een controle; geen verschil meer tussen "herladen" en "opnieuw inlezen" Klaar: 4 s na de laatste wijziging wordt alles verwerkt; een bestand dat nog gekopieerd wordt komt erbij zodra het klaar is; elke nacht om 4 uur een volledige controle (instelbaar). Getest: verwijderd bestand na 4,6 s gemarkeerd als ontbrekend. | een nieuw bestand in de map staat zonder klikken in de bibliotheek |
-| ⬜ | **Verplaatste bestanden terugvinden:** een ontbrekend bestand wordt gezocht op naam, grootte en duur in de bewaakte mappen; cues, categorie en geschiedenis blijven behouden | een hernoemd of verplaatst nummer houdt zijn cues |
+| ✅ | **Verplaatste bestanden terugvinden:** een ontbrekend bestand wordt gezocht op naam, grootte en duur in de bewaakte mappen; cues, categorie en geschiedenis blijven behouden Klaar via het herkenningspatroon: het luidheidsverloop per seconde moet in lengte, vorm (correlatie ≥ 0,9) en niveau overeenkomen; een vlak verloop wordt nooit herkend. Getest: een hernoemde mp3 in een andere map kreeg zijn id, cues en geschiedenis terug. | een hernoemd of verplaatst nummer houdt zijn cues |
 | ⬜ | **Wijzigingen gaan nooit verloren:** alles wordt direct opgeslagen; met "ongedaan maken" zet je de laatste wijziging terug | een verkeerde categoriewijziging is met één klik terug |
 | ⬜ | **Kwaliteitscontrole bij het inlezen:** te zacht of te hard, clipping, lange stilte aan het begin of eind, lage bitrate, dubbele nummers; een lijst "aandacht nodig" | een dubbel nummer en een stil begin worden gemeld |
-| ⬜ | **Meer tagvelden:** jaar, genre, taal, energie, stemming, waardering, ISRC, componist en uitgever (ook voor de rapportage); zie ook "Tags lezen en terugschrijven, hoezen" | de velden staan in het detailpaneel en zijn doorzoekbaar |
+| 🟡 | **Meer tagvelden:** jaar, genre, taal, energie, stemming, waardering, ISRC, componist en uitgever (ook voor de rapportage); zie ook "Tags lezen en terugschrijven, hoezen" Genre en albumartiest worden nu ook gelezen (genre: doorzoekbaar); jaar, ISRC, componist en uitgever waren er al; taal, energie, stemming en waardering nog open. | de velden staan in het detailpaneel en zijn doorzoekbaar |
+| ✅ | **Zelf mappen en shares kiezen:** in de Bibliotheek onder "Mappen en shares" een map op deze pc, een andere schijf of een share (\\server\muziek) toevoegen met "Bladeren…" of een pad; per map muziek of jingles, een vaste categorie of submappen als categorie, bewaken aan/uit, aan/uit. Overlappende of onbereikbare mappen worden geweigerd met een duidelijke melding. Een share die later offline is, laat zijn nummers niet "ontbreken" | een share toevoegen, inlezen en weer verwijderen |
+| ✅ | **Alle metadata overnemen:** artiest, titel, album, albumartiest, genre, jaar, ISRC, componist, uitgever en een BPM-tag uit het bestand | de velden staan in de database |
+| ✅ | **Beat en verloop meten bij het inlezen:** BPM en beatgrid (BASS_FX), het luidheidsverloop per seconde, en geschatte intro- en outromarkers (waar het nummer op niveau komt en waar het einde begint); oudere nummers worden na een scan alsnog gemeten | BPM en markers bij elk nummer; getest met echte mp3's (bijv. 127,95 en 120,05 BPM) |
+| ✅ | **Bewaren in de database of in het bestand:** standaard alles in de database; per map kan "Markers in het bestand" aan, dan gaan cues, beatgrid en BPM ook in de tags, zodat ze met het bestand meegaan naar een andere pc of station | een andere bibliotheek leest de markers uit het bestand terug |
+| ✅ | **Verwijderen zonder verlies:** een verwijderde map haalt de nummers uit beeld, maar alle gegevens (cues, geschiedenis, beat, rechten) blijven bewaard; komt een nummer terug, in dezelfde of een andere map en ook onder een andere naam, dan wordt het herkend aan zijn eigen verloop | verwijderen en terugzetten verliest niets |
 | ⬜ | **Snel bij grote bibliotheken:** zoeken blijft onder 100 ms bij 100.000 nummers; de lijst laadt alleen wat in beeld staat | gemeten met een testbibliotheek van 100.000 nummers |
 
 Volgorde:

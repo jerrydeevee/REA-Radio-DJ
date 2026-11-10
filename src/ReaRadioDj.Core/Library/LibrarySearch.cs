@@ -17,7 +17,8 @@ public static class LibrarySearch
         ("adele hello", "woorden uit artiest, titel, album of categorie; accenten en kleine tikfouten mogen"),
         ("\"night fever\"", "precies deze woorden achter elkaar"),
         ("-live", "zonder dit woord"),
-        ("artiest:abba", "alleen in de artiest (ook titel:, album:, cat:)"),
+        ("artiest:abba", "alleen in de artiest (ook titel:, album:, cat:, genre:)"),
+        ("bpm:120-128  bpm:>140", "tempo (gemeten bij het inlezen)"),
         ("jaar:1985  jaar:198  jaar:1980-1989  jaar:>2000", "jaar, decennium of bereik"),
         ("duur:<3:30  duur:3:00-4:00", "lengte van het nummer"),
         ("gespeeld:0  gespeeld:>20", "aantal keer gespeeld"),
@@ -122,6 +123,11 @@ public static class LibrarySearch
             case "titel" or "title": return (d, _, _) => Normalize(d.Media.Title).Contains(v, StringComparison.Ordinal);
             case "album": return (d, _, _) => Normalize(d.Album).Contains(v, StringComparison.Ordinal);
             case "cat" or "categorie" or "category": return (d, _, _) => Normalize(d.Media.Category).Contains(v, StringComparison.Ordinal);
+            case "genre": return (d, _, _) => Normalize(d.Genre).Contains(v, StringComparison.Ordinal);
+            case "bpm" or "tempo":
+                if (Range(value, s => double.TryParse(s.Replace(',', '.'), NumberStyles.Float, CultureInfo.InvariantCulture, out var b) ? b : null) is not { } br) return null;
+                var (bmin, bmax) = br;
+                return (d, _, _) => d.Bpm is double x && x >= bmin - 0.5 && x <= bmax + 0.5;
             case "jaar" or "year":
                 if (Years(value) is not { } yr) return null;
                 var (from, to) = yr;
@@ -206,7 +212,7 @@ public static class LibrarySearch
     private static Field[] Fields(MediaDetails d) =>
     [
         Make(d.Media.Artist, 3), Make(d.Media.Title, 3), Make(d.Album, 2), Make(d.Media.Category, 1),
-        Make(d.Year?.ToString(CultureInfo.InvariantCulture) ?? "", 1),
+        Make(d.Year?.ToString(CultureInfo.InvariantCulture) ?? "", 1), Make(d.Genre, 1),
     ];
 
     private static Field Make(string text, int weight)

@@ -63,6 +63,35 @@ public sealed partial class LibraryTool : StudioTool
     [ObservableProperty] private string _newCategory = "";
     [ObservableProperty] private bool _newCategoryIsJingle;
 
+    // ---- folders and shares
+    public ObservableCollection<LibraryFolderVm> Folders { get; } = [];
+    [ObservableProperty] private string _newFolderPath = "";
+    [ObservableProperty] private bool _newFolderIsJingle;
+    [ObservableProperty] private string _newFolderCategory = "";
+    [ObservableProperty] private bool _newFolderWriteTags;
+    [ObservableProperty] private string _folderStatus = "";
+
+    public async Task LoadFoldersAsync()
+    {
+        var list = await Hub.Client.GetAsync<List<LibraryFolderDto>>("/api/library/folders");
+        if (list is null) return;
+        Folders.Clear();
+        foreach (var f in list) Folders.Add(new LibraryFolderVm(this, f));
+    }
+
+    [RelayCommand]
+    private async Task AddFolder()
+    {
+        if (string.IsNullOrWhiteSpace(NewFolderPath)) { FolderStatus = "Kies eerst een map, of typ een pad zoals \\\\server\\muziek."; return; }
+        FolderStatus = "Toevoegen…";
+        var (f, error) = await Hub.Client.SendWithErrorAsync<LibraryFolderDto>(HttpMethod.Post, "/api/library/folders",
+            new LibraryFolderRequest(NewFolderPath.Trim(), NewFolderIsJingle ? "jingle" : "song", NewFolderCategory.Trim(), true, NewFolderWriteTags));
+        if (f is null) { FolderStatus = error ?? "Toevoegen mislukt."; return; }
+        FolderStatus = $"{f.Path} toegevoegd. De bestanden worden nu ingelezen en gemeten; bekende nummers worden herkend.";
+        NewFolderPath = ""; NewFolderCategory = "";
+        await LoadFoldersAsync();
+    }
+
     partial void OnQueryChanged(string value)
     {
         ShowHelp = value.Trim() == "?";
@@ -123,9 +152,10 @@ public sealed partial class LibraryTool : StudioTool
         Chips.Add(new FilterChip(this, "Aandacht nodig", "is:geblokkeerd", "Mag nu niet: rotatie, verlopen, uitgezet of bestand weg"));
         Chips.Add(new FilterChip(this, "Ontbreekt", "is:ontbreekt", "Het bestand staat niet meer in de map"));
         Decade = Decades[0];
-        Hub.LibraryChanged += () => { FillCategories(); Refresh(); };
+        Hub.LibraryChanged += () => { FillCategories(); Refresh(); _ = LoadFoldersAsync(); };
         FillCategories();
         Refresh();
+        _ = LoadFoldersAsync();
     }
 
     protected override void OnState(StateDto s)
@@ -133,7 +163,8 @@ public sealed partial class LibraryTool : StudioTool
         Status = $"{s.Library.Songs} nummers · {s.Library.Jingles} jingles · {s.Library.Status}";
         // The engine watches the folders; when a scan finished or another song started, the list (and its "may play now") is fresh again.
         string key = $"{s.Library.Songs}/{s.Library.Jingles}/{s.Library.Status}";
-        bool scanning = s.Library.Status.StartsWith("Analyseren", StringComparison.Ordinal) || s.Library.Status.StartsWith("Inlezen", StringComparison.Ordinal);
+        bool scanning = s.Library.Status.StartsWith("Analyseren", StringComparison.Ordinal) || s.Library.Status.StartsWith("Inlezen", StringComparison.Ordinal)
+            || s.Library.Status.StartsWith("Beat", StringComparison.Ordinal);
         long? playing = s.Engine.Current?.Id;
         if (!scanning && key != _libraryKey && _libraryKey.Length > 0) _ = Hub.RefreshCategoriesAsync();
         else if (playing != _playingId && _playingId is not null && !ShowHelp) Refresh();

@@ -10,7 +10,7 @@ namespace ReaRadioDj.Core.Data;
 /// </summary>
 public sealed class StationDb
 {
-    public const int SchemaVersion = 12;
+    public const int SchemaVersion = 13;
     private readonly string _connectionString;
 
     public StationDb(string path)
@@ -108,7 +108,7 @@ public sealed class StationDb
         {
             cmd.Transaction = tx;
             // Each step brings the database one version further; a new database runs them all.
-            cmd.CommandText = (version < 1 ? SchemaV1 : "") + (version < 2 ? SchemaV2 : "") + (version < 3 ? SchemaV3 : "") + (version < 4 ? SchemaV4 : "") + (version < 5 ? SchemaV5 : "") + (version < 6 ? SchemaV6 : "") + (version < 7 ? SchemaV7 : "") + (version < 8 ? SchemaV8 : "") + (version < 9 ? SchemaV9 : "") + (version < 10 ? SchemaV10 : "") + (version < 11 ? SchemaV11 : "") + (version < 12 ? SchemaV12 : "") + $"PRAGMA user_version = {SchemaVersion};";
+            cmd.CommandText = (version < 1 ? SchemaV1 : "") + (version < 2 ? SchemaV2 : "") + (version < 3 ? SchemaV3 : "") + (version < 4 ? SchemaV4 : "") + (version < 5 ? SchemaV5 : "") + (version < 6 ? SchemaV6 : "") + (version < 7 ? SchemaV7 : "") + (version < 8 ? SchemaV8 : "") + (version < 9 ? SchemaV9 : "") + (version < 10 ? SchemaV10 : "") + (version < 11 ? SchemaV11 : "") + (version < 12 ? SchemaV12 : "") + (version < 13 ? SchemaV13 : "") + $"PRAGMA user_version = {SchemaVersion};";
             cmd.ExecuteNonQuery();
         }
         tx.Commit();
@@ -120,6 +120,36 @@ public sealed class StationDb
     /// </summary>
     /// <summary>A backup voice per voice profile, used when that voice fails.</summary>
     /// <summary>Hardware: MIDI, serial and Livewire devices, the commands their buttons start and the tallies they show.</summary>
+    /// <summary>
+    /// Library folders chosen by the operator (local or on a share), more tag fields, the measured beat, a loudness curve
+    /// per second (the "audio verloop", also the recognition pattern of a track) and estimated intro/outro markers.
+    /// Items of a removed folder are retired: hidden, but kept so a track found again later gets all its data back.
+    /// </summary>
+    private const string SchemaV13 = """
+        CREATE TABLE IF NOT EXISTS library_folders(
+            id INTEGER PRIMARY KEY,
+            path TEXT NOT NULL UNIQUE COLLATE NOCASE,
+            kind INTEGER NOT NULL DEFAULT 0,
+            category TEXT NOT NULL DEFAULT '',
+            watch INTEGER NOT NULL DEFAULT 1,
+            write_tags INTEGER NOT NULL DEFAULT 0,
+            enabled INTEGER NOT NULL DEFAULT 1,
+            added TEXT NOT NULL,
+            last_scan TEXT,
+            last_count INTEGER NOT NULL DEFAULT 0,
+            last_error TEXT NOT NULL DEFAULT '');
+        ALTER TABLE media ADD COLUMN genre TEXT NOT NULL DEFAULT '';
+        ALTER TABLE media ADD COLUMN album_artist TEXT NOT NULL DEFAULT '';
+        ALTER TABLE media ADD COLUMN bpm REAL;
+        ALTER TABLE media ADD COLUMN first_beat REAL;
+        ALTER TABLE media ADD COLUMN est_intro REAL;
+        ALTER TABLE media ADD COLUMN est_outro REAL;
+        ALTER TABLE media ADD COLUMN energy BLOB;
+        ALTER TABLE media ADD COLUMN measured INTEGER NOT NULL DEFAULT 0;
+        ALTER TABLE media ADD COLUMN retired INTEGER NOT NULL DEFAULT 0;
+        CREATE INDEX IF NOT EXISTS media_duration ON media(duration);
+        """;
+
     private const string SchemaV12 = """
         CREATE TABLE IF NOT EXISTS hw_devices(
             id INTEGER PRIMARY KEY,

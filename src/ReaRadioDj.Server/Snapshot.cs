@@ -103,7 +103,7 @@ public static class Snapshot
 
     public static MediaDto Media(MediaDetails d, string? block = null) => new(d.Media.Id, d.Media.Path, Name(d.Media.Kind), d.Media.CategoryId,
         d.Media.Category, d.Media.Artist, d.Media.Title, d.Album, d.Media.Duration, d.Media.Lufs, Cues(d.Media.Cues), d.Enabled, d.CuesManual,
-        d.ValidFrom, d.ValidUntil, d.PlayCount, d.LastPlayed, d.Missing, d.Year, d.Added, block);
+        d.ValidFrom, d.ValidUntil, d.PlayCount, d.LastPlayed, d.Missing, d.Year, d.Added, block, d.Genre, d.Bpm, d.FirstBeat, d.EstIntro, d.EstOutro);
 
     public static CategoryDto Category(Category c) => new(c.Id, c.Name, Name(c.Kind), c.Color);
 

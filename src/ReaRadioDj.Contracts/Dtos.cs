@@ -92,7 +92,7 @@ public sealed record CueDto(double CueIn, double? FullLevel, double? Intro, doub
 public sealed record MediaDto(long Id, string Path, string Kind, long? CategoryId, string Category, string Artist, string Title,
     string Album, double Duration, double? Lufs, CueDto Cues, bool Enabled, bool CuesManual, DateTime? ValidFrom,
     DateTime? ValidUntil, int PlayCount, DateTime? LastPlayed, bool Missing, int? Year = null, DateTime? Added = null,
-    string? Block = null)
+    string? Block = null, string Genre = "", double? Bpm = null, double? FirstBeat = null, double? EstIntro = null, double? EstOutro = null)
 {
     /// <summary>True when the item may be scheduled now (<see cref="Block"/> says why not).</summary>
     public bool Allowed => Block is null;
@@ -101,6 +101,13 @@ public sealed record MediaDto(long Id, string Path, string Kind, long? CategoryI
 
 /// <summary>One line of the search help: an example and what it does.</summary>
 public sealed record SearchHelpDto(string Example, string Meaning);
+
+/// <summary>A folder of the library (Fixed = music or jingle folder from the settings). Files/Reachable/Error: last scan.</summary>
+public sealed record LibraryFolderDto(long Id, string Path, string Kind, string Category, bool Watch, bool WriteTags, bool Enabled,
+    bool Fixed, int? Files, bool? Reachable, string Error, DateTime? Scanned);
+
+public sealed record LibraryFolderRequest(string Path, string Kind = "song", string Category = "", bool Watch = true, bool WriteTags = false,
+    bool Enabled = true);
 
 public sealed record CategoryDto(long Id, string Name, string Kind, string Color);
 

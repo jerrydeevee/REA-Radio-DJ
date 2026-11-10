@@ -1,6 +1,7 @@
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
+using Avalonia.Platform.Storage;
 using ReaRadioDj.Contracts;
 using ReaRadioDj.Studio.ViewModels;
 
@@ -34,6 +35,13 @@ public partial class LibraryView : UserControl
         }, handledEventsToo: true);
         List.AddHandler(PointerReleasedEvent, (_, _) => { _pressed = null; _pressedItem = null; }, handledEventsToo: true);
         List.DoubleTapped += (_, _) => (DataContext as LibraryTool)?.PflCommand.Execute(null);
+        // Folder picker for a library folder (also network locations the Windows dialog offers).
+        BrowseFolder.Click += async (_, _) =>
+        {
+            if (DataContext is not LibraryTool t || TopLevel.GetTopLevel(this)?.StorageProvider is not { } sp) return;
+            var picked = await sp.OpenFolderPickerAsync(new Avalonia.Platform.Storage.FolderPickerOpenOptions { Title = "Map voor de bibliotheek", AllowMultiple = false });
+            if (picked.Count > 0 && picked[0].TryGetLocalPath() is { } path) t.NewFolderPath = path;
+        };
         // Esc empties the search box; arrow down jumps from the search box into the list.
         SearchBox.KeyDown += (_, e) =>
         {

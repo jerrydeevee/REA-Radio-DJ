@@ -57,6 +57,51 @@
       <Button Classes="small" Margin="0,0,4,4" Content="Overlay" Command="{Binding OverlayCommand}" ToolTip.Tip="Over de muziek heen (muziek dimt)" />
       <Button Classes="small" Margin="0,0,4,4" Content="Cues" Command="{Binding CuesCommand}" />
     </WrapPanel>
+    <Expander DockPanel.Dock="Bottom" Header="Mappen en shares" Margin="0,4,0,0" HorizontalAlignment="Stretch">
+      <StackPanel Spacing="6">
+        <TextBlock Classes="muted" TextWrapping="Wrap"
+                   Text="Kies zelf waar de bibliotheek leest: een map op deze pc, een andere schijf of een share (\\server\muziek). Nieuwe bestanden worden vanzelf ingelezen; tags, beat, verloop en markers worden gemeten en bewaard. Een map verwijderen bewaart de nummers met al hun gegevens: komt een nummer later terug, hier of elders, dan wordt het herkend." />
+        <ItemsControl ItemsSource="{Binding Folders}">
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="vm:LibraryFolderVm">
+              <Border Classes="card" Padding="6" Margin="0,0,0,4">
+                <StackPanel Spacing="3">
+                  <DockPanel>
+                    <Button DockPanel.Dock="Right" Classes="small" Content="{Binding RemoveText}" Command="{Binding RemoveCommand}" IsVisible="{Binding Editable}"
+                            ToolTip.Tip="Haalt de map uit de bibliotheek; de nummers en hun gegevens blijven bewaard" />
+                    <TextBlock Text="{Binding Title}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" FontWeight="SemiBold" />
+                  </DockPanel>
+                  <TextBlock Classes="muted" Text="{Binding StateText}" />
+                  <TextBlock Text="Niet bereikbaar: de nummers van deze map blijven gewoon bewaard en komen terug zodra de map er weer is."
+                             Foreground="#F0B429" FontSize="11" TextWrapping="Wrap" IsVisible="{Binding Offline}" />
+                  <WrapPanel IsVisible="{Binding Editable}">
+                    <TextBlock Text="{Binding KindText, StringFormat='Soort: {0}'}" VerticalAlignment="Center" Margin="0,0,12,0" />
+                    <TextBox Text="{Binding Category}" Watermark="categorie (leeg = submappen)" Width="200" Margin="0,0,4,0" />
+                    <Button Classes="small" Content="Opslaan" Command="{Binding SaveCategoryCommand}" Margin="0,0,12,0" />
+                    <CheckBox Content="Bewaken" IsChecked="{Binding Watch}" Margin="0,0,12,0" ToolTip.Tip="Nieuwe en gewijzigde bestanden direct verwerken" />
+                    <CheckBox Content="Markers in het bestand" IsChecked="{Binding WriteTags}" Margin="0,0,12,0"
+                              ToolTip.Tip="Cues, beat en BPM ook in de tags van het audiobestand zetten, zodat ze met het bestand meegaan" />
+                    <CheckBox Content="Aan" IsChecked="{Binding Enabled}" />
+                  </WrapPanel>
+                </StackPanel>
+              </Border>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+        <TextBlock Classes="h" Text="Map toevoegen" />
+        <DockPanel>
+          <Button x:Name="BrowseFolder" DockPanel.Dock="Right" Classes="small" Content="Bladeren…" Margin="4,0,0,0" />
+          <TextBox Text="{Binding NewFolderPath}" Watermark="D:\Muziek of \\server\muziek" />
+        </DockPanel>
+        <WrapPanel>
+          <CheckBox Content="Jingles" IsChecked="{Binding NewFolderIsJingle}" Margin="0,0,12,0" />
+          <TextBox Text="{Binding NewFolderCategory}" Watermark="vaste categorie (leeg = submappen)" Width="230" Margin="0,0,12,0" />
+          <CheckBox Content="Markers in het bestand" IsChecked="{Binding NewFolderWriteTags}" Margin="0,0,12,0" />
+          <Button Classes="small" Content="Toevoegen" Command="{Binding AddFolderCommand}" />
+        </WrapPanel>
+        <TextBlock Classes="muted" Text="{Binding FolderStatus}" TextWrapping="Wrap" />
+      </StackPanel>
+    </Expander>
     <Expander DockPanel.Dock="Bottom" Header="Categorieën en item" Margin="0,4,0,0" HorizontalAlignment="Stretch">
       <StackPanel Spacing="6">
         <DockPanel>
@@ -82,7 +127,7 @@
             <StackPanel Grid.Column="1" Margin="6,0">
               <TextBlock Text="{Binding Title}" TextTrimming="CharacterEllipsis" />
               <TextBlock Classes="muted" TextTrimming="CharacterEllipsis">
-                <Run Text="{Binding Artist}" /><Run Text=" · " /><Run Text="{Binding Category}" /><Run Text="{Binding Year, StringFormat=' · {0}'}" />
+                <Run Text="{Binding Artist}" /><Run Text=" · " /><Run Text="{Binding Category}" /><Run Text="{Binding Year, StringFormat=' · {0}', TargetNullValue=''}" /><Run Text="{Binding Bpm, StringFormat=' · {0:0} BPM', TargetNullValue=''}" />
               </TextBlock>
               <TextBlock Text="{Binding Block, StringFormat='⚠ {0}'}" Foreground="#F0B429" FontSize="11" TextTrimming="CharacterEllipsis"
                          IsVisible="{Binding !Allowed}" ToolTip.Tip="Waarom dit nu niet ingepland wordt" />

@@ -59,6 +59,26 @@ public static class StudioApi
                 .Select(d => Media(d, check.Reason(d)));
         });
         api.MapGet("/library/help", () => LibrarySearch.Help.Select(h => new SearchHelpDto(h.Example, h.Meaning)));
+
+        // Library folders: local or on a share; removing one keeps its items (hidden) for when the tracks turn up again.
+        static LibraryFolderDto Folder(MediaLibrary library, LibraryFolder f)
+        {
+            var st = library.StateOf(f);
+            return new LibraryFolderDto(f.Id, f.Path, Name(f.Kind), f.Category, f.Watch, f.WriteTags, f.Enabled, f.Fixed,
+                st?.Files, st?.Reachable, st?.Error ?? "", st?.Scanned);
+        }
+        api.MapGet("/library/folders", (MediaLibrary library) => library.Folders().Select(f => Folder(library, f)));
+        api.MapPost("/library/folders", (LibraryFolderRequest r, MediaLibrary library) =>
+        {
+            var (f, error) = library.AddFolder(r.Path ?? "", Parse(r.Kind ?? "song", MediaKind.Song), r.Category ?? "", r.Watch, r.WriteTags);
+            return f is null ? Results.BadRequest(error) : Results.Ok(Folder(library, f));
+        });
+        api.MapPut("/library/folders/{id:long}", (long id, LibraryFolderRequest r, MediaLibrary library) =>
+            library.UpdateFolder(id, r.Category ?? "", r.Watch, r.WriteTags, r.Enabled) is { } f ? Results.Ok(Folder(library, f)) : Results.NotFound());
+        api.MapDelete("/library/folders/{id:long}", (long id, MediaLibrary library) =>
+            library.RemoveFolder(id) is int kept and >= 0 ? Results.Ok(new { kept }) : Results.NotFound());
+        api.MapPost("/media/{id:long}/markers/write", (long id, MediaLibrary library) =>
+            library.WriteMarkers(id) ? Results.Ok() : Results.BadRequest("Schrijven in het bestand lukte niet (formaat of alleen-lezen)."));
         api.MapPost("/library/scan", (MediaLibrary library) => { _ = library.ScanAsync(); return Results.Accepted(); });
         api.MapGet("/media/{id:long}", (long id, MediaLibrary library) =>
             library.GetDetails(id) is { } d ? Results.Ok(Media(d)) : Results.NotFound());

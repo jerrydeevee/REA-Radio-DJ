@@ -95,6 +95,23 @@ public sealed class EngineClient : IDisposable
         catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or JsonException) { Error?.Invoke($"{path}: {ex.Message}"); return default; }
     }
 
+    /// <summary>Like <see cref="SendForAsync{T}"/>, but hands back the engine's own error text so a window can show it in place.</summary>
+    public async Task<(T? Value, string? Error)> SendWithErrorAsync<T>(HttpMethod method, string path, object? body)
+    {
+        try
+        {
+            using var request = new HttpRequestMessage(method, path) { Content = body is null ? null : JsonContent.Create(body, body.GetType(), options: Wire.Json) };
+            using var response = await _http.SendAsync(request);
+            if (!response.IsSuccessStatusCode)
+            {
+                var text = (await response.Content.ReadAsStringAsync()).Trim().Trim('"');
+                return (default, text.Length > 0 ? text : $"Niet gelukt ({(int)response.StatusCode}).");
+            }
+            return (await response.Content.ReadFromJsonAsync<T>(Wire.Json), null);
+        }
+        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or JsonException) { return (default, ex.Message); }
+    }
+
     /// <summary>Runs a text command on the engine (the same commands as TCP, OSC and the planner).</summary>
     public async Task<CommandResultDto> RunCommandAsync(string text)
     {
