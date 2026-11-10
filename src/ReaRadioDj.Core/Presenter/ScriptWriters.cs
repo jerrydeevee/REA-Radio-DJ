@@ -176,7 +176,8 @@ public sealed class OpenAiScriptWriter(HttpClient http, PresenterOptions options
 
             Regels:
             - Hoogstens {maxWords} woorden, één tot drie korte zinnen.
-            - Noem titels en artiesten precies zoals ze gegeven worden; vertaal of verbuig ze niet.
+            - Noem titels en artiesten precies zoals ze gegeven worden; vertaal of verbuig ze niet. Wat tussen [ ] staat
+              zegt welk deel de titel en welk deel de artiest is; dat zeg je niet hardop.
             - Verzin geen feiten over artiesten, nummers, het weer of het nieuws.
             - Geen aanhalingstekens, opsommingen, regieaanwijzingen, emoji of Engelse zinnen.
             - Wissel af: begin niet altijd met "Dat was" of "Hier is".
@@ -185,7 +186,7 @@ public sealed class OpenAiScriptWriter(HttpClient http, PresenterOptions options
             Dat was Zomeravond van De Kustband. Het is kwart over vier, je luistert naar {c.StationName}. Nu Lisa Mol met Nooit Meer Alleen!
             Op {c.StationName} is het tien voor half negen. Na Regen in Mei van Tom Brink zet ik er eentje op om lekker mee te zingen: Licht Aan van De Fietsers.
             """;
-        string previous = TemplateScriptWriter.Describe(c.Previous), next = TemplateScriptWriter.Describe(c.Next);
+        string previous = Song(c.Previous), next = Song(c.Next);
         var user = $"""
             Het is {TemplateScriptWriter.SpokenTime(c.Time)} ({c.Time:HH:mm}).
             Net gedraaid: {(previous.Length > 0 ? previous : "(niets)")}.
@@ -194,6 +195,17 @@ public sealed class OpenAiScriptWriter(HttpClient http, PresenterOptions options
             Schrijf de presentatie.
             """;
         return (system, user);
+    }
+
+    /// <summary>
+    /// A song for the prompt, with title and artist spelled out separately: "Riva (Restart The Game)" by Klingande was
+    /// otherwise read as artist Riva with the song Restart The Game.
+    /// </summary>
+    internal static string Song(MediaItem? m)
+    {
+        var said = TemplateScriptWriter.Describe(m);
+        if (m is null || said.Length == 0) return said;
+        return string.IsNullOrWhiteSpace(m.Artist) ? $"{said} [titel: {m.Title}]" : $"{said} [titel: {m.Title} | artiest: {m.Artist}]";
     }
 
     /// <summary>
@@ -218,11 +230,12 @@ public sealed class OpenAiScriptWriter(HttpClient http, PresenterOptions options
             Regels:
             - Hoogstens {maxWords} woorden, twee tot vier korte zinnen.
             - Maak er iets eigens van: een observatie, een herkenbaar moment of een vraag aan de luisteraars.
-            - Eindig met een natuurlijke overgang naar het volgende nummer; noem titel en artiest precies zoals gegeven.
+            - Eindig met een natuurlijke overgang naar het volgende nummer; noem titel en artiest precies zoals gegeven
+              (wat tussen [ ] staat zegt welk deel de titel en welk de artiest is; dat zeg je niet hardop).
             - Geen aanhalingstekens, opsommingen, regieaanwijzingen, emoji of Engelse zinnen.
             - Begin niet met "Dat was" en niet met het onderwerp als kop.
             """;
-        string previous = TemplateScriptWriter.Describe(c.Previous), next = TemplateScriptWriter.Describe(c.Next);
+        string previous = Song(c.Previous), next = Song(c.Next);
         var user = $"""
             Het is {TemplateScriptWriter.SpokenTime(c.Time)} op een {c.Time.ToString("dddd", new System.Globalization.CultureInfo("nl-NL"))}.
             Net gedraaid: {(previous.Length > 0 ? previous : "(niets)")}.

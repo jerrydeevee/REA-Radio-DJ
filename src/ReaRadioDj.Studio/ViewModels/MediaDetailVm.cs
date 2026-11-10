@@ -49,6 +49,12 @@ public sealed partial class MediaDetailVm : ObservableObject
     public bool HasIssues => Media.HasIssues;
     [ObservableProperty] private string _saveText = "";
     [ObservableProperty] private ushort[]? _peaks;
+    [ObservableProperty] private Avalonia.Media.Imaging.Bitmap? _cover;
+    /// <summary>Position on PFL while this item is pre-listened; -1 otherwise.</summary>
+    [ObservableProperty] private double _playhead = -1;
+
+    /// <summary>A click in the waveform: pre-listen from there.</summary>
+    [RelayCommand] private Task ListenAt(double seconds) => StudioHub.Current.Listen(Id, seconds);
     [ObservableProperty] private IReadOnlyList<WaveMarker> _markers = [];
     public ObservableCollection<string> History { get; } = [];
     [ObservableProperty] private string _historyText = "";
@@ -103,6 +109,11 @@ public sealed partial class MediaDetailVm : ObservableObject
             History.Add($"{h.Started:ddd d-M HH:mm}" + (h.Played is double p ? $"  ({StudioHub.Time(p)})" : "") + (h.Source != "log" ? $"  {h.Source}" : ""));
         HistoryText = History.Count == 0 ? "Nog niet uitgezonden." : "";
 
+        if (await hub.Client.GetBytesQuietAsync($"/api/media/{Id}/cover") is { Length: > 0 } image)
+        {
+            try { Cover = Avalonia.Media.Imaging.Bitmap.DecodeToWidth(new MemoryStream(image), 168); }
+            catch (Exception) { Cover = null; }   // not an image Avalonia can read
+        }
         var peaks = await hub.Client.GetAsync<PeaksDto>($"/api/media/{Id}/peaks");
         if (peaks is not null)
         {

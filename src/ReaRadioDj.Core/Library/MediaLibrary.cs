@@ -665,6 +665,46 @@ public sealed class MediaLibrary
 
     public MediaItem? Get(long id) => GetDetails(id)?.Media;
 
+    private static readonly string[] CoverNames = ["cover", "folder", "front", "albumart", "album"];
+
+    /// <summary>
+    /// The cover of an item: the picture in the file (front cover first), otherwise cover.jpg, folder.jpg and the like
+    /// next to it. Null when there is none. Read when asked; nothing is stored.
+    /// </summary>
+    public (byte[] Data, string Mime)? Cover(long id)
+    {
+        if (Get(id) is not { } m || !File.Exists(m.Path)) return null;
+        try
+        {
+            using var f = TagLib.File.Create(m.Path);
+            var pictures = f.Tag.Pictures;
+            if (pictures is { Length: > 0 })
+            {
+                var p = pictures.FirstOrDefault(x => x.Type == TagLib.PictureType.FrontCover) ?? pictures[0];
+                if (p.Data.Count is > 0 and < 8_000_000)
+                    return (p.Data.Data, string.IsNullOrWhiteSpace(p.MimeType) || !p.MimeType.StartsWith("image/") ? "image/jpeg" : p.MimeType);
+            }
+        }
+        catch (Exception ex) when (ex is TagLib.CorruptFileException or TagLib.UnsupportedFormatException or IOException or UnauthorizedAccessException)
+        {
+            _log.LogDebug("No cover from tags of {File}: {Message}", m.Path, ex.Message);
+        }
+        try
+        {
+            var dir = Path.GetDirectoryName(m.Path);
+            if (dir is null) return null;
+            foreach (var name in CoverNames)
+                foreach (var ext in new[] { ".jpg", ".jpeg", ".png" })
+                {
+                    var file = Path.Combine(dir, name + ext);
+                    if (File.Exists(file) && new FileInfo(file).Length < 8_000_000)
+                        return (File.ReadAllBytes(file), ext == ".png" ? "image/png" : "image/jpeg");
+                }
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { _log.LogDebug("No cover file for {File}: {Message}", m.Path, ex.Message); }
+        return null;
+    }
+
     public MediaDetails? GetDetails(long id)
     {
         var d = _db.Query(SelectMedia + " WHERE m.id = $id", MapDetails, ("$id", id)).FirstOrDefault();

@@ -24,6 +24,9 @@ public sealed class WaveformView : Control
     public static readonly StyledProperty<bool> ShowCursorProperty = AvaloniaProperty.Register<WaveformView, bool>(nameof(ShowCursor), true);
     /// <summary>Player mode: markers cannot be dragged and a click raises <see cref="Clicked"/> (seek).</summary>
     public static readonly StyledProperty<bool> ReadOnlyMarkersProperty = AvaloniaProperty.Register<WaveformView, bool>(nameof(ReadOnlyMarkers));
+    /// <summary>Executed with the clicked position in seconds (read-only mode), next to <see cref="Clicked"/>.</summary>
+    public static readonly StyledProperty<System.Windows.Input.ICommand?> ClickCommandProperty =
+        AvaloniaProperty.Register<WaveformView, System.Windows.Input.ICommand?>(nameof(ClickCommand));
 
     static WaveformView()
     {
@@ -43,6 +46,7 @@ public sealed class WaveformView : Control
     public string EmptyText { get => GetValue(EmptyTextProperty); set => SetValue(EmptyTextProperty, value); }
     public bool ShowCursor { get => GetValue(ShowCursorProperty); set => SetValue(ShowCursorProperty, value); }
     public bool ReadOnlyMarkers { get => GetValue(ReadOnlyMarkersProperty); set => SetValue(ReadOnlyMarkersProperty, value); }
+    public System.Windows.Input.ICommand? ClickCommand { get => GetValue(ClickCommandProperty); set => SetValue(ClickCommandProperty, value); }
 
     /// <summary>Raised while and after a marker is dragged: key, new position in seconds.</summary>
     public event Action<string, double>? MarkerMoved;
@@ -151,7 +155,12 @@ public sealed class WaveformView : Control
         var x = e.GetPosition(this).X;
         if (ReadOnlyMarkers)
         {
-            if (Peaks is { Length: > 0 }) Clicked?.Invoke(Math.Clamp(Seconds(x), 0, Total));
+            if (Peaks is { Length: > 0 })
+            {
+                double at = Math.Clamp(Seconds(x), 0, Total);
+                Clicked?.Invoke(at);
+                if (ClickCommand?.CanExecute(at) == true) ClickCommand.Execute(at);
+            }
             e.Handled = true;
             return;
         }

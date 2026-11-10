@@ -349,6 +349,7 @@ public sealed partial class LibraryTool : StudioTool
     protected override void OnState(StateDto s)
     {
         Status = $"{s.Library.Songs} nummers · {s.Library.Jingles} jingles · {s.Library.Status}";
+        if (Detail is { } d) d.Playhead = s.Pfl.MediaId == d.Id && s.Pfl.State is "playing" or "paused" ? s.Pfl.Position : -1;
         // The engine watches the folders; when a scan finished or another song started, the list (and its "may play now") is fresh again.
         string key = $"{s.Library.Songs}/{s.Library.Jingles}/{s.Library.Status}";
         bool scanning = s.Library.Status.StartsWith("Analyseren", StringComparison.Ordinal) || s.Library.Status.StartsWith("Inlezen", StringComparison.Ordinal)
@@ -399,6 +400,14 @@ public sealed partial class LibraryTool : StudioTool
     [RelayCommand] private Task Next() => SelId is long id ? Hub.AddToLog(id, true) : Task.CompletedTask;
     [RelayCommand] private Task End() => _selection.Count > 1 ? BulkToLog() : SelId is long id ? Hub.AddToLog(id, false) : Task.CompletedTask;
     [RelayCommand] private Task Standby(string player) => SelId is long id ? Hub.LoadPlayer(player, id) : Task.CompletedTask;
+
+    /// <summary>The play button of a row: pre-listen on PFL, a second click stops.</summary>
+    [RelayCommand]
+    private Task PflRow(MediaDto? m)
+    {
+        if (m is null) return Task.CompletedTask;
+        return Hub.PflPlaying(m.Id) ? Hub.PlayerCommand("pfl", "stop") : Hub.Listen(m.Id);
+    }
 
     [RelayCommand]
     private async Task Pfl()

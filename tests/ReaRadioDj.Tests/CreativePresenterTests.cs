@@ -167,6 +167,16 @@ public class CreativePresenterTests
     }
 
     [Fact]
+    public void Prompt_spells_out_title_and_artist_for_titles_with_brackets()
+    {
+        var riva = new MediaItem { Path = "r", Kind = MediaKind.Song, Artist = "Klingande", Title = "Riva (Restart The Game)" };
+        Assert.Equal("Riva (Restart The Game) van Klingande [titel: Riva (Restart The Game) | artiest: Klingande]", OpenAiScriptWriter.Song(riva));
+        var (_, user) = OpenAiScriptWriter.Prompt(new PresenterOptions(), new BreakContext("Zender", "Sam", DateTime.Now, null, riva));
+        Assert.Contains("artiest: Klingande", user);
+        Assert.Equal("Hier is Riva van Klingande.", ScriptSanitizer.Clean("Hier is Riva van Klingande [titel: Riva | artiest: Klingande].", 50));
+    }
+
+    [Fact]
     public void Higgs_tags_differ_per_tone()
     {
         var tags = CreativeTones.Keys.Select(CreativeTones.HiggsTags).ToList();

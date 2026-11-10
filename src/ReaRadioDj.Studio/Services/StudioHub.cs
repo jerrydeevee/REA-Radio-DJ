@@ -98,6 +98,17 @@ public sealed partial class StudioHub : ObservableObject
     public Task<bool> PlayerCommand(string player, string action, double? seconds = null) =>
         Client.PostAsync($"/api/players/{player}/{action}", new { seconds });
 
+    /// <summary>True while this item plays on PFL (pre-listen).</summary>
+    public bool PflPlaying(long mediaId) => State?.Pfl is { } p && p.MediaId == mediaId && p.State == "playing";
+
+    /// <summary>Pre-listens an item on PFL, from a position when given; loads it only when PFL holds another item.</summary>
+    public async Task Listen(long mediaId, double? from = null)
+    {
+        if (State?.Pfl.MediaId != mediaId && !await LoadPlayer("pfl", mediaId)) return;
+        await PlayerCommand("pfl", "play");
+        if (from is double s) await PlayerCommand("pfl", "seek", s);
+    }
+
     public static string Time(double seconds)
     {
         if (!double.IsFinite(seconds)) return "-:--";

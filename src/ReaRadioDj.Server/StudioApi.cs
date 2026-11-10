@@ -122,6 +122,13 @@ public static class StudioApi
             Buffer.BlockCopy(peaks, 0, bytes, 0, bytes.Length);
             return Results.Ok(new PeaksDto(AnalysisResult.BlockMilliseconds, Convert.ToBase64String(bytes)));
         });
+        // The cover (from the file, or cover.jpg / folder.jpg next to it); 404 when there is none.
+        api.MapGet("/media/{id:long}/cover", (long id, MediaLibrary library, HttpContext http) =>
+        {
+            if (library.Cover(id) is not { } c) return Results.NotFound();
+            http.Response.Headers.CacheControl = "private, max-age=600";
+            return Results.File(c.Data, c.Mime);
+        });
         // The audio file itself, with range support (browser pre-listen and waveform scrubbing).
         api.MapGet("/media/{id:long}/audio", (long id, MediaLibrary library) =>
         {

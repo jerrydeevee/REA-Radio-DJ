@@ -150,6 +150,17 @@ public sealed class EngineClient : IDisposable
         catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or JsonException) { return (default, ex.Message); }
     }
 
+    /// <summary>Bytes, or null when the engine has none (404) or is not reachable; never reports an error.</summary>
+    public async Task<byte[]?> GetBytesQuietAsync(string path)
+    {
+        try
+        {
+            using var response = await _http.GetAsync(path);
+            return response.IsSuccessStatusCode ? await response.Content.ReadAsByteArrayAsync() : null;
+        }
+        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException) { return null; }
+    }
+
     public async Task<byte[]?> GetBytesAsync(string path)
     {
         try { return await _http.GetByteArrayAsync(path); }

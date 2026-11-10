@@ -179,11 +179,21 @@
         <ContentControl.ContentTemplate>
           <DataTemplate x:DataType="vm:MediaDetailVm">
             <StackPanel Spacing="6">
-              <TextBlock Classes="h" Text="{Binding Media.Title}" TextWrapping="Wrap" />
-              <TextBlock Text="{Binding Media.Artist}" TextWrapping="Wrap" />
-              <TextBlock Classes="muted" Text="{Binding Facts}" TextWrapping="Wrap" />
+              <DockPanel>
+                <Border DockPanel.Dock="Left" Width="84" Height="84" CornerRadius="4" ClipToBounds="True" Margin="0,0,10,0"
+                        IsVisible="{Binding Cover, Converter={x:Static ObjectConverters.IsNotNull}}">
+                  <Image Source="{Binding Cover}" Stretch="UniformToFill" />
+                </Border>
+                <StackPanel Spacing="2">
+                  <TextBlock Classes="h" Text="{Binding Media.Title}" TextWrapping="Wrap" />
+                  <TextBlock Text="{Binding Media.Artist}" TextWrapping="Wrap" />
+                  <TextBlock Classes="muted" Text="{Binding Facts}" TextWrapping="Wrap" />
+                </StackPanel>
+              </DockPanel>
               <ctl:WaveformView Height="70" Peaks="{Binding Peaks}" Markers="{Binding Markers}" ReadOnlyMarkers="True" ShowCursor="False"
-                                CueIn="{Binding Media.Cues.CueIn}" CueOut="{Binding Media.Cues.CueOut}" EmptyText="Golfvorm laden…" />
+                                CueIn="{Binding Media.Cues.CueIn}" CueOut="{Binding Media.Cues.CueOut}" EmptyText="Golfvorm laden…"
+                                Playhead="{Binding Playhead}" ClickCommand="{Binding ListenAtCommand}" Cursor="Hand"
+                                ToolTip.Tip="Klik om vanaf daar voor te luisteren (PFL)" />
               <TextBlock Classes="muted" FontSize="11" Text="{Binding MarkerText}" TextWrapping="Wrap" />
               <TextBlock Text="{Binding BlockText}" TextWrapping="Wrap" FontSize="12"
                          Foreground="{Binding Blocked, Converter={x:Static vm:Brushes.WarnOrOk}}" />
@@ -258,9 +268,12 @@
       </ListBox.ContextMenu>
       <ListBox.ItemTemplate>
         <DataTemplate x:DataType="c:MediaDto">
-          <Grid ColumnDefinitions="6,*,Auto" Opacity="{Binding Enabled, Converter={x:Static vm:Brushes.EnabledOpacity}}">
+          <Grid ColumnDefinitions="6,Auto,*,Auto" Opacity="{Binding Enabled, Converter={x:Static vm:Brushes.EnabledOpacity}}">
             <Border Grid.Column="0" Background="{Binding Kind, Converter={x:Static vm:Brushes.TypeColor}}" CornerRadius="2" Margin="0,2" />
-            <StackPanel Grid.Column="1" Margin="6,0">
+            <Button Grid.Column="1" Classes="small" Content="▶" Padding="6,2" Margin="6,0,0,0" VerticalAlignment="Center"
+                    Command="{Binding $parent[UserControl].DataContext.PflRowCommand}" CommandParameter="{Binding}"
+                    ToolTip.Tip="Voorluisteren (PFL); nog eens klikken stopt" />
+            <StackPanel Grid.Column="2" Margin="6,0">
               <TextBlock Text="{Binding Title}" TextTrimming="CharacterEllipsis" />
               <TextBlock Classes="muted" TextTrimming="CharacterEllipsis">
                 <Run Text="{Binding Artist}" /><Run Text=" · " /><Run Text="{Binding Category}" /><Run Text="{Binding Year, StringFormat=' · {0}', TargetNullValue=''}" /><Run Text="{Binding Bpm, StringFormat=' · {0:0} BPM', TargetNullValue=''}" />
@@ -270,7 +283,7 @@
               <TextBlock Text="{Binding IssueText, StringFormat='⚑ {0}'}" Foreground="#E58A4D" FontSize="11" TextTrimming="CharacterEllipsis"
                          IsVisible="{Binding HasIssues}" ToolTip.Tip="{Binding IssueText}" />
             </StackPanel>
-            <StackPanel Grid.Column="2" VerticalAlignment="Center">
+            <StackPanel Grid.Column="3" VerticalAlignment="Center">
               <TextBlock Classes="mono" HorizontalAlignment="Right" Text="{Binding Duration, Converter={x:Static vm:Brushes.Seconds}}" />
               <TextBlock Classes="muted" FontSize="10" HorizontalAlignment="Right" Text="{Binding Lufs, StringFormat='{}{0:0.0} LUFS'}" />
             </StackPanel>
