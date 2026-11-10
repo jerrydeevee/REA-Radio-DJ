@@ -147,6 +147,49 @@
     <Setter Property="Background" Value="{DynamicResource OnAirBrush}" />
     <Setter Property="Foreground" Value="White" />
   </Style>
+  <!-- DJ desk -->
+  <Style Selector=":is(Button).bar.big">
+    <Setter Property="MinHeight" Value="56" />
+    <Setter Property="Padding" Value="10,0" />
+    <Setter Property="FontSize" Value="16" />
+  </Style>
+  <Style Selector="ToggleButton.bar.play:checked /template/ ContentPresenter">
+    <Setter Property="Background" Value="#1B3155" />
+    <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
+  </Style>
+  <Style Selector="Button.pad">
+    <Setter Property="MinHeight" Value="48" />
+    <Setter Property="Padding" Value="2" />
+    <Setter Property="CornerRadius" Value="8" />
+    <Setter Property="HorizontalContentAlignment" Value="Center" />
+    <Setter Property="Background" Value="#141920" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="Foreground" Value="#6B7684" />
+  </Style>
+  <Style Selector="Button.pad.filled">
+    <Setter Property="Background" Value="{DynamicResource ControlBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
+  </Style>
+  <Style Selector=":is(Button).kill">
+    <Setter Property="MinHeight" Value="28" />
+    <Setter Property="MinWidth" Value="32" />
+    <Setter Property="Padding" Value="4,0" />
+    <Setter Property="FontSize" Value="11" />
+    <Setter Property="CornerRadius" Value="6" />
+    <Setter Property="HorizontalContentAlignment" Value="Center" />
+    <Setter Property="VerticalContentAlignment" Value="Center" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+  <Style Selector="ToggleButton.kill:checked /template/ ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource WarnBrush}" />
+    <Setter Property="Foreground" Value="#1A1206" />
+  </Style>
+  <Style Selector="ToggleButton.seg.onair:checked /template/ ContentPresenter">
+    <Setter Property="Background" Value="#C42B30" />
+    <Setter Property="Foreground" Value="White" />
+  </Style>
   <!-- Two halves of one switch -->
   <Style Selector="ToggleButton.seg">
     <Setter Property="MinHeight" Value="44" />

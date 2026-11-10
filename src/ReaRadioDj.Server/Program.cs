@@ -65,6 +65,8 @@ builder.Services.AddSingleton<ReaRadioDj.Core.Ads.AdStore>();
 builder.Services.AddSingleton<AdService>();
 builder.Services.AddSingleton<AudioRouter>();
 builder.Services.AddSingleton<StudioPlayers>();
+builder.Services.AddSingleton(new DjStore(Path.Combine(options.DataFolder, "dj.json")));
+builder.Services.AddSingleton<DjMixer>();
 builder.Services.AddSingleton(sp => new VoiceTracker(sp.GetRequiredService<PlayoutLog>(), new BassVoiceCapture(),
     new PflVoicePreview(sp.GetRequiredService<StudioPlayers>()), path => sp.GetRequiredService<MediaLibrary>().Load(path, ReaRadioDj.Core.Model.MediaKind.Voice),
     Path.Combine(options.DataFolder, "voicetracks"), options.Routing.MicDevice));
@@ -137,6 +139,7 @@ json.Converters.Add(new JsonStringEnumConverter(JsonNamingPolicy.CamelCase));
 
 var api = app.MapGroup("/api");
 StudioApi.Map(api, options);
+DjApi.Map(api);
 VoiceApi.Map(api);
 PresenterApi.Map(api, options);
 VoiceTrackApi.Map(api, options);

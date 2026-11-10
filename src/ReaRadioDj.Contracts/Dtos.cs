@@ -35,7 +35,24 @@ public sealed record StateDto(
     IReadOnlyList<UpcomingEventDto> Events,
     LibrarySummaryDto Library,
     StreamDto Stream,
-    long LastMessageId);
+    long LastMessageId,
+    DjDto? Dj = null);
+
+// ---------------------------------------------------------------- DJ desk
+
+/// <summary>One DJ deck. Tempo in percent, equaliser and filter -1..1, fader 0..1, positions in seconds.</summary>
+public sealed record DjDeckDto(string Id, long? MediaId, string Title, string Artist, bool Loaded, bool Playing, double Position,
+    double Duration, double Bpm, double FirstBeat, bool Analysing, double Tempo, double TempoRange, bool KeyLock, bool Synced,
+    double CuePoint, IReadOnlyList<double?> HotCues, double? LoopIn, double? LoopOut, bool LoopActive, double LoopBeats, double Gain,
+    double EqLow, double EqMid, double EqHigh, bool KillLow, bool KillMid, bool KillHigh, double Filter, double Fader, bool Pfl,
+    float LevelLeft, float LevelRight);
+
+/// <summary>Crossfader 0 (decks A and C) .. 1 (B and D); curve "smooth" or "sharp"; OnAir = the desk is heard on the radio.</summary>
+public sealed record DjDto(double Crossfader, string Curve, bool OnAir, IReadOnlyList<DjDeckDto> Decks);
+
+public sealed record DjCommand(long? MediaId = null, double? Value = null, int? Index = null, bool? On = null);
+
+public sealed record DjMixerRequest(double? Crossfader = null, string? Curve = null, bool? OnAir = null);
 
 public sealed record EngineDto(bool Running, bool AutoPlay, NowPlayingDto? Current, IReadOnlyList<NowPlayingDto> Playing,
     float LevelLeft, float LevelRight, double SecondsToNext);

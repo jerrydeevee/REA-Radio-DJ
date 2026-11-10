@@ -6,14 +6,15 @@
 #>
 param([string]$Target = (Join-Path $PSScriptRoot "..\native"))
 $ErrorActionPreference = "Stop"
-$zips = @("bass24.zip", "bassmix24.zip", "bassenc24.zip", "bassenc_mp324.zip", "bassloud24.zip", "bassflac24.zip")
+$zips = @("bass24.zip", "bassmix24.zip", "bassenc24.zip", "bassenc_mp324.zip", "bassloud24.zip", "bassflac24.zip", "bass_fx24.zip")
 $tmp = Join-Path ([IO.Path]::GetTempPath()) ("rea-radio-dj-bass-" + [guid]::NewGuid())
 New-Item -ItemType Directory -Force $tmp, $Target | Out-Null
 try {
   foreach ($z in $zips) {
     $file = Join-Path $tmp $z
     Write-Host "Downloading $z"
-    Invoke-WebRequest "https://www.un4seen.com/files/$z" -OutFile $file -UseBasicParsing
+    $url = if ($z -eq "bass_fx24.zip") { "https://www.un4seen.com/files/z/0/$z" } else { "https://www.un4seen.com/files/$z" }
+    Invoke-WebRequest $url -OutFile $file -UseBasicParsing
     $dir = Join-Path $tmp ([IO.Path]::GetFileNameWithoutExtension($z))
     Expand-Archive $file $dir -Force
     # 64-bit DLLs live in the x64 sub folder of each archive

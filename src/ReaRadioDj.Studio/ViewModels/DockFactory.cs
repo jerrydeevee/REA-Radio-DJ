@@ -17,6 +17,7 @@ public sealed class DockFactory : Factory
     public static readonly IReadOnlyList<(string Id, string Name, Func<StudioTool> Create)> Windows =
     [
         ("decks", "Live-decks (A · B · C)", () => new DeckTool()),
+        ("dj", "DJ-mengtafel", () => new DjTool()),
         ("log", "Programmalog", () => new LogTool()),
         ("standby", "Standby-spelers", () => new StandbyTool()),
         ("pfl", "PFL / voorbeluisteren", () => new PflTool()),
@@ -49,6 +50,9 @@ public sealed class DockFactory : Factory
     /// <summary>True = the calm automation view (log, time, levels, messages); false = the full live-assist studio.</summary>
     public bool AutomationView { get; set; }
 
+    /// <summary>True = the DJ workspace: the DJ desk on top, the library and the rest of the studio under it.</summary>
+    public bool DjView { get; set; }
+
     public override IRootDock CreateLayout()
     {
         ToolDock Tools(string id, params string[] ids)
@@ -56,6 +60,28 @@ public sealed class DockFactory : Factory
             var tools = ids.Select(i => (IDockable)Create(i)).ToArray();
             var dock = new ToolDock { Id = id, Title = id, VisibleDockables = CreateList(tools), ActiveDockable = tools[0], Alignment = Alignment.Unset };
             return dock;
+        }
+
+        if (DjView)
+        {
+            var desk = new ProportionalDock
+            {
+                Id = "dj-top", Proportion = 0.74, Orientation = Orientation.Horizontal,
+                VisibleDockables = CreateList<IDockable>(Tools("dock-dj", "dj")),
+            };
+            var under = new ProportionalDock
+            {
+                Id = "dj-bottom", Proportion = 0.26, Orientation = Orientation.Horizontal,
+                VisibleDockables = CreateList<IDockable>(
+                    Tools("dock-library", "library", "log", "asrun"),
+                    new ProportionalDockSplitter(),
+                    Tools("dock-side", "cart1", "cart2", "mixer", "pfl", "clock", "messages")),
+            };
+            return Root(new ProportionalDock
+            {
+                Id = "main", Orientation = Orientation.Vertical,
+                VisibleDockables = CreateList<IDockable>(desk, new ProportionalDockSplitter(), under),
+            });
         }
 
         if (AutomationView)

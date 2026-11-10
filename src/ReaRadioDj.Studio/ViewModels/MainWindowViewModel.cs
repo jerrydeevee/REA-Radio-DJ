@@ -34,6 +34,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
         Hub.TransitionRequested += _ => ShowWindow("transition");
         RefreshLayoutNames();
         _factory.AutomationView = _settings.LastLayout == AutomationLayoutName;
+        _factory.DjView = _settings.LastLayout == DjLayoutName;
         Layout = LoadLayoutFile(_settings.LastLayout) ?? NewDefaultLayout();
         CurrentLayout = _settings.LastLayout;
         // --show <window id> (repeatable): bring windows to the front at start; --cues <media id>: open in the cue editor.
@@ -87,6 +88,11 @@ public sealed partial class MainWindowViewModel : ObservableObject
 
     public const string AutomationLayoutName = "Automatisering";
     public const string AssistLayoutName = "Standaard";
+    public const string DjLayoutName = "DJ";
+    [ObservableProperty] private bool _djWorkspace;
+    public bool LiveWorkspace => !AutomationView && !DjWorkspace;
+    partial void OnDjWorkspaceChanged(bool value) => OnPropertyChanged(nameof(LiveWorkspace));
+    partial void OnAutomationViewChanged(bool value) => OnPropertyChanged(nameof(LiveWorkspace));
 
     public bool StationDiffers => !string.Equals(Station, "REA-Radio-DJ", StringComparison.OrdinalIgnoreCase);
     partial void OnStationChanged(string value) => OnPropertyChanged(nameof(StationDiffers));
@@ -99,7 +105,15 @@ public sealed partial class MainWindowViewModel : ObservableObject
     public string? SelectedLayoutName
     {
         get => CurrentLayout;
-        set { if (!string.IsNullOrEmpty(value) && value != CurrentLayout) LoadLayout(value); }
+        set
+        {
+            if (string.IsNullOrEmpty(value) || value == CurrentLayout) return;
+            // A workspace switches the way its button does (it may not have been saved yet); other names are saved layouts.
+            if (value == DjLayoutName) SwitchView("dj");
+            else if (value == AutomationLayoutName) SwitchView("auto");
+            else if (value == AssistLayoutName) SwitchView("assist");
+            else LoadLayout(value);
+        }
     }
 
     /// <summary>"auto" or "assist": the two halves of the mode switch.</summary>
@@ -225,6 +239,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
     {
         CloseFloating();
         _factory.AutomationView = CurrentLayout == AutomationLayoutName;
+        _factory.DjView = CurrentLayout == DjLayoutName;
         Layout = NewDefaultLayout();
         Hub.Status = "standaardindeling hersteld";
     }
@@ -237,11 +252,13 @@ public sealed partial class MainWindowViewModel : ObservableObject
     private void SwitchView(string? view)
     {
         bool automation = view == "auto" || (view is null && !AutomationView);
-        string target = automation ? AutomationLayoutName : AssistLayoutName;
+        bool dj = view == "dj";
+        string target = dj ? DjLayoutName : automation ? AutomationLayoutName : AssistLayoutName;
         if (target == CurrentLayout) return;
         SaveOnExit();
         CloseFloating();
-        _factory.AutomationView = automation;
+        _factory.AutomationView = automation && !dj;
+        _factory.DjView = dj;
         Layout = LoadLayoutFile(target) ?? NewDefaultLayout();
         CurrentLayout = target;
         _settings.LastLayout = target;
@@ -252,6 +269,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
     partial void OnCurrentLayoutChanged(string value)
     {
         AutomationView = value == AutomationLayoutName;
+        DjWorkspace = value == DjLayoutName;
         OnPropertyChanged(nameof(SelectedLayoutName));
     }
 
@@ -366,6 +384,9 @@ public sealed partial class MainWindowViewModel : ObservableObject
         if (Directory.Exists(StudioSettings.LayoutFolder))
             foreach (var f in Directory.EnumerateFiles(StudioSettings.LayoutFolder, "*.json").Select(Path.GetFileNameWithoutExtension).Order())
                 if (f is not null && f != "Standaard") LayoutNames.Add(f);
+        // The workspaces are always in the list, also before they were saved for the first time.
+        foreach (var workspace in new[] { AutomationLayoutName, DjLayoutName })
+            if (!LayoutNames.Contains(workspace)) LayoutNames.Add(workspace);
         OnPropertyChanged(nameof(SelectedLayoutName));
     }
 }

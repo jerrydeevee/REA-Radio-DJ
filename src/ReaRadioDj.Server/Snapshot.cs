@@ -47,7 +47,8 @@ public static class Snapshot
             automation.UpcomingEvents(6).Select(e => new UpcomingEventDto(e.Id, e.Name, e.At, Name(e.Timing), e.Prepared)).ToList(),
             new LibrarySummaryDto(library.Songs.Count, library.Jingles.Count, library.Status, library.IsScanning),
             new StreamDto(s.Enabled, s.Connected, s.Server, s.BytesSent, s.Error),
-            messages.LastId);
+            messages.LastId,
+            DjApi.Dto(sp.GetRequiredService<DjMixer>().Info));
     }
 
     public static string Name<T>(T value) where T : struct, Enum

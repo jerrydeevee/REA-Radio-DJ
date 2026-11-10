@@ -131,7 +131,7 @@ public sealed class MixerStrip
 public sealed class AudioRouter : IDisposable
 {
     public const string LogStrip = "log", StandbyStrip = "standby", CartStrip = "cart", OverlayStrip = "overlay",
-        MicStrip = "mic", PflStrip = "pfl";
+        MicStrip = "mic", PflStrip = "pfl", DjStrip = "dj";
 
     private readonly ReaRadioDjOptions _options;
     private readonly ILogger _logger;
@@ -171,6 +171,7 @@ public sealed class AudioRouter : IDisposable
         Add(MixerStrip.CreateSubMixer(StandbyStrip, "Standby", Program));
         Add(MixerStrip.CreateSubMixer(CartStrip, "Cartwall", Program));
         Add(MixerStrip.CreateSubMixer(OverlayStrip, "Overlay", Program));
+        Add(MixerStrip.CreateSubMixer(DjStrip, "DJ", Program));
         Add(MixerStrip.CreateSubMixer(PflStrip, "PFL", Preview));
 
         // Microphone: a push stream fed by the recording callback, muted until the mic is opened.
@@ -225,12 +226,12 @@ public sealed class AudioRouter : IDisposable
         if (open)
         {
             mic.Duck("closed", null, 40);
-            foreach (var id in new[] { LogStrip, StandbyStrip, CartStrip }) Strip(id).Duck("mic", duck, 250);
+            foreach (var id in new[] { LogStrip, StandbyStrip, CartStrip, DjStrip }) Strip(id).Duck("mic", duck, 250);
         }
         else
         {
             mic.Duck("closed", 0f, 120);
-            foreach (var id in new[] { LogStrip, StandbyStrip, CartStrip }) Strip(id).Duck("mic", null, 800);
+            foreach (var id in new[] { LogStrip, StandbyStrip, CartStrip, DjStrip }) Strip(id).Duck("mic", null, 800);
         }
         if (MicAvailable) MicStatus = open ? "open" : "dicht";
         MicChanged?.Invoke(open);

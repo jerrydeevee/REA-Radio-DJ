@@ -100,11 +100,11 @@ De DJ-modus speelt op een eigen mengkanaal, zodat de automatisering kan doorlope
 
 | Status | Onderdeel |
 |---|---|
-| ⬜ | Analyse per nummer: BPM, beatgrid, toonsoort en ReplayGain bij het inlezen (bewaard in de bibliotheek) |
-| ⬜ | Deck-engine: laden, start/pauze, cue, tempo (pitch ±8/12/50 %) met of zonder toonhoogtebehoud, pitch-bend, sync op BPM en beat |
-| ⬜ | Mengpaneel: gain, 3-bands EQ met kill, filter, kanaalfaders, crossfader met instelbare curve, koptelefoon-cue per deck en cue-mix |
-| ⬜ | Werkruimte DJ in de app-balk: 2 decks met doorlopende golfvormen boven elkaar, tellers (verstreken/resterend), BPM en toonsoort; schakelbaar naar 4 decks |
-| ⬜ | Hotcues (8 per nummer, bewaard), loops (in/uit, halveren/verdubbelen, loop-roll) en quantize op de beat |
+| 🟡 | Analyse per nummer: BPM en beatgrid worden gemeten zodra een nummer voor het eerst op een deck komt en bewaard (`dj.json` in de datamap). Nog open: toonsoort, ReplayGain, en meten bij het inlezen van de bibliotheek |
+| ✅ | Deck-engine: vier decks op een eigen mengkanaal (DJ); laden, start/pauze, cue, springen, tempo ±8/12/50 % met of zonder toonhoogtebehoud, even aanduwen of afremmen, sync op tempo en beat (ook half en dubbel tempo). De tafel staat standaard niet op de lucht |
+| 🟡 | Mengpaneel: gain, 3-bands EQ met kill, filter (laag- en hoogdoorlaat op één knop), kanaalfaders met niveaumeter, crossfader vloeiend of scherp, voorluisteren per deck. Nog open: cue-mix op de koptelefoon en een begrenzer op de DJ-uitgang |
+| 🟡 | Werkruimte DJ in de app-balk: 2 of 4 decks met golfvorm van het hele nummer, tellers, BPM en tempo, mengpaneel in het midden, bibliotheek eronder (slepen naar een deck). Nog open: de twee doorlopende golfvormen boven elkaar met beatstrepen, en de toonsoort |
+| 🟡 | Hotcues (8 per nummer, bewaard) en loops (in/uit, aantal beats, halveren/verdubbelen) staan. Nog open: loop-roll en quantize op de beat |
 | ⬜ | Effecten per deck (flanger, reverb, echo, filter) met sterkte en lengte op de beat |
 | ⬜ | Sampler: de bestaande cartwall als pads in de DJ-modus |
 | ⬜ | Automix in de DJ-modus: lijst afspelen met overgangstype (knippen, faden, tempo-overgang); mixpunten per nummer |

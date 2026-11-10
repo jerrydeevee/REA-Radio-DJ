@@ -1,0 +1,54 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:ReaRadioDj.Studio.ViewModels"
+             x:Class="ReaRadioDj.Studio.Views.DjStripView"
+             x:DataType="vm:DjDeckVm">
+  <!-- The mixer channel of one deck: gain, equaliser with kills and filter on the left, fader with level on the right -->
+  <StackPanel Spacing="8">
+    <TextBlock Classes="lbl" Foreground="{Binding Brush}" HorizontalAlignment="Center">
+      <Run Text="DECK " /><Run Text="{Binding Id}" />
+    </TextBlock>
+    <Grid ColumnDefinitions="*,12,Auto">
+      <StackPanel Grid.Column="0" Spacing="2">
+        <Grid ColumnDefinitions="50,*,36">
+          <TextBlock Grid.Column="0" Text="Gain" FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center" />
+          <Slider Grid.Column="1" Minimum="-12" Maximum="12" Value="{Binding Gain}" ToolTip.Tip="Voorversterking, -12 tot +12 dB" />
+        </Grid>
+        <Grid ColumnDefinitions="50,*,36">
+          <TextBlock Grid.Column="0" Text="Hoog" FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center" />
+          <Slider Grid.Column="1" Minimum="-1" Maximum="1" Value="{Binding EqHigh}" SmallChange="0.05" LargeChange="0.25" />
+          <ToggleButton Grid.Column="2" Classes="kill" Content="Kill" IsChecked="{Binding KillHigh, Mode=OneWay}" Command="{Binding KillCommand}" CommandParameter="high" ToolTip.Tip="Hoog helemaal weg" />
+        </Grid>
+        <Grid ColumnDefinitions="50,*,36">
+          <TextBlock Grid.Column="0" Text="Midden" FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center" />
+          <Slider Grid.Column="1" Minimum="-1" Maximum="1" Value="{Binding EqMid}" SmallChange="0.05" LargeChange="0.25" />
+          <ToggleButton Grid.Column="2" Classes="kill" Content="Kill" IsChecked="{Binding KillMid, Mode=OneWay}" Command="{Binding KillCommand}" CommandParameter="mid" ToolTip.Tip="Midden helemaal weg" />
+        </Grid>
+        <Grid ColumnDefinitions="50,*,36">
+          <TextBlock Grid.Column="0" Text="Laag" FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center" />
+          <Slider Grid.Column="1" Minimum="-1" Maximum="1" Value="{Binding EqLow}" SmallChange="0.05" LargeChange="0.25" />
+          <ToggleButton Grid.Column="2" Classes="kill" Content="Kill" IsChecked="{Binding KillLow, Mode=OneWay}" Command="{Binding KillCommand}" CommandParameter="low" ToolTip.Tip="Laag helemaal weg" />
+        </Grid>
+        <Grid ColumnDefinitions="50,*,36">
+          <TextBlock Grid.Column="0" Text="Filter" FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center" />
+          <Slider Grid.Column="1" Minimum="-1" Maximum="1" Value="{Binding Filter}" SmallChange="0.05" LargeChange="0.25"
+                  ToolTip.Tip="Links: alleen het laag blijft over. Midden: uit. Rechts: alleen het hoog blijft over." />
+          <Button Grid.Column="2" Classes="kill" Content="0" Command="{Binding ResetEqCommand}" ToolTip.Tip="Equalizer en filter terug naar het midden" />
+        </Grid>
+      </StackPanel>
+      <Grid Grid.Column="2" ColumnDefinitions="Auto,Auto,Auto" Height="200">
+        <Slider Grid.Column="0" Orientation="Vertical" Minimum="0" Maximum="100" Value="{Binding Fader}" ToolTip.Tip="Kanaalfader" />
+        <ProgressBar Grid.Column="1" Orientation="Vertical" Value="{Binding LevelLeft}" Maximum="100" MinWidth="8" Width="8" MinHeight="0" Foreground="{DynamicResource OkBrush}" Margin="4,8,3,8" />
+        <ProgressBar Grid.Column="2" Orientation="Vertical" Value="{Binding LevelRight}" Maximum="100" MinWidth="8" Width="8" MinHeight="0" Foreground="{DynamicResource OkBrush}" Margin="0,8" />
+      </Grid>
+    </Grid>
+    <ToggleButton Classes="bar" IsChecked="{Binding Pfl, Mode=OneWay}" Command="{Binding TogglePflCommand}" HorizontalAlignment="Stretch"
+                  HorizontalContentAlignment="Center" ToolTip.Tip="Dit deck op de koptelefoon (voorluisteren), ook met de fader dicht">
+      <StackPanel Orientation="Horizontal" Spacing="8">
+        <Path Data="M2,13 V8 A6,6 0 0 1 14,8 V13 M1,8 H4 V13 H1 Z M12,8 H15 V13 H12 Z" Stroke="{Binding $parent[ToggleButton].Foreground}" StrokeThickness="1.6"
+              Width="16" Height="14" Stretch="None" VerticalAlignment="Center" />
+        <TextBlock Text="Voorluisteren" VerticalAlignment="Center" />
+      </StackPanel>
+    </ToggleButton>
+  </StackPanel>
+</UserControl>

@@ -1,0 +1,68 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:ReaRadioDj.Studio.ViewModels"
+             xmlns:v="using:ReaRadioDj.Studio.Views"
+             x:Class="ReaRadioDj.Studio.Views.DjView"
+             x:DataType="vm:DjTool">
+  <DockPanel Margin="8">
+    <!-- What the listener hears: the automation or this desk -->
+    <Border DockPanel.Dock="Top" Classes="card" Padding="12,8" Margin="0,0,0,8">
+      <Grid ColumnDefinitions="Auto,*,Auto,Auto">
+        <Border Grid.Column="0" BorderBrush="{DynamicResource ControlBorderBrush}" BorderThickness="1" CornerRadius="8" ClipToBounds="True" VerticalAlignment="Center">
+          <StackPanel Orientation="Horizontal">
+            <ToggleButton Classes="seg" Content="Alleen voorluisteren" IsChecked="{Binding !OnAir, Mode=OneWay}" Command="{Binding SetOnAirCommand}" CommandParameter="off"
+                          ToolTip.Tip="De DJ-tafel gaat niet de zender op; de automatisering loopt gewoon door" />
+            <ToggleButton Classes="seg onair" Content="DJ op de lucht" IsChecked="{Binding OnAir, Mode=OneWay}" Command="{Binding SetOnAirCommand}" CommandParameter="on"
+                          ToolTip.Tip="Wat je mixt gaat de zender op. De automatisering stop je zelf met Stop of Assist in de balk bovenin." />
+          </StackPanel>
+        </Border>
+        <TextBlock Grid.Column="1" Classes="muted" FontSize="13" Text="{Binding OnAirText}" VerticalAlignment="Center" Margin="12,0" TextTrimming="CharacterEllipsis" />
+        <TextBlock Grid.Column="2" Foreground="{DynamicResource WarnBrush}" FontSize="13" VerticalAlignment="Center" Margin="0,0,12,0" IsVisible="{Binding !Available}"
+                   Text="Deze engine heeft nog geen DJ-tafel: werk de engine bij" />
+        <Border Grid.Column="3" BorderBrush="{DynamicResource ControlBorderBrush}" BorderThickness="1" CornerRadius="8" ClipToBounds="True" VerticalAlignment="Center">
+          <StackPanel Orientation="Horizontal">
+            <ToggleButton Classes="seg" Content="2 decks" IsChecked="{Binding !FourDecks, Mode=OneWay}" Command="{Binding SetDecksCommand}" CommandParameter="2" />
+            <ToggleButton Classes="seg" Content="4 decks" IsChecked="{Binding FourDecks, Mode=OneWay}" Command="{Binding SetDecksCommand}" CommandParameter="4" />
+          </StackPanel>
+        </Border>
+      </Grid>
+    </Border>
+
+    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+      <Grid ColumnDefinitions="*,8,Auto,8,*" RowDefinitions="Auto,Auto">
+        <v:DjDeckView Grid.Row="0" Grid.Column="0" DataContext="{Binding A}" />
+        <v:DjDeckView Grid.Row="0" Grid.Column="4" DataContext="{Binding B}" />
+        <Panel Grid.Row="1" Grid.Column="0" Margin="0,8,0,0" IsVisible="{Binding FourDecks}"><v:DjDeckView DataContext="{Binding C}" /></Panel>
+        <Panel Grid.Row="1" Grid.Column="4" Margin="0,8,0,0" IsVisible="{Binding FourDecks}"><v:DjDeckView DataContext="{Binding D}" /></Panel>
+
+        <!-- Mixer -->
+        <Border Grid.Row="0" Grid.RowSpan="2" Grid.Column="2" Classes="card" Padding="16" CornerRadius="10" VerticalAlignment="Top">
+          <StackPanel Spacing="12">
+            <Grid ColumnDefinitions="250,20,250">
+              <v:DjStripView Grid.Column="0" DataContext="{Binding A}" />
+              <v:DjStripView Grid.Column="2" DataContext="{Binding B}" />
+            </Grid>
+            <Grid ColumnDefinitions="250,20,250" IsVisible="{Binding FourDecks}">
+              <v:DjStripView Grid.Column="0" DataContext="{Binding C}" />
+              <v:DjStripView Grid.Column="2" DataContext="{Binding D}" />
+            </Grid>
+            <StackPanel Spacing="4">
+              <Grid ColumnDefinitions="Auto,*,Auto">
+                <TextBlock Grid.Column="0" Classes="lbl" Text="A" Foreground="#4C8DFF" />
+                <TextBlock Grid.Column="1" Classes="lbl" Text="CROSSFADER" HorizontalAlignment="Center" />
+                <TextBlock Grid.Column="2" Classes="lbl" Text="B" Foreground="#F5A524" />
+              </Grid>
+              <Slider Minimum="0" Maximum="100" Value="{Binding Crossfader}" ToolTip.Tip="Links: decks A en C. Rechts: decks B en D." />
+              <Grid ColumnDefinitions="*,8,*">
+                <Button Grid.Column="0" Classes="small" Content="Midden" Command="{Binding CenterCrossfaderCommand}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" />
+                <ToggleButton Grid.Column="2" Classes="small" Content="Scherp" IsChecked="{Binding Sharp, Mode=OneWay}" Command="{Binding ToggleCurveCommand}" HorizontalAlignment="Stretch"
+                              HorizontalContentAlignment="Center" FontSize="12" Padding="4,3"
+                              ToolTip.Tip="Uit: vloeiende overgang. Aan: beide kanten blijven open tot vlak voor het einde (knippen, scratchen)." />
+              </Grid>
+            </StackPanel>
+          </StackPanel>
+        </Border>
+      </Grid>
+    </ScrollViewer>
+  </DockPanel>
+</UserControl>
