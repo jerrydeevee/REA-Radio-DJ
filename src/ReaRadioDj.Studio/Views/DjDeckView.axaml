@@ -90,6 +90,15 @@
               </ToggleButton>
               <Button Classes="bar" Content="×2" Command="{Binding LoopDoubleCommand}" ToolTip.Tip="Loop verdubbelen" />
             </StackPanel>
+            <!-- Loop roll: held down it loops; let go and the track is where it would have been -->
+            <StackPanel x:Name="RollBar" Orientation="Horizontal" Spacing="6"
+                        ToolTip.Tip="Loop-roll: ingedrukt houden. Bij loslaten loopt het nummer verder alsof het gewoon doorspeelde.">
+              <TextBlock Classes="lbl" Text="ROLL" VerticalAlignment="Center" Margin="0,0,4,0" Foreground="{Binding Rolling, Converter={x:Static vm:Brushes.Active}}" />
+              <Button Classes="bar" Content="1/8" Tag="0.125" MinWidth="48" />
+              <Button Classes="bar" Content="1/4" Tag="0.25" MinWidth="48" />
+              <Button Classes="bar" Content="1/2" Tag="0.5" MinWidth="48" />
+              <Button Classes="bar" Content="1" Tag="1" MinWidth="48" />
+            </StackPanel>
           </StackPanel>
         </StackPanel>
 

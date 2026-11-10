@@ -61,6 +61,14 @@ public partial class MainWindow : Window
         // --screenshot <file.png> [seconds]: renders the window to an image and closes (documentation, tests).
         var args = Environment.GetCommandLineArgs();
         if (args.Contains("--about-shot")) Opened += (_, _) => _ = new AboutWindow().ShowDialog(this);
+        // --window <width>x<height>: a fixed window size (screenshots of a whole panel).
+        int wi = Array.IndexOf(args, "--window");
+        if (wi >= 0 && wi + 1 < args.Length && args[wi + 1].Split('x') is [var ws, var hs] && int.TryParse(ws, out var ww) && int.TryParse(hs, out var wh))
+        {
+            WindowState = WindowState.Normal;
+            Width = ww;
+            Height = wh;
+        }
         int i = Array.IndexOf(args, "--screenshot");
         if (i >= 0 && i + 1 < args.Length)
         {

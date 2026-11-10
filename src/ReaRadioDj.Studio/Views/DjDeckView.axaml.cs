@@ -1,4 +1,6 @@
+using System.Globalization;
 using Avalonia.Controls;
+using Avalonia.Input;
 using ReaRadioDj.Studio.ViewModels;
 
 namespace ReaRadioDj.Studio.Views;
@@ -10,5 +12,19 @@ public partial class DjDeckView : UserControl
         InitializeComponent();
         MediaDrag.AcceptDrops(this, (id, _) => DataContext is DjDeckVm deck ? deck.Load(id) : Task.CompletedTask);
         Wave.Clicked += seconds => { if (DataContext is DjDeckVm { Loaded: true } deck) _ = deck.SeekTo(seconds); };
+
+        // Roll buttons work while held: pressed = roll on, released (or the pointer lost) = roll off.
+        foreach (var b in RollBar.Children.OfType<Button>())
+        {
+            double beats = double.Parse((string)b.Tag!, CultureInfo.InvariantCulture);
+            b.AddHandler(PointerPressedEvent, (_, e) =>
+            {
+                if (!e.GetCurrentPoint(b).Properties.IsLeftButtonPressed || DataContext is not DjDeckVm deck) return;
+                e.Pointer.Capture(b);
+                _ = deck.Roll(beats, true);
+            }, handledEventsToo: true);
+            b.AddHandler(PointerReleasedEvent, (_, _) => { if (DataContext is DjDeckVm deck) _ = deck.Roll(beats, false); }, handledEventsToo: true);
+            b.AddHandler(PointerCaptureLostEvent, (_, _) => { if (DataContext is DjDeckVm deck) _ = deck.Roll(beats, false); }, handledEventsToo: true);
+        }
     }
 }

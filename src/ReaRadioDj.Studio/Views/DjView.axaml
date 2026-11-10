@@ -72,6 +72,25 @@
                               ToolTip.Tip="Uit: vloeiende overgang. Aan: beide kanten blijven open tot vlak voor het einde (knippen, scratchen)." />
               </Grid>
             </StackPanel>
+            <!-- Headphones: cue or master, quantize and the limiter on the DJ output -->
+            <StackPanel Spacing="4">
+              <Grid ColumnDefinitions="Auto,*,Auto">
+                <TextBlock Grid.Column="0" Classes="lbl" Text="CUE" />
+                <TextBlock Grid.Column="1" Classes="lbl" Text="KOPTELEFOON" HorizontalAlignment="Center" />
+                <TextBlock Grid.Column="2" Classes="lbl" Text="MASTER" />
+              </Grid>
+              <Slider Minimum="0" Maximum="100" Value="{Binding CueMix}"
+                      ToolTip.Tip="Links: alleen de decks met PFL. Midden: allebei. Rechts: alleen de mix van de tafel." />
+              <Grid ColumnDefinitions="*,8,*,8,*">
+                <Button Grid.Column="0" Classes="small" Content="Alleen cue" Command="{Binding CueOnlyCommand}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" />
+                <ToggleButton Grid.Column="2" Classes="small" Content="Quantize" IsChecked="{Binding Quantize, Mode=OneWay}" Command="{Binding ToggleQuantizeCommand}"
+                              HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
+                              ToolTip.Tip="Hot cues, loops en rolls vallen op de tel; een sprong naar een hot cue blijft in de maat" />
+                <ToggleButton Grid.Column="4" Classes="small" Content="Begrenzer" IsChecked="{Binding Limiter, Mode=OneWay}" Command="{Binding ToggleLimiterCommand}"
+                              HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
+                              ToolTip.Tip="Begrenzer op de DJ-uitgang (-1 dBFS): de mix komt nooit boven het plafond, ook in de opname" />
+              </Grid>
+            </StackPanel>
           </StackPanel>
         </Border>
       </Grid>

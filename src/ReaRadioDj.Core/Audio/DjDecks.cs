@@ -60,7 +60,7 @@ public sealed class DjStore
 public sealed record DjDeckInfo(string Id, MediaItem? Media, bool Playing, double Position, double Duration, double Bpm, double FirstBeat,
     bool Analysing, double Tempo, double TempoRange, bool KeyLock, bool Synced, double CuePoint, IReadOnlyList<double?> HotCues,
     double? LoopIn, double? LoopOut, bool LoopActive, double LoopBeats, double Gain, double EqLow, double EqMid, double EqHigh,
-    bool KillLow, bool KillMid, bool KillHigh, double Filter, double Fader, bool Pfl, float LevelLeft, float LevelRight)
+    bool KillLow, bool KillMid, bool KillHigh, double Filter, double Fader, bool Pfl, float LevelLeft, float LevelRight, bool Rolling = false)
 {
     /// <summary>The tempo you hear: the measured tempo with the tempo fader applied.</summary>
     public double PlayingBpm => Bpm * (1 + Tempo / 100);
@@ -87,6 +87,12 @@ public sealed class DjDeck
     private double _duration, _bend;
     private DateTime _bendUntil;
     private bool _ended;
+    /// <summary>A loop roll in progress: where the decoder was, when, at what rate, and the loop it replaced.</summary>
+    private RollState? _roll;
+    private sealed record RollState(double From, DateTime At, double Rate, double? LoopIn, double? LoopOut, bool LoopActive, double LoopBeats);
+
+    /// <summary>Quantize (set by the mixer for all decks): hot cues, loops and rolls land on the beat.</summary>
+    public bool Quantize { get; internal set; }
 
     internal DjDeck(string id, MixerStrip strip, MixerStrip pflStrip, DjStore store, double targetLufs)
     {
@@ -167,7 +173,7 @@ public sealed class DjDeck
                 if (_main == 0 || !Playing || !BASS_Mixer_ChannelGetLevelEx(_main, levels, 0.05f, BASS_LEVEL_STEREO)) levels[0] = levels[1] = 0;
             return new DjDeckInfo(Id, Media, Playing, Math.Round(Position, 3), _duration, _memory.Bpm, _memory.FirstBeat, Analysing, Tempo, TempoRange,
                 KeyLock, Synced, CuePoint, [.. _memory.HotCues], LoopIn, LoopOut, LoopActive, LoopBeats, Gain, EqLow, EqMid, EqHigh,
-                KillLow, KillMid, KillHigh, Filter, Fader, Pfl, levels[0], levels[1]);
+                KillLow, KillMid, KillHigh, Filter, Fader, Pfl, levels[0], levels[1], _roll is not null);
         }
     }
 
@@ -253,6 +259,7 @@ public sealed class DjDeck
         Analysing = false;
         _memory = new DjTrackMemory();
         _duration = 0;
+        _roll = null;
     }
 
     // ---------------------------------------------------------------- transport
@@ -391,11 +398,12 @@ public sealed class DjDeck
             if (_tempo == 0) return;
             if (_memory.HotCues[index] is double at)
             {
-                SeekLocked(at);
+                // Quantized while playing: keep the place within the beat, so the jump stays on the beat.
+                SeekLocked(Playing && Quantize && _memory.Bpm > 0 ? QuantizedJump(at, Decoded, _memory.FirstBeat, BeatSeconds) : at);
                 if (!Playing) CuePoint = at;
                 return;
             }
-            _memory.HotCues[index] = Math.Round(Position, 3);
+            _memory.HotCues[index] = Math.Round(SnapLocked(Position), 3);
         }
         _store.Save();
     }
@@ -407,14 +415,17 @@ public sealed class DjDeck
         _store.Save();
     }
 
-    public void SetLoopIn() { lock (_gate) { if (_tempo == 0) return; LoopIn = Position; LoopOut = null; LoopActive = false; } }
+    public void SetLoopIn() { lock (_gate) { if (_tempo == 0) return; LoopIn = SnapLocked(Position); LoopOut = null; LoopActive = false; } }
 
     public void SetLoopOut()
     {
         lock (_gate)
         {
-            if (LoopIn is not double start || Position <= start + 0.02) return;
-            LoopOut = Position;
+            if (LoopIn is not double start) return;
+            double end = SnapLocked(Position);
+            if (end <= start + 0.02) end = Quantize && _memory.Bpm > 0 ? start + BeatSeconds : Position;
+            if (end <= start + 0.02) return;
+            LoopOut = end;
             LoopActive = true;
             SeekLocked(start);
         }
@@ -428,7 +439,7 @@ public sealed class DjDeck
             if (_tempo == 0) return;
             if (LoopActive && Math.Abs(beats - LoopBeats) < 0.001) { LoopActive = false; return; }
             LoopBeats = Math.Clamp(beats, 1.0 / 32, 64);
-            double start = LoopActive && LoopIn is double had ? had : Position;
+            double start = LoopActive && LoopIn is double had ? had : SnapLocked(Position, down: true);
             LoopIn = start;
             LoopOut = start + LoopBeats * BeatSeconds;
             LoopActive = true;
@@ -445,6 +456,59 @@ public sealed class DjDeck
     }
 
     public void ExitLoop() { lock (_gate) LoopActive = false; }
+
+    /// <summary>
+    /// Loop roll: while held, a loop of <paramref name="beats"/> from here (from the beat with quantize). On release the
+    /// deck goes on where it would have been without the roll (the track kept running underneath), and the loop that
+    /// was there before comes back.
+    /// </summary>
+    public void Roll(double beats, bool on)
+    {
+        lock (_gate)
+        {
+            if (_tempo == 0) return;
+            if (on)
+            {
+                beats = Math.Clamp(beats, 1.0 / 32, 64);
+                bool first = _roll is null;
+                _roll ??= new RollState(Decoded, DateTime.UtcNow, 1 + (Tempo + _bend) / 100, LoopIn, LoopOut, LoopActive, LoopBeats);
+                if (first || LoopIn is null) LoopIn = SnapLocked(Position, down: true);
+                LoopBeats = beats;
+                LoopOut = LoopIn + beats * BeatSeconds;
+                LoopActive = true;
+                return;
+            }
+            if (_roll is not { } r) return;
+            _roll = null;
+            LoopIn = r.LoopIn; LoopOut = r.LoopOut; LoopActive = r.LoopActive; LoopBeats = r.LoopBeats;
+            if (Playing) SeekLocked(RollReturn(r.From, (DateTime.UtcNow - r.At).TotalSeconds, r.Rate));
+        }
+    }
+
+    /// <summary>Where a rolled deck goes on: the decoder position at the start plus the time that passed, at its rate.</summary>
+    public static double RollReturn(double from, double elapsedSeconds, double rate) => from + Math.Max(0, elapsedSeconds) * rate;
+
+    /// <summary>The nearest beat (or the beat at or before, with <paramref name="down"/>) of a position.</summary>
+    public static double Snap(double position, double firstBeat, double beatSeconds, bool down = false)
+    {
+        if (beatSeconds <= 0) return position;
+        double k = (position - firstBeat) / beatSeconds;
+        k = down ? Math.Floor(k + 1e-6) : Math.Round(k);
+        return Math.Max(0, firstBeat + k * beatSeconds);
+    }
+
+    /// <summary>A jump to <paramref name="target"/> that keeps the place within the beat of <paramref name="now"/>.</summary>
+    public static double QuantizedJump(double target, double now, double firstBeat, double beatSeconds)
+    {
+        if (beatSeconds <= 0) return target;
+        double shift = Phase(now, firstBeat, beatSeconds) - Phase(target, firstBeat, beatSeconds);
+        if (shift > 0.5) shift -= 1;
+        if (shift < -0.5) shift += 1;
+        return Math.Max(0, target + shift * beatSeconds);
+    }
+
+    private double SnapLocked(double position, bool down = false) =>
+        Quantize && _memory.Bpm > 0 ? Snap(position, _memory.FirstBeat, BeatSeconds, down) : position;
 
     /// <summary>One beat in seconds; half a second when the tempo is unknown.</summary>
     private double BeatSeconds => _memory.Bpm > 0 ? 60 / _memory.Bpm : 0.5;
@@ -518,13 +582,19 @@ public sealed class DjDeck
     }
 
     /// <summary>The level to the DJ strip: loudness correction, trim, channel fader and this deck's side of the crossfader.</summary>
-    internal void ApplyVolume(float crossfade)
+    /// <remarks>
+    /// The headphones get this deck's cue (when PFL is on) and its share of the master mix, blended by the cue mix:
+    /// both come from the same split stream, so one volume per deck is enough.
+    /// </remarks>
+    internal void ApplyVolume(float crossfade, double cueMix = 0)
     {
         lock (_gate)
         {
             if (_main == 0) return;
             float volume = (float)(_loudness * Math.Pow(10, Gain / 20) * Fader) * crossfade;
             BASS_ChannelSlideAttribute(_main, BASS_ATTRIB_VOL, volume, 25);
+            var (cue, master) = DjMixer.CueMixGains(cueMix);
+            BASS_ChannelSlideAttribute(_pfl, BASS_ATTRIB_VOL, (Pfl ? cue : 0f) + master * volume, 25);
         }
     }
 
@@ -534,6 +604,8 @@ public sealed class DjDeck
         {
             if (_tempo == 0) return;
             if (_bend != 0 && DateTime.UtcNow >= _bendUntil) { _bend = 0; ApplyTempo(); }
+            // A paused deck does not run on underneath a roll.
+            if (_roll is not null && !Playing) _roll = _roll with { At = DateTime.UtcNow, From = Decoded };
             if (!Playing) return;
             // The loop wraps where the decoder passes its end, so that what you hear turns exactly at the end.
             double decoded = Decoded;
@@ -556,7 +628,7 @@ public sealed class DjDeck
 }
 
 public sealed record DjMixerInfo(double Crossfader, string Curve, bool OnAir, IReadOnlyList<DjDeckInfo> Decks,
-    string? Recording = null, double RecordingSeconds = 0);
+    string? Recording = null, double RecordingSeconds = 0, bool Quantize = false, double CueMix = 0, bool Limiter = true, double LimiterDb = -1);
 
 /// <summary>
 /// The DJ desk: four decks on their own mixer strip, a crossfader, and the switch that puts the desk on air. Off air
@@ -577,7 +649,35 @@ public sealed class DjMixer : ITickable, IDisposable
         var pfl = router.Strip(AudioRouter.PflStrip);
         Decks = new[] { "A", "B", "C", "D" }.Select(id => new DjDeck(id, _strip, pfl, store, options.Mix.TargetLufs)).ToList();
         SetOnAir(false);
+        _limiter.Attach(_strip.Handle);
+        try { SetLimiter(true, -1); }
+        catch (BassException) { /* no limiter: the desk still plays */ }
         router.Register(this);
+    }
+
+    private readonly MasterProcessor _limiter = new();
+
+    /// <summary>Hot cues, loops and rolls land on the beat.</summary>
+    public bool Quantize { get; private set; }
+    /// <summary>Headphones: 0 = only the decks with PFL, 1 = only the master mix of the desk.</summary>
+    public double CueMix { get; private set; }
+
+    public void SetQuantize(bool on)
+    {
+        Quantize = on;
+        foreach (var d in Decks) d.Quantize = on;
+    }
+
+    public void SetCueMix(double value) => CueMix = Math.Clamp(value, 0, 1);
+
+    /// <summary>The peak limiter on the DJ output (before the on-air switch and the mix recording); ceiling in dBFS.</summary>
+    public void SetLimiter(bool on, double ceilingDb) => _limiter.SetLimiter(on, ceilingDb);
+
+    /// <summary>Cue and master level in the headphones for a cue mix of 0..1: both full in the middle.</summary>
+    public static (float Cue, float Master) CueMixGains(double mix)
+    {
+        mix = Math.Clamp(mix, 0, 1);
+        return ((float)Math.Min(1, 2 * (1 - mix)), (float)Math.Min(1, 2 * mix));
     }
 
     public IReadOnlyList<DjDeck> Decks { get; }
@@ -593,7 +693,7 @@ public sealed class DjMixer : ITickable, IDisposable
         {
             var (file, since) = Recording;
             return new(Crossfader, Curve, OnAir, Decks.Select(d => d.Info).ToList(), file,
-                since is { } s ? Math.Round((DateTime.Now - s).TotalSeconds, 1) : 0);
+                since is { } s ? Math.Round((DateTime.Now - s).TotalSeconds, 1) : 0, Quantize, CueMix, _limiter.LimiterOn, _limiter.CeilingDb);
         }
     }
 
@@ -682,7 +782,7 @@ public sealed class DjMixer : ITickable, IDisposable
         foreach (var d in Decks)
         {
             d.Tick();
-            d.ApplyVolume(CrossfadeGain(Crossfader, d.Left, Curve));
+            d.ApplyVolume(CrossfadeGain(Crossfader, d.Left, Curve), CueMix);
         }
     }
 

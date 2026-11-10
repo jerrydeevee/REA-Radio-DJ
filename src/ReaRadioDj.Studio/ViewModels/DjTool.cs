@@ -73,6 +73,7 @@ public sealed partial class DjDeckVm : ObservableObject
     [ObservableProperty] private bool _killHigh;
     [ObservableProperty] private bool _pfl;
     [ObservableProperty] private bool _loopActive;
+    [ObservableProperty] private bool _rolling;
     [ObservableProperty] private string _loopBeats = "4";
     [ObservableProperty] private double _levelLeft;
     [ObservableProperty] private double _levelRight;
@@ -129,6 +130,8 @@ public sealed partial class DjDeckVm : ObservableObject
     [RelayCommand] private Task Loop() => Post("loop");
     [RelayCommand] private Task LoopHalf() => Post("loophalf");
     [RelayCommand] private Task LoopDouble() => Post("loopdouble");
+    /// <summary>Loop roll: on while the button is held, off on release (the deck then goes on as if it kept playing).</summary>
+    public Task Roll(double beats, bool on) => Post("roll", new DjCommand(Value: beats, On: on));
     [RelayCommand] private Task ResetEq() => Task.WhenAll(Post("eqlow", new(Value: 0)), Post("eqmid", new(Value: 0)), Post("eqhigh", new(Value: 0)), Post("filter", new(Value: 0)));
 
     [RelayCommand]
@@ -164,6 +167,7 @@ public sealed partial class DjDeckVm : ObservableObject
             KillLow = d.KillLow; KillMid = d.KillMid; KillHigh = d.KillHigh;
             Pfl = d.Pfl;
             LoopActive = d.LoopActive;
+            Rolling = d.Rolling;
             LoopBeats = d.LoopBeats >= 1 ? d.LoopBeats.ToString("0.##") : $"1/{1 / d.LoopBeats:0}";
             LevelLeft = d.LevelLeft * 100;
             LevelRight = d.LevelRight * 100;
@@ -243,6 +247,22 @@ public sealed partial class DjTool : StudioTool
     partial void OnOnAirChanged(bool value) => OnPropertyChanged(nameof(CanFollow));
     partial void OnAvailableChanged(bool value) => OnPropertyChanged(nameof(CanFollow));
     [ObservableProperty] private string _onAirText = "DJ-tafel is OFF AIR: je hoort de decks alleen op PFL";
+    [ObservableProperty] private bool _quantize;
+    [ObservableProperty] private bool _limiter = true;
+    /// <summary>Headphones: 0 = cue (decks with PFL) .. 100 = master mix of the desk.</summary>
+    [ObservableProperty] private double _cueMix;
+    private DateTime _cueMixTouched;
+
+    partial void OnCueMixChanged(double value)
+    {
+        if (_fromEngine) return;
+        _cueMixTouched = DateTime.UtcNow;
+        _ = Hub.Client.PostAsync("/api/dj/mixer", new DjMixerRequest(CueMix: value / 100));
+    }
+
+    [RelayCommand] private Task ToggleQuantize() => Hub.Client.PostAsync("/api/dj/mixer", new DjMixerRequest(Quantize: !Quantize));
+    [RelayCommand] private Task ToggleLimiter() => Hub.Client.PostAsync("/api/dj/mixer", new DjMixerRequest(Limiter: !Limiter));
+    [RelayCommand] private void CueOnly() => CueMix = 0;
 
     partial void OnCrossfaderChanged(double value)
     {
@@ -290,6 +310,9 @@ public sealed partial class DjTool : StudioTool
             Recording = dj.Recording is not null;
             RecordText = dj.Recording is null ? "● Mix opnemen" : $"■ Stop opname {TimeSpan.FromSeconds(dj.RecordingSeconds):h\\:mm\\:ss}";
             if ((DateTime.UtcNow - _crossTouched).TotalMilliseconds > 500) Crossfader = dj.Crossfader * 100;
+            if ((DateTime.UtcNow - _cueMixTouched).TotalMilliseconds > 500) CueMix = dj.CueMix * 100;
+            Quantize = dj.Quantize;
+            Limiter = dj.Limiter;
         }
         finally { _fromEngine = false; }
         foreach (var d in dj.Decks)
