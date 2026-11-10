@@ -346,6 +346,29 @@
           <TextBlock Classes="field" Text="Grootte van alles" />
           <ComboBox ItemsSource="{Binding ScaleNames}" SelectedIndex="{Binding ScaleIndex}" MinWidth="320" />
           <TextBlock Classes="help" Text="Groter voor een aanraakscherm of een scherm op afstand, kleiner om meer kwijt te kunnen op een laptop. Knoppen, tekst en vensters groeien mee." />
+          <CheckBox Content="Aanraakmodus" IsChecked="{Binding TouchMode}" Margin="0,12,0,0" />
+          <TextBlock Classes="help" Text="Voor een aanraakscherm: knoppen, lijstregels, tabbladen en schuifbalken worden groot genoeg voor een vinger. Combineer met een grotere maat als het scherm ver weg staat." />
+          <TextBlock Classes="field" Text="Kleuren per soort item" />
+          <TextBlock Classes="help" Text="De kleur van de streep en het label in het programmalog, de as-run en de bibliotheek." />
+          <ItemsControl ItemsSource="{Binding KindColorRows}">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="vm:KindColorRow">
+                <Grid ColumnDefinitions="200,*" Margin="0,0,0,6">
+                  <TextBlock Text="{Binding Name}" VerticalAlignment="Center" />
+                  <ComboBox Grid.Column="1" ItemsSource="{Binding Choices}" SelectedIndex="{Binding ColorIndex}" MinWidth="180">
+                    <ComboBox.ItemTemplate>
+                      <DataTemplate x:DataType="vm:KindColorChoice">
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                          <Border Width="18" Height="18" CornerRadius="{DynamicResource Radius3}" Background="{Binding Brush}" VerticalAlignment="Center" />
+                          <TextBlock Text="{Binding Name}" VerticalAlignment="Center" />
+                        </StackPanel>
+                      </DataTemplate>
+                    </ComboBox.ItemTemplate>
+                  </ComboBox>
+                </Grid>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
         </StackPanel></ScrollViewer>
       </TabItem>
       <TabItem Header="Deze studio">

@@ -1,5 +1,6 @@
 using Avalonia;
 using Avalonia.Media;
+using Avalonia.Markup.Xaml.Styling;
 using Avalonia.Styling;
 
 namespace ReaRadioDj.Studio.Services;
@@ -46,9 +47,46 @@ public static class Appearance
     /// <summary>The corner radii the styles use (Radius2 … Radius12), per corner shape.</summary>
     private static readonly int[] Radii = [2, 3, 4, 5, 6, 8, 10, 12];
 
+    // ---- colour per kind of item: one brush per kind, whose colour changes in place, so every row follows at once
+    public static readonly (string Key, string Name)[] ItemKinds =
+        [("song", "Muziek"), ("jingle", "Jingles"), ("voice", "AI-presentator en stem"), ("other", "Overig")];
+
+    public static readonly Dictionary<string, string> DefaultTypeColors = new()
+    {
+        ["song"] = "#3FA7FF", ["jingle"] = "#F0B429", ["voice"] = "#A78BFA", ["other"] = "#8B95A5",
+    };
+
+    /// <summary>The colours to choose from (name, colour).</summary>
+    public static readonly (string Name, string Hex)[] KindColors =
+    [
+        ("Blauw", "#3FA7FF"), ("Geel", "#F0B429"), ("Paars", "#A78BFA"), ("Grijs", "#8B95A5"), ("Groen", "#3FB950"),
+        ("Rood", "#E5484D"), ("Oranje", "#F27A2E"), ("Roze", "#F472B6"), ("Cyaan", "#22D3EE"), ("Wit", "#E6EAF0"),
+    ];
+
+    private static readonly Dictionary<string, SolidColorBrush> KindBrushes =
+        DefaultTypeColors.ToDictionary(k => k.Key, k => new SolidColorBrush(Color.Parse(k.Value)));
+
+    /// <summary>The brush of a kind of item ("song", "jingle", "aiBreak", "voice", anything else = other).</summary>
+    public static IBrush KindBrush(string? type) => KindBrushes[type switch
+    {
+        "song" or "music" => "song",
+        "jingle" => "jingle",
+        "aiBreak" or "ai-break" or "voice" or "voicetrack" or "ai" => "voice",
+        _ => "other",
+    }];
+
+    private static StyleInclude? _touch;
+
     public static void Apply(StudioSettings s)
     {
         if (Application.Current is not { } app) return;
+        foreach (var (key, brush) in KindBrushes)
+            brush.Color = s.TypeColors.TryGetValue(key, out var hex) && Color.TryParse(hex, out var c) ? c : Color.Parse(DefaultTypeColors[key]);
+
+        // Touch mode: an extra style sheet after all others, so its sizes win.
+        _touch ??= new StyleInclude(new Uri("avares://REA-Radio-DJ-Studio/")) { Source = new Uri("avares://REA-Radio-DJ-Studio/TouchStyles.axaml") };
+        if (s.Touch && !app.Styles.Contains(_touch)) app.Styles.Add(_touch);
+        else if (!s.Touch) app.Styles.Remove(_touch);
         var theme = Palettes.ContainsKey(s.Theme) ? s.Theme : "dark";
         var colors = Palettes[theme];
         for (int i = 0; i < Keys.Length; i++) app.Resources[Keys[i]] = new SolidColorBrush(Color.Parse(colors[i]));

@@ -122,6 +122,13 @@ public sealed partial class SettingsTool : StudioTool
     partial void OnCornerIndexChanged(int value) { if (value >= 0) { Hub.Settings.Corners = Appearance.Corners[value].Key; ApplyLook(); } }
     partial void OnScaleIndexChanged(int value) { if (value >= 0) { Hub.Settings.ScalePercent = Appearance.Scales[value]; ApplyLook(); } }
 
+    [ObservableProperty] private bool _touchMode = StudioHub.Current.Settings.Touch;
+    partial void OnTouchModeChanged(bool value) { Hub.Settings.Touch = value; ApplyLook(); }
+
+    /// <summary>One row per kind of item, each with a colour to pick.</summary>
+    public IReadOnlyList<KindColorRow> KindColorRows { get; } =
+        [.. Appearance.ItemKinds.Select(k => new KindColorRow(k.Key, k.Name, StudioHub.Current.Settings))];
+
     private void ApplyLook()
     {
         Appearance.Apply(Hub.Settings);
@@ -482,3 +489,34 @@ public sealed partial class TransitionRuleRow : ObservableObject
     [ObservableProperty] private bool _enabled = true;
     public bool HasSeconds => Mode?.Key is "overlap" or "fade";
 }
+
+/// <summary>Instellingen › Uiterlijk: the colour of one kind of item (muziek, jingles, ...), applied and saved at once.</summary>
+public sealed partial class KindColorRow : ObservableObject
+{
+    private readonly string _key;
+    private readonly StudioSettings _settings;
+
+    public KindColorRow(string key, string name, StudioSettings settings)
+    {
+        _key = key;
+        _settings = settings;
+        Name = name;
+        var hex = settings.TypeColors.TryGetValue(key, out var h) ? h : Appearance.DefaultTypeColors[key];
+        _colorIndex = Math.Max(0, Array.FindIndex(Appearance.KindColors, c => string.Equals(c.Hex, hex, StringComparison.OrdinalIgnoreCase)));
+    }
+
+    public string Name { get; }
+    public IReadOnlyList<KindColorChoice> Choices { get; } = [.. Appearance.KindColors.Select(c => new KindColorChoice(c.Name, Brushes.FromHex(c.Hex)))];
+
+    [ObservableProperty] private int _colorIndex;
+
+    partial void OnColorIndexChanged(int value)
+    {
+        if (value < 0) return;
+        _settings.TypeColors[_key] = Appearance.KindColors[value].Hex;
+        Appearance.Apply(_settings);
+        _settings.Save();
+    }
+}
+
+public sealed record KindColorChoice(string Name, Avalonia.Media.IBrush Brush);

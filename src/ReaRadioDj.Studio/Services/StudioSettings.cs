@@ -16,6 +16,10 @@ public sealed class StudioSettings
     public string Corners { get; set; } = "normal";
     /// <summary>Size of the whole studio in percent (80-150).</summary>
     public int ScalePercent { get; set; } = 100;
+    /// <summary>Touch mode: buttons, list rows, tabs and scroll bars big enough for a finger.</summary>
+    public bool Touch { get; set; }
+    /// <summary>Colour per kind of item (song, jingle, voice, other) in the log, as-run and library.</summary>
+    public Dictionary<string, string> TypeColors { get; set; } = new(Appearance.DefaultTypeColors);
     public string LastLayout { get; set; } = "Standaard";
     /// <summary>2 = the Standaard layout is the Live workspace (management windows moved to their own workspaces).</summary>
     public int LayoutVersion { get; set; }

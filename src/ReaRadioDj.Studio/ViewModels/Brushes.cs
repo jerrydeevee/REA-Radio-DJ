@@ -44,12 +44,6 @@ public static class Brushes
     public static IBrush FromHex(string? s, string fallback = "#2A3240") =>
         new SolidColorBrush(!string.IsNullOrWhiteSpace(s) && Color.TryParse(s, out var c) ? c : Color.Parse(fallback));
 
-    public static readonly IValueConverter TypeColor = new FuncValueConverter<string?, IBrush>(t => FromHex(t switch
-    {
-        "song" => "#3FA7FF",
-        "jingle" => "#F0B429",
-        "aiBreak" => "#A78BFA",
-        "voice" => "#A78BFA",
-        _ => "#8B95A5",
-    }));
+    /// <summary>The colour of a kind of item (Instellingen › Uiterlijk › Kleuren per soort item).</summary>
+    public static readonly IValueConverter TypeColor = new FuncValueConverter<string?, IBrush>(Services.Appearance.KindBrush);
 }
