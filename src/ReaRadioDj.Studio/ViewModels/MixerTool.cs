@@ -18,6 +18,9 @@ public sealed partial class StripCard(string id) : ObservableObject
     [ObservableProperty] private string _duck = "";
     [ObservableProperty] private bool _onAir = true;
     [ObservableProperty] private bool _isInput;
+    [ObservableProperty] private bool _effectOn;
+    [ObservableProperty] private bool _hasEffect;
+    [ObservableProperty] private string _effectTip = "";
     private DateTime _touched;
     private bool _updating;
 
@@ -34,7 +37,9 @@ public sealed partial class StripCard(string id) : ObservableObject
         Left = Math.Min(100, s.LevelLeft * 100);
         Right = Math.Min(100, s.LevelRight * 100);
         IsInput = s.Source is not null;
-        if (DateTime.Now - _touched > TimeSpan.FromSeconds(1)) OnAir = s.OnAir;
+        if (DateTime.Now - _touched > TimeSpan.FromSeconds(1)) { OnAir = s.OnAir; EffectOn = s.EffectOn; }
+        HasEffect = s.Effect.Length > 0;
+        EffectTip = HasEffect ? $"Effect {Effects.NameOf(s.Effect)} aan of uit (kies het effect met het tandwiel)" : "";
         Duck = !s.OnAir ? "" : s.Duck < 0.99 ? $"gedimd {s.Duck * 100:0}%" : "";
         _updating = false;
     }
@@ -47,6 +52,13 @@ public sealed partial class StripCard(string id) : ObservableObject
         if (_updating) return;
         _touched = DateTime.Now;
         _ = StudioHub.Current.Client.PostAsync($"/api/channels/{Id}/onair", new SwitchRequest(value));
+    }
+
+    partial void OnEffectOnChanged(bool value)
+    {
+        if (_updating) return;
+        _touched = DateTime.Now;
+        _ = StudioHub.Current.Client.PostAsync($"/api/channels/{Id}/effect", new SwitchRequest(value));
     }
 
     partial void OnVolumeChanged(double value) => Send();
@@ -81,6 +93,7 @@ public sealed partial class MixerTool : StudioTool
     /// <summary>The channel whose strip is open in the editor (null = closed).</summary>
     [ObservableProperty] private ChannelEditor? _editor;
     public ObservableCollection<OutputChoiceDto> Sources { get; } = [];
+    public ObservableCollection<OutputChoiceDto> EffectChoices { get; } = [];
     [ObservableProperty] private OutputChoiceDto? _newInputSource;
     [ObservableProperty] private string _newInputName = "Lijn-in";
     [ObservableProperty] private string _channelStatus = "";
@@ -98,6 +111,7 @@ public sealed partial class MixerTool : StudioTool
         Sources.Clear();
         foreach (var s in d.Sources) Sources.Add(s);
         NewInputSource = Sources.FirstOrDefault(s => s.Id == keep) ?? Sources.FirstOrDefault();
+        if (d.Effects is { Count: > 0 } fx) { Effects.List.Clear(); Effects.List.AddRange(fx); EffectChoices.Clear(); foreach (var e in fx) EffectChoices.Add(e); }
         if (open is not null && d.Channels.FirstOrDefault(c => c.Id == open) is { } ch) Editor = new ChannelEditor(this, ch);
         return d;
     }
@@ -187,6 +201,8 @@ public sealed partial class ChannelEditor : ObservableObject
         GainDb = s.GainDb; Pan = s.Pan; EqLowDb = s.EqLowDb; EqMidDb = s.EqMidDb; EqHighDb = s.EqHighDb;
         CompressorOn = s.CompressorOn; CompressorThresholdDb = s.CompressorThresholdDb; CompressorRatio = s.CompressorRatio;
         AgcOn = s.AgcOn; OnAir = s.OnAir;
+        Effect = owner.EffectChoices.FirstOrDefault(e => e.Id == s.Effect) ?? owner.EffectChoices.FirstOrDefault();
+        EffectOn = s.EffectOn; EffectMix = Math.Round(s.EffectMix * 100);
         _loading = false;
     }
 
@@ -194,6 +210,7 @@ public sealed partial class ChannelEditor : ObservableObject
     public string Name { get; }
     public bool IsInput { get; }
     public string SourceText { get; }
+    public ObservableCollection<OutputChoiceDto> EffectChoices => _owner.EffectChoices;
 
     [ObservableProperty] private double _gainDb;
     [ObservableProperty] private double _pan;
@@ -205,6 +222,14 @@ public sealed partial class ChannelEditor : ObservableObject
     [ObservableProperty] private double _compressorRatio = 3;
     [ObservableProperty] private bool _agcOn;
     [ObservableProperty] private bool _onAir = true;
+    [ObservableProperty] private OutputChoiceDto? _effect;
+    [ObservableProperty] private bool _effectOn;
+    [ObservableProperty] private double _effectMix = 35;
+
+    /// <summary>Galm, echo, chorus and flanger have a mix; telephone and pitch are all or nothing.</summary>
+    public bool HasMix => Effect?.Id is "reverb" or "echo" or "chorus" or "flanger";
+    public bool HasEffect => !string.IsNullOrEmpty(Effect?.Id);
+    private static readonly HashSet<string> Derived = [nameof(PanText), nameof(HasMix), nameof(HasEffect)];
 
     public string PanText => Math.Abs(Pan) < 0.02 ? "midden" : Pan < 0 ? $"links {-Pan * 100:0}%" : $"rechts {Pan * 100:0}%";
 
@@ -212,7 +237,10 @@ public sealed partial class ChannelEditor : ObservableObject
     {
         base.OnPropertyChanged(e);
         if (e.PropertyName == nameof(Pan)) OnPropertyChanged(nameof(PanText));
-        if (_loading || e.PropertyName == nameof(PanText)) return;
+        if (e.PropertyName == nameof(Effect)) { OnPropertyChanged(nameof(HasMix)); OnPropertyChanged(nameof(HasEffect)); }
+        if (_loading || Derived.Contains(e.PropertyName ?? "")) return;
+        // Choosing an effect switches it on, so it is heard at once.
+        if (e.PropertyName == nameof(Effect) && HasEffect && !EffectOn) { EffectOn = true; return; }
         _ = SendAsync();
     }
 
@@ -220,13 +248,21 @@ public sealed partial class ChannelEditor : ObservableObject
     private void Flat()
     {
         GainDb = Pan = EqLowDb = EqMidDb = EqHighDb = 0;
-        CompressorOn = AgcOn = false;
+        CompressorOn = AgcOn = EffectOn = false;
     }
 
     private async Task SendAsync()
     {
         var dto = new ChannelSettingsDto(Math.Round(GainDb, 1), Math.Round(Pan, 2), Math.Round(EqLowDb, 1), Math.Round(EqMidDb, 1), Math.Round(EqHighDb, 1),
-            CompressorOn, Math.Round(CompressorThresholdDb), Math.Round(CompressorRatio, 1), AgcOn, OnAir);
+            CompressorOn, Math.Round(CompressorThresholdDb), Math.Round(CompressorRatio, 1), AgcOn, OnAir,
+            Effect?.Id ?? "", EffectOn && HasEffect, Math.Round(EffectMix) / 100);
         _owner.ChannelStatus = await StudioHub.Current.Client.PutAsync($"/api/channels/{Id}", dto) ? "" : "Instelling niet gelukt (zie berichten).";
     }
+}
+
+/// <summary>Names of the fader effects, as the engine gave them.</summary>
+public static class Effects
+{
+    public static List<OutputChoiceDto> List { get; } = [];
+    public static string NameOf(string id) => List.FirstOrDefault(e => e.Id == id)?.Name.Split(" (")[0].ToLowerInvariant() ?? id;
 }

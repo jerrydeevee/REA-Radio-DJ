@@ -24,6 +24,7 @@
                 <TextBlock Classes="mono" FontSize="11" HorizontalAlignment="Center" Text="{Binding Volume, StringFormat='{}{0:0}%'}" />
                 <StackPanel Orientation="Horizontal" Spacing="4" HorizontalAlignment="Center">
                   <ToggleButton Content="M" IsChecked="{Binding Muted}" Classes="mic" ToolTip.Tip="Dempen" />
+                  <ToggleButton Content="FX" IsChecked="{Binding EffectOn}" Classes="mic" IsVisible="{Binding HasEffect}" ToolTip.Tip="{Binding EffectTip}" Padding="5,2" />
                   <Button Content="⚙" Padding="6,2" ToolTip.Tip="Kanaalstrip: gain, balans, equalizer, compressor, automatische niveauregeling"
                           Command="{Binding $parent[UserControl].DataContext.EditChannelCommand}" CommandParameter="{Binding}" />
                 </StackPanel>
@@ -73,6 +74,17 @@
             <TextBlock Grid.Row="1" Text="Verhouding" VerticalAlignment="Center" />
             <Slider Grid.Row="1" Grid.Column="1" Minimum="1" Maximum="20" Value="{Binding CompressorRatio}" TickFrequency="0.5" IsSnapToTickEnabled="True" />
             <TextBlock Grid.Row="1" Grid.Column="2" Classes="mono" VerticalAlignment="Center" Text="{Binding CompressorRatio, StringFormat='{}{0:0.0}:1'}" />
+          </Grid>
+          <TextBlock Classes="h" Text="Effect op de fader" Margin="0,8,0,0" />
+          <Grid ColumnDefinitions="150,*,90" RowDefinitions="Auto,Auto" RowSpacing="4">
+            <TextBlock Text="Effect" VerticalAlignment="Center" />
+            <ComboBox Grid.Column="1" ItemsSource="{Binding EffectChoices}" SelectedItem="{Binding Effect}" HorizontalAlignment="Stretch">
+              <ComboBox.ItemTemplate><DataTemplate x:DataType="c:OutputChoiceDto"><TextBlock Text="{Binding Name}" /></DataTemplate></ComboBox.ItemTemplate>
+            </ComboBox>
+            <CheckBox Grid.Column="2" Content="Aan" IsChecked="{Binding EffectOn}" IsEnabled="{Binding HasEffect}" Margin="8,0,0,0" />
+            <TextBlock Grid.Row="1" Text="Mengverhouding" VerticalAlignment="Center" IsVisible="{Binding HasMix}" />
+            <Slider Grid.Row="1" Grid.Column="1" Minimum="0" Maximum="100" Value="{Binding EffectMix}" TickFrequency="5" IsSnapToTickEnabled="True" IsVisible="{Binding HasMix}" />
+            <TextBlock Grid.Row="1" Grid.Column="2" Classes="mono" VerticalAlignment="Center" Text="{Binding EffectMix, StringFormat='{}{0:0}%'}" IsVisible="{Binding HasMix}" />
           </Grid>
           <CheckBox Content="Automatische niveauregeling (brengt het kanaal rustig naar een vast niveau, hooguit 12 dB)" IsChecked="{Binding AgcOn}" Margin="0,6,0,0" />
           <Button Content="Ingang verwijderen" IsVisible="{Binding IsInput}" Command="{Binding $parent[UserControl].DataContext.RemoveInputCommand}" HorizontalAlignment="Left" Margin="0,6,0,0" />

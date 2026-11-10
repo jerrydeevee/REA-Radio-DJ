@@ -71,7 +71,7 @@ public sealed record PlayerDto(string Id, string Name, string State, long? Media
 public sealed record ClipDto(string Key, string Label, long? MediaId, double Position, double Length, bool Loop);
 
 public sealed record StripDto(string Id, string Name, string Bus, float Volume, bool Muted, float Duck, float LevelLeft, float LevelRight,
-    bool OnAir = true, string? Source = null);
+    bool OnAir = true, string? Source = null, string Effect = "", bool EffectOn = false);
 
 public sealed record MicDto(bool Available, bool Open, string Status);
 
@@ -395,11 +395,12 @@ public sealed record MasterDto(bool LimiterOn, double CeilingDb);
 
 /// <summary>Channel strip of one mixer channel.</summary>
 public sealed record ChannelSettingsDto(double GainDb, double Pan, double EqLowDb, double EqMidDb, double EqHighDb,
-    bool CompressorOn, double CompressorThresholdDb, double CompressorRatio, bool AgcOn, bool OnAir);
+    bool CompressorOn, double CompressorThresholdDb, double CompressorRatio, bool AgcOn, bool OnAir,
+    string Effect = "", bool EffectOn = false, double EffectMix = 0.35);
 
 public sealed record ChannelDto(string Id, string Name, string? Source, ChannelSettingsDto Settings);
 
 /// <summary>All mixer channels with their settings, and the sources an input can use.</summary>
-public sealed record ChannelsDto(IReadOnlyList<ChannelDto> Channels, IReadOnlyList<OutputChoiceDto> Sources);
+public sealed record ChannelsDto(IReadOnlyList<ChannelDto> Channels, IReadOnlyList<OutputChoiceDto> Sources, IReadOnlyList<OutputChoiceDto>? Effects = null);
 
 public sealed record InputRequest(string Name, string Source);

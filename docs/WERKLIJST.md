@@ -69,7 +69,7 @@ Vragen bij stap 1:
 | 🟡 | Kanaalstrip per mengkanaal: gain, balans, equalizer, compressor, automatische niveauregeling, dempen, naar de zender, opnemen — klaar via ⚙ op elk kanaal in de Mixer (gemeten op de zender: gain +6 dB, balans, midden -12 dB, compressor, niveauregeling; bewaard na herstart). Opnemen per kanaal volgt | instellingen per kanaal hoorbaar en bewaard |
 | ✅ | Master: begrenzer en loudness-meter op de zender | pieken boven de grens worden begrensd; LUFS zichtbaar — eigen look-ahead-begrenzer (plafond instelbaar, Geluid-tab), LUFS kort/geïntegreerd en true peak bij de meter; getest: plafond -12 dB → true peak -11,5 (zonder -7) |
 | ⬜ | Plekken voor VST-effecten per kanaal | één VST-plug-in laadt en werkt op een kanaal |
-| ⬜ | DSP-effect op een fader: per mengkanaal een ingebouwd effect kiezen (bijv. galm, echo, filter, stemvervorming), met aan/uit en mengverhouding, vanuit de kanaalstrip in de Mixer (verzoek studio, 10-11-2026) | een gekozen effect is hoorbaar op dat kanaal, is aan en uit te zetten en blijft bewaard na een herstart |
+| ✅ | DSP-effect op een fader: per mengkanaal een ingebouwd effect kiezen (bijv. galm, echo, filter, stemvervorming), met aan/uit en mengverhouding, vanuit de kanaalstrip in de Mixer (verzoek studio, 10-11-2026) — galm, echo, chorus, flanger, telefoon, stem lager/hoger; FX-knop op de fader. Gemeten: echo 0,126 → 0,24, telefoon dempt 100 Hz en 8 kHz sterk, stem hoger maakt van 1 kHz 1260 Hz | een gekozen effect is hoorbaar op dat kanaal, is aan en uit te zetten en blijft bewaard na een herstart |
 
 Vragen bij stap 2:
 

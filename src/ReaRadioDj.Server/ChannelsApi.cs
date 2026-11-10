@@ -37,7 +37,7 @@ public static class ChannelsApi
             {
                 GainDb = body.GainDb, Pan = body.Pan, EqLowDb = body.EqLowDb, EqMidDb = body.EqMidDb, EqHighDb = body.EqHighDb,
                 CompressorOn = body.CompressorOn, CompressorThresholdDb = body.CompressorThresholdDb, CompressorRatio = body.CompressorRatio,
-                AgcOn = body.AgcOn, OnAir = body.OnAir,
+                AgcOn = body.AgcOn, OnAir = body.OnAir, Effect = body.Effect ?? "", EffectOn = body.EffectOn, EffectMix = body.EffectMix,
             }.Clamped();
             try { router.ApplyChannel(id, s); }
             catch (Exception ex) when (ex is BassException or DllNotFoundException)
@@ -54,6 +54,18 @@ public static class ChannelsApi
             if (!router.IsStarted || !router.HasStrip(id)) return Results.NotFound();
             var s = router.Strip(id).Processor.Settings with { OnAir = body.On };
             router.ApplyChannel(id, s);
+            options.Routing.Channels[id] = s;
+            Save(db, options);
+            return Results.Ok(Settings(s));
+        });
+
+        api.MapPost("/channels/{id}/effect", (string id, SwitchRequest body, AudioRouter router, StationDb db) =>
+        {
+            if (!router.IsStarted || !router.HasStrip(id)) return Results.NotFound();
+            var s = router.Strip(id).Processor.Settings with { EffectOn = body.On };
+            if (body.On && s.Effect.Length == 0) return Results.BadRequest("Kies eerst een effect in de kanaalstrip");
+            try { router.ApplyChannel(id, s); }
+            catch (Exception ex) when (ex is BassException or DllNotFoundException) { return Results.BadRequest($"Effect niet gelukt: {ex.Message}"); }
             options.Routing.Channels[id] = s;
             Save(db, options);
             return Results.Ok(Settings(s));
@@ -101,7 +113,7 @@ public static class ChannelsApi
     }
 
     private static ChannelSettingsDto Settings(ChannelSettings s) => new(s.GainDb, s.Pan, s.EqLowDb, s.EqMidDb, s.EqHighDb,
-        s.CompressorOn, s.CompressorThresholdDb, s.CompressorRatio, s.AgcOn, s.OnAir);
+        s.CompressorOn, s.CompressorThresholdDb, s.CompressorRatio, s.AgcOn, s.OnAir, s.Effect, s.EffectOn, s.EffectMix);
 
     private static ChannelsDto Dto(AudioRouter router)
     {
@@ -110,6 +122,6 @@ public static class ChannelsApi
             : [];
         var sources = new List<OutputChoiceDto> { new(InputChannel.ToneSource, "Testtoon 1 kHz (-18 dBFS)") };
         sources.AddRange(BassRuntime.GetRecordDevices().Where(d => d.Enabled).Select(d => new OutputChoiceDto($"rec:{d.Index}", d.Name)));
-        return new ChannelsDto(channels, sources);
+        return new ChannelsDto(channels, sources, ChannelEffect.Choices.Select(c => new OutputChoiceDto(c.Id, c.Name)).ToList());
     }
 }

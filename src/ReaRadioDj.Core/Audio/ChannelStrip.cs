@@ -20,9 +20,15 @@ public sealed record ChannelSettings
     public bool AgcOn { get; init; }
     /// <summary>The channel goes on air (for an input this is the switch that puts it through).</summary>
     public bool OnAir { get; init; } = true;
+    /// <summary>Built-in effect on the fader (see <see cref="ChannelEffect.Choices"/>), its switch and how much is heard (0..1).</summary>
+    public string Effect { get; init; } = "";
+    public bool EffectOn { get; init; }
+    public double EffectMix { get; init; } = 0.35;
 
     public ChannelSettings Clamped() => this with
     {
+        Effect = ChannelEffect.IsKnown(Effect) ? Effect ?? "" : "",
+        EffectMix = Math.Clamp(EffectMix, 0, 1),
         GainDb = Math.Clamp(GainDb, -24, 24),
         Pan = Math.Clamp(Pan, -1, 1),
         EqLowDb = Math.Clamp(EqLowDb, -15, 15),
@@ -72,7 +78,13 @@ public sealed unsafe partial class ChannelProcessor
     private GCHandle _self;
     private int _dsp, _low, _mid, _high, _comp;
 
-    public ChannelProcessor(int handle) => _handle = handle;
+    private readonly ChannelEffect _effect;
+
+    public ChannelProcessor(int handle)
+    {
+        _handle = handle;
+        _effect = new ChannelEffect(handle);
+    }
 
     public ChannelSettings Settings { get; private set; } = new();
 
@@ -104,6 +116,8 @@ public sealed unsafe partial class ChannelProcessor
             Band(_mid, BASS_BFX_BQF_PEAKINGEQ, 1000, s.EqMidDb);
             Band(_high, BASS_BFX_BQF_HIGHSHELF, 8000, s.EqHighDb);
         }
+
+        _effect.Apply(s.Effect, s.EffectOn, s.EffectMix);
 
         if (_comp == 0 && s.CompressorOn)
         {

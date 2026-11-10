@@ -89,3 +89,23 @@ public class GainStageTests
         Assert.Equal(-0.4f, s[1], 5);
     }
 }
+
+public class ChannelSettingsTests
+{
+    [Fact]
+    public void Unknown_effect_is_dropped_and_mix_is_clamped()
+    {
+        var s = new ChannelSettings { Effect = "warp-drive", EffectOn = true, EffectMix = 3 }.Clamped();
+        Assert.Equal("", s.Effect);
+        Assert.Equal(1, s.EffectMix);
+        Assert.Equal(ChannelEffect.Reverb, new ChannelSettings { Effect = ChannelEffect.Reverb }.Clamped().Effect);
+    }
+
+    [Fact]
+    public void Every_effect_has_a_name_and_only_some_have_a_mix()
+    {
+        Assert.All(ChannelEffect.Choices, c => Assert.False(string.IsNullOrWhiteSpace(c.Name)));
+        Assert.True(ChannelEffect.HasMix(ChannelEffect.Echo));
+        Assert.False(ChannelEffect.HasMix(ChannelEffect.Phone));
+    }
+}
