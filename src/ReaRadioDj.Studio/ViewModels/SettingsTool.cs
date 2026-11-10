@@ -621,7 +621,7 @@ public sealed partial class SettingsTool : StudioTool
         SoloistFound = SoloistLauncher.FindExe(probe) is { } exe
             ? "Gevonden: " + exe
             : SoloistPath.Trim().Length > 0 ? "Op het eigen pad staat geen soloist.exe."
-            : "Nog niet geïnstalleerd in " + SoloistLauncher.ManagedFolder + ".";
+            : "Nog niet gevonden. Gezocht in: " + string.Join("; ", SoloistLauncher.SearchFolders()) + ".";
         SoloistStatus = SoloistLauncher.LastMessage.Length > 0 ? SoloistLauncher.LastMessage
             : SoloistRunning ? "Soloist draait." : "Soloist is niet door de studio gestart.";
     }

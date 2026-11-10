@@ -40,6 +40,23 @@ public static class SoloistLauncher
     public static string ProgramFolder => Path.Combine(AppContext.BaseDirectory, "soloist");
 
     /// <summary>
+    /// The folders searched for soloist.exe, in order: the Soloist folder of REA-Radio-DJ, the soloist folder next to the
+    /// program, and tools\soloist of the REA-Radio-DJ installation or source folder (found by walking up from the program;
+    /// ignored by git, so the binary never ends up in the repository).
+    /// </summary>
+    public static IEnumerable<string> SearchFolders()
+    {
+        yield return ManagedFolder;
+        yield return ProgramFolder;
+        var dir = new DirectoryInfo(AppContext.BaseDirectory);
+        for (int i = 0; i < 8 && dir is not null; i++, dir = dir.Parent)
+        {
+            string tools = Path.Combine(dir.FullName, "tools", "soloist");
+            if (Directory.Exists(tools)) { yield return tools; yield break; }
+        }
+    }
+
+    /// <summary>
     /// Where soloist.exe is: the own path when one is set, otherwise the Soloist folder of REA-Radio-DJ, otherwise the
     /// soloist folder next to the program. Null when it is nowhere.
     /// </summary>
@@ -47,7 +64,7 @@ public static class SoloistLauncher
     {
         string own = s.ExePath.Trim().Trim('"');
         if (own.Length > 0) return File.Exists(own) ? own : null;
-        foreach (var folder in new[] { ManagedFolder, ProgramFolder })
+        foreach (var folder in SearchFolders())
         {
             if (!Directory.Exists(folder)) continue;
             string direct = Path.Combine(folder, "soloist.exe");
