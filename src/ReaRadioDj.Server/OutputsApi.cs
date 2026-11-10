@@ -14,7 +14,7 @@ public static class OutputsApi
 {
     public const string Key = "outputs";
 
-    public const string AudioKey = "audio";
+    public const string AudioKey = "audio", MasterKey = "master";
 
     private sealed record AudioSettings(string ProgramAsio, string PreviewAsio, int SampleRate, int BufferMs, int AsioBuffer);
 
@@ -41,6 +41,19 @@ public static class OutputsApi
         }
         BassRuntime.Configure(options.Routing.SampleRate, options.Routing.BufferMs);
         _started = Current(options);
+
+        if (db.GetSetting(MasterKey) is { } master)
+        {
+            try
+            {
+                if (JsonSerializer.Deserialize<MasterDto>(master) is { } m)
+                {
+                    options.Routing.LimiterEnabled = m.LimiterOn;
+                    options.Routing.LimiterCeilingDb = Math.Clamp(m.CeilingDb, -12, 0);
+                }
+            }
+            catch (JsonException) { }
+        }
 
         if (db.GetSetting(Key) is not { } json) return;
         try
@@ -73,6 +86,21 @@ public static class OutputsApi
                 : $"{name} heeft nu een eigen uitgang ({router.Strip(strip).Bus.Name}); dit kanaal zit niet meer in de uitzending, de stream en de stiltebewaking");
             return Results.Ok(Dto(router));
         });
+
+        api.MapGet("/master", () => new MasterDto(options.Routing.LimiterEnabled, options.Routing.LimiterCeilingDb));
+
+        api.MapPut("/master", (MasterDto body, AudioRouter router, StationDb db) =>
+        {
+            var m = new MasterDto(body.LimiterOn, Math.Clamp(body.CeilingDb, -12, 0));
+            try { if (router.IsStarted) router.Master.SetLimiter(m.LimiterOn, m.CeilingDb); }
+            catch (Exception ex) when (ex is BassException or DllNotFoundException) { return Results.BadRequest($"Begrenzer niet gelukt: {ex.Message}"); }
+            options.Routing.LimiterEnabled = m.LimiterOn;
+            options.Routing.LimiterCeilingDb = m.CeilingDb;
+            db.SetSetting(MasterKey, JsonSerializer.Serialize(m));
+            return Results.Ok(m);
+        });
+
+        api.MapPost("/master/reset", (AudioRouter router) => { router.Master.ResetIntegrated(); return Results.Ok(); });
 
         api.MapGet("/audio", (AudioRouter router) => Audio(options, router));
 

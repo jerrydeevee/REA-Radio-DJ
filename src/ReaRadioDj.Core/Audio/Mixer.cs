@@ -192,6 +192,8 @@ public sealed class AudioRouter : IDisposable
     public OutputBus Program { get; private set; } = null!;
     public OutputBus Preview { get; private set; } = null!;
     public IReadOnlyCollection<MixerStrip> Strips => _strips.Values;
+    /// <summary>Limiter and loudness measurement on the on-air bus.</summary>
+    public MasterProcessor Master { get; } = new();
     public MixerStrip Strip(string id) => _strips[id];
 
     public bool MicAvailable { get; private set; }
@@ -208,6 +210,9 @@ public sealed class AudioRouter : IDisposable
         AsioRuntime.BufferSamples = _options.Routing.AsioBuffer;
         Program = Bus("program", "Uitzending", _options.Routing.ProgramAsio, _options.OutputDevice);
         Preview = Bus("preview", "PFL", _options.Routing.PreviewAsio, _options.Routing.PreviewDevice);
+        Master.Attach(Program.Handle);
+        try { Master.SetLimiter(_options.Routing.LimiterEnabled, _options.Routing.LimiterCeilingDb); }
+        catch (Exception ex) when (ex is BassException or DllNotFoundException) { _logger.LogWarning("Limiter not available: {Message}", ex.Message); StartNotes.Add($"Begrenzer niet beschikbaar: {ex.Message}"); }
 
         Add(MixerStrip.CreateSubMixer(LogStrip, "Automatisering", Program));
         Add(MixerStrip.CreateSubMixer(StandbyStrip, "Standby", Program));

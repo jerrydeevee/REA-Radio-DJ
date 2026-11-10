@@ -28,6 +28,9 @@ public sealed partial class SettingsTool : StudioTool
     [ObservableProperty] private decimal _bufferMs = 250;
     [ObservableProperty] private decimal _asioBuffer;
     [ObservableProperty] private string _audioStatus = "";
+    [ObservableProperty] private bool _limiterOn = true;
+    [ObservableProperty] private decimal _limiterCeiling = -1;
+    private bool _masterLoaded;
     [ObservableProperty] private string _outputStatus = "";
 
     [ObservableProperty] private string _status = "";
@@ -130,6 +133,7 @@ public sealed partial class SettingsTool : StudioTool
         await LoadSystemAsync();
         await LoadOutputsAsync();
         await LoadAudioAsync();
+        if (await Hub.Client.GetAsync<MasterDto>("/api/master") is { } m) { LimiterOn = m.LimiterOn; LimiterCeiling = (decimal)m.CeilingDb; _masterLoaded = true; }
         Outputs.Clear();
         Outputs.Add(new DeviceDto(-1, "Standaard geluidskaart van Windows", true, false));
         foreach (var d in outs) Outputs.Add(d);
@@ -196,6 +200,7 @@ public sealed partial class SettingsTool : StudioTool
     }
 
     [RelayCommand] private Task TestProgram() => TestToneAsync("program");
+    [RelayCommand] private async Task ResetLoudness() => OutputStatus = await Hub.Client.PostAsync("/api/master/reset") ? "Geïntegreerde loudness begint opnieuw." : "";
     [RelayCommand] private Task TestPreview() => TestToneAsync("preview");
 
     private async Task LoadSystemAsync()
@@ -288,6 +293,8 @@ public sealed partial class SettingsTool : StudioTool
             StreamEnabled, StreamServer, StreamPassword, false, StreamBitrate, StreamGenre, StreamUrl,
             ControlBindAddress, (int)ControlTcpPort, (int)ControlOscPort, ControlPassword, false, ClearControlPassword,
             SilenceEnabled, (double)SilenceDb, (double)SilenceSeconds, SilenceActionNames[Math.Clamp(SilenceAction, 0, 2)], SilenceCategory?.Id));
+
+        if (_masterLoaded) await Hub.Client.PutAsync("/api/master", new MasterDto(LimiterOn, (double)LimiterCeiling));
 
         if (AudioLoaded)
         {

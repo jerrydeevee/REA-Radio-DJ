@@ -67,7 +67,7 @@ Vragen bij stap 1:
 | ⬜ | Ingangen als mengkanaal: meer dan één microfoon, lijn-in (cd-speler, tweede studio), met doorzetknop | een lijn-ingang staat als kanaal in de mixer en kan op de zender |
 | 🟡 | ASIO-uitvoer en instelbare buffer en samplerate, met testtoon per uitgang: klaar in Instellingen › Geluid (uitzending, voorluisteren en elk mengkanaal via ASIO; 44,1 of 48 kHz; buffer). Een stuurprogramma dat niet start wordt geweigerd en de Windows-kaart blijft in gebruik. Getest met Realtek ASIO; nog niet beluisterd en niet met een studiokaart | ASIO-kaart speelt zonder haperen; testtoon klinkt op de gekozen uitgang |
 | ⬜ | Kanaalstrip per mengkanaal: gain, balans, equalizer, compressor, automatische niveauregeling, dempen, naar de zender, opnemen | instellingen per kanaal hoorbaar en bewaard |
-| ⬜ | Master: begrenzer en loudness-meter op de zender | pieken boven de grens worden begrensd; LUFS zichtbaar |
+| ✅ | Master: begrenzer en loudness-meter op de zender | pieken boven de grens worden begrensd; LUFS zichtbaar — eigen look-ahead-begrenzer (plafond instelbaar, Geluid-tab), LUFS kort/geïntegreerd en true peak bij de meter; getest: plafond -12 dB → true peak -11,5 (zonder -7) |
 | ⬜ | Plekken voor VST-effecten per kanaal | één VST-plug-in laadt en werkt op een kanaal |
 
 Vragen bij stap 2:

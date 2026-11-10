@@ -103,6 +103,9 @@ public sealed class RoutingOptions
     public int BufferMs { get; set; } = 250;
     /// <summary>ASIO buffer in samples (0 = what the driver prefers).</summary>
     public int AsioBuffer { get; set; }
+    /// <summary>Limiter on the on-air bus: peaks stay under <see cref="LimiterCeilingDb"/>.</summary>
+    public bool LimiterEnabled { get; set; } = true;
+    public double LimiterCeilingDb { get; set; } = -1;
 }
 
 /// <summary>Rotation rules used by the planner when it picks songs from a category.</summary>

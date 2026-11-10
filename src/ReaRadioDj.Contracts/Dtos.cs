@@ -74,7 +74,8 @@ public sealed record StripDto(string Id, string Name, string Bus, float Volume, 
 
 public sealed record MicDto(bool Available, bool Open, string Status);
 
-public sealed record MixerDto(IReadOnlyList<StripDto> Strips, MicDto Mic, float ProgramLeft, float ProgramRight);
+public sealed record MixerDto(IReadOnlyList<StripDto> Strips, MicDto Mic, float ProgramLeft, float ProgramRight,
+    double? Lufs = null, double? LufsIntegrated = null, double? TruePeakDb = null, bool Limiter = false);
 
 public sealed record UpcomingEventDto(long Id, string Name, DateTime At, string Timing, bool Prepared);
 
@@ -387,3 +388,6 @@ public sealed record AudioSettingsDto(string ProgramAsio, string PreviewAsio, in
 public sealed record AudioSettingsRequest(string ProgramAsio, string PreviewAsio, int SampleRate, int BufferMs, int AsioBuffer);
 
 public sealed record PresetsAddedDto(int Added);
+
+/// <summary>Limiter on the on-air bus.</summary>
+public sealed record MasterDto(bool LimiterOn, double CeilingDb);

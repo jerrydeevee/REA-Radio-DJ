@@ -88,7 +88,8 @@ public static class Snapshot
             return new StripDto(s.Id, s.Name, s.Bus.Id, s.Volume, s.Muted, s.DuckLevel, l, r);
         }).ToList();
         var (pl, pr) = router.Program.Levels();
-        return new MixerDto(strips, new MicDto(router.MicAvailable, router.MicOpen, router.MicStatus), pl, pr);
+        var (st, it, tp) = router.Master.Read();
+        return new MixerDto(strips, new MicDto(router.MicAvailable, router.MicOpen, router.MicStatus), pl, pr, st, it, tp, router.Master.LimiterOn);
     }
 
     public static CueDto Cues(CueSet c) => new(c.CueIn, c.FullLevel, c.Intro, c.Intro2, c.Outro, c.FadeOut, c.Mix, c.CueOut, c.HookIn, c.HookOut);

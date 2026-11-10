@@ -72,6 +72,8 @@ public sealed partial class MainWindowViewModel : ObservableObject
     [ObservableProperty] private string _nextLabel = "";
     [ObservableProperty] private string _clockName = "";
     [ObservableProperty] private double _levelLeft;
+    [ObservableProperty] private string _lufsText = "– LUFS";
+    [ObservableProperty] private string _lufsTip = "";
     [ObservableProperty] private double _levelRight;
     [ObservableProperty] private string _nextEvent = "";
     /// <summary>0-100: how much of the current item is left (the bar runs empty).</summary>
@@ -138,6 +140,10 @@ public sealed partial class MainWindowViewModel : ObservableObject
         MicOpen = s.Mixer.Mic.Open;
         MicStatus = $"Microfoon: {s.Mixer.Mic.Status}";
         LevelLeft = s.Mixer.ProgramLeft * 100;
+        LufsText = s.Mixer.Lufs is double lufs ? $"{lufs:0.0} LUFS" : "– LUFS";
+        LufsTip = $"Loudness van de zender (EBU R128). Kort (3 s): {s.Mixer.Lufs?.ToString("0.0") ?? "–"} LUFS · "
+            + $"geïntegreerd: {s.Mixer.LufsIntegrated?.ToString("0.0") ?? "–"} LUFS · true peak: {s.Mixer.TruePeakDb?.ToString("0.0") ?? "–"} dBTP · "
+            + (s.Mixer.Limiter ? "begrenzer aan" : "begrenzer uit");
         LevelRight = s.Mixer.ProgramRight * 100;
         if (s.Engine.Current is { } c)
         {

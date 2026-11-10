@@ -180,6 +180,7 @@
         <StackPanel Grid.Column="4" Width="72" VerticalAlignment="Center" Spacing="4" Margin="16,0,0,0" ToolTip.Tip="Niveau van het programma, links en rechts">
           <ProgressBar Value="{Binding LevelLeft}" Maximum="100" MinHeight="6" MinWidth="0" Foreground="{DynamicResource OkBrush}" />
           <ProgressBar Value="{Binding LevelRight}" Maximum="100" MinHeight="6" MinWidth="0" Foreground="{DynamicResource OkBrush}" />
+          <TextBlock Text="{Binding LufsText}" FontSize="11" Foreground="{DynamicResource MutedTextBrush}" HorizontalAlignment="Center" ToolTip.Tip="{Binding LufsTip}" />
         </StackPanel>
         <Border Grid.Column="5" BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1,0,0,0" Padding="16,0,0,0" Margin="16,0,0,0">
           <StackPanel VerticalAlignment="Center">

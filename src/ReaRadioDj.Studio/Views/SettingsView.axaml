@@ -77,6 +77,13 @@
             <Button Classes="bar" Content="Testtoon voorluisteren" Command="{Binding TestPreviewCommand}" />
           </StackPanel>
 
+          <TextBlock Classes="title" Text="Begrenzer en loudness op de zender" Margin="0,24,0,4" />
+          <TextBlock Classes="help" Text="De begrenzer houdt pieken op de uitzending onder het plafond, ook als twee items samen te hard worden. De loudness (EBU R128) staat naast de niveaumeter bovenin; wijs hem aan voor de geïntegreerde waarde en de true peak." />
+          <CheckBox Content="Begrenzer op de uitzending" IsChecked="{Binding LimiterOn}" Margin="0,10,0,0" />
+          <TextBlock Classes="field" Text="Plafond (dBFS)" />
+          <NumericUpDown Value="{Binding LimiterCeiling}" Minimum="-12" Maximum="0" Increment="0.5" FormatString="0.0" IsEnabled="{Binding LimiterOn}" />
+          <Button Classes="bar" Content="Geïntegreerde loudness opnieuw beginnen" Command="{Binding ResetLoudnessCommand}" Margin="0,10,0,0" />
+
           <TextBlock Classes="title" Text="ASIO, samplerate en buffer" Margin="0,24,0,4" />
           <TextBlock Classes="help" Text="Met ASIO gaat het geluid rechtstreeks naar het stuurprogramma van een studiokaart, zonder de Windows-mixer ertussen. Kies hier een ASIO-uitgang om de Windows-kaart hierboven te vervangen. Deze instellingen worden actief na een herstart van de engine; lukt ASIO dan niet, dan valt de engine terug op de Windows-kaart en meldt dat." />
           <TextBlock Classes="field" Text="Uitzending via ASIO" />
