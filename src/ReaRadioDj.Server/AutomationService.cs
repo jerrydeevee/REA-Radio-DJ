@@ -81,10 +81,17 @@ public sealed class AutomationService(
         if (options.Stream.Enabled) streamer.Start(engine.MixerHandle);
         if (resumed is null) messages.Info(engine.AutoPlay ? "Automatisering gestart" : "Gestart in live-assist");
 
-        try { await library.ScanAsync(ct); }
-        catch (Exception ex) when (!ct.IsCancellationRequested) { logger.LogError(ex, "Library scan failed"); messages.Error($"Inlezen mislukt: {ex.Message}"); }
-        if (library.Songs.Count == 0)
-            messages.Warning($"Geen muziek in {options.MusicFolder}. Zet daar muziek neer, of start één keer met --demo.");
+        // The scan runs in the background: with a large library (tens of thousands of new files) it takes hours, and the
+        // log must keep filling and breaks must keep rendering from what the database already knows in the meantime.
+        bool scanDone = false;
+        var scan = Task.Run(async () =>
+        {
+            try { await library.ScanAsync(ct); }
+            catch (Exception ex) when (!ct.IsCancellationRequested) { logger.LogError(ex, "Library scan failed"); messages.Error($"Inlezen mislukt: {ex.Message}"); }
+            if (library.Songs.Count == 0)
+                messages.Warning($"Geen muziek in {options.MusicFolder}. Zet daar muziek neer, of start één keer met --demo.");
+            Volatile.Write(ref scanDone, true);
+        }, CancellationToken.None);
         planner.Reload();
         if (planner.EnsureDefaults()) messages.Info("Standaardklok aangemaakt voor de hele week");
         if (SeedDemoEvents) SeedNews();
@@ -95,6 +102,13 @@ public sealed class AutomationService(
         {
             try
             {
+                if (Volatile.Read(ref scanDone))   // new categories and items after the scan (a first start only has them now)
+                {
+                    scanDone = false;
+                    planner.Reload();
+                    if (planner.EnsureDefaults()) messages.Info("Standaardklok aangemaakt voor de hele week");
+                    if (SeedDemoEvents) SeedNews();
+                }
                 _scheduler.Fill(log, planner, DateTime.Now, engine.GetState().SecondsToNext);
                 if (options.Presenter.Enabled) await breaks.RenderPendingAsync(ct);
                 SaveLog();
@@ -106,6 +120,7 @@ public sealed class AutomationService(
             await Task.Delay(1000, ct).ContinueWith(_ => { }, CancellationToken.None);
         }
         await eventLoop.ContinueWith(_ => { }, CancellationToken.None);
+        await scan.ContinueWith(_ => { }, CancellationToken.None);
         SaveLog();
         if (KeepOnAirState) SaveOnAir(); else _resume.Clear();
     }
