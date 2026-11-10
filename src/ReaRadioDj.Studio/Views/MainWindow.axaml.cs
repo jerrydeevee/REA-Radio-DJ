@@ -14,7 +14,8 @@ public partial class MainWindow : Window
         // Hotkeys come from studio.json (Bediening › Sneltoetsen) and are rebuilt when they are saved.
         DataContextChanged += (_, _) => ApplyHotkeys();
         ViewModels.Hotkeys.Changed += ApplyHotkeys;
-        Closed += (_, _) => ViewModels.Hotkeys.Changed -= ApplyHotkeys;
+        Closed += (_, _) => { ViewModels.Hotkeys.Changed -= ApplyHotkeys; _global?.Dispose(); };
+        Opened += (_, _) => ApplyHotkeys();
         // Narrower than 1900 px the transport buttons get their own row, so the title keeps its room.
         void Arrange()
         {
@@ -62,11 +63,18 @@ public partial class MainWindow : Window
         }
     }
 
+    private Services.GlobalHotkeys? _global;
+
     private void ApplyHotkeys()
     {
         if (DataContext is not ViewModels.MainWindowViewModel vm) return;
         KeyBindings.Clear();
         foreach (var (gesture, command) in ViewModels.Hotkeys.Bindings(vm.Settings))
             KeyBindings.Add(new Avalonia.Input.KeyBinding { Gesture = gesture, Command = vm.RunEngineCommandCommand, CommandParameter = command });
+        // Hotkeys marked "overal" also work while another program has the focus.
+        _global ??= Services.GlobalHotkeys.For(this, c => Dispatcher.UIThread.Post(() => vm.RunEngineCommandCommand.Execute(c)));
+        if (_global is null) return;
+        var failed = _global.Apply(ViewModels.Hotkeys.GlobalBindings(vm.Settings));
+        if (failed.Count > 0) vm.Hub.Status = $"Sneltoets niet overal te gebruiken (al in gebruik door een ander programma?): {string.Join(", ", failed)}";
     }
 }

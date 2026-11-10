@@ -254,9 +254,9 @@ Vraag bij stap 7:
 
 | Status | Werk |
 |---|---|
-| ⬜ | Gebeurtenissen koppelen aan commando's (start van een item, microfoon open, stream weg) |
-| ⬜ | Bediening via een webadres per knop en een UDP-poort; sneltoetsen die ook buiten de studio werken |
-| ⬜ | OSC uitsturen |
+| ✅ | Gebeurtenissen koppelen aan commando's (start van een item, microfoon open, stream weg): Bediening › Gebeurtenissen; ook per soort item (nummer, jingle, AI-presentator, voicetrack), microfoon dicht en stream terug, met {artiest} {titel} {type} {categorie} {station} in het commando |
+| ✅ | Bediening via een webadres per knop en een UDP-poort; sneltoetsen die ook buiten de studio werken: /api/do/next, /api/do/cart/1/5 of /api/do?text=… (met wachtwoord ?key=…); UDP-poort 8603 met één commando per pakket en antwoord terug; per sneltoets 'overal' (Windows RegisterHotKey) |
+| ✅ | OSC uitsturen: commando OSC <host:poort> </adres> [argumenten] (getallen als i/f, tekst als s), samen met HTTP <webadres> te gebruiken bij gebeurtenissen, sneltoetsen en de planner |
 | ⬜ | USB-GPIO-kaarten, joystickpoort, tweede Ember+- en Livewire-apparaat als reserve |
 | ⬜ | Mengtafels: eerst D&R Airence en D&R Webstation, via een algemene laag zodat AxelTech, Wheatstone en andere fabrikanten erbij kunnen; elk met het openbare protocol van de fabrikant |
 | 🟡 | Ember+ testen tegen LUCI Studio en een Lawo-tafel |

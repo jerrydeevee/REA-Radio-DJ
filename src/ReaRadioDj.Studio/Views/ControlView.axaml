@@ -37,7 +37,7 @@
           <Button Content="Opslaan" Command="{Binding SaveHotkeysCommand}" Background="#2F9E6A" />
         </StackPanel>
         <TextBlock DockPanel.Dock="Bottom" Classes="muted" TextWrapping="Wrap" Margin="0,6,0,0"
-                   Text="Toets als F5, Ctrl+B, Shift+F1 of Ctrl+Alt+1. Elk commando uit de lijst kan; kies een regel en klik een commando op het eerste tabblad om het over te nemen. Sneltoetsen gelden in alle studiovensters." />
+                   Text="Toets als F5, Ctrl+B, Shift+F1 of Ctrl+Alt+1. Elk commando uit de lijst kan; kies een regel en klik een commando op het eerste tabblad om het over te nemen. Sneltoetsen gelden in alle studiovensters; met 'overal' ook als een ander programma vooraan staat (kies dan een combinatie die andere programma's niet gebruiken, bijv. Ctrl+Alt+F5)." />
         <ListBox ItemsSource="{Binding HotkeyRows}" SelectedItem="{Binding SelectedHotkey}">
           <ListBox.ItemTemplate>
             <DataTemplate x:DataType="vm:HotkeyRow">
@@ -46,7 +46,36 @@
                         Command="{Binding $parent[ListBox].DataContext.RemoveHotkeyCommand}" CommandParameter="{Binding}" />
                 <TextBox DockPanel.Dock="Left" Width="130" Text="{Binding Key}" FontFamily="Consolas"
                          BorderBrush="{Binding Valid, Converter={x:Static vm:Brushes.ValidBorder}}" />
+                <CheckBox DockPanel.Dock="Right" Content="overal" IsChecked="{Binding Global}" Margin="6,0,0,0"
+                          ToolTip.Tip="Werkt ook als een ander programma vooraan staat (bijv. de browser of de mail)" />
                 <TextBox Margin="4,0,0,0" Text="{Binding Command}" FontFamily="Consolas" Watermark="commando" />
+              </DockPanel>
+            </DataTemplate>
+          </ListBox.ItemTemplate>
+        </ListBox>
+      </DockPanel>
+    </TabItem>
+
+    <!-- ============================================================ events -->
+    <TabItem Header="Gebeurtenissen">
+      <DockPanel>
+        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="4" Margin="0,0,0,6">
+          <Button Classes="small" Content="+ koppeling" Command="{Binding AddEventRuleCommand}" />
+          <Button Content="Opslaan" Command="{Binding SaveEventRulesCommand}" Background="#2F9E6A" />
+          <TextBlock Classes="muted" Text="{Binding EventStatus}" VerticalAlignment="Center" />
+        </StackPanel>
+        <TextBlock DockPanel.Dock="Bottom" Classes="muted" TextWrapping="Wrap" Margin="0,6,0,0"
+                   Text="Bij een gebeurtenis voert de engine het commando uit, met {artiest} {titel} {type} {categorie} {station} ingevuld. Bijvoorbeeld: microfoon open → OSC 192.168.1.20:8000 /onair 1, of een nummer start → HTTP http://rds.local/set?ps={titel}." />
+        <ListBox ItemsSource="{Binding EventRules}">
+          <ListBox.ItemTemplate>
+            <DataTemplate x:DataType="vm:EventRuleRow">
+              <DockPanel>
+                <Button DockPanel.Dock="Right" Classes="small" Content="✕" Margin="4,0,0,0"
+                        Command="{Binding $parent[ListBox].DataContext.RemoveEventRuleCommand}" CommandParameter="{Binding}" />
+                <CheckBox DockPanel.Dock="Left" IsChecked="{Binding Enabled}" ToolTip.Tip="Aan of uit" />
+                <ComboBox DockPanel.Dock="Left" Width="190" SelectedItem="{Binding Event}"
+                          ItemsSource="{Binding $parent[ListBox].DataContext.EventChoices}" />
+                <TextBox Margin="4,0,0,0" Text="{Binding Command}" FontFamily="Consolas" Watermark="commando, bijv. OSC 192.168.1.20:8000 /onair 1" />
               </DockPanel>
             </DataTemplate>
           </ListBox.ItemTemplate>

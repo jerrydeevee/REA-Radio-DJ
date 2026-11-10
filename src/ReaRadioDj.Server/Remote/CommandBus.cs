@@ -1,5 +1,7 @@
 using System.Globalization;
+using System.Net.Sockets;
 using ReaRadioDj.Core;
+using ReaRadioDj.Core.Remote;
 using ReaRadioDj.Core.Audio;
 using ReaRadioDj.Core.Library;
 using ReaRadioDj.Core.Model;
@@ -56,6 +58,8 @@ public sealed class CommandBus(
         new("OVERLAY STOP", "Overlays stoppen", "Spelers"),
         new("STREAM START|STOP", "Icecast-uitzending starten of stoppen", "Stream"),
         new("SCAN", "Bibliotheek opnieuw inlezen", "Bibliotheek"),
+        new("OSC <host:poort> </adres> [argumenten]", "OSC-bericht uitsturen, bijv. OSC 192.168.1.20:8000 /licht/onair 1 (tekst met spaties tussen \"aanhalingstekens\")", "Uitsturen"),
+        new("HTTP <webadres>", "Webadres aanroepen (GET), bijv. voor een lamp, RDS-encoder of website", "Uitsturen"),
         new("MESSAGE <tekst>", "Melding in de studio", "Meldingen"),
         new("ALERT <tekst>", "Alarm in de studio", "Meldingen"),
         new("STATUS", "Wat er nu speelt", "Info"),
@@ -135,6 +139,11 @@ public sealed class CommandBus(
             case "STREAM" when Arg(1) == "STOP": streamer.Stop(); return CommandResult.Done();
             case "SCAN": _ = library.ScanAsync(); return CommandResult.Done("inlezen gestart");
 
+            case "OSC" when w.Count >= 3:
+                return SendOsc(Words(raw).Skip(1).ToList());
+            case "HTTP" when w.Count >= 2:
+                return CallHttp(RawRest(raw));
+
             case "MESSAGE" when w.Count > 1: messages.Info(RawRest(raw)); return CommandResult.Done();
             case "ALERT" when w.Count > 1: messages.Add("alarm", RawRest(raw)); return CommandResult.Done();
 
@@ -147,6 +156,66 @@ public sealed class CommandBus(
                 return CommandResult.Done(string.Join("; ", Commands.Select(c => c.Syntax)));
         }
         return CommandResult.Fail($"onbekend commando: {Rest(0)}");
+    }
+
+    private static readonly UdpClient OscOut = new();
+
+    /// <summary>OSC to host:port with an address and arguments (numbers as numbers, the rest as text).</summary>
+    private static CommandResult SendOsc(List<string> words)
+    {
+        var target = words[0];
+        int colon = target.LastIndexOf(':');
+        if (colon <= 0 || !int.TryParse(target[(colon + 1)..], out int port) || port is < 1 or > 65535)
+            return CommandResult.Fail("doel als host:poort, bijv. 192.168.1.20:8000");
+        if (!words[1].StartsWith('/')) return CommandResult.Fail("het OSC-adres begint met /");
+        var packet = Osc.Build(words[1], Osc.Arguments(words.Skip(2)));
+        try
+        {
+            lock (OscOut) OscOut.Send(packet, packet.Length, target[..colon], port);
+            return CommandResult.Done($"OSC {words[1]} naar {target}");
+        }
+        catch (SocketException ex) { return CommandResult.Fail(ex.Message); }
+    }
+
+    /// <summary>Calls a web address in the background; the answer is logged when it is an error.</summary>
+    private CommandResult CallHttp(string url)
+    {
+        if (!Uri.TryCreate(url.Trim('"'), UriKind.Absolute, out var uri) || uri.Scheme is not ("http" or "https"))
+            return CommandResult.Fail("een webadres met http:// of https://");
+        var http = services.GetRequiredService<IHttpClientFactory>().CreateClient("commands");
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                using var req = new HttpRequestMessage(HttpMethod.Get, uri);
+                req.Headers.UserAgent.ParseAdd("REA-Radio-DJ/0.1 ( https://github.com/jerrydeevee/REA-Radio-DJ )");
+                using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+                using var res = await http.SendAsync(req, cts.Token);
+                if (!res.IsSuccessStatusCode) logger.LogWarning("HTTP command to {Host} answered {Status}", uri.Host, (int)res.StatusCode);
+            }
+            catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException) { logger.LogWarning("HTTP command to {Host}: {Error}", uri.Host, ex.Message); }
+        });
+        return CommandResult.Done($"aangeroepen: {uri.Host}");
+    }
+
+    /// <summary>Words of a command; "text with spaces" between quotes stays one word.</summary>
+    public static List<string> Words(string raw)
+    {
+        var list = new List<string>();
+        var sb = new System.Text.StringBuilder();
+        bool quoted = false, any = false;
+        foreach (char c in raw.Trim())
+        {
+            if (c == '"') { quoted = !quoted; any = true; continue; }
+            if (char.IsWhiteSpace(c) && !quoted)
+            {
+                if (sb.Length > 0 || any) { list.Add(sb.ToString()); sb.Clear(); any = false; }
+                continue;
+            }
+            sb.Append(c);
+        }
+        if (sb.Length > 0 || any) list.Add(sb.ToString());
+        return list;
     }
 
     private CommandResult Player(string which, string action, long? mediaId)

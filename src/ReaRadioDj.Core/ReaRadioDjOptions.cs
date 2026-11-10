@@ -73,6 +73,8 @@ public sealed class ControlOptions
     public int TcpPort { get; set; } = 8601;
     /// <summary>OSC over UDP (TouchOSC, Companion, lighting desks). 0 = off.</summary>
     public int OscPort { get; set; } = 8602;
+    /// <summary>Plain text commands over UDP, one per datagram ("NEXT", "CART 1 5"). 0 = off.</summary>
+    public int UdpPort { get; set; } = 8603;
     /// <summary>When set, a TCP client first sends "AUTH &lt;password&gt;".</summary>
     public string Password { get; set; } = "";
 }

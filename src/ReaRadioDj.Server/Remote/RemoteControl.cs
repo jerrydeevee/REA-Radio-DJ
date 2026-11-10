@@ -115,6 +115,60 @@ public sealed class OscControlService(ReaRadioDjOptions options, CommandBus bus,
     }
 }
 
+/// <summary>
+/// Plain text commands over UDP: one command per datagram, the answer ("OK ..." or "ERR ...") goes back to the sender.
+/// With a password set, the datagram starts with the password and a space ("geheim NEXT").
+/// </summary>
+public sealed class UdpControlService(ReaRadioDjOptions options, CommandBus bus, ILogger<UdpControlService> logger) : BackgroundService
+{
+    protected override async Task ExecuteAsync(CancellationToken ct)
+    {
+        var o = options.Control;
+        if (o.UdpPort <= 0) return;
+        UdpClient udp;
+        try { udp = new UdpClient(new IPEndPoint(RemoteControl.Address(o.BindAddress), o.UdpPort)); }
+        catch (SocketException ex)
+        {
+            logger.LogWarning("UDP control on port {Port} not available: {Error}", o.UdpPort, ex.Message);
+            return;
+        }
+        logger.LogInformation("UDP control on {Address}:{Port}", o.BindAddress, o.UdpPort);
+        using (udp)
+        {
+            while (!ct.IsCancellationRequested)
+            {
+                UdpReceiveResult packet;
+                try { packet = await udp.ReceiveAsync(ct); }
+                catch (OperationCanceledException) { break; }
+                catch (SocketException) { continue; }
+                var text = Encoding.UTF8.GetString(packet.Buffer).Trim();
+                string answer;
+                if (!string.IsNullOrEmpty(o.Password))
+                {
+                    int space = text.IndexOf(' ');
+                    if (space <= 0 || !RemoteControl.SamePassword(text[..space], o.Password))
+                    {
+                        logger.LogWarning("UDP control: wrong password from {Remote}", packet.RemoteEndPoint);
+                        answer = "ERR wachtwoord";
+                        await Reply(udp, answer, packet.RemoteEndPoint, ct);
+                        continue;
+                    }
+                    text = text[(space + 1)..];
+                }
+                var r = bus.Run(text, $"udp {packet.RemoteEndPoint}");
+                answer = (r.Ok ? "OK " : "ERR ") + r.Text.ReplaceLineEndings(" ");
+                await Reply(udp, answer, packet.RemoteEndPoint, ct);
+            }
+        }
+    }
+
+    private static async Task Reply(UdpClient udp, string text, IPEndPoint to, CancellationToken ct)
+    {
+        try { await udp.SendAsync(Encoding.UTF8.GetBytes(text), to, ct); }
+        catch (SocketException) { }
+    }
+}
+
 public static class RemoteControl
 {
     public static IPAddress Address(string bind) =>

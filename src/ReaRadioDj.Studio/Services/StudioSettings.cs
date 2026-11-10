@@ -37,6 +37,8 @@ public sealed class StudioSettings
 
     /// <summary>Key (Avalonia gesture text, e.g. "F5", "Ctrl+B", "Shift+F1") → engine command.</summary>
     public Dictionary<string, string> Hotkeys { get; set; } = DefaultHotkeys();
+    /// <summary>Hotkeys (as in <see cref="Hotkeys"/>) that also work while another program has the focus.</summary>
+    public List<string> GlobalHotkeys { get; set; } = [];
 
     public static Dictionary<string, string> DefaultHotkeys() => new()
     {

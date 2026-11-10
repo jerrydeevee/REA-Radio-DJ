@@ -144,6 +144,9 @@ builder.Services.AddHostedService(sp => sp.GetRequiredService<AutomationService>
 builder.Services.AddSingleton<CommandBus>();
 builder.Services.AddHostedService<TcpControlService>();
 builder.Services.AddHostedService<OscControlService>();
+builder.Services.AddHostedService<UdpControlService>();
+builder.Services.AddSingleton<EventCommandService>();
+builder.Services.AddHostedService(sp => sp.GetRequiredService<EventCommandService>());
 builder.Services.AddSingleton<StreamWatchService>();
 builder.Services.AddHostedService(sp => sp.GetRequiredService<StreamWatchService>());
 // Icon next to the clock, so a running engine can always be found back (not when running as a service).
@@ -184,6 +187,26 @@ SourcesApi.Map(api);
 ReaRadioDj.Server.Hardware.HardwareApi.Map(api);
 WishlistApi.Map(api, options);
 api.MapGet("/commands", () => CommandBus.Commands);
+// A web address per command, for a Stream Deck, a web page or a button box: /api/do/next, /api/do/cart/1/5,
+// /api/do/mic/toggle; ?text=AUTO%20OFF runs any text. With a control password, add ?key=<password>.
+api.MapGet("/do/{**path}", (string? path, string? text, string? key, CommandBus bus, HttpContext http) =>
+{
+    if (!string.IsNullOrEmpty(options.Control.Password) && !RemoteControl.SamePassword(key ?? "", options.Control.Password))
+        return Results.Json(new { ok = false, text = "wachtwoord" }, statusCode: 401);
+    var command = !string.IsNullOrWhiteSpace(text) ? text : string.Join(' ', (path ?? "").Split('/', StringSplitOptions.RemoveEmptyEntries));
+    var r = bus.Run(command, $"http {http.Connection.RemoteIpAddress}");
+    return r.Ok ? Results.Ok(r) : Results.BadRequest(r);
+});
+api.MapGet("/event-commands", (EventCommandService s) => new
+{
+    rules = s.Rules,
+    events = ReaRadioDj.Core.Remote.EventRules.Events.Select(e => new { key = e.Key, label = e.Label }),
+});
+api.MapPut("/event-commands", (List<ReaRadioDj.Core.Remote.EventRule> rules, EventCommandService s) =>
+{
+    s.Save(rules);
+    return Results.Ok(s.Rules);
+});
 api.MapPost("/watches/stop", (StreamWatchService w) => w.StopLive() ? Results.Ok() : Results.NotFound());
 api.MapPost("/command", (CommandRequest body, CommandBus bus) =>
 {
