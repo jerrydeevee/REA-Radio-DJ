@@ -16,12 +16,11 @@ public partial class LibraryView : UserControl
     {
         InitializeComponent();
         MediaDrag.Bind(this);
-        // Small dock panel: the list always keeps room; top and bottom scroll, the detail pane only shows when it fits.
+        // Small dock panel: the list always keeps room; the top scrolls, the detail pane only shows when it fits.
         SizeChanged += (_, e) =>
         {
             double h = e.NewSize.Height, w = e.NewSize.Width;
             TopArea.MaxHeight = Math.Max(60, h * 0.45);
-            BottomArea.MaxHeight = Math.Max(40, h * 0.35);
             if (DataContext is LibraryTool t) t.Wide = w >= 720;
         };
         DataContextChanged += (_, _) => { if (DataContext is LibraryTool t) t.Wide = Bounds.Width <= 0 || Bounds.Width >= 720; };

@@ -25,6 +25,9 @@ public static class Brushes
     /// <summary>True when the value equals the converter parameter (for style classes).</summary>
     public static readonly IValueConverter Is = new FuncValueConverter<string?, string?, bool>((v, p) => string.Equals(v, p, StringComparison.Ordinal));
 
+    /// <summary>Fader height of a mixer strip for a panel of this height: what is left after the buttons, 60-220 px.</summary>
+    public static readonly IValueConverter FaderHeight = new FuncValueConverter<double, double>(h => h <= 0 ? 150 : Math.Clamp(h - 225, 60, 220));
+
     public static readonly IValueConverter Half = new FuncValueConverter<double, double>(v => Math.Max(12, Math.Round(v / 2)));
 
     public static readonly IValueConverter ValidBorder = new FuncValueConverter<bool, IBrush>(ok => ok ? Off : Red);

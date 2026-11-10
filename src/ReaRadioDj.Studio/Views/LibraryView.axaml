@@ -5,7 +5,11 @@
              xmlns:ctl="using:ReaRadioDj.Studio.Controls"
              x:Class="ReaRadioDj.Studio.Views.LibraryView"
              x:DataType="vm:LibraryTool">
-  <Grid Margin="6" RowDefinitions="Auto,*,Auto">
+  <!-- Searching and playing on the first tab; managing categories, folders and shares on its own tab, so it is never
+       hidden under the list in a small panel. -->
+  <TabControl Classes="compact" Margin="2">
+    <TabItem Header="Zoeken">
+  <Grid Margin="6" RowDefinitions="Auto,*">
     <ScrollViewer x:Name="TopArea" Grid.Row="0" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
     <StackPanel>
       <Grid ColumnDefinitions="*,Auto,Auto" Margin="0,0,0,4">
@@ -139,101 +143,6 @@
       </Border>
     </StackPanel>
     </ScrollViewer>
-    <ScrollViewer x:Name="BottomArea" Grid.Row="2" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-    <StackPanel>
-      <Expander Header="Categorieën en item" Margin="0,4,0,0" HorizontalAlignment="Stretch">
-        <StackPanel Spacing="6">
-          <DockPanel>
-            <Button DockPanel.Dock="Right" Classes="small" Content="Verplaats selectie" Margin="4,0,0,0"
-                    Command="{Binding MoveToCategoryCommand}" CommandParameter="{Binding #MoveTarget.SelectedItem}" />
-            <ComboBox x:Name="MoveTarget" ItemsSource="{Binding CategoryChoices}" HorizontalAlignment="Stretch" />
-          </DockPanel>
-          <Button Classes="small" Content="Selectie aan/uit (niet meer inplannen)" Command="{Binding ToggleEnabledCommand}" />
-          <DockPanel>
-            <Button DockPanel.Dock="Right" Classes="small" Content="Toevoegen" Command="{Binding AddCategoryCommand}" Margin="4,0,0,0" />
-            <CheckBox DockPanel.Dock="Right" Content="jingle" IsChecked="{Binding NewCategoryIsJingle}" Margin="4,0,0,0" />
-            <TextBox Text="{Binding NewCategory}" Watermark="nieuwe categorie" />
-          </DockPanel>
-          <TextBlock Classes="muted" TextWrapping="Wrap"
-                     Text="Tip: elke submap van de muziek- of jinglemap wordt bij het inlezen een categorie." />
-        </StackPanel>
-      </Expander>
-      <Expander Header="Mappen en shares" Margin="0,4,0,0" HorizontalAlignment="Stretch">
-        <StackPanel Spacing="6">
-          <TextBlock Classes="muted" TextWrapping="Wrap"
-                     Text="Kies zelf waar de bibliotheek leest: een map op deze pc, een andere schijf of een share (\\server\muziek). Nieuwe bestanden worden vanzelf ingelezen; tags, beat, verloop en markers worden gemeten en bewaard. Een map verwijderen bewaart de nummers met al hun gegevens: komt een nummer later terug, hier of elders, dan wordt het herkend." />
-          <ItemsControl ItemsSource="{Binding Folders}">
-            <ItemsControl.ItemTemplate>
-              <DataTemplate x:DataType="vm:LibraryFolderVm">
-                <Border Classes="card" Padding="6" Margin="0,0,0,4">
-                  <StackPanel Spacing="3">
-                    <DockPanel>
-                      <Button DockPanel.Dock="Right" Classes="small" Content="{Binding RemoveText}" Command="{Binding RemoveCommand}" IsVisible="{Binding Editable}"
-                              ToolTip.Tip="Haalt de map uit de bibliotheek; de nummers en hun gegevens blijven bewaard" />
-                      <TextBlock Text="{Binding Title}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" FontWeight="SemiBold" />
-                    </DockPanel>
-                    <TextBlock Classes="muted" Text="{Binding StateText}" />
-                    <TextBlock Text="Niet bereikbaar: de nummers van deze map blijven gewoon bewaard en komen terug zodra de map er weer is."
-                               Foreground="#F0B429" FontSize="11" TextWrapping="Wrap" IsVisible="{Binding Offline}" />
-                    <WrapPanel IsVisible="{Binding Editable}">
-                      <TextBlock Text="{Binding KindText, StringFormat='Soort: {0}'}" VerticalAlignment="Center" Margin="0,0,12,0" />
-                      <TextBox Text="{Binding Category}" Watermark="categorie (leeg = submappen)" Width="200" Margin="0,0,4,0" />
-                      <Button Classes="small" Content="Opslaan" Command="{Binding SaveCategoryCommand}" Margin="0,0,12,0" />
-                      <CheckBox Content="Bewaken" IsChecked="{Binding Watch}" Margin="0,0,12,0" ToolTip.Tip="Nieuwe en gewijzigde bestanden direct verwerken" />
-                      <CheckBox Content="Markers in het bestand" IsChecked="{Binding WriteTags}" Margin="0,0,12,0"
-                                ToolTip.Tip="Cues, beat en BPM ook in de tags van het audiobestand zetten, zodat ze met het bestand meegaan" />
-                      <CheckBox Content="Aan" IsChecked="{Binding Enabled}" />
-                    </WrapPanel>
-                  </StackPanel>
-                </Border>
-              </DataTemplate>
-            </ItemsControl.ItemTemplate>
-          </ItemsControl>
-          <TextBlock Classes="h" Text="Map toevoegen" />
-          <DockPanel>
-            <Button x:Name="BrowseFolder" DockPanel.Dock="Right" Classes="small" Content="Bladeren…" Margin="4,0,0,0" />
-            <TextBox Text="{Binding NewFolderPath}" Watermark="D:\Muziek of \\server\muziek" />
-          </DockPanel>
-          <WrapPanel>
-            <CheckBox Content="Jingles" IsChecked="{Binding NewFolderIsJingle}" Margin="0,0,12,0" />
-            <TextBox Text="{Binding NewFolderCategory}" Watermark="vaste categorie (leeg = submappen)" Width="230" Margin="0,0,12,0" />
-            <CheckBox Content="Markers in het bestand" IsChecked="{Binding NewFolderWriteTags}" Margin="0,0,12,0" />
-            <Button Classes="small" Content="Toevoegen" Command="{Binding AddFolderCommand}" />
-          </WrapPanel>
-          <TextBlock Classes="muted" Text="{Binding FolderStatus}" TextWrapping="Wrap" />
-          <TextBlock Classes="h" Text="Vervangende locaties" Margin="0,6,0,0" />
-          <TextBlock Classes="muted" TextWrapping="Wrap"
-                     Text="Staat een bestand niet op zijn pad (share weg, andere stationsletter, andere pc), dan zoekt de engine hetzelfde bestand onder de vervangende map. Bijvoorbeeld Y:\Muziek → \\nas\muziek. 'Definitief omzetten' past de paden in de bibliotheek blijvend aan." />
-          <ItemsControl ItemsSource="{Binding Substitutes}">
-            <ItemsControl.ItemTemplate>
-              <DataTemplate x:DataType="vm:SubstituteRow">
-                <DockPanel Margin="0,0,0,3">
-                  <Button DockPanel.Dock="Right" Classes="small" Content="✕" Margin="4,0,0,0"
-                          Command="{Binding $parent[ItemsControl].DataContext.RemoveSubstituteCommand}" CommandParameter="{Binding}" />
-                  <Button DockPanel.Dock="Right" Classes="small" Content="{Binding RelocateText}" Margin="4,0,0,0"
-                          Command="{Binding $parent[ItemsControl].DataContext.RelocateCommand}" CommandParameter="{Binding}"
-                          ToolTip.Tip="Zet de opgeslagen paden blijvend om naar de nieuwe map (alle gegevens blijven)" />
-                  <CheckBox DockPanel.Dock="Left" IsChecked="{Binding Enabled}" ToolTip.Tip="Aan of uit" />
-                  <TextBlock DockPanel.Dock="Right" Text="niet bereikbaar" Foreground="#F0B429" FontSize="11" VerticalAlignment="Center"
-                             Margin="4,0,0,0" IsVisible="{Binding !Reachable}" />
-                  <Grid ColumnDefinitions="*,Auto,*">
-                    <TextBox Grid.Column="0" Text="{Binding From}" Watermark="oude map, bijv. Y:\Muziek" />
-                    <TextBlock Grid.Column="1" Text=" → " VerticalAlignment="Center" />
-                    <TextBox Grid.Column="2" Text="{Binding To}" Watermark="vervangende map, bijv. \\nas\muziek" />
-                  </Grid>
-                </DockPanel>
-              </DataTemplate>
-            </ItemsControl.ItemTemplate>
-          </ItemsControl>
-          <StackPanel Orientation="Horizontal" Spacing="4">
-            <Button Classes="small" Content="+ vervangende locatie" Command="{Binding AddSubstituteCommand}" />
-            <Button Classes="small" Content="Opslaan" Command="{Binding SaveSubstitutesCommand}" />
-          </StackPanel>
-          <TextBlock Classes="muted" Text="{Binding SubstituteStatus}" TextWrapping="Wrap" />
-        </StackPanel>
-      </Expander>
-    </StackPanel>
-    </ScrollViewer>
     <Grid x:Name="Body" Grid.Row="1" ColumnDefinitions="*,Auto,Auto" MinHeight="120">
     <ScrollViewer x:Name="DetailPane" Grid.Column="2" Width="380" IsVisible="{Binding DetailVisible}" Margin="6,0,0,0">
       <ContentControl Content="{Binding Detail}">
@@ -359,4 +268,105 @@
     </ListBox>
     </Grid>
   </Grid>
+    </TabItem>
+    <TabItem Header="Beheer" ToolTip.Tip="Categorieën, mappen en shares van de bibliotheek">
+        <ScrollViewer x:Name="BottomArea" Margin="6" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+        <StackPanel>
+          <StackPanel Margin="0,4,0,16">
+            <TextBlock Classes="h" Text="Categorieën en item" Margin="0,0,0,6" />
+            <StackPanel Spacing="6">
+              <DockPanel>
+                <Button DockPanel.Dock="Right" Classes="small" Content="Verplaats selectie" Margin="4,0,0,0"
+                        Command="{Binding MoveToCategoryCommand}" CommandParameter="{Binding #MoveTarget.SelectedItem}" />
+                <ComboBox x:Name="MoveTarget" ItemsSource="{Binding CategoryChoices}" HorizontalAlignment="Stretch" />
+              </DockPanel>
+              <Button Classes="small" Content="Selectie aan/uit (niet meer inplannen)" Command="{Binding ToggleEnabledCommand}" />
+              <DockPanel>
+                <Button DockPanel.Dock="Right" Classes="small" Content="Toevoegen" Command="{Binding AddCategoryCommand}" Margin="4,0,0,0" />
+                <CheckBox DockPanel.Dock="Right" Content="jingle" IsChecked="{Binding NewCategoryIsJingle}" Margin="4,0,0,0" />
+                <TextBox Text="{Binding NewCategory}" Watermark="nieuwe categorie" />
+              </DockPanel>
+              <TextBlock Classes="muted" TextWrapping="Wrap"
+                         Text="Tip: elke submap van de muziek- of jinglemap wordt bij het inlezen een categorie." />
+            </StackPanel>
+          </StackPanel>
+          <StackPanel Margin="0,4,0,16">
+            <TextBlock Classes="h" Text="Mappen en shares" Margin="0,0,0,6" />
+            <StackPanel Spacing="6">
+              <TextBlock Classes="muted" TextWrapping="Wrap"
+                         Text="Kies zelf waar de bibliotheek leest: een map op deze pc, een andere schijf of een share (\\server\muziek). Nieuwe bestanden worden vanzelf ingelezen; tags, beat, verloop en markers worden gemeten en bewaard. Een map verwijderen bewaart de nummers met al hun gegevens: komt een nummer later terug, hier of elders, dan wordt het herkend." />
+              <ItemsControl ItemsSource="{Binding Folders}">
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate x:DataType="vm:LibraryFolderVm">
+                    <Border Classes="card" Padding="6" Margin="0,0,0,4">
+                      <StackPanel Spacing="3">
+                        <DockPanel>
+                          <Button DockPanel.Dock="Right" Classes="small" Content="{Binding RemoveText}" Command="{Binding RemoveCommand}" IsVisible="{Binding Editable}"
+                                  ToolTip.Tip="Haalt de map uit de bibliotheek; de nummers en hun gegevens blijven bewaard" />
+                          <TextBlock Text="{Binding Title}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" FontWeight="SemiBold" />
+                        </DockPanel>
+                        <TextBlock Classes="muted" Text="{Binding StateText}" />
+                        <TextBlock Text="Niet bereikbaar: de nummers van deze map blijven gewoon bewaard en komen terug zodra de map er weer is."
+                                   Foreground="#F0B429" FontSize="11" TextWrapping="Wrap" IsVisible="{Binding Offline}" />
+                        <WrapPanel IsVisible="{Binding Editable}">
+                          <TextBlock Text="{Binding KindText, StringFormat='Soort: {0}'}" VerticalAlignment="Center" Margin="0,0,12,0" />
+                          <TextBox Text="{Binding Category}" Watermark="categorie (leeg = submappen)" Width="200" Margin="0,0,4,0" />
+                          <Button Classes="small" Content="Opslaan" Command="{Binding SaveCategoryCommand}" Margin="0,0,12,0" />
+                          <CheckBox Content="Bewaken" IsChecked="{Binding Watch}" Margin="0,0,12,0" ToolTip.Tip="Nieuwe en gewijzigde bestanden direct verwerken" />
+                          <CheckBox Content="Markers in het bestand" IsChecked="{Binding WriteTags}" Margin="0,0,12,0"
+                                    ToolTip.Tip="Cues, beat en BPM ook in de tags van het audiobestand zetten, zodat ze met het bestand meegaan" />
+                          <CheckBox Content="Aan" IsChecked="{Binding Enabled}" />
+                        </WrapPanel>
+                      </StackPanel>
+                    </Border>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+              <TextBlock Classes="h" Text="Map toevoegen" />
+              <DockPanel>
+                <Button x:Name="BrowseFolder" DockPanel.Dock="Right" Classes="small" Content="Bladeren…" Margin="4,0,0,0" />
+                <TextBox Text="{Binding NewFolderPath}" Watermark="D:\Muziek of \\server\muziek" />
+              </DockPanel>
+              <WrapPanel>
+                <CheckBox Content="Jingles" IsChecked="{Binding NewFolderIsJingle}" Margin="0,0,12,0" />
+                <TextBox Text="{Binding NewFolderCategory}" Watermark="vaste categorie (leeg = submappen)" Width="230" Margin="0,0,12,0" />
+                <CheckBox Content="Markers in het bestand" IsChecked="{Binding NewFolderWriteTags}" Margin="0,0,12,0" />
+                <Button Classes="small" Content="Toevoegen" Command="{Binding AddFolderCommand}" />
+              </WrapPanel>
+              <TextBlock Classes="muted" Text="{Binding FolderStatus}" TextWrapping="Wrap" />
+              <TextBlock Classes="h" Text="Vervangende locaties" Margin="0,6,0,0" />
+              <TextBlock Classes="muted" TextWrapping="Wrap"
+                         Text="Staat een bestand niet op zijn pad (share weg, andere stationsletter, andere pc), dan zoekt de engine hetzelfde bestand onder de vervangende map. Bijvoorbeeld Y:\Muziek → \\nas\muziek. 'Definitief omzetten' past de paden in de bibliotheek blijvend aan." />
+              <ItemsControl ItemsSource="{Binding Substitutes}">
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate x:DataType="vm:SubstituteRow">
+                    <DockPanel Margin="0,0,0,3">
+                      <Button DockPanel.Dock="Right" Classes="small" Content="✕" Margin="4,0,0,0"
+                              Command="{Binding $parent[ItemsControl].DataContext.RemoveSubstituteCommand}" CommandParameter="{Binding}" />
+                      <Button DockPanel.Dock="Right" Classes="small" Content="{Binding RelocateText}" Margin="4,0,0,0"
+                              Command="{Binding $parent[ItemsControl].DataContext.RelocateCommand}" CommandParameter="{Binding}"
+                              ToolTip.Tip="Zet de opgeslagen paden blijvend om naar de nieuwe map (alle gegevens blijven)" />
+                      <CheckBox DockPanel.Dock="Left" IsChecked="{Binding Enabled}" ToolTip.Tip="Aan of uit" />
+                      <TextBlock DockPanel.Dock="Right" Text="niet bereikbaar" Foreground="#F0B429" FontSize="11" VerticalAlignment="Center"
+                                 Margin="4,0,0,0" IsVisible="{Binding !Reachable}" />
+                      <Grid ColumnDefinitions="*,Auto,*">
+                        <TextBox Grid.Column="0" Text="{Binding From}" Watermark="oude map, bijv. Y:\Muziek" />
+                        <TextBlock Grid.Column="1" Text=" → " VerticalAlignment="Center" />
+                        <TextBox Grid.Column="2" Text="{Binding To}" Watermark="vervangende map, bijv. \\nas\muziek" />
+                      </Grid>
+                    </DockPanel>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+              <StackPanel Orientation="Horizontal" Spacing="4">
+                <Button Classes="small" Content="+ vervangende locatie" Command="{Binding AddSubstituteCommand}" />
+                <Button Classes="small" Content="Opslaan" Command="{Binding SaveSubstitutesCommand}" />
+              </StackPanel>
+              <TextBlock Classes="muted" Text="{Binding SubstituteStatus}" TextWrapping="Wrap" />
+            </StackPanel>
+          </StackPanel>
+        </StackPanel>
+        </ScrollViewer>
+    </TabItem>
+  </TabControl>
 </UserControl>

@@ -17,7 +17,8 @@
                 <TextBlock Text="{Binding Name}" FontWeight="SemiBold" HorizontalAlignment="Center" TextTrimming="CharacterEllipsis"
                            ToolTip.Tip="{Binding Name}" />
                 <TextBlock Classes="muted" FontSize="10" Text="{Binding BusLabel}" HorizontalAlignment="Center" />
-                <Grid ColumnDefinitions="*,6,6" Height="150">
+                <!-- the fader grows and shrinks with the panel, so ZENDER stays in view without scrolling -->
+                <Grid ColumnDefinitions="*,6,6" Height="{Binding $parent[UserControl].Bounds.Height, Converter={x:Static vm:Brushes.FaderHeight}}">
                   <Slider Grid.Column="0" Orientation="Vertical" Minimum="0" Maximum="125" Value="{Binding Volume}" HorizontalAlignment="Center" />
                   <ProgressBar Grid.Column="1" Orientation="Vertical" Maximum="100" Value="{Binding Left}" MinWidth="5" Width="5" Foreground="#3DBD7D" />
                   <ProgressBar Grid.Column="2" Orientation="Vertical" Maximum="100" Value="{Binding Right}" MinWidth="5" Width="5" Foreground="#3DBD7D" Margin="1,0,0,0" />
