@@ -61,7 +61,7 @@ Legenda: ✅ klaar · 🟡 deels · ⬜ open
 | ⬜ | Multi-studio: master/slave met hartslag en automatische overname |
 | ⬜ | Centrale bibliotheekserver |
 | ⬜ | Voicetracking op afstand |
-| ⬜ | Remote-app: Android-tablet (bedienen) en telefoon (bewaken) |
+| ⬜ | Remote-app: Android-tablet (bedienen) en telefoon (bewaken met meldingen), volgens het layout-ontwerp; rechten per gebruiker |
 
 ## Audio en techniek
 
@@ -70,5 +70,27 @@ Legenda: ✅ klaar · 🟡 deels · ⬜ open
 | ⬜ | ASIO-uitvoer |
 | ⬜ | Meerdere streamservers en codecs (AAC, Opus), HLS |
 | ⬜ | Opnemen (programma, mic) en automatische opname |
-| ⬜ | DSP/VST per kanaal, ReplayGain en BPM-detectie |
+| ⬜ | DSP/VST per kanaal |
 | ⬜ | Watchdog en herstel na een crash |
+| ⬜ | Analyse per nummer: BPM, toonsoort en ReplayGain bij het inlezen; tempo-overgang (BPM gelijktrekken) als overgangstype |
+| ⬜ | Mixpunten per nummer met overgangstypes per categorie (knippen, faden, over de intro), bovenop de overgangseditor |
+| ⬜ | Externe bijdragen: NDI- of ASIO/WASAPI-ingang als live-bron (bijv. LUCI Studio, een dj-programma), met terugkanaal (mix-minus) |
+| ⬜ | Eigen RTP-ontvanger en SIP volgens EBU N/ACIP (G.711, G.722, Opus, PCM) voor verslaggevers op locatie |
+| ⬜ | OSC uitsturen (status naar mengtafel of lichtsturing), naast het bestaande OSC-commandokanaal |
+
+## Studio-layout moderniseren
+
+Volgens het ontwerp "REA-Radio-DJ Studio-layout" (1, 2 en 3 schermen, tablet en telefoon). Ontwerpregels: de
+aan-de-luchtbalk staat altijd bovenaan; één hoofdactie per gebied; een toestand nooit alleen met kleur; raster van
+8 px met knoppen van minstens 44 px; werkruimtes als vaste navigatie, vensters blijven vrij te docken.
+
+| Status | Onderdeel |
+|---|---|
+| ⬜ | Stijlbasis: één kleurenpalet en maatvoering (kaarten, knoppen, labels, monospace-tellers) voor alle vensters |
+| ⬜ | App-balk met werkruimtes Live, Productie, Planning en Rapportage, indelingkeuze en enginestatus |
+| ⬜ | Aan-de-luchtbalk nieuw: titel met voortgang, intro- en mixmarkering, grote resterende tijd, Volgende als enige gevulde knop, Stop apart en met vasthouden |
+| ⬜ | Spelers en cartwall in de nieuwe stijl: toestand als woord en vorm (leeg, klaar, speelt, laatste 10 s), cartknoppen van 96 px |
+| ⬜ | Programmalog in de nieuwe stijl: tijd, kleurstreep per soort, titel met ondertitel, lengte |
+| ⬜ | Responsive: breder dan 1600 px naast elkaar, 1100-1600 px cartwall onder de spelers, smaller alles in één kolom |
+| ⬜ | Indelingen voor 2 en 3 schermen (Uitzending, Productie, Cartwalls + mixer); onthouden per indeling, terugvallen naar scherm 1 als een scherm wegvalt |
+| ⬜ | Overige vensters (planner, bibliotheek, mixer, beheer) nalopen op de nieuwe stijl |
