@@ -126,6 +126,20 @@ public sealed record CartRequest(long? MediaId, string? Label, string? Color, bo
 
 public sealed record DeviceDto(int Index, string Name, bool Enabled, bool IsDefault);
 
+/// <summary>
+/// The station settings of the engine. Passwords are never sent to the studio: the "...Set" flags say whether one is
+/// stored; when saving, an empty password keeps the stored one.
+/// </summary>
+public sealed record SettingsDto(
+    string StationName, string MusicFolder, string JingleFolder, bool StartAutomation, int StandbyPlayers,
+    double TargetLufs, double CueInDb, double MixDb, double CueOutDb, double MaxOverlap, double FadeOut, double DuckLevel,
+    int ArtistSeparation, int SongSeparation, int LookAhead,
+    bool StreamEnabled, string StreamServer, string StreamPassword, bool StreamPasswordSet, int StreamBitrate, string StreamGenre, string StreamUrl,
+    string ControlBindAddress, int ControlTcpPort, int ControlOscPort, string ControlPassword, bool ControlPasswordSet, bool ClearControlPassword);
+
+/// <summary>The answer to saving the settings: what was stored, and what needs a restart or a rescan.</summary>
+public sealed record SettingsSavedDto(SettingsDto Settings, IReadOnlyList<string> NeedsRestart, bool Rescanning);
+
 public sealed record RoutingDto(int OutputDevice, int PreviewDevice, bool MicEnabled, int MicDevice, double MicDuckLevel,
     double OverlayDuckLevel);
 

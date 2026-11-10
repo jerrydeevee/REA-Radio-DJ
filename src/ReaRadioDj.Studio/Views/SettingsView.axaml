@@ -1,0 +1,179 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:ReaRadioDj.Studio.ViewModels"
+             xmlns:c="using:ReaRadioDj.Contracts"
+             x:Class="ReaRadioDj.Studio.Views.SettingsView"
+             x:DataType="vm:SettingsTool">
+  <UserControl.Styles>
+    <Style Selector="TextBlock.field">
+      <Setter Property="FontSize" Value="13" />
+      <Setter Property="Margin" Value="0,10,0,4" />
+    </Style>
+    <Style Selector="TextBlock.help">
+      <Setter Property="FontSize" Value="12" />
+      <Setter Property="Foreground" Value="{DynamicResource MutedTextBrush}" />
+      <Setter Property="TextWrapping" Value="Wrap" />
+      <Setter Property="Margin" Value="0,4,0,0" />
+    </Style>
+    <Style Selector="TextBlock.title">
+      <Setter Property="FontSize" Value="18" />
+      <Setter Property="FontWeight" Value="Bold" />
+      <Setter Property="Margin" Value="0,0,0,4" />
+    </Style>
+    <Style Selector="StackPanel.page">
+      <Setter Property="MaxWidth" Value="620" />
+      <Setter Property="HorizontalAlignment" Value="Left" />
+      <Setter Property="Margin" Value="20,12,20,20" />
+    </Style>
+    <Style Selector="NumericUpDown">
+      <Setter Property="Width" Value="150" />
+      <Setter Property="HorizontalAlignment" Value="Left" />
+    </Style>
+  </UserControl.Styles>
+
+  <DockPanel>
+    <!-- Save bar: always in view -->
+    <Border DockPanel.Dock="Bottom" Padding="16,10" Background="{DynamicResource BarBrush}" BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="0,1,0,0">
+      <DockPanel>
+        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="8">
+          <Button Classes="bar" Content="Opnieuw lezen" Command="{Binding ReloadCommand}" ToolTip.Tip="Gooit wat je hier gewijzigd hebt weg en leest de instellingen opnieuw uit de engine" />
+          <Button Classes="bar primary" MinHeight="44" Content="Opslaan" Command="{Binding SaveCommand}" IsEnabled="{Binding Loaded}" />
+        </StackPanel>
+        <TextBlock Text="{Binding Status}" TextWrapping="Wrap" VerticalAlignment="Center" Margin="0,0,16,0" />
+      </DockPanel>
+    </Border>
+
+    <TabControl TabStripPlacement="Left" Classes="compact">
+      <TabItem Header="Station">
+        <ScrollViewer><StackPanel Classes="page">
+          <TextBlock Classes="title" Text="Station" />
+          <TextBlock Classes="field" Text="Naam van het station" />
+          <TextBox Text="{Binding StationName}" />
+          <TextBlock Classes="help" Text="Staat in de studio, in de teksten van de AI-presentator en in de rapporten." />
+          <TextBlock Classes="field" Text="Map met muziek" />
+          <TextBox Text="{Binding MusicFolder}" Watermark="bijv. D:\Radio\Muziek" />
+          <TextBlock Classes="field" Text="Map met jingles" />
+          <TextBox Text="{Binding JingleFolder}" Watermark="bijv. D:\Radio\Jingles" />
+          <TextBlock Classes="help" Text="Het pad zoals de computer van de engine het ziet. Na het opslaan van een andere map wordt de bibliotheek opnieuw ingelezen; submappen worden categorieën." />
+          <CheckBox Content="Automatisering starten zodra de engine start" IsChecked="{Binding StartAutomation}" Margin="0,14,0,0" />
+          <TextBlock Classes="help" Text="Uit: de engine start stil en wacht tot je Volgende of Automatisch kiest." />
+        </StackPanel></ScrollViewer>
+      </TabItem>
+
+      <TabItem Header="Geluid">
+        <ScrollViewer><StackPanel Classes="page">
+          <TextBlock Classes="title" Text="Geluidskaarten" />
+          <TextBlock Classes="field" Text="Uitzending (wat de zender en de stream krijgen)" />
+          <ComboBox ItemsSource="{Binding Outputs}" SelectedItem="{Binding OutputDevice}" HorizontalAlignment="Stretch">
+            <ComboBox.ItemTemplate><DataTemplate x:DataType="c:DeviceDto"><TextBlock Text="{Binding Name}" /></DataTemplate></ComboBox.ItemTemplate>
+          </ComboBox>
+          <TextBlock Classes="field" Text="Voorluisteren (koptelefoon: PFL, cue-editor en de DJ-decks)" />
+          <ComboBox ItemsSource="{Binding Outputs}" SelectedItem="{Binding PreviewDevice}" HorizontalAlignment="Stretch">
+            <ComboBox.ItemTemplate><DataTemplate x:DataType="c:DeviceDto"><TextBlock Text="{Binding Name}" /></DataTemplate></ComboBox.ItemTemplate>
+          </ComboBox>
+          <TextBlock Classes="help" Text="Een andere kaart wordt meteen gebruikt, de uitzending loopt door. Kies voor voorluisteren een andere kaart dan voor de uitzending, anders hoort de luisteraar je voorluisteren mee." />
+          <CheckBox Content="Microfoon gebruiken (praten over de muziek)" IsChecked="{Binding MicEnabled}" Margin="0,14,0,0" />
+          <TextBlock Classes="field" Text="Microfoon-ingang" />
+          <ComboBox ItemsSource="{Binding Inputs}" SelectedItem="{Binding MicDevice}" HorizontalAlignment="Stretch" IsEnabled="{Binding MicEnabled}">
+            <ComboBox.ItemTemplate><DataTemplate x:DataType="c:DeviceDto"><TextBlock Text="{Binding Name}" /></DataTemplate></ComboBox.ItemTemplate>
+          </ComboBox>
+          <TextBlock Classes="help" Text="Een andere microfoon wordt actief na een herstart van de engine." />
+          <TextBlock Classes="field" Text="Muziek onder de microfoon (% van het volume)" />
+          <NumericUpDown Value="{Binding MicDuck}" Minimum="0" Maximum="100" Increment="5" FormatString="0" />
+          <TextBlock Classes="field" Text="Muziek onder een overlay (% van het volume)" />
+          <NumericUpDown Value="{Binding OverlayDuck}" Minimum="0" Maximum="100" Increment="5" FormatString="0" />
+          <TextBlock Classes="field" Text="Aantal standby-spelers" />
+          <NumericUpDown Value="{Binding StandbyPlayers}" Minimum="1" Maximum="4" Increment="1" FormatString="0" />
+          <TextBlock Classes="help" Text="Actief na een herstart van de engine." />
+        </StackPanel></ScrollViewer>
+      </TabItem>
+
+      <TabItem Header="Mixen">
+        <ScrollViewer><StackPanel Classes="page">
+          <TextBlock Classes="title" Text="Mixen en loudness" />
+          <TextBlock Classes="field" Text="Loudness van de zender (LUFS)" />
+          <NumericUpDown Value="{Binding TargetLufs}" Minimum="-30" Maximum="-8" Increment="0.5" FormatString="0.0" />
+          <TextBlock Classes="help" Text="Elk item wordt naar deze loudness gebracht. -16 is gebruikelijk voor een stream, -23 voor omroep (EBU R128)." />
+          <TextBlock Classes="title" Text="Automatische cuepunten" Margin="0,20,0,4" />
+          <TextBlock Classes="help" Text="Bij het inlezen zoekt de engine waar het geluid begint, waar het volgende item mag starten en waar het eindigt. Deze drempels gelden voor nieuwe bestanden en voor Opnieuw analyseren; cuepunten die je met de hand zette blijven staan." />
+          <TextBlock Classes="field" Text="Begin: het geluid komt boven (dB)" />
+          <NumericUpDown Value="{Binding CueInDb}" Minimum="-80" Maximum="-10" Increment="1" FormatString="0" />
+          <TextBlock Classes="field" Text="Mixpunt: het einde zakt onder (dB)" />
+          <NumericUpDown Value="{Binding MixDb}" Minimum="-60" Maximum="-6" Increment="1" FormatString="0" />
+          <TextBlock Classes="field" Text="Einde: het geluid zakt onder (dB)" />
+          <NumericUpDown Value="{Binding CueOutDb}" Minimum="-80" Maximum="-10" Increment="1" FormatString="0" />
+          <TextBlock Classes="title" Text="Overgangen" Margin="0,20,0,4" />
+          <TextBlock Classes="field" Text="Langste overlap tussen twee items (seconden)" />
+          <NumericUpDown Value="{Binding MaxOverlap}" Minimum="0" Maximum="30" Increment="0.5" FormatString="0.0" />
+          <TextBlock Classes="field" Text="Uitfaden bij Volgende of Overslaan (seconden)" />
+          <NumericUpDown Value="{Binding FadeOut}" Minimum="0" Maximum="15" Increment="0.5" FormatString="0.0" />
+          <TextBlock Classes="field" Text="Muziek onder een stem die over het einde praat (% van het volume)" />
+          <NumericUpDown Value="{Binding DuckLevel}" Minimum="0" Maximum="100" Increment="5" FormatString="0" />
+        </StackPanel></ScrollViewer>
+      </TabItem>
+
+      <TabItem Header="Rotatie">
+        <ScrollViewer><StackPanel Classes="page">
+          <TextBlock Classes="title" Text="Rotatie" />
+          <TextBlock Classes="help" Text="Hoe de automatisering nummers kiest uit een categorie. De klokken en regels zelf staan in de Planner." />
+          <TextBlock Classes="field" Text="Zelfde artiest pas weer na zoveel nummers" />
+          <NumericUpDown Value="{Binding ArtistSeparation}" Minimum="0" Maximum="100" Increment="1" FormatString="0" />
+          <TextBlock Classes="field" Text="Zelfde nummer pas weer na zoveel nummers" />
+          <NumericUpDown Value="{Binding SongSeparation}" Minimum="0" Maximum="1000" Increment="1" FormatString="0" />
+          <TextBlock Classes="field" Text="Aantal items dat de log vooruit plant" />
+          <NumericUpDown Value="{Binding LookAhead}" Minimum="2" Maximum="40" Increment="1" FormatString="0" />
+        </StackPanel></ScrollViewer>
+      </TabItem>
+
+      <TabItem Header="Stream">
+        <ScrollViewer><StackPanel Classes="page">
+          <TextBlock Classes="title" Text="Stream (Icecast)" />
+          <CheckBox Content="Stream starten zodra de engine start" IsChecked="{Binding StreamEnabled}" />
+          <TextBlock Classes="field" Text="Server en mountpoint" />
+          <TextBox Text="{Binding StreamServer}" Watermark="server:poort/mount, bijv. stream.voorbeeld.nl:8000/live" />
+          <TextBlock Classes="field" Text="Wachtwoord van de bron" />
+          <TextBox Text="{Binding StreamPassword}" PasswordChar="●" Watermark="nieuw wachtwoord" />
+          <TextBlock Classes="help" Text="{Binding StreamPasswordHint}" />
+          <TextBlock Classes="field" Text="Bitrate (kb/s, MP3)" />
+          <ComboBox ItemsSource="{Binding Bitrates}" SelectedItem="{Binding StreamBitrate}" Width="150" />
+          <TextBlock Classes="field" Text="Genre" />
+          <TextBox Text="{Binding StreamGenre}" />
+          <TextBlock Classes="field" Text="Website van het station" />
+          <TextBox Text="{Binding StreamUrl}" Watermark="https://…" />
+          <TextBlock Classes="help" Text="Een lopende stream gebruikt de nieuwe gegevens nadat je hem in het venster Stream stopt en weer start." />
+        </StackPanel></ScrollViewer>
+      </TabItem>
+
+      <TabItem Header="Op afstand">
+        <ScrollViewer><StackPanel Classes="page">
+          <TextBlock Classes="title" Text="Bediening op afstand" />
+          <TextBlock Classes="help" Text="De commando's waarmee andere apparaten en programma's het station bedienen (venster Bediening toont ze allemaal). Knoppen, lampjes en mengtafels stel je in bij het venster Hardware." />
+          <TextBlock Classes="field" Text="Luisteren op adres" />
+          <TextBox Text="{Binding ControlBindAddress}" Watermark="127.0.0.1 = alleen deze computer, 0.0.0.0 = het hele netwerk" />
+          <TextBlock Classes="field" Text="TCP-poort (0 = uit)" />
+          <NumericUpDown Value="{Binding ControlTcpPort}" Minimum="0" Maximum="65535" Increment="1" FormatString="0" />
+          <TextBlock Classes="field" Text="OSC-poort, UDP (0 = uit)" />
+          <NumericUpDown Value="{Binding ControlOscPort}" Minimum="0" Maximum="65535" Increment="1" FormatString="0" />
+          <TextBlock Classes="field" Text="Wachtwoord" />
+          <TextBox Text="{Binding ControlPassword}" PasswordChar="●" Watermark="nieuw wachtwoord" />
+          <TextBlock Classes="help" Text="{Binding ControlPasswordHint}" />
+          <CheckBox Content="Wachtwoord verwijderen" IsChecked="{Binding ClearControlPassword}" Margin="0,8,0,0" />
+          <TextBlock Classes="help" Text="Adres en poorten worden actief na een herstart van de engine. Zet een wachtwoord als je op het hele netwerk luistert." />
+        </StackPanel></ScrollViewer>
+      </TabItem>
+
+      <TabItem Header="Deze studio">
+        <ScrollViewer><StackPanel Classes="page">
+          <TextBlock Classes="title" Text="Deze studiocomputer" />
+          <TextBlock Classes="help" Text="Deze instellingen gelden alleen voor deze computer, niet voor de engine." />
+          <TextBlock Classes="field" Text="Adres van de engine" />
+          <TextBox Text="{Binding EngineUrl}" Watermark="http://127.0.0.1:8600" />
+          <TextBlock Classes="help" Text="Wordt gebruikt de volgende keer dat de studio start." />
+          <CheckBox Content="De engine starten als hij nog niet draait" IsChecked="{Binding StartEngine}" Margin="0,14,0,0" />
+          <TextBlock Classes="title" Text="Elders in de studio" Margin="0,24,0,4" />
+          <TextBlock Classes="help" Text="Sneltoetsen: venster Bediening en sneltoetsen. Klok, tellers en spelerkleuren: venster Tijd. MIDI, seriële poort, Livewire en Ember+: venster Hardware. Taalmodel, stemmen en controle: vensters AI-presentator en Stemmen. Indelingen: de keuzelijst Indeling bovenin." />
+        </StackPanel></ScrollViewer>
+      </TabItem>
+    </TabControl>
+  </DockPanel>
+</UserControl>

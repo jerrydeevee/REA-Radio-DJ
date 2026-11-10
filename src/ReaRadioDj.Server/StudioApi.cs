@@ -171,6 +171,24 @@ public static class StudioApi
                 messages.Info("Microfooninstelling opgeslagen; wordt actief na een herstart van de engine");
             return Results.Ok(Routing(s));
         });
+        // ------------------------------------------------------------ station settings
+        api.MapGet("/settings", () => Settings(GeneralSettings.From(options)));
+        api.MapPut("/settings", (SettingsDto d, StationDb db, MediaLibrary library, MessageCenter messages) =>
+        {
+            var old = GeneralSettings.From(options);
+            var s = new GeneralSettings(d.StationName, d.MusicFolder, d.JingleFolder, d.StartAutomation, d.StandbyPlayers,
+                d.TargetLufs, d.CueInDb, d.MixDb, d.CueOutDb, d.MaxOverlap, d.FadeOut, d.DuckLevel, d.ArtistSeparation, d.SongSeparation, d.LookAhead,
+                d.StreamEnabled, d.StreamServer, d.StreamPassword, d.StreamBitrate, d.StreamGenre, d.StreamUrl,
+                d.ControlBindAddress, d.ControlTcpPort, d.ControlOscPort, d.ControlPassword).Checked(old, d.ClearControlPassword);
+            s.ApplyTo(options);
+            s.Save(db);
+            var restart = s.NeedsRestart(old);
+            bool rescan = s.FoldersChanged(old);
+            if (rescan) _ = library.ScanAsync();
+            if (restart.Count > 0) messages.Info("Instellingen opgeslagen. Actief na een herstart van de engine: " + string.Join(", ", restart));
+            return Results.Ok(new SettingsSavedDto(Settings(s), restart, rescan));
+        });
+
         api.MapGet("/devices", () => BassRuntime.GetDevices().Select(d => new DeviceDto(d.Index, d.Name, d.Enabled, d.IsDefault)));
         api.MapGet("/record-devices", () => BassRuntime.GetRecordDevices().Select(d => new DeviceDto(d.Index, d.Name, d.Enabled, d.IsDefault)));
         api.MapGet("/voices", () => SapiSpeechEngine.InstalledVoices());
@@ -218,6 +236,14 @@ public static class StudioApi
     private static IResult? Valid(StreamWatchDto w) =>
         Uri.TryCreate(w.Url?.Trim(), UriKind.Absolute, out var u) && u.Scheme is "http" or "https"
             ? null : Results.BadRequest(new { error = "URL moet met http:// of https:// beginnen" });
+
+    /// <summary>The settings as the studio gets them: without the passwords, only whether one is stored.</summary>
+    private static SettingsDto Settings(GeneralSettings s) => new(
+        s.StationName, s.MusicFolder, s.JingleFolder, s.StartAutomation, s.StandbyPlayers,
+        s.TargetLufs, s.CueInDb, s.MixDb, s.CueOutDb, s.MaxOverlap, s.FadeOut, s.DuckLevel,
+        s.ArtistSeparation, s.SongSeparation, s.LookAhead,
+        s.StreamEnabled, s.StreamServer, "", s.StreamPassword.Length > 0, s.StreamBitrate, s.StreamGenre, s.StreamUrl,
+        s.ControlBindAddress, s.ControlTcpPort, s.ControlOscPort, "", s.ControlPassword.Length > 0, false);
 
     private static RoutingDto Routing(RoutingSettings s) =>
         new(s.OutputDevice, s.PreviewDevice, s.MicEnabled, s.MicDevice, s.MicDuckLevel, s.OverlayDuckLevel);

@@ -24,7 +24,8 @@
             <MenuItem Header="AI-break als volgende" Command="{Binding AddBreakCommand}" />
             <MenuItem Header="Alle carts stoppen" Command="{Binding StopCartsCommand}" />
             <Separator />
-            <MenuItem Header="Bediening en sneltoetsen…" Command="{Binding ShowWindowCommand}" CommandParameter="control" />
+            <MenuItem Header="Instellingen…" Command="{Binding ShowWindowCommand}" CommandParameter="settings" />
+        <MenuItem Header="Bediening en sneltoetsen…" Command="{Binding ShowWindowCommand}" CommandParameter="control" />
           </MenuItem>
           <MenuItem Header="_Vensters" ItemsSource="{Binding WindowMenu}" Command="{x:Null}" CommandParameter="{x:Null}">
             <MenuItem.Styles>

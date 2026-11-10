@@ -43,6 +43,7 @@ public sealed class DockFactory : Factory
         ("import", "Log-import", () => new ImportTool()),
         ("sources", "Databronnen", () => new SourcesTool()),
         ("hardware", "Hardware", () => new HardwareTool()),
+        ("settings", "Instellingen", () => new SettingsTool()),
     ];
 
     public static StudioTool Create(string id) => Windows.First(w => w.Id == id).Create();

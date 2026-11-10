@@ -41,6 +41,7 @@ if (!BassRuntime.IsAvailable)
 
 var db = new StationDb(Path.Combine(options.DataFolder, "station.db"));
 RoutingSettings.Load(db, options);
+GeneralSettings.Load(db, options);
 PresenterSettings.Load(db, options);
 PresenterExtrasSettings.Load(db, options);
 VoiceServicesSettings.Load(db, options);
