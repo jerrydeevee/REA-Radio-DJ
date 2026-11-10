@@ -19,9 +19,12 @@
     <Setter Property="FontFamily" Value="Consolas, Cascadia Mono, monospace" />
   </Style>
   <Style Selector="Button.small">
-    <Setter Property="Padding" Value="8,3" />
+    <Setter Property="Padding" Value="10,4" />
     <Setter Property="MinWidth" Value="28" />
+    <Setter Property="MinHeight" Value="30" />
     <Setter Property="FontSize" Value="12" />
+    <Setter Property="VerticalContentAlignment" Value="Center" />
+    <Setter Property="CornerRadius" Value="{DynamicResource Radius6}" />
   </Style>
   <Style Selector="Button.onair">
     <Setter Property="Background" Value="{DynamicResource OnAirBrush}" />

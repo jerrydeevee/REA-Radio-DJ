@@ -12,9 +12,10 @@
         </ItemsControl.ItemsPanel>
         <ItemsControl.ItemTemplate>
           <DataTemplate x:DataType="vm:StripCard">
-            <Border Classes="card" Width="86" Margin="0,0,6,6" Padding="6">
+            <Border Classes="card" Width="96" Margin="0,0,6,6" Padding="6">
               <StackPanel Spacing="4">
-                <TextBlock Text="{Binding Name}" FontWeight="SemiBold" HorizontalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                <TextBlock Text="{Binding Name}" FontWeight="SemiBold" HorizontalAlignment="Center" TextTrimming="CharacterEllipsis"
+                           ToolTip.Tip="{Binding Name}" />
                 <TextBlock Classes="muted" FontSize="10" Text="{Binding BusLabel}" HorizontalAlignment="Center" />
                 <Grid ColumnDefinitions="*,6,6" Height="150">
                   <Slider Grid.Column="0" Orientation="Vertical" Minimum="0" Maximum="125" Value="{Binding Volume}" HorizontalAlignment="Center" />
@@ -22,14 +23,24 @@
                   <ProgressBar Grid.Column="2" Orientation="Vertical" Maximum="100" Value="{Binding Right}" MinWidth="5" Width="5" Foreground="#3DBD7D" Margin="1,0,0,0" />
                 </Grid>
                 <TextBlock Classes="mono" FontSize="11" HorizontalAlignment="Center" Text="{Binding Volume, StringFormat='{}{0:0}%'}" />
-                <StackPanel Orientation="Horizontal" Spacing="4" HorizontalAlignment="Center">
+                <!-- two by two, so nothing falls off a narrow strip -->
+                <UniformGrid Columns="2" ColumnSpacing="4" RowSpacing="4">
+                  <UniformGrid.Styles>
+                    <Style Selector="ToggleButton, Button">
+                      <Setter Property="HorizontalAlignment" Value="Stretch" />
+                      <Setter Property="HorizontalContentAlignment" Value="Center" />
+                      <Setter Property="Padding" Value="0,3" />
+                      <Setter Property="MinWidth" Value="0" />
+                      <Setter Property="FontSize" Value="12" />
+                    </Style>
+                  </UniformGrid.Styles>
                   <ToggleButton Content="M" IsChecked="{Binding Muted}" Classes="mic" ToolTip.Tip="Dempen" />
-                  <ToggleButton Content="REC" IsChecked="{Binding Recording}" Classes="mic" Padding="5,2"
+                  <ToggleButton Content="REC" IsChecked="{Binding Recording}" Classes="mic"
                                 ToolTip.Tip="Dit kanaal opnemen (na de kanaalstrip, voor de fader) naar een WAV-bestand in de map Opnamen" />
-                  <ToggleButton Content="FX" IsChecked="{Binding EffectOn}" Classes="mic" IsVisible="{Binding HasEffect}" ToolTip.Tip="{Binding EffectTip}" Padding="5,2" />
-                  <Button Content="⚙" Padding="6,2" ToolTip.Tip="Kanaalstrip: gain, balans, equalizer, compressor, automatische niveauregeling"
+                  <Button Content="⚙" ToolTip.Tip="Kanaalstrip: gain, balans, equalizer, compressor, automatische niveauregeling"
                           Command="{Binding $parent[UserControl].DataContext.EditChannelCommand}" CommandParameter="{Binding}" />
-                </StackPanel>
+                  <ToggleButton Content="FX" IsChecked="{Binding EffectOn}" Classes="mic" IsVisible="{Binding HasEffect}" ToolTip.Tip="{Binding EffectTip}" />
+                </UniformGrid>
                 <ToggleButton Content="ZENDER" IsChecked="{Binding OnAir}" Classes="mic" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" FontSize="11"
                               ToolTip.Tip="Aan: dit kanaal gaat naar de zender. Uit: het kanaal is dicht (bij een ingang de doorzetknop)." />
                 <TextBlock FontSize="10" Foreground="#F0B429" HorizontalAlignment="Center" Text="{Binding Duck}" />
