@@ -60,6 +60,7 @@ public partial class MainWindow : Window
         StopButton.PointerCaptureLost += (_, _) => Release();
         // --screenshot <file.png> [seconds]: renders the window to an image and closes (documentation, tests).
         var args = Environment.GetCommandLineArgs();
+        if (args.Contains("--about-shot")) Opened += (_, _) => _ = new AboutWindow().ShowDialog(this);
         int i = Array.IndexOf(args, "--screenshot");
         if (i >= 0 && i + 1 < args.Length)
         {
@@ -74,6 +75,17 @@ public partial class MainWindow : Window
                 Close();
             }, TimeSpan.FromSeconds(delay));
         }
+    }
+
+    // ---- Info menu
+    private void OnAbout(object? sender, Avalonia.Interactivity.RoutedEventArgs e) => _ = new AboutWindow().ShowDialog(this);
+    private void OnSource(object? sender, Avalonia.Interactivity.RoutedEventArgs e) => OpenUrl(AboutWindow.SourceUrl);
+    private void OnLicense(object? sender, Avalonia.Interactivity.RoutedEventArgs e) => OpenUrl(AboutWindow.SourceUrl + "/blob/main/NOTICE.md");
+
+    private static void OpenUrl(string url)
+    {
+        try { System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(url) { UseShellExecute = true }); }
+        catch (Exception ex) when (ex is System.ComponentModel.Win32Exception or InvalidOperationException) { }
     }
 
     private Services.GlobalHotkeys? _global;

@@ -8,6 +8,10 @@
     <LangVersion>latest</LangVersion>
     <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
     <Authors>REA-Radio-DJ contributors</Authors>
+    <Version>0.1.0</Version>
+    <Company>ICT Holland (DVC-it)</Company>
+    <Product>REA-Radio-DJ</Product>
+    <Copyright>© 2026 ICT Holland (DVC-it) · GPL-3.0-or-later</Copyright>
     <PackageLicenseExpression>GPL-3.0-or-later</PackageLicenseExpression>
   </PropertyGroup>
 

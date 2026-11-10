@@ -70,6 +70,12 @@
             <MenuItem Header="Standaardindeling herstellen" Command="{Binding ResetLayoutCommand}" />
             <MenuItem Header="Alle werkbladen sluiten" Command="{Binding CloseWorkbenchesCommand}" />
           </MenuItem>
+          <MenuItem Header="I_nfo">
+            <MenuItem Header="Over REA-Radio-DJ…" Click="OnAbout" />
+            <Separator />
+            <MenuItem Header="Broncode op GitHub" Click="OnSource" />
+            <MenuItem Header="Licentie en onderdelen" Click="OnLicense" />
+          </MenuItem>
         </Menu>
         <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="4" Margin="12,0,0,0"
                     ToolTip.Tip="Werkruimte: rustig bewaken of de volledige studio. Elke werkruimte onthoudt zijn eigen indeling.">

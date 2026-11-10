@@ -22,12 +22,38 @@ public partial class App : Application
 
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
-            var vm = new MainWindowViewModel();
-            var window = new MainWindow { DataContext = vm };
-            window.Closing += (_, _) => vm.SaveOnExit();
-            desktop.MainWindow = window;
             // Workbenches are windows of their own; closing the main window still closes the whole studio.
             desktop.ShutdownMode = Avalonia.Controls.ShutdownMode.OnMainWindowClose;
+
+            MainWindow Build()
+            {
+                var vm = new MainWindowViewModel();
+                var window = new MainWindow { DataContext = vm };
+                window.Closing += (_, _) => vm.SaveOnExit();
+                desktop.MainWindow = window;
+                return window;
+            }
+
+            // The splash (who made the program) shows first; the studio is built once it is on screen.
+            if (AboutWindow.Splash() is { } splash)
+            {
+                splash.Show();
+                DispatcherTimer.RunOnce(() =>
+                {
+                    try
+                    {
+                        var window = Build();
+                        window.Show();
+                        splash.CloseWhenOpen(window);
+                    }
+                    catch
+                    {
+                        splash.Close();
+                        throw;
+                    }
+                }, TimeSpan.FromMilliseconds(80));
+            }
+            else Build();
         }
         base.OnFrameworkInitializationCompleted();
     }
