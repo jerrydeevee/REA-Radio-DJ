@@ -170,6 +170,16 @@ var app = builder.Build();
 if (restoredFrom is not null)
     app.Services.GetRequiredService<MessageCenter>().Info($"Reservekopie teruggezet; de vorige gegevens staan in {restoredFrom}");
 app.UseWebSockets();
+// Developer test pages (/dev/…, e.g. the Spotify Web Playback test) only for this computer, never over the network.
+app.Use(async (http, next) =>
+{
+    if (http.Request.Path.StartsWithSegments("/dev") && http.Connection.RemoteIpAddress is { } ip && !System.Net.IPAddress.IsLoopback(ip))
+    {
+        http.Response.StatusCode = StatusCodes.Status404NotFound;
+        return;
+    }
+    await next();
+});
 app.UseDefaultFiles();
 // The browser studio changes with the code; always let the browser revalidate it.
 app.UseStaticFiles(new StaticFileOptions { OnPrepareResponse = c => c.Context.Response.Headers.CacheControl = "no-cache" });

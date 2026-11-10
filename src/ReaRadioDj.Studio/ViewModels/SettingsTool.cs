@@ -554,6 +554,30 @@ public sealed partial class SettingsTool : StudioTool
         SpotifyResult(true, "De Spotify-gegevens zijn gewist.");
     }
 
+    /// <summary>
+    /// The Web Playback test page on the engine. Spotify only accepts a loopback IP address as a redirect, so
+    /// "localhost" becomes 127.0.0.1; on an engine elsewhere in the network the page cannot be used from here.
+    /// </summary>
+    public string SpotifyPlayerUrl
+    {
+        get
+        {
+            if (!Uri.TryCreate(Hub.Settings.EffectiveEngineUrl, UriKind.Absolute, out var u)) return "";
+            string host = u.Host is "localhost" or "::1" or "[::1]" ? "127.0.0.1" : u.Host;
+            return $"http://{host}:{u.Port}/dev/spotify-player.html";
+        }
+    }
+
+    public bool SpotifyPlayerLocal => Uri.TryCreate(Hub.Settings.EffectiveEngineUrl, UriKind.Absolute, out var u) && u.IsLoopback;
+
+    [RelayCommand]
+    private void OpenSpotifyPlayer()
+    {
+        if (!SpotifyPlayerLocal) { SpotifyResult(false, "De testpagina werkt alleen op de computer waar de engine draait."); return; }
+        try { System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(SpotifyPlayerUrl) { UseShellExecute = true }); }
+        catch (System.ComponentModel.Win32Exception) { }
+    }
+
     [RelayCommand]
     private static void OpenSpotifyDashboard()
     {

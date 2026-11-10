@@ -1,0 +1,314 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Spotify-ontwikkeltest</title>
+<!--
+  Developer test of the Spotify Web Playback SDK. Plays in this browser only: the sound goes to this computer's
+  speakers, never through the engine, the DJ desk, the stream or a recording. Spotify does not allow broadcasting.
+  Sign-in uses Authorization Code with PKCE; the user token stays in this browser tab (sessionStorage) and is never
+  sent to the engine. Served to this computer only (see Program.cs).
+-->
+<style>
+  :root {
+    --bg: #0f1216; --panel: #171b21; --panel2: #1e232b; --line: #2a313b; --text: #e7ebf0; --muted: #8b95a3;
+    --accent: #3fa7ff; --ok: #3dbd7d; --warn: #f0b429; --bad: #e5484d;
+    font-family: "Segoe UI", system-ui, -apple-system, sans-serif; color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font-size: 15px; }
+  main { max-width: 760px; margin: 0 auto; padding: 24px 16px 40px; }
+  h1 { font-size: 22px; margin: 0 0 4px; }
+  h2 { font-size: 12px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin: 22px 0 10px; font-weight: 600; }
+  p { margin: 6px 0; line-height: 1.45; }
+  .muted { color: var(--muted); }
+  .note { border: 1px solid var(--warn); background: rgba(240,180,41,.08); border-radius: 10px; padding: 10px 14px; margin: 14px 0; }
+  .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 16px; }
+  button { background: var(--panel2); color: var(--text); border: 1px solid var(--line); border-radius: 8px; padding: 9px 14px; font: inherit; cursor: pointer; }
+  button:hover:not(:disabled) { border-color: var(--accent); }
+  button:disabled { opacity: .45; cursor: default; }
+  button.primary { background: var(--accent); border-color: var(--accent); color: #04121f; font-weight: 600; }
+  .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  input[type=text] { flex: 1; min-width: 0; background: var(--panel2); color: var(--text); border: 1px solid var(--line); border-radius: 8px; padding: 9px 12px; font: inherit; }
+  code, .mono { font-family: Consolas, "Cascadia Mono", monospace; font-size: 13px; }
+  code.copy { display: block; background: var(--panel2); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; word-break: break-all; user-select: all; }
+  .status { font-weight: 600; }
+  .status.ok { color: var(--ok); } .status.bad { color: var(--bad); } .status.wait { color: var(--warn); }
+  .now { display: flex; gap: 14px; align-items: center; }
+  .now img { width: 96px; height: 96px; border-radius: 8px; object-fit: cover; background: var(--panel2); flex: none; }
+  .now .t { font-size: 18px; font-weight: 600; overflow-wrap: anywhere; }
+  .bar { height: 4px; background: var(--panel2); border-radius: 2px; margin-top: 10px; overflow: hidden; }
+  .bar div { height: 100%; width: 0; background: var(--accent); }
+  input[type=range] { width: 160px; accent-color: var(--accent); }
+  #log { max-height: 180px; overflow: auto; background: var(--panel2); border-radius: 8px; padding: 8px 10px; margin: 0; white-space: pre-wrap; }
+  .hidden { display: none !important; }
+  @media (max-width: 520px) { .now img { width: 64px; height: 64px; } input[type=range] { width: 100%; } }
+</style>
+</head>
+<body>
+<main>
+  <h1>Spotify Web Playback — ontwikkeltest</h1>
+  <p class="muted">REA-Radio-DJ · alleen op deze computer</p>
+  <div class="note">
+    Dit is een test van de Web Playback SDK. Het geluid speelt alleen in deze browser, via de luidsprekers van deze computer:
+    niet via de engine, de DJ-tafel, de stream of een opname. Spotify staat uitzenden niet toe. Je hebt Spotify Premium nodig.
+  </div>
+
+  <h2>1. In het Spotify-dashboard</h2>
+  <div class="panel">
+    <p>Zet bij je app onder <b>Redirect URIs</b> precies dit adres en vink <b>Web Playback SDK</b> en <b>Web API</b> aan:</p>
+    <code class="copy" id="redirect"></code>
+    <p class="muted">Client ID uit de engine: <span class="mono" id="clientId">…</span></p>
+  </div>
+
+  <h2>2. Aanmelden</h2>
+  <div class="panel">
+    <p class="status" id="authStatus">…</p>
+    <div class="row" style="margin-top:10px">
+      <button class="primary" id="login">Aanmelden bij Spotify</button>
+      <button id="logout" class="hidden">Afmelden</button>
+    </div>
+  </div>
+
+  <section id="playerPart" class="hidden">
+    <h2>3. Speler</h2>
+    <div class="panel">
+      <p class="status" id="playerStatus">speler laden…</p>
+      <div class="row" style="margin:10px 0 14px">
+        <button id="transfer" disabled>Hier afspelen</button>
+        <span class="muted">of kies "REA-Radio-DJ ontwikkeltest" als apparaat in de Spotify-app</span>
+      </div>
+      <div class="now">
+        <img id="cover" alt="">
+        <div style="min-width:0;flex:1">
+          <div class="t" id="track">Niets aan het spelen</div>
+          <div class="muted" id="artist"></div>
+          <div class="muted mono" id="time"></div>
+        </div>
+      </div>
+      <div class="bar"><div id="progress"></div></div>
+      <div class="row" style="margin-top:14px">
+        <button id="prev" disabled>⏮</button>
+        <button id="toggle" class="primary" disabled>Afspelen / pauze</button>
+        <button id="next" disabled>⏭</button>
+        <span class="muted" style="margin-left:8px">Volume</span>
+        <input type="range" id="volume" min="0" max="100" value="50">
+      </div>
+      <div class="row" style="margin-top:14px">
+        <input type="text" id="uri" placeholder="Spotify-link of URI van een nummer, album of playlist">
+        <button id="play" disabled>Speel af</button>
+      </div>
+    </div>
+  </section>
+
+  <h2>Logboek</h2>
+  <pre id="log" class="mono"></pre>
+</main>
+
+<script>
+(() => {
+  // A page on "localhost" goes to 127.0.0.1: Spotify only accepts loopback IP addresses as a redirect.
+  if (location.hostname === 'localhost') { location.replace(location.href.replace('//localhost', '//127.0.0.1')); return; }
+
+  const SCOPES = 'streaming user-read-email user-read-private user-read-playback-state user-modify-playback-state';
+  const redirectUri = location.origin + location.pathname;
+  const $ = id => document.getElementById(id);
+  const store = {
+    get: k => { try { return sessionStorage.getItem('rea-sp-' + k); } catch { return null; } },
+    set: (k, v) => { try { sessionStorage.setItem('rea-sp-' + k, v); } catch { } },
+    clear: () => { try { Object.keys(sessionStorage).filter(k => k.startsWith('rea-sp-')).forEach(k => sessionStorage.removeItem(k)); } catch { } },
+  };
+  let clientId = '', player = null, deviceId = null, state = null, stateAt = 0;
+
+  function log(text) {
+    const t = new Date().toLocaleTimeString('nl-NL');
+    $('log').textContent = `${t}  ${text}\n` + $('log').textContent;
+  }
+  function status(el, text, kind) { el.textContent = text; el.className = 'status ' + (kind || ''); }
+  $('redirect').textContent = redirectUri;
+
+  // ---- PKCE
+  function randomText(n) {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~';
+    return Array.from(crypto.getRandomValues(new Uint8Array(n)), b => chars[b % chars.length]).join('');
+  }
+  async function challenge(verifier) {
+    const hash = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(verifier));
+    return btoa(String.fromCharCode(...new Uint8Array(hash))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  }
+
+  async function login() {
+    if (!clientId) { status($('authStatus'), 'Vul eerst de Client ID in bij Instellingen → Spotify in de studio.', 'bad'); return; }
+    const verifier = randomText(64), stateKey = randomText(16);
+    store.set('verifier', verifier); store.set('state', stateKey);
+    const q = new URLSearchParams({
+      response_type: 'code', client_id: clientId, scope: SCOPES, redirect_uri: redirectUri,
+      code_challenge_method: 'S256', code_challenge: await challenge(verifier), state: stateKey,
+    });
+    location.assign('https://accounts.spotify.com/authorize?' + q);
+  }
+
+  async function tokenRequest(body) {
+    const res = await fetch('https://accounts.spotify.com/api/token', {
+      method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: new URLSearchParams(body),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error_description || data.error || ('fout ' + res.status));
+    store.set('token', data.access_token);
+    store.set('until', String(Date.now() + (data.expires_in - 60) * 1000));
+    if (data.refresh_token) store.set('refresh', data.refresh_token);
+    return data.access_token;
+  }
+
+  async function token() {
+    const t = store.get('token'), until = Number(store.get('until') || 0);
+    if (t && Date.now() < until) return t;
+    const refresh = store.get('refresh');
+    if (!refresh) throw new Error('niet aangemeld');
+    log('aanmelding vernieuwen');
+    return tokenRequest({ grant_type: 'refresh_token', refresh_token: refresh, client_id: clientId });
+  }
+
+  async function api(method, path, body) {
+    const res = await fetch('https://api.spotify.com/v1' + path, {
+      method, headers: { Authorization: 'Bearer ' + await token(), 'Content-Type': 'application/json' },
+      body: body ? JSON.stringify(body) : undefined,
+    });
+    if (res.status === 204 || res.status === 202) return null;
+    const data = await res.json().catch(() => null);
+    if (!res.ok) throw new Error((data && data.error && data.error.message) || ('fout ' + res.status));
+    return data;
+  }
+
+  // ---- the player
+  function loadSdk() {
+    $('playerPart').classList.remove('hidden');
+    window.onSpotifyWebPlaybackSDKReady = createPlayer;
+    const s = document.createElement('script');
+    s.src = 'https://sdk.scdn.co/spotify-player.js';
+    s.onerror = () => status($('playerStatus'), 'De Web Playback SDK laadde niet (internetverbinding?).', 'bad');
+    document.head.appendChild(s);
+  }
+
+  function createPlayer() {
+    player = new Spotify.Player({
+      name: 'REA-Radio-DJ ontwikkeltest',
+      getOAuthToken: cb => token().then(cb).catch(e => { log('aanmelding: ' + e.message); showSignedOut(); }),
+      volume: $('volume').value / 100,
+    });
+    player.addListener('ready', ({ device_id }) => {
+      deviceId = device_id;
+      status($('playerStatus'), 'Speler klaar: apparaat "REA-Radio-DJ ontwikkeltest".', 'ok');
+      log('speler klaar, apparaat ' + device_id);
+      ['transfer', 'toggle', 'prev', 'next', 'play'].forEach(id => $(id).disabled = false);
+    });
+    player.addListener('not_ready', () => { status($('playerStatus'), 'Speler niet meer bereikbaar.', 'bad'); log('speler offline'); });
+    player.addListener('initialization_error', ({ message }) => { status($('playerStatus'), 'Deze browser kan niet afspelen: ' + message, 'bad'); log('initialisatie: ' + message); });
+    player.addListener('authentication_error', ({ message }) => { status($('playerStatus'), 'Aanmelding geweigerd: ' + message, 'bad'); log('aanmelding: ' + message); });
+    player.addListener('account_error', ({ message }) => { status($('playerStatus'), 'Dit account kan niet afspelen (Spotify Premium nodig).', 'bad'); log('account: ' + message); });
+    player.addListener('playback_error', ({ message }) => log('afspelen: ' + message));
+    player.addListener('player_state_changed', s => { state = s; stateAt = performance.now(); showState(); });
+    player.connect().then(ok => { if (!ok) status($('playerStatus'), 'Verbinden met Spotify mislukt.', 'bad'); });
+  }
+
+  function mmss(ms) { const s = Math.max(0, Math.floor(ms / 1000)); return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); }
+
+  function showState() {
+    const t = state && state.track_window && state.track_window.current_track;
+    if (!t) { $('track').textContent = 'Niets aan het spelen'; $('artist').textContent = ''; $('cover').removeAttribute('src'); $('time').textContent = ''; $('progress').style.width = '0'; return; }
+    $('track').textContent = t.name;
+    $('artist').textContent = t.artists.map(a => a.name).join(', ') + ' · ' + t.album.name;
+    const img = t.album.images && t.album.images[0];
+    if (img) $('cover').src = img.url;
+  }
+
+  function tick() {
+    if (state && state.track_window && state.track_window.current_track) {
+      const pos = Math.min(state.duration, state.position + (state.paused ? 0 : performance.now() - stateAt));
+      $('time').textContent = `${mmss(pos)} / ${mmss(state.duration)}${state.paused ? ' · gepauzeerd' : ''}`;
+      $('progress').style.width = (state.duration ? pos / state.duration * 100 : 0) + '%';
+    }
+    requestAnimationFrame(tick);
+  }
+  requestAnimationFrame(tick);
+
+  // A link (open.spotify.com/track/…) or URI (spotify:album:…) → what the play call needs.
+  function target(text) {
+    const m = text.trim().match(/(track|album|playlist|artist)[/:]([A-Za-z0-9]{10,})/);
+    if (!m) return null;
+    const uri = `spotify:${m[1]}:${m[2]}`;
+    return m[1] === 'track' ? { uris: [uri] } : { context_uri: uri };
+  }
+
+  $('transfer').onclick = async () => {
+    player.activateElement();
+    try { await api('PUT', '/me/player', { device_ids: [deviceId], play: false }); log('afspelen overgezet naar deze browser'); }
+    catch (e) { log('overzetten: ' + e.message); }
+  };
+  $('toggle').onclick = () => { player.activateElement(); player.togglePlay(); };
+  $('prev').onclick = () => player.previousTrack();
+  $('next').onclick = () => player.nextTrack();
+  $('volume').oninput = e => player && player.setVolume(e.target.value / 100);
+  $('play').onclick = async () => {
+    const body = target($('uri').value);
+    if (!body) { log('geen Spotify-link of URI herkend'); return; }
+    player.activateElement();
+    try { await api('PUT', '/me/player/play?device_id=' + encodeURIComponent(deviceId), body); log('afspelen: ' + (body.context_uri || body.uris[0])); }
+    catch (e) { log('afspelen: ' + e.message); }
+  };
+  $('uri').onkeydown = e => { if (e.key === 'Enter') $('play').click(); };
+  $('login').onclick = login;
+  $('logout').onclick = () => {
+    if (player) player.disconnect();
+    store.clear();
+    log('afgemeld');
+    location.replace(redirectUri);
+  };
+
+  function showSignedOut(text) {
+    status($('authStatus'), text || 'Niet aangemeld.', text ? 'bad' : '');
+    $('login').classList.remove('hidden'); $('logout').classList.add('hidden');
+  }
+
+  async function signedIn() {
+    try {
+      const me = await api('GET', '/me');
+      const premium = me.product === 'premium';
+      status($('authStatus'), `Aangemeld als ${me.display_name || me.id} (${me.product || 'onbekend'})` + (premium ? '' : ' — afspelen vraagt Spotify Premium'), premium ? 'ok' : 'wait');
+      $('login').classList.add('hidden'); $('logout').classList.remove('hidden');
+      loadSdk();
+    } catch (e) { showSignedOut('Aanmelding werkt niet: ' + e.message); }
+  }
+
+  async function start() {
+    try {
+      const res = await fetch('/api/spotify/settings');
+      const s = await res.json();
+      clientId = s.clientId || '';
+    } catch { }
+    $('clientId').textContent = clientId || '(niet ingesteld)';
+
+    const q = new URLSearchParams(location.search);
+    if (q.has('error')) {
+      history.replaceState(null, '', redirectUri);
+      showSignedOut(q.get('error') === 'access_denied' ? 'Aanmelden geannuleerd.' : 'Spotify meldt: ' + q.get('error'));
+      return;
+    }
+    if (q.has('code')) {
+      history.replaceState(null, '', redirectUri);
+      if (q.get('state') !== store.get('state')) { showSignedOut('Aanmelding niet herkend (begin opnieuw).'); return; }
+      try {
+        status($('authStatus'), 'aanmelden…', 'wait');
+        await tokenRequest({ grant_type: 'authorization_code', code: q.get('code'), redirect_uri: redirectUri, client_id: clientId, code_verifier: store.get('verifier') || '' });
+        log('aangemeld');
+      } catch (e) { showSignedOut('Aanmelden mislukt: ' + e.message); return; }
+    }
+    if (store.get('token') || store.get('refresh')) signedIn();
+    else showSignedOut(clientId ? '' : 'Vul eerst de Client ID in bij Instellingen → Spotify in de studio.');
+  }
+  start();
+})();
+</script>
+</body>
+</html>

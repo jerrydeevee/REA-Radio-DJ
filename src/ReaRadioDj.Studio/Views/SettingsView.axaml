@@ -278,7 +278,7 @@
         <ScrollViewer><StackPanel Classes="page">
           <TextBlock Classes="title" Text="Spotify" />
           <TextBlock Classes="help" TextWrapping="Wrap"
-                     Text="Voor de wensenlijst en het aanvullen van gegevens (album, jaar, ISRC, hoes). Alleen gegevens: er komt nooit geluid uit Spotify. Maak een app aan in het Spotify-dashboard en kopieer de Client ID en het Client Secret hierheen. Een Redirect URI is niet nodig; die mag je in het dashboard op http://127.0.0.1 zetten." />
+                     Text="Voor de wensenlijst en het aanvullen van gegevens (album, jaar, ISRC, hoes): alleen gegevens, het programma zendt nooit geluid uit Spotify uit. Maak een app aan in het Spotify-dashboard (Web API aanvinken) en kopieer de Client ID en het Client Secret hierheen. De Redirect URI is alleen nodig voor de Web Playback-test onderaan." />
           <Button Classes="bar" Content="Spotify-dashboard openen" Command="{Binding OpenSpotifyDashboardCommand}" HorizontalAlignment="Left" Margin="0,8,0,0"
                   ToolTip.Tip="developer.spotify.com/dashboard in je browser" />
           <TextBlock Foreground="{DynamicResource WarnBrush}" IsVisible="{Binding !SpotifyLoaded}" Margin="0,8,0,0"
@@ -302,6 +302,15 @@
             <TextBlock Text="{Binding SpotifyStatus}" TextWrapping="Wrap" Margin="0,8,0,0" FontWeight="SemiBold" Foreground="{DynamicResource WarnBrush}" IsVisible="{Binding SpotifyFailed}" />
             <TextBlock Classes="muted" Text="{Binding SpotifyStatus}" TextWrapping="Wrap" Margin="0,8,0,0" IsVisible="{Binding SpotifyBusy}" />
             <TextBlock Classes="help" Text="Opslaan (onderaan) bewaart de gegevens ook. Ze staan in de stationsdatabase van de engine en gaan voor op appsettings.json; het Client Secret wordt nooit teruggestuurd naar de studio." />
+
+            <TextBlock Classes="title" Text="Web Playback (ontwikkeltest)" Margin="0,24,0,0" />
+            <TextBlock Classes="help" TextWrapping="Wrap"
+                       Text="Test de Web Playback SDK in je browser. Het geluid speelt alleen in de browser, via de luidsprekers van deze computer: niet via de engine, de DJ-tafel, de stream of een opname (Spotify staat uitzenden niet toe). Je hebt Spotify Premium nodig. Zet dit adres bij je app onder Redirect URIs:" />
+            <TextBox Classes="mono" Text="{Binding SpotifyPlayerUrl, Mode=OneWay}" IsReadOnly="True" Margin="0,6,0,0" />
+            <Button Classes="bar" Content="Testpagina openen" Command="{Binding OpenSpotifyPlayerCommand}" HorizontalAlignment="Left" Margin="0,8,0,0"
+                    ToolTip.Tip="Opent de testpagina in je browser; alleen op de computer waar de engine draait" />
+            <TextBlock Classes="help" IsVisible="{Binding !SpotifyPlayerLocal}"
+                       Text="Deze studio praat met een engine op een andere computer: open de testpagina daar." />
           </StackPanel>
         </StackPanel></ScrollViewer>
       </TabItem>
