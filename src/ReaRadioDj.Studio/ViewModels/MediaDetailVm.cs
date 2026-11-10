@@ -64,6 +64,8 @@ public sealed partial class MediaDetailVm : ObservableObject
         StudioHub.Time(Media.Duration),
         Media.Lufs is double l ? $"{l:0.0} LUFS" : null,
         Media.Bpm is double b ? $"{b:0.0} BPM" : null,
+        Media.Camelot is { } k ? $"{k} ({Media.Key})" : null,
+        Media.ReplayGain is double rg ? $"ReplayGain {rg:+0.0;-0.0} dB" : null,
         Media.Bitrate is int kbps ? $"{kbps} kbps" : null,
         Media.Category,
         Media.Kind == "jingle" ? "jingle" : null,

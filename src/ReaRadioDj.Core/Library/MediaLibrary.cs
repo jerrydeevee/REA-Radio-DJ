@@ -15,8 +15,11 @@ public sealed record MediaDetails(MediaItem Media, string Album, bool Enabled, b
     DateTime? ValidUntil, int PlayCount, DateTime? LastPlayed, bool Missing, int? Year = null, DateTime? Added = null,
     string Genre = "", double? Bpm = null, double? FirstBeat = null, double? EstIntro = null, double? EstOutro = null,
     long Size = 0, double? Clip = null, string Language = "", string Mood = "", int? Rating = null, int? EnergyLevel = null,
-    IReadOnlyList<string>? Issues = null)
+    IReadOnlyList<string>? Issues = null, string? Key = null)
 {
+    /// <summary>The key as a value (null when unknown).</summary>
+    public MusicalKey? MusicalKey => ReaRadioDj.Core.Audio.MusicalKey.Parse(Key);
+
     /// <summary>What the quality check found (empty = nothing).</summary>
     public IReadOnlyList<string> Problems => Issues ?? [];
 
@@ -405,6 +408,10 @@ public sealed class MediaLibrary
         double? bpm = inFile?.Bpm, firstBeat = inFile?.FirstBeat;
         if (bpm is null && kind == MediaKind.Song && peaks is not null && Beat(info.FullName) is { } beat) { bpm = beat.Bpm; firstBeat = beat.FirstBeat; }
         bpm ??= tags.Bpm;
+        // The key: from the tags when they have one, otherwise measured (songs only; jingles and speech have none).
+        var key = tags.Key;
+        bool keyTried = key is not null || kind != MediaKind.Song || peaks is not null;
+        if (key is null && kind == MediaKind.Song && peaks is not null) key = Key(info.FullName);
 
         // A new path may be a track the library knew before (moved, renamed, or its folder removed and added again).
         if (isNew && energy is not null && Recognise(energy, duration) is { } knownId)
@@ -423,10 +430,10 @@ public sealed class MediaLibrary
                 INSERT INTO media(path, kind, category_id, artist, title, album, size, modified, duration, lufs,
                                   cue_in, intro, outro, mix, cue_out, hook_in, hook_out, cues_manual, added, missing,
                                   genre, album_artist, bpm, first_beat, est_intro, est_outro, energy, measured, retired,
-                                  clip, language, mood, rating)
+                                  clip, language, mood, rating, musical_key, key_measured)
                 VALUES($path, $kind, $cat, $artist, $title, $album, $size, $mod, $dur, $lufs, $in, $intro, $outro, $mix, $out,
                        $hi, $ho, $manual, $added, 0, $genre, $aa, $bpm, $fb, $ei, $eo, $energy, $measured, 0,
-                       $clip, $lang, $mood, $rating)
+                       $clip, $lang, $mood, $rating, $key, $keyTried)
                 ON CONFLICT(path) DO UPDATE SET
                     kind = excluded.kind, artist = excluded.artist, title = excluded.title, album = excluded.album,
                     size = excluded.size, modified = excluded.modified, duration = excluded.duration, lufs = excluded.lufs,
@@ -439,6 +446,8 @@ public sealed class MediaLibrary
                     language = CASE WHEN excluded.language <> '' THEN excluded.language ELSE media.language END,
                     mood = CASE WHEN excluded.mood <> '' THEN excluded.mood ELSE media.mood END,
                     rating = COALESCE(excluded.rating, media.rating),
+                    musical_key = COALESCE(excluded.musical_key, media.musical_key),
+                    key_measured = MAX(media.key_measured, excluded.key_measured),
                     cue_in = CASE WHEN media.cues_manual = 1 THEN media.cue_in ELSE excluded.cue_in END,
                     intro = CASE WHEN media.cues_manual = 1 THEN media.intro ELSE excluded.intro END,
                     outro = CASE WHEN media.cues_manual = 1 THEN media.outro ELSE excluded.outro END,
@@ -455,7 +464,8 @@ public sealed class MediaLibrary
                 ("$hi", cues.HookIn), ("$ho", cues.HookOut), ("$manual", inFile?.Manual == true ? 1 : 0),
                 ("$added", StationDb.Iso(DateTime.Now)), ("$genre", tags.Genre), ("$aa", tags.AlbumArtist), ("$bpm", bpm), ("$fb", firstBeat),
                 ("$ei", estIntro), ("$eo", estOutro), ("$energy", energy), ("$measured", energy is null ? 0 : 1),
-                ("$clip", clip), ("$lang", tags.Language), ("$mood", tags.Mood), ("$rating", tags.Rating));
+                ("$clip", clip), ("$lang", tags.Language), ("$mood", tags.Mood), ("$rating", tags.Rating),
+                ("$key", key?.Name), ("$keyTried", keyTried ? 1 : 0));
             cmd.Transaction = tx;
             long id = mediaId = (long)cmd.ExecuteScalar()!;
             if (peaks is not null) StorePeaks(c, tx, id, peaks);
@@ -480,6 +490,12 @@ public sealed class MediaLibrary
             if (TrackProfile.Difference(energy, duration, c.Energy, c.Duration) is double d && d < bestDiff) { bestDiff = d; best = c.Id; }
         }
         return best;
+    }
+
+    private MusicalKey? Key(string path)
+    {
+        try { return KeyAnalyzer.Analyze(path); }
+        catch (Exception ex) when (ex is DllNotFoundException or EntryPointNotFoundException) { return null; }
     }
 
     private BeatInfo? Beat(string path)
@@ -531,6 +547,22 @@ public sealed class MediaLibrary
                 if (FolderOf(t.Path) is { WriteTags: true }) WriteMarkers(t.Id);
             }
             catch (Exception ex) when (ex is not OperationCanceledException) { _log.LogWarning(ex, "Could not measure {File}", t.Path); }
+        }
+        // The key of songs imported before it was measured.
+        var noKey = _db.Query($"SELECT id, path FROM media WHERE key_measured = 0 AND kind = {(int)MediaKind.Song} AND missing = 0 AND retired = 0",
+            r => (Id: r.GetInt64(0), Path: r.GetString(1)));
+        int keyed = 0;
+        foreach (var (id, path) in noKey)
+        {
+            ct.ThrowIfCancellationRequested();
+            Status = $"Toonsoort meten {++keyed}/{noKey.Count}: {Path.GetFileName(path)}";
+            try
+            {
+                if (!File.Exists(path)) continue;
+                var key = Key(path);
+                _db.Execute("UPDATE media SET musical_key = COALESCE(musical_key, $k), key_measured = 1 WHERE id = $id", ("$k", key?.Name), ("$id", id));
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException) { _log.LogDebug(ex, "Could not measure the key of {File}", path); }
         }
     }
 
@@ -1061,7 +1093,7 @@ public sealed class MediaLibrary
                m.cue_in, m.full_level, m.intro, m.intro2, m.outro, m.fade_out, m.mix, m.cue_out, m.hook_in, m.hook_out,
                m.album, m.enabled, m.cues_manual, m.valid_from, m.valid_until, m.play_count, m.last_played, m.missing,
                r.year, m.added, m.genre, m.bpm, m.first_beat, m.est_intro, m.est_outro,
-               m.size, m.clip, m.language, m.mood, m.rating, m.energy_level
+               m.size, m.clip, m.language, m.mood, m.rating, m.energy_level, m.musical_key
         FROM media m LEFT JOIN categories c ON c.id = m.category_id LEFT JOIN media_rights r ON r.media_id = m.id
         """;
 
@@ -1091,11 +1123,12 @@ public sealed class MediaLibrary
             r.GetInt64OrNull(27) is long y and > 0 ? (int)y : null, StationDb.ParseIso(r.GetStringOrNull(28)),
             r.GetString(29), r.GetDoubleOrNull(30), r.GetDoubleOrNull(31), r.GetDoubleOrNull(32), r.GetDoubleOrNull(33),
             r.GetInt64(34), r.GetDoubleOrNull(35), r.GetString(36), r.GetString(37),
-            r.GetInt64OrNull(38) is long rt ? (int)rt : null, r.GetInt64OrNull(39) is long el ? (int)el : null);
+            r.GetInt64OrNull(38) is long rt ? (int)rt : null, r.GetInt64OrNull(39) is long el ? (int)el : null,
+            Key: r.GetStringOrNull(40));
     }
 
     private sealed record Tags(string Artist, string Title, string Album, string Genre, string AlbumArtist, double? Bpm,
-        string Language = "", string Mood = "", int? Rating = null);
+        string Language = "", string Mood = "", int? Rating = null, MusicalKey? Key = null);
 
     /// <summary>Language, mood and rating from ID3 (TLAN, TMOO, POPM) or Vorbis comments (LANGUAGE, MOOD, RATING).</summary>
     private static (string Language, string Mood, int? Rating) ReadExtraTags(TagLib.File f)
@@ -1140,7 +1173,7 @@ public sealed class MediaLibrary
     private static Tags ReadTags(string path)
     {
         string artist = "", title = "", album = "", genre = "", albumArtist = "", language = "", mood = "";
-        double? bpm = null; int? rating = null;
+        double? bpm = null; int? rating = null; MusicalKey? key = null;
         try
         {
             using var tagFile = TagLib.File.Create(path);
@@ -1151,6 +1184,7 @@ public sealed class MediaLibrary
             genre = t.FirstGenre ?? "";
             albumArtist = t.FirstAlbumArtist ?? "";
             if (t.BeatsPerMinute is > 0 and < 300) bpm = t.BeatsPerMinute;
+            key = MusicalKey.Parse(t.InitialKey);   // TKEY or INITIALKEY, written by this or another program
             (language, mood, rating) = ReadExtraTags(tagFile);
         }
         catch (Exception) { /* untagged or unsupported: fall back to the file name */ }
@@ -1162,7 +1196,7 @@ public sealed class MediaLibrary
             if (dash > 0 && string.IsNullOrWhiteSpace(artist)) { artist = name[..dash].Trim(); title = name[(dash + 3)..].Trim(); }
             else title = name;
         }
-        return new Tags(artist.Trim(), title.Trim(), album.Trim(), genre.Trim(), albumArtist.Trim(), bpm, language, mood, rating);
+        return new Tags(artist.Trim(), title.Trim(), album.Trim(), genre.Trim(), albumArtist.Trim(), bpm, language, mood, rating, key);
     }
 
     /// <summary>Reads the rights tags of one file and stores them (an empty record marks "looked, nothing there").</summary>

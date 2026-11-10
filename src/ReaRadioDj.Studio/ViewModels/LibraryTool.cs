@@ -56,7 +56,7 @@ public sealed partial class LibraryTool : StudioTool
     public List<SortChoice> Sorts { get; } =
     [
         new("Beste treffer", "relevance"), new("Artiest", "artist"), new("Titel", "title"), new("Jaar", "year"),
-        new("BPM", "bpm"), new("Duur", "duration"), new("Laatst gespeeld", "lastplayed"), new("Vaakst gespeeld", "plays"),
+        new("BPM", "bpm"), new("Toonsoort", "key"), new("Duur", "duration"), new("Laatst gespeeld", "lastplayed"), new("Vaakst gespeeld", "plays"),
         new("Nieuwste eerst", "added"),
     ];
     public List<ClickChoice> ClickActions { get; } =
@@ -137,6 +137,10 @@ public sealed partial class LibraryTool : StudioTool
         }
     }
 
+    /// <summary>Around the Camelot wheel (1A, 1B, 2A ...); unknown keys last.</summary>
+    private static int KeyOrder(string? camelot) =>
+        camelot is { Length: >= 2 } c && int.TryParse(c[..^1], out int n) ? n * 2 + (c[^1] == 'B' ? 1 : 0) : int.MaxValue;
+
     [RelayCommand] private Task PflStop() => Hub.PlayerCommand("pfl", "stop");
 
     private IEnumerable<MediaDto> Sorted(IEnumerable<MediaDto> items) => (Sort?.Key ?? "relevance") switch
@@ -145,6 +149,7 @@ public sealed partial class LibraryTool : StudioTool
         "title" => items.OrderBy(m => m.Title, StringComparer.CurrentCultureIgnoreCase),
         "year" => items.OrderByDescending(m => m.Year ?? 0),
         "bpm" => items.OrderBy(m => m.Bpm ?? double.MaxValue),
+        "key" => items.OrderBy(m => KeyOrder(m.Camelot)).ThenBy(m => m.Bpm ?? double.MaxValue),
         "duration" => items.OrderBy(m => m.Duration),
         "lastplayed" => items.OrderByDescending(m => m.LastPlayed ?? DateTime.MinValue),
         "plays" => items.OrderByDescending(m => m.PlayCount),

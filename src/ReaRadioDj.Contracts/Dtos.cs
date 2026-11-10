@@ -93,7 +93,8 @@ public sealed record MediaDto(long Id, string Path, string Kind, long? CategoryI
     string Album, double Duration, double? Lufs, CueDto Cues, bool Enabled, bool CuesManual, DateTime? ValidFrom,
     DateTime? ValidUntil, int PlayCount, DateTime? LastPlayed, bool Missing, int? Year = null, DateTime? Added = null,
     string? Block = null, string Genre = "", double? Bpm = null, double? FirstBeat = null, double? EstIntro = null, double? EstOutro = null,
-    IReadOnlyList<string>? Issues = null, string Language = "", string Mood = "", int? Rating = null, int? EnergyLevel = null, int? Bitrate = null)
+    IReadOnlyList<string>? Issues = null, string Language = "", string Mood = "", int? Rating = null, int? EnergyLevel = null, int? Bitrate = null,
+    string? Key = null, string? Camelot = null, double? ReplayGain = null)
 {
     /// <summary>True when the quality check found something (te zacht, clipping, stilte, dubbel, ...).</summary>
     public bool HasIssues => Issues is { Count: > 0 };

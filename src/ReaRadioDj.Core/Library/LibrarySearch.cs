@@ -2,6 +2,7 @@ using System.Collections.Concurrent;
 using System.Globalization;
 using System.Runtime.CompilerServices;
 using System.Text;
+using ReaRadioDj.Core.Audio;
 using ReaRadioDj.Core.Model;
 
 namespace ReaRadioDj.Core.Library;
@@ -22,6 +23,7 @@ public static class LibrarySearch
         ("artiest:abba", "alleen in de artiest (ook titel:, album:, cat:, genre:, taal:, stemming:)"),
         ("waardering:>=4  energie:4-5", "sterren en energie (1 tot 5) uit het detailpaneel of de tags"),
         ("bpm:120-128  bpm:>140", "tempo (gemeten bij het inlezen)"),
+        ("toon:8A  toon:Am  toon:8A+", "toonsoort (Camelot of naam); met + ook wat er harmonisch bij past"),
         ("jaar:1985  jaar:198  jaar:1980-1989  jaar:>2000", "jaar, decennium of bereik"),
         ("duur:<3:30  duur:3:00-4:00", "lengte van het nummer"),
         ("gespeeld:0  gespeeld:>20", "aantal keer gespeeld"),
@@ -148,6 +150,12 @@ public static class LibrarySearch
                 if (Range(value, s => int.TryParse(s, out var n) ? n : null) is not { } er) return null;
                 var (emin, emax) = er;
                 return (d, _, _) => d.EnergyLevel is int x && x >= emin && x <= emax;
+            case "toon" or "key" or "toonsoort":
+            {
+                bool near = value.EndsWith('+');
+                if (MusicalKey.Parse(near ? value[..^1] : value) is not { } want) return null;
+                return (d, _, _) => d.MusicalKey is { } k && (k == want || near && MusicalKey.Harmonic(want, k));
+            }
             case "bpm" or "tempo":
                 if (Range(value, s => double.TryParse(s.Replace(',', '.'), NumberStyles.Float, CultureInfo.InvariantCulture, out var b) ? b : null) is not { } br) return null;
                 var (bmin, bmax) = br;

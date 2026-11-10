@@ -276,7 +276,7 @@
             <StackPanel Grid.Column="2" Margin="6,0">
               <TextBlock Text="{Binding Title}" TextTrimming="CharacterEllipsis" />
               <TextBlock Classes="muted" TextTrimming="CharacterEllipsis">
-                <Run Text="{Binding Artist}" /><Run Text=" · " /><Run Text="{Binding Category}" /><Run Text="{Binding Year, StringFormat=' · {0}', TargetNullValue=''}" /><Run Text="{Binding Bpm, StringFormat=' · {0:0} BPM', TargetNullValue=''}" />
+                <Run Text="{Binding Artist}" /><Run Text=" · " /><Run Text="{Binding Category}" /><Run Text="{Binding Year, StringFormat=' · {0}', TargetNullValue=''}" /><Run Text="{Binding Bpm, StringFormat=' · {0:0} BPM', TargetNullValue=''}" /><Run Text="{Binding Camelot, StringFormat=' · {0}', TargetNullValue=''}" />
               </TextBlock>
               <TextBlock Text="{Binding Block, StringFormat='⚠ {0}'}" Foreground="#F0B429" FontSize="11" TextTrimming="CharacterEllipsis"
                          IsVisible="{Binding !Allowed}" ToolTip.Tip="Waarom dit nu niet ingepland wordt" />
