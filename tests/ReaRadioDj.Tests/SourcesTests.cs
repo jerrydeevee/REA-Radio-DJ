@@ -212,6 +212,62 @@ public sealed class MetadataTests
         Assert.False(MetadataMatch.Propose(1, "Adele", "Hello", "25", 2015, "X", "Y", m).AddsSomething);
     }
 
+    private const string Recording = """
+        {"id":"0a8e8d55-4b83-4f8a-9732-fbb5ded9f344","title":"Hello",
+         "genres":[{"name":"ballad","count":1},{"name":"pop","count":4}],
+         "tags":[{"name":"acoustic jazz","count":7}],
+         "relations":[
+           {"type":"producer","target-type":"artist","artist":{"name":"Greg Kurstin"}},
+           {"type":"performance","target-type":"work","work":{"title":"Hello","relations":[
+             {"type":"lyricist","target-type":"artist","artist":{"name":"Adele"}},
+             {"type":"composer","target-type":"artist","artist":{"name":"Greg Kurstin"}},
+             {"type":"writer","target-type":"artist","artist":{"name":"Adele"}},
+             {"type":"other version","target-type":"work","work":{"title":"Hello (live)"}}]}}]}
+        """;
+
+    [Fact]
+    public void A_recording_lookup_gives_the_genre_and_the_writers_of_the_work()
+    {
+        var d = MetadataMatch.ParseMusicBrainzRecording(Recording);
+        Assert.Equal("Pop", d.Genre);                                // most voted genre, capital first letter
+        Assert.Equal("Greg Kurstin, Adele", d.Composer);              // composers first, each name once, producer left out
+        Assert.Equal("Acoustic jazz", MetadataMatch.ParseMusicBrainzRecording("""{"tags":[{"name":"acoustic jazz","count":2}]}""").Genre);
+        Assert.Equal(new MetaDetails("", ""), MetadataMatch.ParseMusicBrainzRecording("{}"));
+        Assert.Equal("Pop", MetadataMatch.ParseMusicBrainzArtistGenre("""{"genres":[{"name":"neo soul","count":2},{"name":"pop","count":8}]}"""));
+    }
+
+    [Fact]
+    public void Search_results_carry_the_ids_needed_for_details_and_cover()
+    {
+        const string json = """
+            {"recordings":[{"id":"0a8e8d55-4b83-4f8a-9732-fbb5ded9f344","score":100,"title":"Hello","length":295493,
+              "artist-credit":[{"name":"Adele","artist":{"id":"cc2c9c3c-b7bc-4b8b-84d8-4fbd8779e493","name":"Adele"}}],
+              "releases":[{"id":"r","title":"25","status":"Official","date":"2015-11-20",
+                "release-group":{"id":"5537624c-3d2f-4f5c-8099-df916082c85c","primary-type":"Album"}}]}]}
+            """;
+        var c = MetadataMatch.ParseMusicBrainz(json)[0];
+        Assert.Equal(("0a8e8d55-4b83-4f8a-9732-fbb5ded9f344", "5537624c-3d2f-4f5c-8099-df916082c85c", "cc2c9c3c-b7bc-4b8b-84d8-4fbd8779e493"),
+            (c.RecordingId, c.ReleaseGroupId, c.ArtistId));
+        Assert.Equal("https://coverartarchive.org/release-group/5537624c-3d2f-4f5c-8099-df916082c85c/front-500", MetadataMatch.CoverArtUrl(c.ReleaseGroupId));
+        Assert.StartsWith("https://musicbrainz.org/ws/2/recording/0a8e8d55-4b83-4f8a-9732-fbb5ded9f344?fmt=json&inc=", MetadataMatch.MusicBrainzRecordingUrl(c.RecordingId));
+        // Ids that are no GUID are never put into an address.
+        Assert.Equal("", MetadataMatch.ParseMusicBrainz(MusicBrainz)[0].RecordingId);
+        Assert.False(MetadataMatch.IsMbid("../x"));
+    }
+
+    [Fact]
+    public void Genre_writers_and_cover_are_only_proposed_when_missing()
+    {
+        var m = new MetaCandidate("MusicBrainz", "Adele", "Hello", "25", 2015, "GBBKS1500214", "", 295, 100,
+            RecordingId: "0a8e8d55-4b83-4f8a-9732-fbb5ded9f344", Genre: "Pop", Composer: "Adele, Greg Kurstin", CoverUrl: "https://coverartarchive.org/x");
+        var p = MetadataMatch.Propose(1, "Adele", "Hello", "25", 2015, "GBBKS1500214", "", m, genre: "", composer: "", hasCover: false);
+        Assert.Equal(("Pop", "Adele, Greg Kurstin", "https://coverartarchive.org/x", "0a8e8d55-4b83-4f8a-9732-fbb5ded9f344"), (p.Genre, p.Composer, p.CoverUrl, p.Mbid));
+        Assert.True(p.AddsSomething);
+        var full = MetadataMatch.Propose(1, "Adele", "Hello", "25", 2015, "GBBKS1500214", "", m, genre: "Soul", composer: "A. Adkins", hasCover: true, mbid: "x");
+        Assert.Equal(((string?)null, (string?)null, (string?)null, (string?)null), (full.Genre, full.Composer, full.CoverUrl, full.Mbid));
+        Assert.False(full.AddsSomething); // only the id would be new: not worth a proposal
+    }
+
     [Fact]
     public void Search_addresses_quote_the_title_and_artist()
     {

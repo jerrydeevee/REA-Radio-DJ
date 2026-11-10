@@ -24,7 +24,7 @@ public static class SourcesApi
         m.MapGet("/status", (MetadataService s) => s.Status());
         m.MapPost("/start", (MetaStartDto d, MetadataService s) => s.Start(d.Limit) ? Results.Ok() : Results.Conflict(new { error = "loopt al" }));
         m.MapPost("/stop", (MetadataService s) => { s.Stop(); return Results.Ok(); });
-        m.MapPost("/apply", (IdListDto d, MetadataService s) => Results.Ok(new { applied = s.Apply(d.Ids) }));
+        m.MapPost("/apply", async (IdListDto d, MetadataService s, CancellationToken ct) => Results.Ok(new { applied = await s.ApplyAsync(d.Ids, ct) }));
         m.MapPost("/dismiss", (IdListDto d, MetadataService s) => Results.Ok(new { dismissed = s.Dismiss(d.Ids) }));
     }
 }

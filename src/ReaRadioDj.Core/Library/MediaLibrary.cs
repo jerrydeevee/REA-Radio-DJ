@@ -778,7 +778,28 @@ public sealed class MediaLibrary
                 }
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { _log.LogDebug("No cover file for {File}: {Message}", m.Path, ex.Message); }
+        try
+        {
+            // A cover found online by the metadata lookup, kept in the data folder (the music file stays as it is).
+            var found = FoundCoverPath(id);
+            if (File.Exists(found)) { var b = File.ReadAllBytes(found); if (CoverMime(b) is { } mime) return (b, mime); }
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { _log.LogDebug("No found cover for {Id}: {Message}", id, ex.Message); }
         return null;
+    }
+
+    /// <summary>Where a cover found online is kept for an item: covers\{id}.img in the data folder.</summary>
+    public string FoundCoverPath(long id) => Path.Combine(_options.DataFolder, "covers", id.ToString(System.Globalization.CultureInfo.InvariantCulture) + ".img");
+
+    /// <summary>Keeps a cover found online for an item (in the data folder, not in the music file). False when it is no picture.</summary>
+    public bool SaveFoundCover(long id, byte[] image)
+    {
+        if (image.Length is 0 or > 8_000_000 || CoverMime(image) is null) return false;
+        var path = FoundCoverPath(id);
+        Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+        File.WriteAllBytes(path, image);
+        Changed?.Invoke();
+        return true;
     }
 
     /// <summary>The library item of a file, or null when the file is not in the library.</summary>

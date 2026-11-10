@@ -16,13 +16,17 @@ public sealed partial class MetaRow(MetaProposalDto p) : ObservableObject
         P.Year is null ? null : $"jaar: {P.Year}",
         P.Isrc is null ? null : $"ISRC: {P.Isrc}",
         P.Label is null ? null : $"label: {P.Label}",
+        P.Genre is null ? null : $"genre: {P.Genre}",
+        P.Composer is null ? null : $"componist/auteur: {P.Composer}",
+        P.CoverUrl is null ? null : "hoes",
     }.Where(x => x is not null));
     public string From => $"{P.Source}: {P.Found}";
 }
 
 /// <summary>
 /// Data sources for the library: music catalogues in other databases (ODBC), read in on request or every few minutes,
-/// and a lookup of missing album, year, ISRC and label in MusicBrainz (and Spotify, when its keys are set).
+/// and a lookup of missing album, year, ISRC, label, genre, composers/authors and cover in MusicBrainz and the Cover Art
+/// Archive (and Spotify, when its keys are set).
 /// </summary>
 public sealed partial class SourcesTool : StudioTool
 {

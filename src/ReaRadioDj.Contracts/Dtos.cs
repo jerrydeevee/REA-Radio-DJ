@@ -336,7 +336,7 @@ public sealed record DbTestDto(bool Ok, List<string> Columns, List<string> Used,
 
 /// <summary>What a metadata lookup found for a library item; only fields that are empty now are filled in.</summary>
 public sealed record MetaProposalDto(long MediaId, string Song, string Source, string Found, string? Album, int? Year, string? Isrc,
-    string? Label, string Link);
+    string? Label, string Link, string? Genre = null, string? Composer = null, string? CoverUrl = null);
 
 /// <summary>The state of the metadata lookup.</summary>
 public sealed record MetaStatusDto(bool Running, int Done, int Total, string Current, int NotFound, int NothingNew, bool Spotify,

@@ -5,15 +5,27 @@ using System.Text.RegularExpressions;
 
 namespace ReaRadioDj.Core.Library;
 
-/// <summary>A possible match for a library item from an online source.</summary>
+/// <summary>
+/// A possible match for a library item from an online source. The MusicBrainz ids (recording, release group of the
+/// chosen album, first artist) lead to the details: genre, composers/authors and the cover.
+/// </summary>
 public sealed record MetaCandidate(string Source, string Artist, string Title, string Album, int? Year, string Isrc, string Label,
-    double? Length, int Score, string Link = "");
+    double? Length, int Score, string Link = "", string RecordingId = "", string ReleaseGroupId = "", string ArtistId = "",
+    string Genre = "", string Composer = "", string CoverUrl = "");
 
-/// <summary>What a lookup would add to a library item: only fields that are empty now.</summary>
-public sealed record MetaProposal(long MediaId, string Artist, string Title, MetaCandidate Match, string? Album, int? Year, string? Isrc, string? Label)
+/// <summary>
+/// What a lookup would add to a library item: only fields that are empty now. <see cref="Mbid"/> (the MusicBrainz
+/// recording id, so a later lookup finds the same recording) is stored along with the rest but does not count on its own.
+/// </summary>
+public sealed record MetaProposal(long MediaId, string Artist, string Title, MetaCandidate Match, string? Album, int? Year, string? Isrc, string? Label,
+    string? Genre = null, string? Composer = null, string? CoverUrl = null, string? Mbid = null)
 {
-    public bool AddsSomething => Album is not null || Year is not null || Isrc is not null || Label is not null;
+    public bool AddsSomething => Album is not null || Year is not null || Isrc is not null || Label is not null
+        || Genre is not null || Composer is not null || CoverUrl is not null;
 }
+
+/// <summary>Genre, composers/authors from a MusicBrainz recording lookup.</summary>
+public sealed record MetaDetails(string Genre, string Composer);
 
 /// <summary>Picks the right recording out of search results and works out what it adds.</summary>
 public static partial class MetadataMatch
@@ -62,13 +74,18 @@ public static partial class MetadataMatch
             .FirstOrDefault();
     }
 
-    /// <summary>What the match adds: only the fields that are empty in the library.</summary>
-    public static MetaProposal Propose(long mediaId, string artist, string title, string album, int? year, string isrc, string label, MetaCandidate m) =>
+    /// <summary>What the match adds: only the fields that are empty in the library (a cover only when there is none).</summary>
+    public static MetaProposal Propose(long mediaId, string artist, string title, string album, int? year, string isrc, string label, MetaCandidate m,
+        string genre = "", string composer = "", bool hasCover = true, string mbid = "") =>
         new(mediaId, artist, title, m,
             album.Length == 0 && m.Album.Length > 0 ? m.Album : null,
             year is null ? m.Year : null,
             isrc.Length == 0 && m.Isrc.Length > 0 ? m.Isrc : null,
-            label.Length == 0 && m.Label.Length > 0 ? m.Label : null);
+            label.Length == 0 && m.Label.Length > 0 ? m.Label : null,
+            genre.Length == 0 && m.Genre.Length > 0 ? m.Genre : null,
+            composer.Length == 0 && m.Composer.Length > 0 ? m.Composer : null,
+            !hasCover && m.CoverUrl.Length > 0 ? m.CoverUrl : null,
+            mbid.Length == 0 && m.RecordingId.Length > 0 ? m.RecordingId : null);
 
     private static int? Year(string? date) =>
         date is { Length: >= 4 } && int.TryParse(date[..4], NumberStyles.Integer, CultureInfo.InvariantCulture, out int y) && y > 1800 ? y : null;
@@ -99,27 +116,96 @@ public static partial class MetadataMatch
             if (r.TryGetProperty("artist-credit", out var credits))
                 foreach (var c in credits.EnumerateArray())
                     artist.Append(Str(c, "name")).Append(Str(c, "joinphrase"));
-            string album = "";
+            string artistId = "";
+            if (r.TryGetProperty("artist-credit", out var cr) && cr.GetArrayLength() > 0 && cr[0].TryGetProperty("artist", out var a0))
+                artistId = Str(a0, "id");
+            string album = "", group = "";
             string? firstDate = Str(r, "first-release-date") is { Length: > 0 } f ? f : null;
             if (r.TryGetProperty("releases", out var releases))
             {
                 var ordered = releases.EnumerateArray()
                     .Select(x => (Title: Str(x, "title"), Date: Str(x, "date"), Status: Str(x, "status"),
-                        Type: x.TryGetProperty("release-group", out var g) ? Str(g, "primary-type") : ""))
+                        Type: x.TryGetProperty("release-group", out var g) ? Str(g, "primary-type") : "",
+                        Group: x.TryGetProperty("release-group", out var g2) ? Str(g2, "id") : ""))
                     .OrderBy(x => x.Date.Length == 0 ? "9999" : x.Date, StringComparer.Ordinal)
                     .ToList();
                 var pick = ordered.FirstOrDefault(x => x.Type == "Album" && x.Status is "Official" or "")
                     is { Title.Length: > 0 } a ? a : ordered.FirstOrDefault();
                 album = pick.Title ?? "";
+                group = pick.Group ?? "";
                 firstDate ??= ordered.FirstOrDefault(x => x.Date.Length > 0).Date;
             }
             string isrc = r.TryGetProperty("isrcs", out var isrcs) && isrcs.GetArrayLength() > 0 ? isrcs[0].GetString() ?? "" : "";
             double? length = r.TryGetProperty("length", out var len) && len.ValueKind == JsonValueKind.Number ? len.GetDouble() / 1000 : null;
             int score = r.TryGetProperty("score", out var sc) && sc.ValueKind == JsonValueKind.Number ? sc.GetInt32() : 0;
+            string id = Str(r, "id");
             list.Add(new MetaCandidate("MusicBrainz", artist.ToString(), title, album, Year(firstDate), isrc, "", length, score,
-                "https://musicbrainz.org/recording/" + Str(r, "id")));
+                "https://musicbrainz.org/recording/" + id, IsMbid(id) ? id : "", IsMbid(group) ? group : "", IsMbid(artistId) ? artistId : ""));
         }
         return list;
+    }
+
+    /// <summary>A MusicBrainz id: a GUID, so it is safe to put in an address.</summary>
+    public static bool IsMbid(string id) => Guid.TryParseExact(id, "D", out _);
+
+    /// <summary>Lookup address of a recording with its genres, tags and the writers of the work it is a performance of.</summary>
+    public static string MusicBrainzRecordingUrl(string recordingId) =>
+        $"https://musicbrainz.org/ws/2/recording/{recordingId}?fmt=json&inc=genres+tags+artist-rels+work-rels+work-level-rels";
+
+    /// <summary>Lookup address of an artist with its genres (used when the recording has none).</summary>
+    public static string MusicBrainzArtistUrl(string artistId) => $"https://musicbrainz.org/ws/2/artist/{artistId}?fmt=json&inc=genres";
+
+    /// <summary>The front cover of a release group in the Cover Art Archive (500 pixels).</summary>
+    public static string CoverArtUrl(string releaseGroupId) => $"https://coverartarchive.org/release-group/{releaseGroupId}/front-500";
+
+    private static readonly string[] Writers = ["composer", "writer", "lyricist", "librettist"];
+
+    /// <summary>
+    /// Genre and writers from a recording lookup. The genre is the most voted genre (else the most voted tag); the
+    /// writers are the composers, writers and lyricists of the work, composers first, each name once ("A, B").
+    /// </summary>
+    public static MetaDetails ParseMusicBrainzRecording(string json)
+    {
+        using var doc = JsonDocument.Parse(json);
+        var root = doc.RootElement;
+        string genre = TopName(root, "genres") is { Length: > 0 } g ? g : TopName(root, "tags");
+        var names = new List<(int Rank, string Name)>();
+        void Collect(JsonElement owner)
+        {
+            if (!owner.TryGetProperty("relations", out var rels)) return;
+            foreach (var rel in rels.EnumerateArray())
+            {
+                int rank = Array.IndexOf(Writers, Str(rel, "type"));
+                if (rank >= 0 && rel.TryGetProperty("artist", out var a) && Str(a, "name") is { Length: > 0 } n) names.Add((rank, n));
+            }
+        }
+        Collect(root);
+        if (root.TryGetProperty("relations", out var rr))
+            foreach (var rel in rr.EnumerateArray())
+                if (Str(rel, "type") == "performance" && rel.TryGetProperty("work", out var work)) Collect(work);
+        string composer = string.Join(", ", names.OrderBy(x => x.Rank).Select(x => x.Name).Distinct(StringComparer.OrdinalIgnoreCase));
+        return new MetaDetails(genre, composer);
+    }
+
+    /// <summary>The most voted genre of an artist lookup.</summary>
+    public static string ParseMusicBrainzArtistGenre(string json)
+    {
+        using var doc = JsonDocument.Parse(json);
+        return TopName(doc.RootElement, "genres");
+    }
+
+    // The name with the highest count in a genres/tags list, with a capital first letter ("dance-pop" -> "Dance-pop").
+    private static string TopName(JsonElement e, string list)
+    {
+        if (!e.TryGetProperty(list, out var items) || items.ValueKind != JsonValueKind.Array) return "";
+        string best = ""; int bestCount = 0;
+        foreach (var x in items.EnumerateArray())
+        {
+            int count = x.TryGetProperty("count", out var c) && c.ValueKind == JsonValueKind.Number ? c.GetInt32() : 0;
+            string name = Str(x, "name").Trim();
+            if (name.Length > 0 && count > bestCount) { best = name; bestCount = count; }
+        }
+        return best.Length == 0 ? "" : char.ToUpperInvariant(best[0]) + best[1..];
     }
 
     // ---------------------------------------------------------------- Spotify
