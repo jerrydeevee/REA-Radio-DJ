@@ -72,10 +72,7 @@ Legenda: ✅ klaar · 🟡 deels · ⬜ open
 | ⬜ | Opnemen (programma, mic) en automatische opname |
 | ⬜ | DSP/VST per kanaal |
 | ⬜ | Watchdog en herstel na een crash |
-| ⬜ | Analyse per nummer: BPM, toonsoort en ReplayGain bij het inlezen; tempo-overgang (BPM gelijktrekken) als overgangstype |
 | ⬜ | Mixpunten per nummer met overgangstypes per categorie (knippen, faden, over de intro), bovenop de overgangseditor |
-| ⬜ | Externe bijdragen: NDI- of ASIO/WASAPI-ingang als live-bron (bijv. LUCI Studio, een dj-programma), met terugkanaal (mix-minus) |
-| ⬜ | Eigen RTP-ontvanger en SIP volgens EBU N/ACIP (G.711, G.722, Opus, PCM) voor verslaggevers op locatie |
 | ⬜ | OSC uitsturen (status naar mengtafel of lichtsturing), naast het bestaande OSC-commandokanaal |
 
 ## Studio-layout moderniseren
@@ -94,3 +91,41 @@ aan-de-luchtbalk staat altijd bovenaan; één hoofdactie per gebied; een toestan
 | ⬜ | Responsive: breder dan 1600 px naast elkaar, 1100-1600 px cartwall onder de spelers, smaller alles in één kolom |
 | ⬜ | Indelingen voor 2 en 3 schermen (Uitzending, Productie, Cartwalls + mixer); onthouden per indeling, terugvallen naar scherm 1 als een scherm wegvalt |
 | ⬜ | Overige vensters (planner, bibliotheek, mixer, beheer) nalopen op de nieuwe stijl |
+
+## DJ-modus
+
+Een eigen werkruimte in dezelfde studio om met de hand te mixen: twee of vier decks, een mengpaneel en de
+bibliotheek eronder. Eigen ontwerp in de stijl van de studio; geen skins, merken of beelden van andere dj-pakketten.
+De DJ-modus speelt op een eigen mengkanaal, zodat de automatisering kan doorlopen of juist wijkt.
+
+| Status | Onderdeel |
+|---|---|
+| ⬜ | Analyse per nummer: BPM, beatgrid, toonsoort en ReplayGain bij het inlezen (bewaard in de bibliotheek) |
+| ⬜ | Deck-engine: laden, start/pauze, cue, tempo (pitch ±8/12/50 %) met of zonder toonhoogtebehoud, pitch-bend, sync op BPM en beat |
+| ⬜ | Mengpaneel: gain, 3-bands EQ met kill, filter, kanaalfaders, crossfader met instelbare curve, koptelefoon-cue per deck en cue-mix |
+| ⬜ | Werkruimte DJ in de app-balk: 2 decks met doorlopende golfvormen boven elkaar, tellers (verstreken/resterend), BPM en toonsoort; schakelbaar naar 4 decks |
+| ⬜ | Hotcues (8 per nummer, bewaard), loops (in/uit, halveren/verdubbelen, loop-roll) en quantize op de beat |
+| ⬜ | Effecten per deck (flanger, reverb, echo, filter) met sterkte en lengte op de beat |
+| ⬜ | Sampler: de bestaande cartwall als pads in de DJ-modus |
+| ⬜ | Automix in de DJ-modus: lijst afspelen met overgangstype (knippen, faden, tempo-overgang); mixpunten per nummer |
+| ⬜ | Bediening: decks, mengpaneel en pads op de commandobus, dus ook via MIDI-controllers en sneltoetsen |
+| ⬜ | Stems (zang, instrumenten, bas, drums) met een open scheidingsmodel op de GPU, vooraf berekend per nummer |
+| ⬜ | Opname van de mix en tempo-overgang als overgangstype in de automatisering |
+
+## Verbindingen (codec)
+
+Een eigen venster voor live-verbindingen met verslaggevers, andere studio's en bellers, met de functies van een
+audiocodec. Alleen open protocollen en codecs; eigen ontwerp. Elke verbinding komt als bron op een mengkanaal
+(bijv. VoIP) en krijgt een terugkanaal zonder zichzelf (mix-minus).
+
+| Status | Onderdeel |
+|---|---|
+| ⬜ | Mengkanaal VoIP/extern in de mixer met eigen fader, PFL en mix-minus-terugkanaal |
+| ⬜ | RTP in twee richtingen: G.711, G.722, Opus en lineair PCM (L16/L24), jitterbuffer met meting (jitter, verlies, kwaliteit) |
+| ⬜ | SIP volgens EBU N/ACIP: bellen en gebeld worden, registreren bij een SIP-server, automatisch of handmatig aannemen |
+| ⬜ | Venster Verbindingen: stationslijst (adresboek met protocol, codec, bitrate), verbinden/ophangen/aannemen, niveaumeters in en uit, verbindingstijd, kwaliteit, waarschuwingen |
+| ⬜ | Presets per station en meerdere verbindingen tegelijk, elk op een eigen mengkanaal |
+| ⬜ | Betrouwbaarheid: verbinding over twee netwerken tegelijk, RTP over SRT, automatisch opnieuw verbinden |
+| ⬜ | Icecast/SHOUTcast-bron en RTP-multicast als verbindingstype; NDI- of ASIO/WASAPI-ingang als bron (bijv. LUCI Studio of een dj-programma) |
+| ⬜ | Bediening op afstand: verbinden en status op de commandobus (knoppen, lampjes, Ember+, OSC) |
+| ⬜ | Tekstberichten naar de overkant en opname van een verbinding |
