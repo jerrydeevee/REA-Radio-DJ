@@ -88,6 +88,7 @@ public sealed class MixerStrip
         Bus = bus;
         Handle = handle;
         Processor = new ChannelProcessor(handle);
+        Recorder = new ChannelRecorder(handle);
         if (addToBus)
             BassRuntime.Check(BASS_Mixer_StreamAddChannel(bus.Handle, handle, BASS_MIXER_CHAN_BUFFER | BASS_MIXER_CHAN_NORAMPIN),
                 $"BASS_Mixer_StreamAddChannel({id})");
@@ -111,6 +112,8 @@ public sealed class MixerStrip
     public bool Muted { get; private set; }
     /// <summary>Gain, balance, equaliser, compressor and automatic level of this channel.</summary>
     public ChannelProcessor Processor { get; }
+    /// <summary>Recording of this channel to a WAV file (after the channel strip, before the fader).</summary>
+    public ChannelRecorder Recorder { get; }
     /// <summary>The source of an input channel ("rec:1", "tone"); null for the players' channels.</summary>
     public string? Source { get; internal set; }
     public bool OnAir => Processor.Settings.OnAir;
@@ -163,6 +166,7 @@ public sealed class MixerStrip
 
     internal void Free()
     {
+        Recorder.Stop();
         BASS_Mixer_ChannelRemove(Handle);
         BASS_StreamFree(Handle);
     }

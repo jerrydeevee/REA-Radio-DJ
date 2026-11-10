@@ -9,6 +9,11 @@ public sealed class ReaRadioDjOptions
     /// <summary>Where rendered AI breaks and the analysis cache are written.</summary>
     public string DataFolder { get; set; } = "data";
 
+    /// <summary>Where channel recordings go; empty = the folder "Opnamen" in the data folder.</summary>
+    public string RecordingFolder { get; set; } = "";
+
+    public string RecordingPath => string.IsNullOrWhiteSpace(RecordingFolder) ? Path.Combine(DataFolder, "Opnamen") : RecordingFolder;
+
     /// <summary>-1 = default sound card, 0 = no sound card (stream only), 1.. = device index (see /api/devices).</summary>
     public int OutputDevice { get; set; } = -1;
     public bool StartAutomation { get; set; } = true;

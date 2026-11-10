@@ -21,6 +21,8 @@ public sealed partial class StripCard(string id) : ObservableObject
     [ObservableProperty] private bool _effectOn;
     [ObservableProperty] private bool _hasEffect;
     [ObservableProperty] private string _effectTip = "";
+    [ObservableProperty] private bool _recording;
+    [ObservableProperty] private string _recordText = "";
     private DateTime _touched;
     private bool _updating;
 
@@ -40,6 +42,8 @@ public sealed partial class StripCard(string id) : ObservableObject
         if (DateTime.Now - _touched > TimeSpan.FromSeconds(1)) { OnAir = s.OnAir; EffectOn = s.EffectOn; }
         HasEffect = s.Effect.Length > 0;
         EffectTip = HasEffect ? $"Effect {Effects.NameOf(s.Effect)} aan of uit (kies het effect met het tandwiel)" : "";
+        if (DateTime.Now - _touched > TimeSpan.FromSeconds(1)) Recording = s.Recording;
+        RecordText = s.Recording ? TimeSpan.FromSeconds(Math.Floor(s.RecordSeconds)).ToString(s.RecordSeconds >= 3600 ? @"h\:mm\:ss" : @"m\:ss") : "";
         Duck = !s.OnAir ? "" : s.Duck < 0.99 ? $"gedimd {s.Duck * 100:0}%" : "";
         _updating = false;
     }
@@ -59,6 +63,13 @@ public sealed partial class StripCard(string id) : ObservableObject
         if (_updating) return;
         _touched = DateTime.Now;
         _ = StudioHub.Current.Client.PostAsync($"/api/channels/{Id}/effect", new SwitchRequest(value));
+    }
+
+    partial void OnRecordingChanged(bool value)
+    {
+        if (_updating) return;
+        _touched = DateTime.Now;
+        _ = StudioHub.Current.Client.PostAsync($"/api/channels/{Id}/record", new SwitchRequest(value));
     }
 
     partial void OnVolumeChanged(double value) => Send();

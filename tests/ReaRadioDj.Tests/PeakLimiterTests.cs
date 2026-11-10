@@ -90,6 +90,39 @@ public class GainStageTests
     }
 }
 
+public class WavWriterTests
+{
+    [Fact]
+    public void Header_sizes_and_samples_are_correct()
+    {
+        var ms = new KeepOpen();
+        using (var w = new WavWriter(ms, 48000, 2))
+        {
+            w.Write([0.5f, -0.5f, 2f, -2f]);
+            w.Write([0f, 1f]);
+        }
+        var b = ms.ToArray();
+        Assert.Equal(44 + 12, b.Length);
+        Assert.Equal("RIFF", System.Text.Encoding.ASCII.GetString(b, 0, 4));
+        Assert.Equal(36 + 12, BitConverter.ToInt32(b, 4));
+        Assert.Equal(48000, BitConverter.ToInt32(b, 24));
+        Assert.Equal(48000 * 4, BitConverter.ToInt32(b, 28));
+        Assert.Equal(12, BitConverter.ToInt32(b, 40));
+        short S(int i) => BitConverter.ToInt16(b, 44 + 2 * i);
+        Assert.Equal(16384, S(0));
+        Assert.Equal(-16384, S(1));
+        Assert.Equal(32767, S(2));     // clipped, not wrapped
+        Assert.Equal(-32767, S(3));
+        Assert.Equal(0, S(4));
+    }
+
+    /// <summary>A memory stream that can still be read after the writer has closed it.</summary>
+    private sealed class KeepOpen : MemoryStream
+    {
+        protected override void Dispose(bool disposing) { }
+    }
+}
+
 public class ChannelSettingsTests
 {
     [Fact]

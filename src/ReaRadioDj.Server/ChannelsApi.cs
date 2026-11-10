@@ -71,7 +71,34 @@ public static class ChannelsApi
             return Results.Ok(Settings(s));
         });
 
-        api.MapPost("/inputs", (InputRequest body, AudioRouter router, StationDb db, MessageCenter messages) =>
+        api.MapPost("/channels/{id}/record", (string id, SwitchRequest body, AudioRouter router, MessageCenter messages) =>
+        {
+            if (!router.IsStarted || !router.HasStrip(id)) return Results.NotFound();
+            var strip = router.Strip(id);
+            if (body.On)
+            {
+                try { strip.Recorder.Start(options.RecordingPath, id); }
+                catch (Exception ex) when (ex is BassException or IOException or UnauthorizedAccessException)
+                {
+                    return Results.BadRequest($"Opname niet gestart: {ex.Message}");
+                }
+                messages.Info($"Opname van {strip.Name} gestart");
+            }
+            else if (strip.Recorder.Stop() is { } file)
+                messages.Info($"Opname van {strip.Name} opgeslagen: {Path.GetFileName(file)} ({Duration(strip.Recorder.Seconds)})");
+            return Results.Ok(Recording(strip));
+        });
+
+        api.MapGet("/recordings", () =>
+        {
+            var dir = new DirectoryInfo(options.RecordingPath);
+            if (!dir.Exists) return Results.Ok(new List<RecordingFileDto>());
+            int rate = BassRuntime.SampleRate > 0 ? BassRuntime.SampleRate : 44100;
+            return Results.Ok(dir.GetFiles("*.wav").OrderByDescending(f => f.LastWriteTimeUtc)
+                .Select(f => new RecordingFileDto(f.Name, f.Length, Math.Round(Math.Max(0, f.Length - 44) / (rate * 4.0), 1), f.LastWriteTime)).ToList());
+        });
+
+        api.MapPost("/inputs",(InputRequest body, AudioRouter router, StationDb db, MessageCenter messages) =>
         {
             if (!router.IsStarted) return Results.Conflict("De geluidsengine draait niet");
             var name = string.IsNullOrWhiteSpace(body.Name) ? "Ingang" : body.Name.Trim();
@@ -111,6 +138,11 @@ public static class ChannelsApi
         db.SetSetting(InputsKey, JsonSerializer.Serialize(options.Routing.Inputs));
         db.SetSetting(ChannelsKey, JsonSerializer.Serialize(options.Routing.Channels));
     }
+
+    private static RecordingDto Recording(MixerStrip s) =>
+        new(s.Id, s.Recorder.IsRecording, s.Recorder.FilePath is { } f ? Path.GetFileName(f) : null, Math.Round(s.Recorder.Seconds, 1));
+
+    private static string Duration(double seconds) => TimeSpan.FromSeconds(Math.Round(seconds)).ToString(seconds >= 3600 ? @"h\:mm\:ss" : @"m\:ss");
 
     private static ChannelSettingsDto Settings(ChannelSettings s) => new(s.GainDb, s.Pan, s.EqLowDb, s.EqMidDb, s.EqHighDb,
         s.CompressorOn, s.CompressorThresholdDb, s.CompressorRatio, s.AgcOn, s.OnAir, s.Effect, s.EffectOn, s.EffectMix);

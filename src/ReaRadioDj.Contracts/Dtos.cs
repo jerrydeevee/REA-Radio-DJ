@@ -71,7 +71,7 @@ public sealed record PlayerDto(string Id, string Name, string State, long? Media
 public sealed record ClipDto(string Key, string Label, long? MediaId, double Position, double Length, bool Loop);
 
 public sealed record StripDto(string Id, string Name, string Bus, float Volume, bool Muted, float Duck, float LevelLeft, float LevelRight,
-    bool OnAir = true, string? Source = null, string Effect = "", bool EffectOn = false);
+    bool OnAir = true, string? Source = null, string Effect = "", bool EffectOn = false, bool Recording = false, double RecordSeconds = 0);
 
 public sealed record MicDto(bool Available, bool Open, string Status);
 
@@ -397,6 +397,12 @@ public sealed record MasterDto(bool LimiterOn, double CeilingDb);
 public sealed record ChannelSettingsDto(double GainDb, double Pan, double EqLowDb, double EqMidDb, double EqHighDb,
     bool CompressorOn, double CompressorThresholdDb, double CompressorRatio, bool AgcOn, bool OnAir,
     string Effect = "", bool EffectOn = false, double EffectMix = 0.35);
+
+/// <summary>A channel recording: whether it runs, its file and how long it is so far.</summary>
+public sealed record RecordingDto(string Channel, bool Recording, string? File, double Seconds);
+
+/// <summary>A recorded file in the recordings folder.</summary>
+public sealed record RecordingFileDto(string Name, long Bytes, double Seconds, DateTime Modified);
 
 public sealed record ChannelDto(string Id, string Name, string? Source, ChannelSettingsDto Settings);
 

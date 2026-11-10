@@ -24,6 +24,8 @@
                 <TextBlock Classes="mono" FontSize="11" HorizontalAlignment="Center" Text="{Binding Volume, StringFormat='{}{0:0}%'}" />
                 <StackPanel Orientation="Horizontal" Spacing="4" HorizontalAlignment="Center">
                   <ToggleButton Content="M" IsChecked="{Binding Muted}" Classes="mic" ToolTip.Tip="Dempen" />
+                  <ToggleButton Content="REC" IsChecked="{Binding Recording}" Classes="mic" Padding="5,2"
+                                ToolTip.Tip="Dit kanaal opnemen (na de kanaalstrip, voor de fader) naar een WAV-bestand in de map Opnamen" />
                   <ToggleButton Content="FX" IsChecked="{Binding EffectOn}" Classes="mic" IsVisible="{Binding HasEffect}" ToolTip.Tip="{Binding EffectTip}" Padding="5,2" />
                   <Button Content="⚙" Padding="6,2" ToolTip.Tip="Kanaalstrip: gain, balans, equalizer, compressor, automatische niveauregeling"
                           Command="{Binding $parent[UserControl].DataContext.EditChannelCommand}" CommandParameter="{Binding}" />
@@ -31,6 +33,7 @@
                 <ToggleButton Content="ZENDER" IsChecked="{Binding OnAir}" Classes="mic" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" FontSize="11"
                               ToolTip.Tip="Aan: dit kanaal gaat naar de zender. Uit: het kanaal is dicht (bij een ingang de doorzetknop)." />
                 <TextBlock FontSize="10" Foreground="#F0B429" HorizontalAlignment="Center" Text="{Binding Duck}" />
+                <TextBlock FontSize="10" Foreground="#E5484D" HorizontalAlignment="Center" Text="{Binding RecordText, StringFormat='● {0}'}" IsVisible="{Binding Recording}" />
               </StackPanel>
             </Border>
           </DataTemplate>

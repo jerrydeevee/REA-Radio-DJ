@@ -85,7 +85,8 @@ public static class Snapshot
         var strips = router.Strips.Select(s =>
         {
             var (l, r) = s.Levels();
-            return new StripDto(s.Id, s.Name, s.Bus.Id, s.Volume, s.Muted, s.DuckLevel, l, r, s.OnAir, s.Source, s.Processor.Settings.Effect, s.Processor.Settings.EffectOn);
+            return new StripDto(s.Id, s.Name, s.Bus.Id, s.Volume, s.Muted, s.DuckLevel, l, r, s.OnAir, s.Source, s.Processor.Settings.Effect, s.Processor.Settings.EffectOn,
+                s.Recorder.IsRecording, Math.Round(s.Recorder.Seconds, 1));
         }).ToList();
         var (pl, pr) = router.Program.Levels();
         var (st, it, tp) = router.Master.Read();
