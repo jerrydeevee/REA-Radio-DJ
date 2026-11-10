@@ -17,6 +17,17 @@ public sealed partial class SettingsTool : StudioTool
     public ObservableCollection<DeviceDto> Inputs { get; } = [];
     public IReadOnlyList<int> Bitrates { get; } = [64, 96, 128, 160, 192, 256, 320];
     public ObservableCollection<OutputRouteVm> StripOutputs { get; } = [];
+
+    // Sound engine (active after a restart of the engine)
+    public ObservableCollection<OutputChoiceDto> AsioChoices { get; } = [];
+    public IReadOnlyList<int> SampleRates { get; } = [44100, 48000];
+    [ObservableProperty] private bool _audioLoaded;
+    [ObservableProperty] private OutputChoiceDto? _programAsio;
+    [ObservableProperty] private OutputChoiceDto? _previewAsio;
+    [ObservableProperty] private int _sampleRate = 44100;
+    [ObservableProperty] private decimal _bufferMs = 250;
+    [ObservableProperty] private decimal _asioBuffer;
+    [ObservableProperty] private string _audioStatus = "";
     [ObservableProperty] private string _outputStatus = "";
 
     [ObservableProperty] private string _status = "";
@@ -118,6 +129,7 @@ public sealed partial class SettingsTool : StudioTool
         Show(s);
         await LoadSystemAsync();
         await LoadOutputsAsync();
+        await LoadAudioAsync();
         Outputs.Clear();
         Outputs.Add(new DeviceDto(-1, "Standaard geluidskaart van Windows", true, false));
         foreach (var d in outs) Outputs.Add(d);
@@ -132,6 +144,31 @@ public sealed partial class SettingsTool : StudioTool
         OverlayDuck = Percent(r.OverlayDuckLevel);
         Loaded = true;
         Status = "";
+    }
+
+    private async Task LoadAudioAsync()
+    {
+        var a = await Hub.Client.GetAsync<AudioSettingsDto>("/api/audio");
+        AudioLoaded = a is not null;
+        if (a is null) { AudioStatus = "De engine kent ASIO en buffers nog niet: werk hem bij."; return; }
+        ShowAudio(a);
+    }
+
+    private void ShowAudio(AudioSettingsDto a)
+    {
+        AsioChoices.Clear();
+        foreach (var c in a.AsioChoices) AsioChoices.Add(c);
+        ProgramAsio = AsioChoices.FirstOrDefault(c => c.Id == a.ProgramAsio) ?? AsioChoices[0];
+        PreviewAsio = AsioChoices.FirstOrDefault(c => c.Id == a.PreviewAsio) ?? AsioChoices[0];
+        SampleRate = a.SampleRate;
+        BufferMs = a.BufferMs;
+        AsioBuffer = a.AsioBuffer;
+        var notes = new List<string>();
+        if (!a.AsioAvailable) notes.Add("bassasio.dll ontbreekt: draai scripts\\fetch-bass.ps1 en bouw opnieuw.");
+        else if (a.AsioChoices.Count <= 1) notes.Add("Geen ASIO-stuurprogramma gevonden op de pc van de engine.");
+        if (a.ProgramNow.Length > 0) notes.Add($"Nu: {a.ProgramNow} en {a.PreviewNow}.");
+        if (a.NeedsRestart) notes.Add("Gewijzigd: actief na een herstart van de engine (Instellingen › Systeem).");
+        AudioStatus = string.Join(" ", notes);
     }
 
     private async Task LoadOutputsAsync()
@@ -251,6 +288,13 @@ public sealed partial class SettingsTool : StudioTool
             StreamEnabled, StreamServer, StreamPassword, false, StreamBitrate, StreamGenre, StreamUrl,
             ControlBindAddress, (int)ControlTcpPort, (int)ControlOscPort, ControlPassword, false, ClearControlPassword,
             SilenceEnabled, (double)SilenceDb, (double)SilenceSeconds, SilenceActionNames[Math.Clamp(SilenceAction, 0, 2)], SilenceCategory?.Id));
+
+        if (AudioLoaded)
+        {
+            var a = await Hub.Client.SendForAsync<AudioSettingsDto>(HttpMethod.Put, "/api/audio",
+                new AudioSettingsRequest(ProgramAsio?.Id ?? "", PreviewAsio?.Id ?? "", SampleRate, (int)BufferMs, (int)AsioBuffer));
+            if (a is not null) ShowAudio(a);
+        }
 
         if (SystemLoaded)
         {

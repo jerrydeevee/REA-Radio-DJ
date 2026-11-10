@@ -161,8 +161,8 @@ public static class StudioApi
             var s = new RoutingSettings(d.OutputDevice, d.PreviewDevice, d.MicEnabled, d.MicDevice, d.MicDuckLevel, d.OverlayDuckLevel);
             try
             {
-                if (router.IsStarted && s.OutputDevice != old.OutputDevice) router.Program.SetDevice(s.OutputDevice);
-                if (router.IsStarted && s.PreviewDevice != old.PreviewDevice) router.Preview.SetDevice(s.PreviewDevice);
+                if (router.IsStarted && router.Program.Asio is null && s.OutputDevice != old.OutputDevice) router.Program.SetDevice(s.OutputDevice);
+                if (router.IsStarted && router.Preview.Asio is null && s.PreviewDevice != old.PreviewDevice) router.Preview.SetDevice(s.PreviewDevice);
             }
             catch (BassException ex) { return Results.BadRequest(ex.Message); }
             s.ApplyTo(options);

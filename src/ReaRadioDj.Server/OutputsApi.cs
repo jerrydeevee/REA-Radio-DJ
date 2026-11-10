@@ -14,8 +14,34 @@ public static class OutputsApi
 {
     public const string Key = "outputs";
 
+    public const string AudioKey = "audio";
+
+    private sealed record AudioSettings(string ProgramAsio, string PreviewAsio, int SampleRate, int BufferMs, int AsioBuffer);
+
+    /// <summary>Values the running engine started with; a difference means a restart is needed.</summary>
+    private static AudioSettings? _started;
+
+    private static AudioSettings Current(ReaRadioDjOptions o) =>
+        new(o.Routing.ProgramAsio, o.Routing.PreviewAsio, o.Routing.SampleRate, o.Routing.BufferMs, o.Routing.AsioBuffer);
+
     public static void Load(StationDb db, ReaRadioDjOptions options)
     {
+        if (db.GetSetting(AudioKey) is { } audio)
+        {
+            try
+            {
+                if (JsonSerializer.Deserialize<AudioSettings>(audio) is { } a)
+                {
+                    var r = options.Routing;
+                    r.ProgramAsio = a.ProgramAsio ?? ""; r.PreviewAsio = a.PreviewAsio ?? "";
+                    r.SampleRate = a.SampleRate; r.BufferMs = a.BufferMs; r.AsioBuffer = a.AsioBuffer;
+                }
+            }
+            catch (JsonException) { }
+        }
+        BassRuntime.Configure(options.Routing.SampleRate, options.Routing.BufferMs);
+        _started = Current(options);
+
         if (db.GetSetting(Key) is not { } json) return;
         try
         {
@@ -48,6 +74,23 @@ public static class OutputsApi
             return Results.Ok(Dto(router));
         });
 
+        api.MapGet("/audio", (AudioRouter router) => Audio(options, router));
+
+        api.MapPut("/audio", (AudioSettingsRequest body, AudioRouter router, StationDb db, MessageCenter messages) =>
+        {
+            bool Valid(string t) => t.Length == 0 || (OutputTarget.TryParse(t, out var x) && x.Asio);
+            if (!Valid(body.ProgramAsio ?? "") || !Valid(body.PreviewAsio ?? "")) return Results.BadRequest("Onbekende ASIO-uitgang.");
+            var r = options.Routing;
+            r.ProgramAsio = body.ProgramAsio ?? ""; r.PreviewAsio = body.PreviewAsio ?? "";
+            r.SampleRate = body.SampleRate is 48000 ? 48000 : 44100;
+            r.BufferMs = Math.Clamp(body.BufferMs, 40, 1000);
+            r.AsioBuffer = Math.Clamp(body.AsioBuffer, 0, 8192);
+            db.SetSetting(AudioKey, JsonSerializer.Serialize(Current(options)));
+            var dto = Audio(options, router);
+            if (dto.NeedsRestart) messages.Info("Geluidsinstellingen opgeslagen; actief na een herstart van de engine");
+            return Results.Ok(dto);
+        });
+
         api.MapPost("/outputs/test", (OutputRouteRequest body, AudioRouter router) =>
         {
             if (!router.IsStarted) return Results.Conflict("De mixer draait nog niet.");
@@ -63,9 +106,27 @@ public static class OutputsApi
         foreach (var d in BassRuntime.GetDevices().Where(d => d.Enabled && d.Index > 0))
             for (int pair = 0; pair < OutputTarget.Pairs; pair++)
                 targets.Add(new(new OutputTarget(d.Index, pair).Id, $"{d.Name} · uitgang {OutputTarget.Name(pair)}"));
+        targets.AddRange(AsioChoices());
         var strips = router.IsStarted
             ? router.Strips.Select(s => new OutputRouteDto(s.Id, s.Name, router.RouteOf(s.Id))).ToList()
             : [];
         return new OutputsDto(targets, strips);
+    }
+
+    private static IEnumerable<OutputChoiceDto> AsioChoices()
+    {
+        foreach (var d in AsioRuntime.GetDevices())
+            for (int pair = 0; pair < OutputTarget.AsioPairs; pair++)
+                yield return new(new OutputTarget(d.Index, pair, true).Id, $"ASIO · {d.Name} · uitgang {OutputTarget.Name(pair)}");
+    }
+
+    private static AudioSettingsDto Audio(ReaRadioDjOptions options, AudioRouter router)
+    {
+        var r = options.Routing;
+        var now = Current(options);
+        return new AudioSettingsDto(r.ProgramAsio, r.PreviewAsio, r.SampleRate, r.BufferMs, r.AsioBuffer,
+            [new("", "Geen: de Windows-kaart hierboven"), .. AsioChoices()], AsioRuntime.IsAvailable,
+            router.IsStarted ? router.Program.Name : "", router.IsStarted ? router.Preview.Name : "",
+            _started is not null && now != _started);
     }
 }

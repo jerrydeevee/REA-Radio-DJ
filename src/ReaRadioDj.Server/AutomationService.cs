@@ -75,6 +75,7 @@ public sealed class AutomationService(
         var again = resumed is null ? null : ResumeStore.ContinueItem(resumed, DateTime.Now);
         if (again is not null) log.Insert(0, again);
         engine.Start();
+        foreach (var note in services.GetRequiredService<AudioRouter>().StartNotes) messages.Warning(note);
         if (resumed is { AutoPlay: true }) engine.Play();
         ReportRestart(resumed, again);
         if (options.Stream.Enabled) streamer.Start(engine.MixerHandle);

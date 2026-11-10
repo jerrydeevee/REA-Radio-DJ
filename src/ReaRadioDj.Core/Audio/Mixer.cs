@@ -19,10 +19,28 @@ public sealed class OutputBus
         Name = name;
         Device = device;
         BassRuntime.Use(device);
-        Handle = BassRuntime.Check(BASS_Mixer_StreamCreate(BassRuntime.SampleRate, 2, BASS_SAMPLE_FLOAT | BASS_MIXER_NONSTOP | speakers),
+        Handle = BassRuntime.Check(BASS_Mixer_StreamCreate((uint)BassRuntime.SampleRate, 2, BASS_SAMPLE_FLOAT | BASS_MIXER_NONSTOP | speakers),
             $"BASS_Mixer_StreamCreate({id})");
         BassRuntime.Check(BASS_ChannelPlay(Handle, false), $"BASS_ChannelPlay({id})");
     }
+
+    /// <summary>A bus on an ASIO card: a decoding mixer that the ASIO driver pulls audio from.</summary>
+    private OutputBus(string id, string name, OutputTarget asio)
+    {
+        Id = id;
+        Name = name;
+        Device = -1;
+        Asio = asio;
+        Handle = BassRuntime.Check(BASS_Mixer_StreamCreate((uint)BassRuntime.SampleRate, 2, BASS_SAMPLE_FLOAT | BASS_MIXER_NONSTOP | BASS_STREAM_DECODE),
+            $"BASS_Mixer_StreamCreate({id})");
+        try { AsioRuntime.Attach(asio.Device, asio.Pair * 2, Handle); }
+        catch { BASS_StreamFree(Handle); throw; }
+    }
+
+    internal static OutputBus OnAsio(string id, string name, OutputTarget target) => new(id, name, target);
+
+    /// <summary>The ASIO output of this bus, or null for a Windows card.</summary>
+    public OutputTarget? Asio { get; }
 
     public string Id { get; }
     public string Name { get; }
@@ -33,6 +51,7 @@ public sealed class OutputBus
     /// <summary>Moves the bus to another sound card while it keeps playing.</summary>
     public void SetDevice(int device)
     {
+        if (Asio is not null) throw new InvalidOperationException("Deze uitgang loopt via ASIO; kies de kaart bij ASIO en start de engine opnieuw.");
         uint real = BassRuntime.EnsureDevice(device);
         BassRuntime.Check(BASS_ChannelSetDevice(Handle, real), $"BASS_ChannelSetDevice({Id})");
         Device = device;
@@ -40,11 +59,17 @@ public sealed class OutputBus
 
     public (float Left, float Right) Levels()
     {
+        // A decoding (ASIO) mixer must not be read here: that would take audio away from the card.
+        if (Asio is { } a) return AsioRuntime.Levels(a.Device, a.Pair * 2);
         var l = new float[2];
         return BASS_ChannelGetLevelEx(Handle, l, 0.05f, BASS_LEVEL_STEREO) ? (l[0], l[1]) : (0, 0);
     }
 
-    internal void Free() => BASS_StreamFree(Handle);
+    internal void Free()
+    {
+        if (Asio is { } a) AsioRuntime.Detach(a.Device, a.Pair * 2);
+        BASS_StreamFree(Handle);
+    }
 }
 
 /// <summary>
@@ -69,7 +94,7 @@ public sealed class MixerStrip
 
     internal static MixerStrip CreateSubMixer(string id, string name, OutputBus bus)
     {
-        int h = BassRuntime.Check(BASS_Mixer_StreamCreate(BassRuntime.SampleRate, 2,
+        int h = BassRuntime.Check(BASS_Mixer_StreamCreate((uint)BassRuntime.SampleRate, 2,
             BASS_SAMPLE_FLOAT | BASS_STREAM_DECODE | BASS_MIXER_NONSTOP), $"BASS_Mixer_StreamCreate({id})");
         return new MixerStrip(id, name, bus, h);
     }
@@ -160,6 +185,7 @@ public sealed class AudioRouter : IDisposable
     {
         _options = options;
         _logger = (ILogger?)logger ?? NullLogger.Instance;
+        AsioRuntime.UseLogger(_logger);
     }
 
     public bool IsStarted { get; private set; }
@@ -179,8 +205,9 @@ public sealed class AudioRouter : IDisposable
     {
         if (IsStarted) return;
         BassRuntime.Initialize(_options.OutputDevice);
-        Program = new OutputBus("program", "Uitzending", _options.OutputDevice);
-        Preview = new OutputBus("preview", "PFL", _options.Routing.PreviewDevice);
+        AsioRuntime.BufferSamples = _options.Routing.AsioBuffer;
+        Program = Bus("program", "Uitzending", _options.Routing.ProgramAsio, _options.OutputDevice);
+        Preview = Bus("preview", "PFL", _options.Routing.PreviewAsio, _options.Routing.PreviewDevice);
 
         Add(MixerStrip.CreateSubMixer(LogStrip, "Automatisering", Program));
         Add(MixerStrip.CreateSubMixer(StandbyStrip, "Standby", Program));
@@ -190,7 +217,7 @@ public sealed class AudioRouter : IDisposable
         Add(MixerStrip.CreateSubMixer(PflStrip, "PFL", Preview));
 
         // Microphone: a push stream fed by the recording callback, muted until the mic is opened.
-        _push = BassRuntime.Check(BASS_StreamCreate(BassRuntime.SampleRate, 2, BASS_SAMPLE_FLOAT | BASS_STREAM_DECODE, STREAMPROC_PUSH, IntPtr.Zero),
+        _push = BassRuntime.Check(BASS_StreamCreate((uint)BassRuntime.SampleRate, 2, BASS_SAMPLE_FLOAT | BASS_STREAM_DECODE, STREAMPROC_PUSH, IntPtr.Zero),
             "BASS_StreamCreate(push)");
         var mic = new MixerStrip(MicStrip, "Microfoon", Program, _push);
         Add(mic);
@@ -215,13 +242,30 @@ public sealed class AudioRouter : IDisposable
 
     private void Add(MixerStrip s) => _strips[s.Id] = s;
 
+    /// <summary>Messages about the sound cards at start (an ASIO card that was not found, for example).</summary>
+    public List<string> StartNotes { get; } = [];
+
+    private OutputBus Bus(string id, string name, string asio, int device)
+    {
+        if (OutputTarget.TryParse(asio, out var t) && t.Asio)
+        {
+            try { return OutputBus.OnAsio(id, $"{name} (ASIO {OutputTarget.Name(t.Pair)})", t); }
+            catch (BassException ex)
+            {
+                _logger.LogError("ASIO output for {Bus} not available, using the Windows card: {Message}", id, ex.Message);
+                StartNotes.Add($"{name}: ASIO-uitgang niet beschikbaar ({ex.Message}); de Windows-kaart wordt gebruikt");
+            }
+        }
+        return new OutputBus(id, name, device);
+    }
+
     private unsafe void StartRecording(int device)
     {
         try
         {
             if (!BASS_RecordInit(device) && BASS_ErrorGetCode() != BASS_ERROR_ALREADY) throw new BassException($"BASS_RecordInit({device})");
             delegate* unmanaged[Stdcall]<int, IntPtr, uint, IntPtr, int> proc = &RecordProc;
-            _record = BassRuntime.Check(BASS_RecordStart(BassRuntime.SampleRate, 2, BASS_SAMPLE_FLOAT, (IntPtr)proc, _push),
+            _record = BassRuntime.Check(BASS_RecordStart((uint)BassRuntime.SampleRate, 2, BASS_SAMPLE_FLOAT, (IntPtr)proc, _push),
                 "BASS_RecordStart");
             MicAvailable = true;
             MicStatus = "dicht";
@@ -293,7 +337,12 @@ public sealed class AudioRouter : IDisposable
     {
         if (_outputs.TryGetValue(t.Id, out var bus)) return bus;
         var card = BassRuntime.GetDevices().FirstOrDefault(d => d.Index == t.Device)?.Name ?? $"apparaat {t.Device}";
-        bus = new OutputBus(t.Id, $"{card}, uitgang {OutputTarget.Name(t.Pair)}", t.Device, t.SpeakerFlags);
+        if (t.Asio)
+        {
+            var driver = AsioRuntime.GetDevices().FirstOrDefault(d => d.Index == t.Device)?.Name ?? $"ASIO {t.Device}";
+            bus = OutputBus.OnAsio(t.Id, $"{driver} (ASIO), uitgang {OutputTarget.Name(t.Pair)}", t);
+        }
+        else bus = new OutputBus(t.Id, $"{card}, uitgang {OutputTarget.Name(t.Pair)}", t.Device, t.SpeakerFlags);
         _outputs[t.Id] = bus;
         return bus;
     }

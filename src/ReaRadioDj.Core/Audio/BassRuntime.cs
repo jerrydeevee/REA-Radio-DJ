@@ -9,7 +9,21 @@ namespace ReaRadioDj.Core.Audio;
 /// </summary>
 public static class BassRuntime
 {
-    public const int SampleRate = 44100;
+    /// <summary>Sample rate of the whole engine (44100 or 48000); set with <see cref="Configure"/> before the first device.</summary>
+    public static int SampleRate { get; private set; } = 44100;
+    /// <summary>Playback buffer of Windows sound cards in milliseconds.</summary>
+    public static int BufferMs { get; private set; } = 250;
+
+    /// <summary>Sets sample rate and buffer; only has effect before the first device is initialised.</summary>
+    public static void Configure(int sampleRate, int bufferMs)
+    {
+        lock (Gate)
+        {
+            if (Devices.Count > 0) return;
+            SampleRate = sampleRate is 48000 ? 48000 : 44100;
+            BufferMs = Math.Clamp(bufferMs, 40, 1000);
+        }
+    }
     private static readonly object Gate = new();
     private static readonly Dictionary<int, uint> Devices = []; // requested index -> real BASS device number
     private static bool _configured;
@@ -45,13 +59,13 @@ public static class BassRuntime
                 throw new InvalidOperationException("BASS 2.4 (bass.dll) not found. Run scripts\\fetch-bass.ps1 first.");
             if (!_configured)
             {
-                BASS_SetConfig(BASS_CONFIG_BUFFER, 250);      // playback buffer in ms: lower = more responsive
-                BASS_SetConfig(BASS_CONFIG_UPDATEPERIOD, 20);
+                BASS_SetConfig(BASS_CONFIG_BUFFER, (uint)BufferMs);      // playback buffer in ms: lower = more responsive
+                BASS_SetConfig(BASS_CONFIG_UPDATEPERIOD, (uint)Math.Min(20, BufferMs / 4));
                 _configured = true;
             }
 
             uint real;
-            if (BASS_Init(device, SampleRate, 0, IntPtr.Zero, IntPtr.Zero))
+            if (BASS_Init(device, (uint)SampleRate, 0, IntPtr.Zero, IntPtr.Zero))
                 real = BASS_GetDevice();
             else if (BASS_ErrorGetCode() == BASS_ERROR_ALREADY)
                 real = device >= 0 ? (uint)device : DefaultDevice();
@@ -116,8 +130,12 @@ public static class BassRuntime
 
 public sealed record AudioDevice(int Index, string Name, bool Enabled, bool IsDefault);
 
-public sealed class BassException(string call)
-    : Exception($"{call} failed with BASS error {BassNative.BASS_ErrorGetCode()}")
+public class BassException : Exception
 {
-    public int ErrorCode { get; } = BassNative.BASS_ErrorGetCode();
+    public BassException(string call) : base($"{call} failed with BASS error {BassNative.BASS_ErrorGetCode()}") =>
+        ErrorCode = BassNative.BASS_ErrorGetCode();
+
+    protected BassException(string message, bool _) : base(message) { }
+
+    public int ErrorCode { get; }
 }

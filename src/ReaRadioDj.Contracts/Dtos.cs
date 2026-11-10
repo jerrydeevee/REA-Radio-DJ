@@ -379,3 +379,9 @@ public sealed record OutputRouteDto(string Strip, string Name, string Target);
 public sealed record OutputsDto(IReadOnlyList<OutputChoiceDto> Targets, IReadOnlyList<OutputRouteDto> Strips);
 
 public sealed record OutputRouteRequest(string? Target);
+
+/// <summary>Sound engine settings that apply after a restart: ASIO for the buses, sample rate and buffers.</summary>
+public sealed record AudioSettingsDto(string ProgramAsio, string PreviewAsio, int SampleRate, int BufferMs, int AsioBuffer,
+    IReadOnlyList<OutputChoiceDto> AsioChoices, bool AsioAvailable, string ProgramNow, string PreviewNow, bool NeedsRestart);
+
+public sealed record AudioSettingsRequest(string ProgramAsio, string PreviewAsio, int SampleRate, int BufferMs, int AsioBuffer);

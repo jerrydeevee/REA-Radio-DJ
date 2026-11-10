@@ -76,6 +76,26 @@
             <Button Classes="bar" Content="Testtoon uitzending" Command="{Binding TestProgramCommand}" ToolTip.Tip="Let op: de testtoon gaat ook de zender en de stream op" />
             <Button Classes="bar" Content="Testtoon voorluisteren" Command="{Binding TestPreviewCommand}" />
           </StackPanel>
+
+          <TextBlock Classes="title" Text="ASIO, samplerate en buffer" Margin="0,24,0,4" />
+          <TextBlock Classes="help" Text="Met ASIO gaat het geluid rechtstreeks naar het stuurprogramma van een studiokaart, zonder de Windows-mixer ertussen. Kies hier een ASIO-uitgang om de Windows-kaart hierboven te vervangen. Deze instellingen worden actief na een herstart van de engine; lukt ASIO dan niet, dan valt de engine terug op de Windows-kaart en meldt dat." />
+          <TextBlock Classes="field" Text="Uitzending via ASIO" />
+          <ComboBox ItemsSource="{Binding AsioChoices}" SelectedItem="{Binding ProgramAsio}" HorizontalAlignment="Stretch" IsEnabled="{Binding AudioLoaded}">
+            <ComboBox.ItemTemplate><DataTemplate x:DataType="c:OutputChoiceDto"><TextBlock Text="{Binding Name}" /></DataTemplate></ComboBox.ItemTemplate>
+          </ComboBox>
+          <TextBlock Classes="field" Text="Voorluisteren via ASIO" />
+          <ComboBox ItemsSource="{Binding AsioChoices}" SelectedItem="{Binding PreviewAsio}" HorizontalAlignment="Stretch" IsEnabled="{Binding AudioLoaded}">
+            <ComboBox.ItemTemplate><DataTemplate x:DataType="c:OutputChoiceDto"><TextBlock Text="{Binding Name}" /></DataTemplate></ComboBox.ItemTemplate>
+          </ComboBox>
+          <TextBlock Classes="field" Text="Samplerate (Hz)" />
+          <ComboBox ItemsSource="{Binding SampleRates}" SelectedItem="{Binding SampleRate}" Width="150" IsEnabled="{Binding AudioLoaded}" />
+          <TextBlock Classes="help" Text="Neem de samplerate waarop de geluidskaart en de mengtafel draaien; dan hoeft er niets omgerekend te worden." />
+          <TextBlock Classes="field" Text="Buffer van Windows-kaarten (ms)" />
+          <NumericUpDown Value="{Binding BufferMs}" Minimum="40" Maximum="1000" Increment="10" FormatString="0" IsEnabled="{Binding AudioLoaded}" />
+          <TextBlock Classes="field" Text="ASIO-buffer (samples, 0 = wat het stuurprogramma wil)" />
+          <NumericUpDown Value="{Binding AsioBuffer}" Minimum="0" Maximum="8192" Increment="64" FormatString="0" IsEnabled="{Binding AudioLoaded}" />
+          <TextBlock Classes="help" Text="Kleiner reageert sneller, groter is veiliger. Hapert het geluid, maak de buffer dan groter." />
+          <TextBlock Classes="help" Text="{Binding AudioStatus}" Margin="0,6,0,0" />
           <CheckBox Content="Microfoon gebruiken (praten over de muziek)" IsChecked="{Binding MicEnabled}" Margin="0,14,0,0" />
           <TextBlock Classes="field" Text="Microfoon-ingang" />
           <ComboBox ItemsSource="{Binding Inputs}" SelectedItem="{Binding MicDevice}" HorizontalAlignment="Stretch" IsEnabled="{Binding MicEnabled}">
@@ -107,7 +127,6 @@
             </ItemsControl.ItemTemplate>
           </ItemsControl>
           <TextBlock Classes="help" Text="{Binding OutputStatus}" Margin="0,6,0,0" />
-          <TextBlock Classes="help" Text="ASIO-kaarten, buffer en samplerate volgen in een volgende stap." />
         </StackPanel></ScrollViewer>
       </TabItem>
 

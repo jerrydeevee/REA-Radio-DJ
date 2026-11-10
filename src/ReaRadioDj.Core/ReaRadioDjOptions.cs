@@ -93,6 +93,16 @@ public sealed class RoutingOptions
     public int StandbyPlayers { get; set; } = 2;
     /// <summary>Mixer channels that have an output of their own (channel id → "dev:&lt;device&gt;:&lt;pair&gt;"); the rest goes on air.</summary>
     public Dictionary<string, string> StripOutputs { get; set; } = [];
+    /// <summary>ASIO output for the on-air bus ("asio:&lt;device&gt;:&lt;pair&gt;"), or "" for the Windows card in OutputDevice.</summary>
+    public string ProgramAsio { get; set; } = "";
+    /// <summary>ASIO output for the pre-listen bus, or "" for the Windows card in PreviewDevice.</summary>
+    public string PreviewAsio { get; set; } = "";
+    /// <summary>44100 or 48000 Hz for the whole engine (take what the sound card runs at).</summary>
+    public int SampleRate { get; set; } = 44100;
+    /// <summary>Buffer of Windows sound cards in milliseconds (lower = quicker reaction, higher = safer).</summary>
+    public int BufferMs { get; set; } = 250;
+    /// <summary>ASIO buffer in samples (0 = what the driver prefers).</summary>
+    public int AsioBuffer { get; set; }
 }
 
 /// <summary>Rotation rules used by the planner when it picks songs from a category.</summary>

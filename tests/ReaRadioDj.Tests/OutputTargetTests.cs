@@ -9,6 +9,7 @@ public sealed class OutputTargetTests
     [InlineData("dev:3:1", 3, 1, 0x2000000u)]
     [InlineData("dev:1:3", 1, 3, 0x4000000u)]
     [InlineData("dev:-1:0", -1, 0, 0u)]
+    [InlineData("asio:1:5", 1, 5, 0u)]
     public void Outputs_are_parsed_with_their_speaker_pair(string text, int device, int pair, uint flags)
     {
         Assert.True(OutputTarget.TryParse(text, out var t));
@@ -23,7 +24,9 @@ public sealed class OutputTargetTests
     [InlineData(null)]
     [InlineData("dev:3")]
     [InlineData("dev:3:4")]
-    [InlineData("asio:1:0")]
+    [InlineData("asio:1:8")]
+    [InlineData("asio:-1:0")]
+    [InlineData("wasapi:1:0")]
     [InlineData("dev:x:0")]
     public void Unknown_outputs_are_refused(string? text) => Assert.False(OutputTarget.TryParse(text, out _));
 
