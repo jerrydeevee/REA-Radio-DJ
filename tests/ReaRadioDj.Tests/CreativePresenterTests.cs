@@ -105,6 +105,36 @@ public class CreativePresenterTests
     }
 
     [Fact]
+    public async Task Headlines_from_a_feed_are_never_joked_about()
+    {
+        var o = Options(c => { c.UseOwnThemes = false; c.UseFeeds = true; c.Feeds = ["https://zender.example/feed.xml"]; c.Funny = 5; c.Edgy = 5; });
+        var http = new HttpClient(new FakeHandler(_ => new HttpResponseMessage(System.Net.HttpStatusCode.OK)
+        {
+            Content = new StringContent("""
+                <rss><channel><title>Zender - nieuws</title>
+                  <item><title>Ravage in Assen na enorme brand</title></item>
+                  <item><title>Kroketten zijn het medicijn tegen polarisatie</title></item>
+                </channel></rss>
+                """),
+        }));
+        var picker = new CreativePicker(http, o, random: new Random(5));
+        for (int i = 0; i < 40; i++)
+        {
+            var idea = (await picker.PickAsync(DateTime.Now, CancellationToken.None, tone: CreativeTones.Edgy))!;
+            Assert.True(idea.Headline);
+            if (idea.Theme.Contains("brand")) Assert.Equal(CreativeTones.Serious, idea.Tone);
+            else Assert.Contains(idea.Tone, new[] { CreativeTones.Serious, CreativeTones.Light });
+        }
+        Assert.True(CreativeTones.IsSad("Auto slaat over de kop bij Tynaarlo"));
+        Assert.False(CreativeTones.IsSad("Konijn van Olland krijgt nieuw verblijf"));
+
+        var c = new BreakContext("Radio Aa en Hunze", "Sam", DateTime.Now, null, null,
+            Creative: new CreativeIdea("Konijn van Olland krijgt nieuw verblijf", CreativeTones.Light, "zender", Headline: true));
+        Assert.Contains("echte nieuwskop", OpenAiScriptWriter.Prompt(new PresenterOptions(), c).System);
+        Assert.DoesNotContain("echte nieuwskop", OpenAiScriptWriter.Prompt(new PresenterOptions(), c with { Creative = c.Creative! with { Headline = false } }).System);
+    }
+
+    [Fact]
     public void Built_in_themes_fit_the_moment()
     {
         var winterMonday = CreativePicker.BuiltIn(new DateTime(2026, 1, 5, 7, 30, 0));

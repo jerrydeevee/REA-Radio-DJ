@@ -213,6 +213,7 @@ public sealed class OpenAiScriptWriter(HttpClient http, PresenterOptions options
             {CreativeTones.Instruction(idea.Tone)}
 
             {CreativeTones.Limits}
+            {(idea.Headline ? CreativeTones.HeadlineRules : "")}
 
             Regels:
             - Hoogstens {maxWords} woorden, twee tot vier korte zinnen.

@@ -37,8 +37,8 @@ public sealed class CreativeOptions
     public int RepeatHours { get; set; } = 12;
 }
 
-/// <summary>What one creative break is about.</summary>
-public sealed record CreativeIdea(string Theme, string Tone, string Source)
+/// <summary>What one creative break is about. Headline = a real news headline from an online feed of the station.</summary>
+public sealed record CreativeIdea(string Theme, string Tone, string Source, bool Headline = false)
 {
     /// <summary>Stored in the log item's Extra ("theme:grappig").</summary>
     public string Extra => "theme:" + Tone;
@@ -86,6 +86,23 @@ public static class CreativeTones
         - Geen medisch, juridisch of financieel advies; niets wat iemand in gevaar brengt.
         - Verzin geen nieuws en geen feiten: speel met het onderwerp, niet met de waarheid.
         """;
+
+    /// <summary>Extra rules when the theme is a real headline: stick to it, and no jokes about bad news.</summary>
+    public const string HeadlineRules = """
+        Het onderwerp is een echte nieuwskop van de zender. Noem alleen wat in de kop staat en verzin geen details,
+        namen, getallen of oorzaken. Maak geen grappen over ongelukken, branden, misdaad, rechtszaken, ziekte of
+        overlijden: bij zulk nieuws ben je kort, serieus en meelevend, en ga je daarna rustig door met de muziek.
+        """;
+
+    private static readonly string[] SadWords =
+    [
+        "brand", "ongeluk", "gewond", "dood", "overle", "rechter", "rechtbank", "rechtszaak", "politie", "verdacht",
+        "slachtoffer", "ziek", "crash", "botsing", "aanrijding", "over de kop", "inbraak", "diefstal", "steek", "schiet",
+        "gaslek", "ravage", "explosie", "vermist", "drama", "verdriet", "geweld", "mishandel", "fraude",
+    ];
+
+    /// <summary>A headline about an accident, fire, crime, illness or death: only a serious tone fits.</summary>
+    public static bool IsSad(string headline) => SadWords.Any(w => headline.Contains(w, StringComparison.OrdinalIgnoreCase));
 }
 
 /// <summary>Chooses a theme and a tone for a break and keeps track of what was used recently.</summary>
@@ -109,7 +126,7 @@ public sealed class CreativePicker(HttpClient http, PresenterOptions options, IL
         if (!string.IsNullOrWhiteSpace(theme))
         {
             var (fixedTone, text) = ParseLine(theme);
-            return new CreativeIdea(text, ToneFor(tone ?? fixedTone), "proef");
+            return new CreativeIdea(text, ToneFor(tone ?? fixedTone), "proef");   // a trial theme is typed by a person
         }
         var pool = await PoolAsync(airTime, ct);
         DateTime since = airTime.AddHours(-Math.Max(0, O.RepeatHours));
@@ -118,7 +135,8 @@ public sealed class CreativePicker(HttpClient http, PresenterOptions options, IL
         if (fresh.Count == 0) fresh = pool;   // everything was used recently: start again
         if (fresh.Count == 0) return null;
         var pick = fresh[_random.Next(fresh.Count)];
-        return new CreativeIdea(pick.Theme, ToneFor(tone ?? pick.Tone), pick.Source);
+        bool headline = pick.Source is not ("eigen" or "ingebouwd");
+        return new CreativeIdea(pick.Theme, headline ? HeadlineTone(pick.Theme, tone) : ToneFor(tone ?? pick.Tone), pick.Source, headline);
     }
 
     public void Used(CreativeIdea idea, DateTime airTime)
@@ -128,6 +146,20 @@ public sealed class CreativePicker(HttpClient http, PresenterOptions options, IL
             _used[idea.Theme] = airTime;
             foreach (var old in _used.Where(u => u.Value < airTime.AddDays(-2)).Select(u => u.Key).ToList()) _used.Remove(old);
         }
+    }
+
+    /// <summary>
+    /// A real headline is never joked about: sad news is always serious, other news serious or light (by their weights),
+    /// whatever tone was asked for.
+    /// </summary>
+    public string HeadlineTone(string headline, string? wanted = null)
+    {
+        if (CreativeTones.IsSad(headline)) return CreativeTones.Serious;
+        if (wanted is CreativeTones.Serious or CreativeTones.Light) return wanted;
+        if (O.Tone is CreativeTones.Serious or CreativeTones.Light) return O.Tone;
+        int serious = Math.Clamp(O.Serious, 0, 10), light = Math.Clamp(O.Light, 0, 10);
+        if (serious + light == 0) return CreativeTones.Light;
+        return _random.Next(serious + light) < serious ? CreativeTones.Serious : CreativeTones.Light;
     }
 
     /// <summary>The tone: the one asked for, the fixed one from the settings, or a random one by the weights.</summary>
