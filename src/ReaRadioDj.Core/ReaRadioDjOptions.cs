@@ -105,6 +105,10 @@ public sealed class RoutingOptions
     public int AsioBuffer { get; set; }
     /// <summary>Limiter on the on-air bus: peaks stay under <see cref="LimiterCeilingDb"/>.</summary>
     public bool LimiterEnabled { get; set; } = true;
+    /// <summary>Sound inputs as mixer channels (line in, a second microphone, a line-up tone).</summary>
+    public List<Audio.InputChannel> Inputs { get; set; } = [];
+    /// <summary>Channel strip settings per mixer channel.</summary>
+    public Dictionary<string, Audio.ChannelSettings> Channels { get; set; } = [];
     public double LimiterCeilingDb { get; set; } = -1;
 }
 

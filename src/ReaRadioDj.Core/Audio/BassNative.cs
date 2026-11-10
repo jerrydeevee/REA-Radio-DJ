@@ -155,6 +155,10 @@ internal static partial class BassNative
     [return: MarshalAs(UnmanagedType.Bool)]
     public static partial bool BASS_RecordFree();
 
+    [LibraryImport(Bass)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static partial bool BASS_RecordSetDevice(int device);
+
     [LibraryImport(Bass)] public static partial int BASS_RecordStart(uint freq, uint chans, uint flags, IntPtr proc, IntPtr user);
 
     // ---- bassmix.h ----------------------------------------------------------------------

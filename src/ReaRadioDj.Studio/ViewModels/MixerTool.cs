@@ -16,6 +16,8 @@ public sealed partial class StripCard(string id) : ObservableObject
     [ObservableProperty] private double _left;
     [ObservableProperty] private double _right;
     [ObservableProperty] private string _duck = "";
+    [ObservableProperty] private bool _onAir = true;
+    [ObservableProperty] private bool _isInput;
     private DateTime _touched;
     private bool _updating;
 
@@ -31,8 +33,20 @@ public sealed partial class StripCard(string id) : ObservableObject
         if (DateTime.Now - _touched > TimeSpan.FromSeconds(1)) { Volume = Math.Round(s.Volume * 100); Muted = s.Muted; }
         Left = Math.Min(100, s.LevelLeft * 100);
         Right = Math.Min(100, s.LevelRight * 100);
-        Duck = s.Duck < 0.99 ? $"gedimd {s.Duck * 100:0}%" : "";
+        IsInput = s.Source is not null;
+        if (DateTime.Now - _touched > TimeSpan.FromSeconds(1)) OnAir = s.OnAir;
+        Duck = !s.OnAir ? "" : s.Duck < 0.99 ? $"gedimd {s.Duck * 100:0}%" : "";
         _updating = false;
+    }
+
+    public string BusLabel => IsInput ? "ingang" : BusText;
+    partial void OnIsInputChanged(bool value) => OnPropertyChanged(nameof(BusLabel));
+
+    partial void OnOnAirChanged(bool value)
+    {
+        if (_updating) return;
+        _touched = DateTime.Now;
+        _ = StudioHub.Current.Client.PostAsync($"/api/channels/{Id}/onair", new SwitchRequest(value));
     }
 
     partial void OnVolumeChanged(double value) => Send();
@@ -64,10 +78,56 @@ public sealed partial class MixerTool : StudioTool
     [ObservableProperty] private double _micDuck = 25;
     [ObservableProperty] private double _overlayDuck = 35;
 
-    protected override void OnFirstShow() => _ = LoadRoutingAsync();
+    /// <summary>The channel whose strip is open in the editor (null = closed).</summary>
+    [ObservableProperty] private ChannelEditor? _editor;
+    public ObservableCollection<OutputChoiceDto> Sources { get; } = [];
+    [ObservableProperty] private OutputChoiceDto? _newInputSource;
+    [ObservableProperty] private string _newInputName = "Lijn-in";
+    [ObservableProperty] private string _channelStatus = "";
+
+    /// <summary>Channel whose strip opens at start ("--show mixer:in1").</summary>
+    public static string? StartChannel { get; set; }
+
+    protected override void OnFirstShow() { _ = LoadRoutingAsync(); _ = LoadChannelsAsync(StartChannel); }
+
+    private async Task<ChannelsDto?> LoadChannelsAsync(string? open)
+    {
+        var d = await Hub.Client.GetAsync<ChannelsDto>("/api/channels");
+        if (d is null) return null;
+        var keep = NewInputSource?.Id;
+        Sources.Clear();
+        foreach (var s in d.Sources) Sources.Add(s);
+        NewInputSource = Sources.FirstOrDefault(s => s.Id == keep) ?? Sources.FirstOrDefault();
+        if (open is not null && d.Channels.FirstOrDefault(c => c.Id == open) is { } ch) Editor = new ChannelEditor(this, ch);
+        return d;
+    }
+
+    [RelayCommand] private Task EditChannel(StripCard card) => LoadChannelsAsync(card.Id);
+    [RelayCommand] private void CloseEditor() => Editor = null;
+
+    [RelayCommand]
+    private async Task AddInput()
+    {
+        if (NewInputSource is null) return;
+        var r = await Hub.Client.SendForAsync<ChannelsDto>(HttpMethod.Post, "/api/inputs", new InputRequest(NewInputName, NewInputSource.Id));
+        ChannelStatus = r is null ? "Ingang toevoegen mislukt (zie berichten)." : $"{NewInputName} staat in de mixer; zet hem met ZENDER op de uitzending.";
+    }
+
+    [RelayCommand]
+    private async Task RemoveInput()
+    {
+        if (Editor is not { IsInput: true } e) return;
+        if (await Hub.Client.SendForAsync<ChannelsDto>(HttpMethod.Delete, $"/api/inputs/{e.Id}", null) is not null)
+        {
+            if (Strips.FirstOrDefault(s => s.Id == e.Id) is { } card) Strips.Remove(card);
+            Editor = null;
+            ChannelStatus = $"{e.Name} is verwijderd.";
+        }
+    }
 
     protected override void OnState(StateDto s)
     {
+        foreach (var gone in Strips.Where(c => s.Mixer.Strips.All(d => d.Id != c.Id)).ToList()) Strips.Remove(gone);
         foreach (var dto in s.Mixer.Strips)
         {
             var card = Strips.FirstOrDefault(c => c.Id == dto.Id);
@@ -106,5 +166,67 @@ public sealed partial class MixerTool : StudioTool
     {
         var r = new RoutingDto(OutputDevice?.Index ?? -1, PreviewDevice?.Index ?? -1, MicEnabled, MicDevice?.Index ?? -1, MicDuck / 100, OverlayDuck / 100);
         if (await Hub.Client.PutAsync("/api/routing", r)) Hub.Status = "routing opgeslagen";
+    }
+}
+
+/// <summary>The channel strip of one channel: every change goes to the engine at once.</summary>
+public sealed partial class ChannelEditor : ObservableObject
+{
+    private readonly MixerTool _owner;
+    private readonly bool _loading;
+
+    public ChannelEditor(MixerTool owner, ChannelDto c)
+    {
+        _owner = owner;
+        Id = c.Id;
+        Name = c.Name;
+        IsInput = c.Source is not null;
+        SourceText = c.Source is null ? "" : owner.Sources.FirstOrDefault(s => s.Id == c.Source)?.Name ?? c.Source;
+        _loading = true;
+        var s = c.Settings;
+        GainDb = s.GainDb; Pan = s.Pan; EqLowDb = s.EqLowDb; EqMidDb = s.EqMidDb; EqHighDb = s.EqHighDb;
+        CompressorOn = s.CompressorOn; CompressorThresholdDb = s.CompressorThresholdDb; CompressorRatio = s.CompressorRatio;
+        AgcOn = s.AgcOn; OnAir = s.OnAir;
+        _loading = false;
+    }
+
+    public string Id { get; }
+    public string Name { get; }
+    public bool IsInput { get; }
+    public string SourceText { get; }
+
+    [ObservableProperty] private double _gainDb;
+    [ObservableProperty] private double _pan;
+    [ObservableProperty] private double _eqLowDb;
+    [ObservableProperty] private double _eqMidDb;
+    [ObservableProperty] private double _eqHighDb;
+    [ObservableProperty] private bool _compressorOn;
+    [ObservableProperty] private double _compressorThresholdDb = -20;
+    [ObservableProperty] private double _compressorRatio = 3;
+    [ObservableProperty] private bool _agcOn;
+    [ObservableProperty] private bool _onAir = true;
+
+    public string PanText => Math.Abs(Pan) < 0.02 ? "midden" : Pan < 0 ? $"links {-Pan * 100:0}%" : $"rechts {Pan * 100:0}%";
+
+    protected override void OnPropertyChanged(System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        base.OnPropertyChanged(e);
+        if (e.PropertyName == nameof(Pan)) OnPropertyChanged(nameof(PanText));
+        if (_loading || e.PropertyName == nameof(PanText)) return;
+        _ = SendAsync();
+    }
+
+    [RelayCommand]
+    private void Flat()
+    {
+        GainDb = Pan = EqLowDb = EqMidDb = EqHighDb = 0;
+        CompressorOn = AgcOn = false;
+    }
+
+    private async Task SendAsync()
+    {
+        var dto = new ChannelSettingsDto(Math.Round(GainDb, 1), Math.Round(Pan, 2), Math.Round(EqLowDb, 1), Math.Round(EqMidDb, 1), Math.Round(EqHighDb, 1),
+            CompressorOn, Math.Round(CompressorThresholdDb), Math.Round(CompressorRatio, 1), AgcOn, OnAir);
+        _owner.ChannelStatus = await StudioHub.Current.Client.PutAsync($"/api/channels/{Id}", dto) ? "" : "Instelling niet gelukt (zie berichten).";
     }
 }

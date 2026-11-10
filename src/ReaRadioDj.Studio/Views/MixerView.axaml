@@ -6,7 +6,7 @@
              x:DataType="vm:MixerTool">
   <ScrollViewer Margin="6">
     <StackPanel Spacing="8">
-      <ItemsControl ItemsSource="{Binding Strips}">
+      <ItemsControl ItemsSource="{Binding Strips}" x:Name="StripList">
         <ItemsControl.ItemsPanel>
           <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
         </ItemsControl.ItemsPanel>
@@ -15,20 +15,83 @@
             <Border Classes="card" Width="86" Margin="0,0,6,6" Padding="6">
               <StackPanel Spacing="4">
                 <TextBlock Text="{Binding Name}" FontWeight="SemiBold" HorizontalAlignment="Center" TextTrimming="CharacterEllipsis" />
-                <TextBlock Classes="muted" FontSize="10" Text="{Binding BusText}" HorizontalAlignment="Center" />
+                <TextBlock Classes="muted" FontSize="10" Text="{Binding BusLabel}" HorizontalAlignment="Center" />
                 <Grid ColumnDefinitions="*,6,6" Height="150">
                   <Slider Grid.Column="0" Orientation="Vertical" Minimum="0" Maximum="125" Value="{Binding Volume}" HorizontalAlignment="Center" />
                   <ProgressBar Grid.Column="1" Orientation="Vertical" Maximum="100" Value="{Binding Left}" MinWidth="5" Width="5" Foreground="#3DBD7D" />
                   <ProgressBar Grid.Column="2" Orientation="Vertical" Maximum="100" Value="{Binding Right}" MinWidth="5" Width="5" Foreground="#3DBD7D" Margin="1,0,0,0" />
                 </Grid>
                 <TextBlock Classes="mono" FontSize="11" HorizontalAlignment="Center" Text="{Binding Volume, StringFormat='{}{0:0}%'}" />
-                <ToggleButton Content="M" IsChecked="{Binding Muted}" HorizontalAlignment="Center" Classes="mic" ToolTip.Tip="Dempen" />
+                <StackPanel Orientation="Horizontal" Spacing="4" HorizontalAlignment="Center">
+                  <ToggleButton Content="M" IsChecked="{Binding Muted}" Classes="mic" ToolTip.Tip="Dempen" />
+                  <Button Content="⚙" Padding="6,2" ToolTip.Tip="Kanaalstrip: gain, balans, equalizer, compressor, automatische niveauregeling"
+                          Command="{Binding $parent[UserControl].DataContext.EditChannelCommand}" CommandParameter="{Binding}" />
+                </StackPanel>
+                <ToggleButton Content="ZENDER" IsChecked="{Binding OnAir}" Classes="mic" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" FontSize="11"
+                              ToolTip.Tip="Aan: dit kanaal gaat naar de zender. Uit: het kanaal is dicht (bij een ingang de doorzetknop)." />
                 <TextBlock FontSize="10" Foreground="#F0B429" HorizontalAlignment="Center" Text="{Binding Duck}" />
               </StackPanel>
             </Border>
           </DataTemplate>
         </ItemsControl.ItemTemplate>
       </ItemsControl>
+
+      <!-- ============================================================ channel strip of the chosen channel -->
+      <Border Classes="card" IsVisible="{Binding Editor, Converter={x:Static ObjectConverters.IsNotNull}}">
+        <StackPanel Spacing="6" DataContext="{Binding Editor}" x:DataType="vm:ChannelEditor">
+          <DockPanel>
+            <Button DockPanel.Dock="Right" Content="Sluiten" Command="{Binding $parent[UserControl].DataContext.CloseEditorCommand}" />
+            <Button DockPanel.Dock="Right" Content="Alles neutraal" Command="{Binding FlatCommand}" Margin="0,0,6,0" />
+            <StackPanel>
+              <TextBlock Classes="h" Text="{Binding Name, StringFormat='Kanaalstrip: {0}'}" />
+              <TextBlock Classes="muted" Text="{Binding SourceText, StringFormat='Bron: {0}'}" IsVisible="{Binding IsInput}" />
+            </StackPanel>
+          </DockPanel>
+          <CheckBox Content="Naar de zender" IsChecked="{Binding OnAir}" />
+          <Grid ColumnDefinitions="150,*,90" RowDefinitions="Auto,Auto,Auto,Auto,Auto">
+            <TextBlock Grid.Row="0" Text="Gain" VerticalAlignment="Center" />
+            <Slider Grid.Row="0" Grid.Column="1" Minimum="-24" Maximum="24" Value="{Binding GainDb}" TickFrequency="0.5" IsSnapToTickEnabled="True" />
+            <TextBlock Grid.Row="0" Grid.Column="2" Classes="mono" VerticalAlignment="Center" Text="{Binding GainDb, StringFormat='{}{0:+0.0;-0.0;0} dB'}" />
+            <TextBlock Grid.Row="1" Text="Balans" VerticalAlignment="Center" />
+            <Slider Grid.Row="1" Grid.Column="1" Minimum="-1" Maximum="1" Value="{Binding Pan}" TickFrequency="0.05" IsSnapToTickEnabled="True" />
+            <TextBlock Grid.Row="1" Grid.Column="2" Classes="mono" VerticalAlignment="Center" Text="{Binding PanText}" />
+            <TextBlock Grid.Row="2" Text="Laag (120 Hz)" VerticalAlignment="Center" />
+            <Slider Grid.Row="2" Grid.Column="1" Minimum="-15" Maximum="15" Value="{Binding EqLowDb}" TickFrequency="0.5" IsSnapToTickEnabled="True" />
+            <TextBlock Grid.Row="2" Grid.Column="2" Classes="mono" VerticalAlignment="Center" Text="{Binding EqLowDb, StringFormat='{}{0:+0.0;-0.0;0} dB'}" />
+            <TextBlock Grid.Row="3" Text="Midden (1 kHz)" VerticalAlignment="Center" />
+            <Slider Grid.Row="3" Grid.Column="1" Minimum="-15" Maximum="15" Value="{Binding EqMidDb}" TickFrequency="0.5" IsSnapToTickEnabled="True" />
+            <TextBlock Grid.Row="3" Grid.Column="2" Classes="mono" VerticalAlignment="Center" Text="{Binding EqMidDb, StringFormat='{}{0:+0.0;-0.0;0} dB'}" />
+            <TextBlock Grid.Row="4" Text="Hoog (8 kHz)" VerticalAlignment="Center" />
+            <Slider Grid.Row="4" Grid.Column="1" Minimum="-15" Maximum="15" Value="{Binding EqHighDb}" TickFrequency="0.5" IsSnapToTickEnabled="True" />
+            <TextBlock Grid.Row="4" Grid.Column="2" Classes="mono" VerticalAlignment="Center" Text="{Binding EqHighDb, StringFormat='{}{0:+0.0;-0.0;0} dB'}" />
+          </Grid>
+          <CheckBox Content="Compressor" IsChecked="{Binding CompressorOn}" Margin="0,6,0,0" />
+          <Grid ColumnDefinitions="150,*,90" RowDefinitions="Auto,Auto" IsEnabled="{Binding CompressorOn}">
+            <TextBlock Grid.Row="0" Text="Drempel" VerticalAlignment="Center" />
+            <Slider Grid.Row="0" Grid.Column="1" Minimum="-50" Maximum="0" Value="{Binding CompressorThresholdDb}" TickFrequency="1" IsSnapToTickEnabled="True" />
+            <TextBlock Grid.Row="0" Grid.Column="2" Classes="mono" VerticalAlignment="Center" Text="{Binding CompressorThresholdDb, StringFormat='{}{0:0} dB'}" />
+            <TextBlock Grid.Row="1" Text="Verhouding" VerticalAlignment="Center" />
+            <Slider Grid.Row="1" Grid.Column="1" Minimum="1" Maximum="20" Value="{Binding CompressorRatio}" TickFrequency="0.5" IsSnapToTickEnabled="True" />
+            <TextBlock Grid.Row="1" Grid.Column="2" Classes="mono" VerticalAlignment="Center" Text="{Binding CompressorRatio, StringFormat='{}{0:0.0}:1'}" />
+          </Grid>
+          <CheckBox Content="Automatische niveauregeling (brengt het kanaal rustig naar een vast niveau, hooguit 12 dB)" IsChecked="{Binding AgcOn}" Margin="0,6,0,0" />
+          <Button Content="Ingang verwijderen" IsVisible="{Binding IsInput}" Command="{Binding $parent[UserControl].DataContext.RemoveInputCommand}" HorizontalAlignment="Left" Margin="0,6,0,0" />
+        </StackPanel>
+      </Border>
+      <TextBlock Classes="muted" Text="{Binding ChannelStatus}" TextWrapping="Wrap" IsVisible="{Binding ChannelStatus, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+
+      <Expander Header="Ingangen (lijn-in, tweede microfoon, testtoon)" HorizontalAlignment="Stretch">
+        <StackPanel Spacing="6">
+          <TextBlock Classes="muted" TextWrapping="Wrap" Text="Een ingang komt als kanaal in de mixer en staat eerst dicht. Met ZENDER zet je hem door naar de uitzending; met het tandwiel stel je gain, equalizer en compressor in." />
+          <Grid ColumnDefinitions="*,6,2*,6,Auto">
+            <TextBox Text="{Binding NewInputName}" Watermark="Naam (bijv. cd-speler)" />
+            <ComboBox Grid.Column="2" ItemsSource="{Binding Sources}" SelectedItem="{Binding NewInputSource}" HorizontalAlignment="Stretch">
+              <ComboBox.ItemTemplate><DataTemplate x:DataType="c:OutputChoiceDto"><TextBlock Text="{Binding Name}" /></DataTemplate></ComboBox.ItemTemplate>
+            </ComboBox>
+            <Button Grid.Column="4" Content="Toevoegen" Command="{Binding AddInputCommand}" />
+          </Grid>
+        </StackPanel>
+      </Expander>
 
       <Border Classes="card">
         <DockPanel>

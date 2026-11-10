@@ -54,6 +54,7 @@ catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or I
 var db = new StationDb(Path.Combine(options.DataFolder, "station.db"));
 SystemApi.Load(db);
 OutputsApi.Load(db, options);
+ChannelsApi.Load(db, options);
 RoutingSettings.Load(db, options);
 GeneralSettings.Load(db, options);
 PresenterSettings.Load(db, options);
@@ -163,6 +164,7 @@ StudioApi.Map(api, options);
 DjApi.Map(api);
 SystemApi.Map(api, options, args);
 OutputsApi.Map(api, options);
+ChannelsApi.Map(api, options);
 VoiceApi.Map(api);
 PresenterApi.Map(api, options);
 VoiceTrackApi.Map(api, options);

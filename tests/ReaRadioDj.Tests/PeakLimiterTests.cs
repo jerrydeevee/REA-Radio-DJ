@@ -48,3 +48,44 @@ public class PeakLimiterTests
         Assert.True(s.Skip(2 * 40000).Max(MathF.Abs) > 0.29f);
     }
 }
+
+public class GainStageTests
+{
+    [Fact]
+    public void Agc_brings_a_quiet_signal_towards_the_target()
+    {
+        var g = new GainStage();
+        g.Configure(1f, agc: true, 44100);
+        // A sine at -32 dBFS RMS (peak -29 dBFS), 15 seconds.
+        float amp = MathF.Pow(10, -29 / 20f);
+        var s = new float[44100 * 2];
+        for (int sec = 0; sec < 15; sec++)
+        {
+            for (int i = 0; i < 44100; i++) s[2 * i] = s[2 * i + 1] = amp * MathF.Sin(2 * MathF.PI * 440 * i / 44100);
+            g.Process(s);
+        }
+        Assert.InRange(g.AgcGainDb, 10f, 12.01f);
+    }
+
+    [Fact]
+    public void Agc_does_not_pull_up_silence()
+    {
+        var g = new GainStage();
+        g.Configure(1f, agc: true, 44100);
+        var s = new float[44100 * 2];
+        for (int i = 0; i < 44100; i++) s[2 * i] = s[2 * i + 1] = 1e-4f * MathF.Sin(i);
+        for (int sec = 0; sec < 5; sec++) g.Process(s);
+        Assert.InRange(g.AgcGainDb, -0.01f, 0.01f);
+    }
+
+    [Fact]
+    public void Gain_without_agc_is_exact()
+    {
+        var g = new GainStage();
+        g.Configure(2f, agc: false, 44100);
+        var s = new[] { 0.1f, -0.2f };
+        g.Process(s);
+        Assert.Equal(0.2f, s[0], 5);
+        Assert.Equal(-0.4f, s[1], 5);
+    }
+}

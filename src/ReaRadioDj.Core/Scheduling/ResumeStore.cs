@@ -64,7 +64,7 @@ public sealed class ResumeStore(string path)
         {
             Type = type,
             Media = media with { Cues = media.Cues with { CueIn = from, Intro = null } },
-            Origin = string.IsNullOrEmpty(state.Origin) ? "hervat" : $"{state.Origin} · hervat",
+            Origin = string.IsNullOrEmpty(state.Origin) ? "hervat" : state.Origin.EndsWith("hervat", StringComparison.Ordinal) ? state.Origin : $"{state.Origin} · hervat",
             BreakState = BreakState.Ready,
         };
     }

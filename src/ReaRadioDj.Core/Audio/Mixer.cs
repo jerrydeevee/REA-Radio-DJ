@@ -87,6 +87,7 @@ public sealed class MixerStrip
         Name = name;
         Bus = bus;
         Handle = handle;
+        Processor = new ChannelProcessor(handle);
         if (addToBus)
             BassRuntime.Check(BASS_Mixer_StreamAddChannel(bus.Handle, handle, BASS_MIXER_CHAN_BUFFER | BASS_MIXER_CHAN_NORAMPIN),
                 $"BASS_Mixer_StreamAddChannel({id})");
@@ -108,6 +109,11 @@ public sealed class MixerStrip
     public int Handle { get; }
     public float Volume { get; private set; } = 1f;
     public bool Muted { get; private set; }
+    /// <summary>Gain, balance, equaliser, compressor and automatic level of this channel.</summary>
+    public ChannelProcessor Processor { get; }
+    /// <summary>The source of an input channel ("rec:1", "tone"); null for the players' channels.</summary>
+    public string? Source { get; internal set; }
+    public bool OnAir => Processor.Settings.OnAir;
 
     /// <summary>The lowest active duck level (1 = not ducked).</summary>
     public float DuckLevel { get { lock (_gate) return _ducks.Count == 0 ? 1f : _ducks.Values.Min(); } }
@@ -174,7 +180,9 @@ public sealed class AudioRouter : IDisposable
     private readonly ReaRadioDjOptions _options;
     private readonly ILogger _logger;
     private readonly List<ITickable> _tickables = [];
-    private readonly Dictionary<string, MixerStrip> _strips = [];
+    // Copied on every change (inputs come and go while the engine runs), so readers never see a dictionary being changed.
+    private volatile Dictionary<string, MixerStrip> _strips = [];
+    private readonly Dictionary<string, (int Record, GCHandle Tone)> _inputs = [];
     private readonly Dictionary<string, OutputBus> _outputs = [];   // outputs of their own, by target id
     private readonly object _routeGate = new();
     private Thread? _thread;
@@ -195,6 +203,7 @@ public sealed class AudioRouter : IDisposable
     /// <summary>Limiter and loudness measurement on the on-air bus.</summary>
     public MasterProcessor Master { get; } = new();
     public MixerStrip Strip(string id) => _strips[id];
+    public bool HasStrip(string id) => _strips.ContainsKey(id);
 
     public bool MicAvailable { get; private set; }
     public bool MicOpen { get; private set; }
@@ -231,12 +240,34 @@ public sealed class AudioRouter : IDisposable
         else MicStatus = "uitgeschakeld in de instellingen";
         foreach (var s in _strips.Values) s.HomeBus = s.Bus;
 
+        // Inputs as mixer channels. An input whose device is gone is reported and left out.
+        foreach (var input in _options.Routing.Inputs.ToList())
+        {
+            try { AddInput(input); }
+            catch (Exception ex) when (ex is BassException or ArgumentException)
+            {
+                _logger.LogWarning("Input {Input} not available: {Message}", input.Name, ex.Message);
+                StartNotes.Add($"Ingang {input.Name} niet beschikbaar: {ex.Message}");
+            }
+        }
+
         // Channels with an output of their own (physical mixing desk). A card that is gone leaves the channel on air.
         foreach (var (id, target) in _options.Routing.StripOutputs.ToList())
         {
             if (!_strips.ContainsKey(id)) continue;
             try { Route(id, target); }
             catch (BassException ex) { _logger.LogWarning("Output {Target} for {Strip} not available, stays on its normal bus: {Message}", target, id, ex.Message); }
+        }
+
+        foreach (var s in _strips.Values)
+        {
+            var settings = _options.Routing.Channels.GetValueOrDefault(s.Id) ?? DefaultChannel(s);
+            try { ApplyChannel(s.Id, settings); }
+            catch (Exception ex) when (ex is BassException or DllNotFoundException)
+            {
+                _logger.LogWarning("Channel settings for {Strip} not applied: {Message}", s.Id, ex.Message);
+                StartNotes.Add($"Kanaalinstellingen van {s.Name} niet toegepast: {ex.Message}");
+            }
         }
 
         IsStarted = true;
@@ -246,6 +277,72 @@ public sealed class AudioRouter : IDisposable
     }
 
     private void Add(MixerStrip s) => _strips[s.Id] = s;
+
+    /// <summary>An input starts closed (not on air); the players' channels start on air.</summary>
+    public static ChannelSettings DefaultChannel(MixerStrip s) => new() { OnAir = s.Source is null };
+
+    /// <summary>Applies gain, balance, equaliser, compressor, automatic level and on air to a channel.</summary>
+    public void ApplyChannel(string stripId, ChannelSettings settings)
+    {
+        var strip = Strip(stripId);
+        strip.Processor.Apply(settings);
+        strip.Duck("off", strip.Processor.Settings.OnAir ? null : 0f, 150);
+    }
+
+    /// <summary>The input channels, in the order they were added.</summary>
+    public IReadOnlyList<MixerStrip> InputStrips => _strips.Values.Where(s => s.Source is not null).ToList();
+
+    /// <summary>Adds an input as a mixer channel on the on-air bus; it starts closed until it is put on air.</summary>
+    public unsafe MixerStrip AddInput(InputChannel input)
+    {
+        if (_strips.ContainsKey(input.Id)) throw new ArgumentException($"Kanaal {input.Id} bestaat al");
+        int handle, record = 0;
+        GCHandle tone = default;
+        if (input.Source == InputChannel.ToneSource) (handle, tone) = ToneGenerator.Create(BassRuntime.SampleRate);
+        else if (InputChannel.TryRecordDevice(input.Source, out var device))
+        {
+            handle = BassRuntime.Check(BASS_StreamCreate((uint)BassRuntime.SampleRate, 2, BASS_SAMPLE_FLOAT | BASS_STREAM_DECODE, STREAMPROC_PUSH, IntPtr.Zero),
+                "BASS_StreamCreate(input)");
+            try
+            {
+                if (!BASS_RecordInit(device) && BASS_ErrorGetCode() != BASS_ERROR_ALREADY) throw new BassException($"BASS_RecordInit({device})");
+                BassRuntime.Check(BASS_RecordSetDevice(device), $"BASS_RecordSetDevice({device})");
+                delegate* unmanaged[Stdcall]<int, IntPtr, uint, IntPtr, int> proc = &RecordProc;
+                record = BassRuntime.Check(BASS_RecordStart((uint)BassRuntime.SampleRate, 2, BASS_SAMPLE_FLOAT, (IntPtr)proc, handle), "BASS_RecordStart(input)");
+            }
+            catch { BASS_StreamFree(handle); throw; }
+        }
+        else throw new ArgumentException($"Onbekende bron: {input.Source}");
+
+        var strip = new MixerStrip(input.Id, input.Name, Program, handle) { Source = input.Source, HomeBus = Program };
+        strip.Duck("off", 0f, 0);
+        lock (_routeGate)
+        {
+            _strips = new Dictionary<string, MixerStrip>(_strips) { [input.Id] = strip };
+            _inputs[input.Id] = (record, tone);
+        }
+        return strip;
+    }
+
+    /// <summary>Removes an input channel and stops its recording.</summary>
+    public void RemoveInput(string id)
+    {
+        lock (_routeGate)
+        {
+            if (!_strips.TryGetValue(id, out var strip) || strip.Source is null) return;
+            var copy = new Dictionary<string, MixerStrip>(_strips);
+            copy.Remove(id);
+            _strips = copy;
+            if (_inputs.Remove(id, out var x))
+            {
+                if (x.Record != 0) BASS_ChannelStop(x.Record);
+                strip.Free();
+                if (x.Tone.IsAllocated) x.Tone.Free();
+            }
+            foreach (var (bid, bus) in _outputs.ToList())
+                if (!_strips.Values.Any(s => s.Bus == bus)) { bus.Free(); _outputs.Remove(bid); }
+        }
+    }
 
     /// <summary>Messages about the sound cards at start (an ASIO card that was not found, for example).</summary>
     public List<string> StartNotes { get; } = [];
@@ -420,6 +517,7 @@ public sealed class AudioRouter : IDisposable
         _thread?.Join(500);
         if (!IsStarted) return;
         if (_record != 0) BASS_ChannelStop(_record);
+        foreach (var x in _inputs.Values) if (x.Record != 0) BASS_ChannelStop(x.Record);
         foreach (var s in _strips.Values) s.Free();
         foreach (var b in _outputs.Values) b.Free();
         Program.Free();

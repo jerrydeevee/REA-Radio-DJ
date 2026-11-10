@@ -85,7 +85,7 @@ public static class Snapshot
         var strips = router.Strips.Select(s =>
         {
             var (l, r) = s.Levels();
-            return new StripDto(s.Id, s.Name, s.Bus.Id, s.Volume, s.Muted, s.DuckLevel, l, r);
+            return new StripDto(s.Id, s.Name, s.Bus.Id, s.Volume, s.Muted, s.DuckLevel, l, r, s.OnAir, s.Source);
         }).ToList();
         var (pl, pr) = router.Program.Levels();
         var (st, it, tp) = router.Master.Read();

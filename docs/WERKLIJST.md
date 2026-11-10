@@ -64,9 +64,9 @@ Vragen bij stap 1:
 | Status | Werk | Af als |
 |---|---|---|
 | ✅ | Uitgang per mengkanaal: automatisering, standby, cartwalls, overlays, DJ, microfoon en voorluisteren elk naar een eigen Windows-kaart of kanaalpaar (1/2 t/m 7/8), Instellingen › Geluid. VoIP volgt met stap 5 | elk kanaal is in Instellingen op een eigen uitgang te zetten en blijft daar na een herstart. Getest op het apparaat "geen geluid"; een kanaalpaar 3/4 op een echte meerkanaalskaart nog niet |
-| ⬜ | Ingangen als mengkanaal: meer dan één microfoon, lijn-in (cd-speler, tweede studio), met doorzetknop | een lijn-ingang staat als kanaal in de mixer en kan op de zender |
+| ✅ | Ingangen als mengkanaal: meer dan één microfoon, lijn-in (cd-speler, tweede studio), met doorzetknop — Mixer › Ingangen: elk invoerapparaat of een testtoon als kanaal, start dicht, ZENDER zet hem door; ook een eigen uitgang mogelijk. Getest met de testtoon; een echte lijn-in nog niet | een lijn-ingang staat als kanaal in de mixer en kan op de zender |
 | 🟡 | ASIO-uitvoer en instelbare buffer en samplerate, met testtoon per uitgang: klaar in Instellingen › Geluid (uitzending, voorluisteren en elk mengkanaal via ASIO; 44,1 of 48 kHz; buffer). Een stuurprogramma dat niet start wordt geweigerd en de Windows-kaart blijft in gebruik. Getest met Realtek ASIO; nog niet beluisterd en niet met een studiokaart | ASIO-kaart speelt zonder haperen; testtoon klinkt op de gekozen uitgang |
-| ⬜ | Kanaalstrip per mengkanaal: gain, balans, equalizer, compressor, automatische niveauregeling, dempen, naar de zender, opnemen | instellingen per kanaal hoorbaar en bewaard |
+| 🟡 | Kanaalstrip per mengkanaal: gain, balans, equalizer, compressor, automatische niveauregeling, dempen, naar de zender, opnemen — klaar via ⚙ op elk kanaal in de Mixer (gemeten op de zender: gain +6 dB, balans, midden -12 dB, compressor, niveauregeling; bewaard na herstart). Opnemen per kanaal volgt | instellingen per kanaal hoorbaar en bewaard |
 | ✅ | Master: begrenzer en loudness-meter op de zender | pieken boven de grens worden begrensd; LUFS zichtbaar — eigen look-ahead-begrenzer (plafond instelbaar, Geluid-tab), LUFS kort/geïntegreerd en true peak bij de meter; getest: plafond -12 dB → true peak -11,5 (zonder -7) |
 | ⬜ | Plekken voor VST-effecten per kanaal | één VST-plug-in laadt en werkt op een kanaal |
 
