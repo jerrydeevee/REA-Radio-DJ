@@ -112,6 +112,11 @@ public sealed class RoutingOptions
     public int StandbyPlayers { get; set; } = 2;
     /// <summary>Mixer channels that have an output of their own (channel id → "dev:&lt;device&gt;:&lt;pair&gt;"); the rest goes on air.</summary>
     public Dictionary<string, string> StripOutputs { get; set; } = [];
+    /// <summary>
+    /// Mixing desk mode: a channel with an output of its own goes out at full level; its fader, mute and the automatic
+    /// ducking are left to the desk. Off (software mode): the engine mixes and the faders work as usual.
+    /// </summary>
+    public bool DeskMode { get; set; }
     /// <summary>ASIO output for the on-air bus ("asio:&lt;device&gt;:&lt;pair&gt;"), or "" for the Windows card in OutputDevice.</summary>
     public string ProgramAsio { get; set; } = "";
     /// <summary>ASIO output for the pre-listen bus, or "" for the Windows card in PreviewDevice.</summary>

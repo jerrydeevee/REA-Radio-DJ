@@ -117,6 +117,14 @@
           <NumericUpDown Value="{Binding StandbyPlayers}" Minimum="1" Maximum="4" Increment="1" FormatString="0" />
           <TextBlock Classes="help" Text="Actief na een herstart van de engine." />
 
+          <TextBlock Classes="title" Text="Werkwijze" Margin="0,24,0,4" />
+          <StackPanel Orientation="Horizontal" Spacing="12">
+            <RadioButton GroupName="desk" Content="Software: de engine mengt" IsChecked="{Binding !DeskMode}" />
+            <RadioButton GroupName="desk" Content="Mengtafel: elk kanaal met een eigen uitgang op vol naar de tafel" IsChecked="{Binding DeskMode}" />
+          </StackPanel>
+          <TextBlock Classes="help" Text="Bij mengtafel doet de tafel het mengen: een kanaal met een eigen uitgang gaat op vol, en de fader, dempen en het automatisch zachter zetten onder de microfoon gelden er niet. Een kanaal uitzetten of de microfoon dichtdoen werkt wel. Omschakelen werkt meteen en blijft bewaard." />
+          <TextBlock Classes="muted" Text="{Binding DeskStatus}" TextWrapping="Wrap" />
+
           <TextBlock Classes="title" Text="Uitgang per mengkanaal" Margin="0,24,0,4" />
           <TextBlock Classes="help" Text="Voor een mengtafel met een eigen fader per speler: geef een kanaal een eigen uitgang op een geluidskaart (uitgang 1/2, 3/4, 5/6 of 7/8 van een kaart met meer kanalen). Zo'n kanaal zit dan niet meer in de uitzending, de stream en de stiltebewaking; dat doet de mengtafel. Een wijziging werkt meteen en blijft na een herstart bewaard." />
           <ItemsControl ItemsSource="{Binding StripOutputs}" Margin="0,8,0,0">

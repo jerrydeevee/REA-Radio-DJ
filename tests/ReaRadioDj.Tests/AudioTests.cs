@@ -151,6 +151,36 @@ public sealed class AudioTests : IDisposable
     }
 
     [BassFact]
+    public async Task In_desk_mode_a_channel_on_its_own_output_goes_out_at_full_level()
+    {
+        var options = Options();
+        var router = Router(options);
+        router.Start();
+        var cart = router.Strip(AudioRouter.CartStrip);
+        async Task<float> Vol() { await Task.Delay(400); BASS_ChannelGetAttribute(cart.Handle, BASS_ATTRIB_VOL, out float v); return v; }
+
+        cart.SetVolume(0.5f);
+        cart.Duck("mic", 0.25f, 0);
+        Assert.Equal(0.125f, await Vol(), 3);           // software: fader times duck
+
+        router.SetDeskMode(true);
+        Assert.False(cart.Direct);                        // still on the normal bus: the engine mixes it
+        Assert.Equal(0.125f, await Vol(), 3);
+
+        router.Route(AudioRouter.CartStrip, "dev:0:0");   // its own output (the "no sound" device in this test)
+        Assert.True(cart.Direct);
+        Assert.Equal(1f, await Vol(), 3);                 // full level: fader and duck are the desk's job
+        cart.Duck("off", 0f, 0);                          // switched off still counts
+        Assert.Equal(0f, await Vol(), 3);
+        cart.Duck("off", null, 0);
+
+        router.SetDeskMode(false);                        // back to software, without a restart
+        Assert.False(cart.Direct);
+        Assert.Equal(0.125f, await Vol(), 3);
+        Assert.False(options.Routing.DeskMode);
+    }
+
+    [BassFact]
     public async Task The_program_is_recorded_per_hour_and_old_recordings_are_removed()
     {
         var options = Options();

@@ -118,6 +118,22 @@ public sealed class MixerStrip
     public string? Source { get; internal set; }
     public bool OnAir => Processor.Settings.OnAir;
 
+    /// <summary>Reasons that still count in mixing desk mode: the channel switched off, the microphone closed.</summary>
+    private static readonly string[] Switches = ["off", "closed"];
+
+    /// <summary>
+    /// Mixing desk mode on an output of its own: the channel goes out at full level; the fader, mute and ducking under
+    /// the microphone or an overlay are left to the desk. Switching the channel off or closing the microphone still counts.
+    /// </summary>
+    public bool Direct { get; private set; }
+
+    internal void SetDirect(bool direct)
+    {
+        if (Direct == direct) return;
+        Direct = direct;
+        Apply(150);
+    }
+
     /// <summary>The lowest active duck level (1 = not ducked).</summary>
     public float DuckLevel { get { lock (_gate) return _ducks.Count == 0 ? 1f : _ducks.Values.Min(); } }
 
@@ -143,7 +159,10 @@ public sealed class MixerStrip
 
     private void Apply(int milliseconds)
     {
-        float target = Muted ? 0f : Volume * DuckLevel;
+        float target;
+        if (Direct)
+            lock (_gate) target = _ducks.Where(d => Switches.Contains(d.Key)).Select(d => d.Value).DefaultIfEmpty(1f).Min();
+        else target = Muted ? 0f : Volume * DuckLevel;
         BASS_ChannelSlideAttribute(Handle, BASS_ATTRIB_VOL, target, (uint)Math.Max(0, milliseconds));
     }
 
@@ -209,6 +228,16 @@ public sealed class AudioRouter : IDisposable
     public MixerStrip Strip(string id) => _strips[id];
     public bool HasStrip(string id) => _strips.ContainsKey(id);
 
+    /// <summary>Mixing desk mode (see <see cref="RoutingOptions.DeskMode"/>); switches at once, no restart.</summary>
+    public bool DeskMode { get; private set; }
+
+    public void SetDeskMode(bool desk)
+    {
+        DeskMode = desk;
+        _options.Routing.DeskMode = desk;
+        foreach (var s in _strips.Values) s.SetDirect(desk && s.Bus != s.HomeBus);
+    }
+
     public bool MicAvailable { get; private set; }
     public bool MicOpen { get; private set; }
     public string MicStatus { get; private set; } = "uit";
@@ -263,6 +292,7 @@ public sealed class AudioRouter : IDisposable
             catch (BassException ex) { _logger.LogWarning("Output {Target} for {Strip} not available, stays on its normal bus: {Message}", target, id, ex.Message); }
         }
 
+        SetDeskMode(_options.Routing.DeskMode);
         foreach (var s in _strips.Values)
         {
             var settings = _options.Routing.Channels.GetValueOrDefault(s.Id) ?? DefaultChannel(s);
@@ -433,6 +463,7 @@ public sealed class AudioRouter : IDisposable
                 if (!OutputTarget.TryParse(target, out var t)) throw new ArgumentException($"Onbekende uitgang: {target}");
                 strip.MoveTo(Output(t));
             }
+            strip.SetDirect(DeskMode && strip.Bus != strip.HomeBus);
             // Outputs nobody uses any more are closed.
             foreach (var (id, bus) in _outputs.ToList())
                 if (!_strips.Values.Any(s => s.Bus == bus)) { bus.Free(); _outputs.Remove(id); }

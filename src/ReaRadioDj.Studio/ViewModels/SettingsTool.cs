@@ -112,6 +112,38 @@ public sealed partial class SettingsTool : StudioTool
 
     protected override void OnFirstShow() => _ = LoadAsync();
 
+    // ---- mixing desk or software
+    [ObservableProperty] private bool _deskMode;
+    [ObservableProperty] private string _deskStatus = "";
+    private bool _deskLoaded;
+
+    private sealed record MixingMode(bool Desk, List<string> Direct);
+
+    private async Task LoadDeskModeAsync()
+    {
+        if (await Hub.Client.GetAsync<MixingMode>("/api/mixing-mode") is not { } m) return;
+        _deskLoaded = false;
+        DeskMode = m.Desk;
+        _deskLoaded = true;
+        DeskStatus = Describe(m);
+    }
+
+    private static string Describe(MixingMode m) => !m.Desk ? "De engine mengt; faders, dempen en automatisch zachter werken op alle kanalen."
+        : m.Direct.Count == 0 ? "Mengtafel, maar nog geen kanaal heeft een eigen uitgang: geef ze hieronder een uitgang."
+        : $"Op vol naar de tafel: {string.Join(", ", m.Direct)}.";
+
+    partial void OnDeskModeChanged(bool value)
+    {
+        if (!_deskLoaded) return;
+        _ = SaveDeskModeAsync(value);
+    }
+
+    private async Task SaveDeskModeAsync(bool desk)
+    {
+        var m = await Hub.Client.SendForAsync<MixingMode>(HttpMethod.Put, "/api/mixing-mode", new { desk });
+        DeskStatus = m is null ? "Omschakelen mislukt." : Describe(m);
+    }
+
     // ---- the station's own recordings
     [ObservableProperty] private bool _recProgram;
     [ObservableProperty] private bool _recMic;
@@ -222,6 +254,7 @@ public sealed partial class SettingsTool : StudioTool
         await LoadRulesAsync();
         await LoadSystemAsync();
         await LoadOutputsAsync();
+        await LoadDeskModeAsync();
         await LoadAudioAsync();
         if (await Hub.Client.GetAsync<MasterDto>("/api/master") is { } m) { LimiterOn = m.LimiterOn; LimiterCeiling = (decimal)m.CeilingDb; _masterLoaded = true; }
         Outputs.Clear();

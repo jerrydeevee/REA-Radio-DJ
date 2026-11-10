@@ -14,7 +14,7 @@ public static class OutputsApi
 {
     public const string Key = "outputs";
 
-    public const string AudioKey = "audio", MasterKey = "master";
+    public const string AudioKey = "audio", MasterKey = "master", DeskKey = "desk-mode";
 
     private sealed record AudioSettings(string ProgramAsio, string PreviewAsio, int SampleRate, int BufferMs, int AsioBuffer);
 
@@ -55,6 +55,8 @@ public static class OutputsApi
             catch (JsonException) { }
         }
 
+        options.Routing.DeskMode = db.GetSetting(DeskKey) == "true";
+
         if (db.GetSetting(Key) is not { } json) return;
         try
         {
@@ -85,6 +87,19 @@ public static class OutputsApi
                 ? $"{name} gaat weer via de normale uitgang"
                 : $"{name} heeft nu een eigen uitgang ({router.Strip(strip).Bus.Name}); dit kanaal zit niet meer in de uitzending, de stream en de stiltebewaking");
             return Results.Ok(Dto(router));
+        });
+
+        // Mixing desk or software: whether channels on an output of their own go out at full level.
+        api.MapGet("/mixing-mode", (AudioRouter router) => new { desk = options.Routing.DeskMode, direct = Direct(router) });
+        api.MapPut("/mixing-mode", (MixingModeRequest body, AudioRouter router, StationDb db, MessageCenter messages) =>
+        {
+            if (router.IsStarted) router.SetDeskMode(body.Desk);
+            else options.Routing.DeskMode = body.Desk;
+            db.SetSetting(DeskKey, body.Desk ? "true" : "false");
+            messages.Info(body.Desk
+                ? "Werkwijze mengtafel: kanalen met een eigen uitgang gaan op vol naar de tafel"
+                : "Werkwijze software: de engine mengt, de faders werken weer");
+            return Results.Ok(new { desk = options.Routing.DeskMode, direct = Direct(router) });
         });
 
         api.MapGet("/master", () => new MasterDto(options.Routing.LimiterEnabled, options.Routing.LimiterCeilingDb));
@@ -127,6 +142,11 @@ public static class OutputsApi
             return Results.Ok();
         });
     }
+
+    private static List<string> Direct(AudioRouter router) =>
+        router.IsStarted ? [.. router.Strips.Where(s => s.Direct).Select(s => s.Name)] : [];
+
+    public sealed record MixingModeRequest(bool Desk);
 
     private static OutputsDto Dto(AudioRouter router)
     {
