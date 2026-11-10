@@ -9,11 +9,12 @@ public static class DjApi
 {
     public static void Map(RouteGroupBuilder api)
     {
-        api.MapGet("/dj", (DjMixer dj, DjHandover handover) => Dto(dj.Info, handover.Following));
+        api.MapGet("/dj", (DjMixer dj, DjHandover handover) => Dto(dj.Info, handover.Following, dj.Automix.Info));
 
         // Deck A starts copying what the automation plays (see DjHandover).
         api.MapPost("/dj/follow", (DjMixer dj, DjHandover handover) =>
-            handover.Follow() is { } problem ? Results.BadRequest(problem) : Results.Ok(Dto(dj.Info, handover.Following)));
+            dj.Automix.On ? Results.BadRequest("automix speelt op deck A en B; zet automix eerst uit")
+            : handover.Follow() is { } problem ? Results.BadRequest(problem) : Results.Ok(Dto(dj.Info, handover.Following, dj.Automix.Info)));
 
         api.MapPost("/dj/mixer", (DjMixerRequest r, DjMixer dj, DjHandover handover, MessageCenter messages, RecordingService recordings,
             ReaRadioDj.Core.ReaRadioDjOptions options) =>
@@ -48,7 +49,35 @@ public static class DjApi
                 if (on && !dj.OnAir && handover.TakeOver()) messages.Info("DJ-tafel heeft de uitzending overgenomen; de automatisering is gestopt");
                 dj.SetOnAir(on);
             }
-            return Results.Ok(Dto(dj.Info, handover.Following));
+            return Results.Ok(Dto(dj.Info, handover.Following, dj.Automix.Info));
+        });
+
+        api.MapPost("/dj/automix", (DjAutomixRequest r, DjMixer dj, MediaLibrary library, DjHandover handover) =>
+        {
+            var am = dj.Automix;
+            if (r.Clear is true) am.Clear();
+            if (r.Remove is int rm && !am.Remove(rm)) return Results.BadRequest("geen nummer op die plaats");
+            if (r.MoveFrom is int mf && !am.Move(mf, r.MoveTo ?? 0)) return Results.BadRequest("geen nummer op die plaats");
+            if (r.MediaIds is { } ids)
+            {
+                int? at = r.Index;
+                foreach (var id in ids)
+                {
+                    if (library.Get(id) is not { } media) return Results.BadRequest($"nummer {id} niet gevonden");
+                    am.Add(media, at);
+                    if (at is not null) at++;
+                }
+            }
+            if (r.Transition is { } t) am.SetTransition(t);
+            if (r.Beats is double b) am.SetBeats(b);
+            if (r.On is bool on)
+            {
+                // Automix plays decks A and B itself: deck A no longer follows the automation.
+                if (on) handover.Release();
+                am.SetOn(on);
+            }
+            if (r.MixNow is true && !am.MixNow()) return Results.BadRequest("er wacht geen volgend nummer om naartoe te mixen");
+            return Results.Ok(Dto(dj.Info, handover.Following, am.Info));
         });
 
         api.MapPost("/dj/decks/{id}/{action}", (string id, string action, DjCommand? body, DjMixer dj, MediaLibrary library, DjHandover handover) =>
@@ -116,9 +145,12 @@ public static class DjApi
         return null;
     }
 
-    public static DjDto Dto(DjMixerInfo m, bool following = false) =>
+    public static DjDto Dto(DjMixerInfo m, bool following = false, DjAutomixInfo? automix = null) =>
         new(m.Crossfader, m.Curve, m.OnAir, m.Decks.Select(Deck).ToList(), following, m.Recording is { } f ? Path.GetFileName(f) : null, m.RecordingSeconds,
-            m.Quantize, m.CueMix, m.Limiter, m.LimiterDb);
+            m.Quantize, m.CueMix, m.Limiter, m.LimiterDb, automix is { } a ? Automix(a) : null);
+
+    public static DjAutomixDto Automix(DjAutomixInfo a) => new(a.On, a.Transition, a.Beats,
+        a.Queue.Select(q => new DjAutomixItemDto(q.Id, q.Title, q.Artist, Math.Round(q.Duration, 1))).ToList(), a.State, a.Progress, a.SecondsToMix, a.OutDeck);
 
     public static DjDeckDto Deck(DjDeckInfo d) => new(d.Id, d.Media is { Id: > 0 } m ? m.Id : null, d.Media?.Title ?? "", d.Media?.Artist ?? "",
         d.Media is not null, d.Playing, d.Position, Math.Round(d.Duration, 3), d.Bpm, d.FirstBeat, d.Analysing, Math.Round(d.Tempo, 3), d.TempoRange,

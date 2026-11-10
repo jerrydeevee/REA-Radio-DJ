@@ -52,7 +52,21 @@ public sealed record DjDeckDto(string Id, long? MediaId, string Title, string Ar
 /// Recording = the file the mix is being recorded to (null when not recording), for RecordingSeconds.
 /// Quantize = hot cues, loops and rolls on the beat; CueMix = headphones 0 (cue) .. 1 (master); Limiter on the DJ output.
 public sealed record DjDto(double Crossfader, string Curve, bool OnAir, IReadOnlyList<DjDeckDto> Decks, bool Following = false,
-    string? Recording = null, double RecordingSeconds = 0, bool Quantize = false, double CueMix = 0, bool Limiter = true, double LimiterDb = -1);
+    string? Recording = null, double RecordingSeconds = 0, bool Quantize = false, double CueMix = 0, bool Limiter = true, double LimiterDb = -1,
+    DjAutomixDto? Automix = null);
+
+/// <summary>
+/// Automix on decks A and B. Transition: fade, cut, beat (tempo and beat matched), echo or filter; Beats = its length.
+/// State: uit, leeg, klaar, speelt or mixen; Progress 0..1 while mixing; SecondsToMix until the next transition.
+/// </summary>
+public sealed record DjAutomixDto(bool On, string Transition, double Beats, IReadOnlyList<DjAutomixItemDto> Queue, string State,
+    double Progress, double? SecondsToMix, string? OutDeck);
+
+public sealed record DjAutomixItemDto(long Id, string Title, string Artist, double Duration);
+
+/// <summary>Automix settings and list changes; any field left out stays as it is. MediaIds are added (at Index when given).</summary>
+public sealed record DjAutomixRequest(bool? On = null, string? Transition = null, double? Beats = null, IReadOnlyList<long>? MediaIds = null,
+    int? Index = null, int? Remove = null, int? MoveFrom = null, int? MoveTo = null, bool? Clear = null, bool? MixNow = null);
 
 public sealed record DjCommand(long? MediaId = null, double? Value = null, int? Index = null, bool? On = null, string? Name = null);
 

@@ -487,7 +487,7 @@ public sealed partial class TransitionRuleRow : ObservableObject
     [ObservableProperty] [NotifyPropertyChangedFor(nameof(HasSeconds))] private KeyChoice? _mode;
     [ObservableProperty] private decimal _seconds = 2;
     [ObservableProperty] private bool _enabled = true;
-    public bool HasSeconds => Mode?.Key is "overlap" or "fade";
+    public bool HasSeconds => Mode?.Key is "overlap" or "fade" or "tempo";
 }
 
 /// <summary>Instellingen › Uiterlijk: the colour of one kind of item (muziek, jingles, ...), applied and saved at once.</summary>

@@ -36,6 +36,15 @@ public sealed class PlayoutEngine : IDisposable
     /// <summary>Supplies a replacement when an AI break is not ready in time (usually a station jingle).</summary>
     public Func<MediaItem?>? FallbackProvider { get; set; }
 
+    /// <summary>The tempo and first beat of a library item (null when unknown), for transitions on the beat.</summary>
+    public Func<MediaItem, (double Bpm, double FirstBeat)?>? BeatProvider { get; set; }
+
+    private (double Bpm, double FirstBeat)? BeatOf(MediaItem m)
+    {
+        try { return BeatProvider?.Invoke(m); }
+        catch (Exception ex) { _logger.LogWarning(ex, "No tempo for {Path}", m.Path); return null; }
+    }
+
     /// <summary>Raised (on the engine thread, outside the engine lock) whenever an item goes on air.</summary>
     public event Action<LogItem>? ItemStarted;
     /// <summary>Raised when an item has stopped: the item and the seconds it played.</summary>
@@ -312,6 +321,10 @@ public sealed class PlayoutEngine : IDisposable
         private double? _unduckAt;
         private double? _stopAt;
         private bool _fading;
+        private readonly (double Bpm, double FirstBeat)? _beat;
+        /// <summary>Tempo transition: where this song glides back to its own tempo (null when it plays at its own tempo).</summary>
+        private double? _glideAt;
+        private readonly PlayoutEngine _engine;
 
         public LogItem Item { get; }
         public MediaItem Media { get; }
@@ -337,15 +350,44 @@ public sealed class PlayoutEngine : IDisposable
             var mix = engine._options.Mix;
             var cues = media.Cues;
             _gain = engine.LoudnessGain(media);
+            _engine = engine;
 
             bool hook = item.UseHook && cues is { HookIn: double, HookOut: double };
             var mixIn = !hook && item.MixIn is { } tr && previous is not null && tr.AfterPath == previous.Media.Path ? tr : null;
             From = hook ? cues.HookIn!.Value : mixIn?.From ?? cues.CueIn;
             To = hook ? cues.HookOut!.Value : cues.CueOut;
 
-            _handle = BassRuntime.Check(
-                BASS_StreamCreateFile(false, Library.MediaPaths.Resolve(media.Path), 0, 0, BASS_STREAM_DECODE | BASS_SAMPLE_FLOAT | BASS_UNICODE),
+            // Tempo transition: start on a beat, at the tempo the outgoing song plays at.
+            _beat = media.Kind == MediaKind.Song ? engine.BeatOf(media) : null;
+            double? tempo = null;
+            if (!hook && mixIn is null && previous is { _rule.Mode: "tempo", _beat: { } before } && _beat is { } own)
+            {
+                tempo = Audio.TransitionRules.TempoMatch(before.Bpm * (1 + previous.TempoPercent / 100), own.Bpm);
+                if (tempo is not null)
+                {
+                    double beat = 60 / own.Bpm;
+                    From = Math.Min(To, Audio.TransitionRules.NextBeat(From - 0.02, own.FirstBeat, beat));
+                    _glideAt = From + (previous._rule!.Seconds > 0 ? previous._rule.Seconds : Audio.TransitionRules.DefaultTempoSeconds) * (1 + tempo.Value / 100);
+                }
+            }
+
+            int decode = BassRuntime.Check(
+                BASS_StreamCreateFile(false, Library.MediaPaths.Resolve(media.Path), 0, 0,
+                    BASS_STREAM_DECODE | BASS_SAMPLE_FLOAT | BASS_UNICODE | (tempo is null ? 0u : BASS_STREAM_PRESCAN)),
                 $"BASS_StreamCreateFile({Path.GetFileName(media.Path)})");
+            _handle = decode;
+            if (tempo is double percent)
+            {
+                int stretched = 0;
+                try { stretched = BASS_FX_TempoCreate(decode, BASS_STREAM_DECODE | BASS_FX_FREESOURCE); }
+                catch (Exception ex) when (ex is DllNotFoundException or EntryPointNotFoundException) { }
+                if (stretched != 0)
+                {
+                    _handle = stretched;
+                    BASS_ChannelSetAttribute(_handle, BASS_ATTRIB_TEMPO, (float)percent);
+                }
+                else _glideAt = null; // no bass_fx: an ordinary overlap
+            }
             if (From > 0) BASS_ChannelSetPosition(_handle, BASS_ChannelSeconds2Bytes(_handle, From), BASS_POS_BYTE);
 
             // Talk-up: when a voice break is still running, start under it and come up when it ends.
@@ -404,6 +446,12 @@ public sealed class PlayoutEngine : IDisposable
 
         public double Played => (DateTime.Now - _started).TotalSeconds;
 
+        /// <summary>The tempo change this song plays at now (percent; 0 unless it came in with a tempo transition).</summary>
+        public double TempoPercent => _glideAt is null && !_gliding ? 0
+            : BASS_ChannelGetAttribute(_handle, BASS_ATTRIB_TEMPO, out var t) ? t : 0;
+
+        private bool _gliding;
+
         public double Position
         {
             get
@@ -456,6 +504,9 @@ public sealed class PlayoutEngine : IDisposable
             if (!_ruleable || _fading || ReferenceEquals(rule, _rule)) return;
             _rule = rule;
             (MixAt, FadeLength) = Audio.TransitionRules.Apply(rule, From, To, _autoMixAt, _autoFade);
+            // On the beat: the next song starts on a beat of this one.
+            if (rule?.Mode == "tempo" && _beat is { } b && _engine._log.PeekNext()?.Media is { Kind: MediaKind.Song })
+                MixAt = Math.Min(To, Audio.TransitionRules.NextBeat(MixAt, b.FirstBeat, 60 / b.Bpm));
         }
 
         /// <summary>The insert to start now, once.</summary>
@@ -495,6 +546,12 @@ public sealed class PlayoutEngine : IDisposable
         {
             double pos = Position;
             FollowEnvelope(pos);
+            if (_glideAt is double g && pos >= g)
+            {
+                _glideAt = null;
+                _gliding = true;
+                BASS_ChannelSlideAttribute(_handle, BASS_ATTRIB_TEMPO, 0, (uint)(Audio.TransitionRules.GlideSeconds * 1000));
+            }
             if (_talkFadeAt is double tf && pos >= tf) { _talkFadeAt = null; FadeOutAt(FadeLength); }
             if (_unduckAt is double u && pos >= u)
             {

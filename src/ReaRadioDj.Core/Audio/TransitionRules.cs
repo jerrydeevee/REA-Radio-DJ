@@ -7,13 +7,41 @@ namespace ReaRadioDj.Core.Audio;
 /// (<see cref="To"/>). A side is "*" (anything), a kind (song, jingle, voice, voicetrack, aibreak, ad) or a category
 /// as "cat:Naam". <see cref="Mode"/>: "auto" (the measured mix point), "cut" (play to the end, then the next, no
 /// overlap), "overlap" (the next starts <see cref="Seconds"/> before the end, the outgoing fades over that time) or
-/// "fade" (keep the mix point, fade out over <see cref="Seconds"/>). A hand-made transition always wins.
+/// "fade" (keep the mix point, fade out over <see cref="Seconds"/>) or "tempo" (like overlap, but on the beat: the next
+/// song starts at the tempo of the outgoing one and glides back to its own tempo once the outgoing one has gone; only
+/// between songs whose tempos lie within 8 %). A hand-made transition always wins.
 /// </summary>
 public sealed record TransitionRule(string From, string To, string Mode, double Seconds = 0, bool Enabled = true);
 
 public static class TransitionRules
 {
-    public static readonly string[] Modes = ["auto", "cut", "overlap", "fade"];
+    public static readonly string[] Modes = ["auto", "cut", "overlap", "fade", "tempo"];
+
+    /// <summary>Overlap of a tempo transition when the rule gives no seconds.</summary>
+    public const double DefaultTempoSeconds = 8;
+    /// <summary>How long the next song takes to glide back to its own tempo.</summary>
+    public const double GlideSeconds = 8;
+
+    /// <summary>
+    /// The tempo change (percent) that makes a song at <paramref name="nextBpm"/> play at <paramref name="playingBpm"/>,
+    /// matching half or double tempo too; null when either is unknown or the change would be more than 8 %.
+    /// </summary>
+    public static double? TempoMatch(double? playingBpm, double? nextBpm)
+    {
+        if (playingBpm is not > 0 || nextBpm is not > 0) return null;
+        double target = playingBpm.Value, own = nextBpm.Value;
+        double ratio = new[] { target / own, target / 2 / own, target * 2 / own }.MinBy(r => Math.Abs(r - 1));
+        double percent = (ratio - 1) * 100;
+        return Math.Abs(percent) <= 8 ? percent : null;
+    }
+
+    /// <summary>The first beat at or after <paramref name="position"/> (the position itself without a tempo).</summary>
+    public static double NextBeat(double position, double firstBeat, double beatSeconds)
+    {
+        if (beatSeconds <= 0) return position;
+        double n = Math.Ceiling((position - firstBeat) / beatSeconds - 1e-6);
+        return Math.Max(0, firstBeat + n * beatSeconds);
+    }
     public static readonly string[] Kinds = ["*", "song", "jingle", "voice", "voicetrack", "aibreak", "ad"];
 
     /// <summary>Drops rules with an unknown mode or side and keeps the seconds within reason.</summary>
@@ -66,6 +94,8 @@ public static class TransitionRules
         {
             "cut" => (to, 0),
             "overlap" => (Math.Max(from, to - rule.Seconds), Math.Min(rule.Seconds, Math.Max(0, to - from))),
+            "tempo" when (rule.Seconds > 0 ? rule.Seconds : DefaultTempoSeconds) is var s =>
+                (Math.Max(from, to - s), Math.Min(s, Math.Max(0, to - from))),
             "fade" => (autoMix, Math.Clamp(rule.Seconds, 0.3, Math.Max(0.3, to - autoMix))),
             _ => (autoMix, autoFade),
         };

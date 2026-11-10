@@ -688,6 +688,7 @@ public sealed class DjMixer : ITickable, IDisposable
         Decks = new[] { "A", "B", "C", "D" }.Select(id => new DjDeck(id, _strip, pfl, store, options.Mix.TargetLufs)).ToList();
         Sampler = new ClipBank(router, _strip, options.Mix.TargetLufs);
         SamplerCue = new ClipBank(router, pfl, options.Mix.TargetLufs);
+        Automix = new DjAutomix(this);
         SetOnAir(false);
         _limiter.Attach(_strip.Handle);
         try { SetLimiter(true, -1); }
@@ -696,6 +697,9 @@ public sealed class DjMixer : ITickable, IDisposable
     }
 
     private readonly MasterProcessor _limiter = new();
+
+    /// <summary>The list of tracks that mixes itself on decks A and B.</summary>
+    public DjAutomix Automix { get; }
 
     /// <summary>
     /// The sampler pads play on the DJ strip (through the limiter, into the mix recording, on air with the desk), or on
@@ -851,6 +855,7 @@ public sealed class DjMixer : ITickable, IDisposable
             d.Tick();
             d.ApplyVolume(CrossfadeGain(Crossfader, d.Left, Curve), CueMix);
         }
+        Automix.Tick();
     }
 
     public void Dispose()

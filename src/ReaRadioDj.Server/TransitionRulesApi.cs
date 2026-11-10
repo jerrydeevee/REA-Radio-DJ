@@ -37,6 +37,7 @@ public static class TransitionRulesApi
                 new { key = "cut", label = "achter elkaar (geen overlap)" },
                 new { key = "overlap", label = "overlap van … seconden" },
                 new { key = "fade", label = "uitfaden in … seconden" },
+                new { key = "tempo", label = "op de tel, tempo gelijk (overlap … seconden)" },
             },
         }));
         api.MapPut("/transition-rules", (List<TransitionRule> body) =>

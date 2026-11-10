@@ -57,6 +57,7 @@ public sealed class AutomationService(
     {
         _ct = ct;
         engine.FallbackProvider = Fallback;
+        engine.BeatProvider = m => m.Id > 0 && library.GetDetails(m.Id) is { Bpm: > 0 } d ? (d.Bpm!.Value, d.FirstBeat ?? 0) : null;
         engine.ItemStarted += OnItemStarted;
         var adService = services.GetRequiredService<AdService>();
         engine.ItemStarted += adService.OnStarted;
