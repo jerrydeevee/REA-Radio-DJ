@@ -46,6 +46,7 @@ public sealed class DockFactory : Factory
         ("buttons", "Eigen knoppen", () => new ButtonsTool()),
         ("item", "Itemgegevens", () => new ItemTool()),
         ("explorer", "Verkenner", () => new ExplorerTool()),
+        ("regie", "Regiekamer", () => new ControlRoomTool()),
         ("settings", "Instellingen", () => new SettingsTool()),
     ];
 
@@ -101,7 +102,7 @@ public sealed class DockFactory : Factory
             // Reports and technique: what went out, the music report, the stream, hardware and control.
             return Root(Row("main",
                 Column("r-left", 0.58, Tools("dock-asrun", "asrun", "log")),
-                Column("r-right", 0.42, Sized(0.6, "dock-tech", "stream", "hardware", "control"), Sized(0.4, "dock-status", "messages", "clock"))));
+                Column("r-right", 0.42, Sized(0.6, "dock-tech", "stream", "hardware", "control"), Sized(0.4, "dock-status", "regie", "messages", "clock"))));
 
         if (Workspace == "dj")
         {

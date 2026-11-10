@@ -414,6 +414,12 @@ public sealed record PresenterExtrasDto(long? OutroCategoryId, bool WeatherEnabl
     int WeatherEveryMinutes, bool NewsEnabled, string NewsFeeds, int NewsEveryMinutes);
 
 public sealed record ExtrasPreviewDto(string? Weather, string? Headline, string? Error);
+/// <summary>Regiekamer: weather now (null when off or not fetched, with the reason in WeatherNote) and the news headlines.</summary>
+public sealed record ControlRoomDto(WeatherDto? Weather, string? WeatherNote, DateTime? WeatherAt,
+    IReadOnlyList<HeadlineDto> Headlines, IReadOnlyList<string> NewsProblems, DateTime? NewsAt);
+/// <summary>Temperature in degrees Celsius, WMO code, sky in Dutch, wind in Beaufort, today's max; RainChance -1 = unknown.</summary>
+public sealed record WeatherDto(string Place, int Temperature, int Code, string Sky, int Beaufort, int Max, int RainChance);
+public sealed record HeadlineDto(string Title, string Source);
 
 /// <summary>
 /// The creative presenter. Tone = "random" or serieus/grappig/leuk/randje; the four weights (0..10) decide how often each

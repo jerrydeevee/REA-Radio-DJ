@@ -11,6 +11,9 @@ namespace ReaRadioDj.Core.Presenter;
 /// One thing the presenter can mention besides the music. <see cref="Fact"/> goes to the language model,
 /// <see cref="Spoken"/> is a ready sentence for the template writer.
 /// </summary>
+/// <summary>Weather now; <c>Code</c> is the WMO weather code.</summary>
+public sealed record WeatherReport(int Temperature, int Code, string Sky, int Beaufort, int Max, int RainChance);
+
 public sealed record BreakExtra(string Kind, string Fact, string Spoken, long? NoteId = null);
 
 /// <summary>A message to read out ("Groeten aan Jan uit Gieten, 80 jaar!"), entered in the studio.</summary>
@@ -102,9 +105,7 @@ public sealed class BreakExtras(HttpClient http, PresenterOptions options, NoteS
     {
         lock (_gate) if (_weatherCache is { } c && DateTime.Now - c.At < TimeSpan.FromMinutes(15)) return c.Extra;
         var w = options.Weather;
-        var url = FormattableString.Invariant($"https://api.open-meteo.com/v1/forecast?latitude={w.Latitude:0.###}&longitude={w.Longitude:0.###}")
-            + "&current=temperature_2m,weather_code,wind_speed_10m&daily=temperature_2m_max,precipitation_probability_max"
-            + "&wind_speed_unit=ms&timezone=Europe%2FAmsterdam&forecast_days=1";
+        var url = WeatherUrl(w);
         using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
         cts.CancelAfter(TimeSpan.FromSeconds(10));
         using var doc = JsonDocument.Parse(await http.GetStringAsync(url, cts.Token));
@@ -113,15 +114,26 @@ public sealed class BreakExtras(HttpClient http, PresenterOptions options, NoteS
         return extra;
     }
 
-    internal static BreakExtra WeatherExtra(JsonElement root, string place)
+    /// <summary>The URL of the current weather and today's forecast for one place (Open-Meteo, the presenter's source).</summary>
+    public static string WeatherUrl(WeatherOptions w) =>
+        FormattableString.Invariant($"https://api.open-meteo.com/v1/forecast?latitude={w.Latitude:0.###}&longitude={w.Longitude:0.###}")
+        + "&current=temperature_2m,weather_code,wind_speed_10m&daily=temperature_2m_max,precipitation_probability_max"
+        + "&wind_speed_unit=ms&timezone=Europe%2FAmsterdam&forecast_days=1";
+
+    /// <summary>The weather now: degrees, sky in Dutch, wind in Beaufort, today's maximum and chance of rain (-1 = unknown).</summary>
+    public static WeatherReport ParseWeather(JsonElement root)
     {
         var cur = root.GetProperty("current");
-        int temp = (int)Math.Round(cur.GetProperty("temperature_2m").GetDouble());
-        string sky = WeatherText(cur.GetProperty("weather_code").GetInt32());
-        int bft = Beaufort(cur.GetProperty("wind_speed_10m").GetDouble());
+        int code = cur.GetProperty("weather_code").GetInt32();
         var daily = root.GetProperty("daily");
-        int max = (int)Math.Round(daily.GetProperty("temperature_2m_max")[0].GetDouble());
         int rain = daily.TryGetProperty("precipitation_probability_max", out var p) && p[0].ValueKind == JsonValueKind.Number ? p[0].GetInt32() : -1;
+        return new WeatherReport((int)Math.Round(cur.GetProperty("temperature_2m").GetDouble()), code, WeatherText(code),
+            Beaufort(cur.GetProperty("wind_speed_10m").GetDouble()), (int)Math.Round(daily.GetProperty("temperature_2m_max")[0].GetDouble()), rain);
+    }
+
+    internal static BreakExtra WeatherExtra(JsonElement root, string place)
+    {
+        var (temp, _, sky, bft, max, rain) = ParseWeather(root);
         string where = string.IsNullOrWhiteSpace(place) ? "" : $" in {place}";
         string fact = $"Weer{where} nu: {temp} graden, {sky}, wind kracht {bft}; vandaag maximaal {max} graden" +
             (rain >= 0 ? $", kans op regen {rain} procent." : ".");

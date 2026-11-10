@@ -1,0 +1,87 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:ReaRadioDj.Studio.ViewModels"
+             xmlns:c="using:ReaRadioDj.Contracts"
+             x:Class="ReaRadioDj.Studio.Views.ControlRoomView"
+             x:DataType="vm:ControlRoomTool">
+  <ScrollViewer HorizontalScrollBarVisibility="Disabled">
+    <StackPanel Margin="8" Spacing="10">
+      <!-- time and on air -->
+      <Border Classes="card" Padding="12">
+        <DockPanel>
+          <StackPanel DockPanel.Dock="Right" VerticalAlignment="Center" HorizontalAlignment="Right">
+            <TextBlock Text="{Binding Time}" FontSize="44" FontWeight="Bold" FontFamily="Consolas, monospace" HorizontalAlignment="Right" />
+            <TextBlock Classes="muted" Text="{Binding Date}" FontSize="14" HorizontalAlignment="Right" />
+          </StackPanel>
+          <StackPanel Spacing="4" Margin="0,0,12,0" VerticalAlignment="Center">
+            <Border HorizontalAlignment="Left" CornerRadius="{DynamicResource Radius6}" Padding="10,3"
+                    Background="{Binding OnAir, Converter={x:Static vm:Brushes.OnAir}}">
+              <TextBlock Text="{Binding OnAir, Converter={x:Static vm:Brushes.OnAirText}}" FontWeight="Bold" Foreground="White" />
+            </Border>
+            <TextBlock Text="{Binding Now}" FontSize="18" FontWeight="SemiBold" TextWrapping="Wrap" MaxLines="2" TextTrimming="CharacterEllipsis" />
+            <TextBlock Classes="muted" Text="{Binding Remaining}" FontSize="13" />
+            <TextBlock Classes="muted" Text="{Binding Next}" FontSize="13" TextTrimming="CharacterEllipsis" />
+          </StackPanel>
+        </DockPanel>
+      </Border>
+
+      <!-- weather -->
+      <Border Classes="card" Padding="12">
+        <StackPanel Spacing="4">
+          <DockPanel>
+            <Button DockPanel.Dock="Right" Classes="small" Content="↻" Command="{Binding RefreshCommand}" IsEnabled="{Binding !Busy}"
+                    ToolTip.Tip="Weer en nieuws nu opnieuw ophalen" />
+            <TextBlock Classes="h" Text="Weer" VerticalAlignment="Center" />
+          </DockPanel>
+          <StackPanel Orientation="Horizontal" Spacing="12" IsVisible="{Binding HasWeather}">
+            <TextBlock Text="{Binding WeatherIcon}" FontSize="40" VerticalAlignment="Center" />
+            <TextBlock Text="{Binding Temperature}" FontSize="40" FontWeight="Bold" VerticalAlignment="Center" />
+            <StackPanel VerticalAlignment="Center" Spacing="2">
+              <TextBlock Text="{Binding Sky}" FontSize="16" FontWeight="SemiBold" />
+              <TextBlock Classes="muted" Text="{Binding WeatherDetail}" FontSize="13" TextWrapping="Wrap" />
+            </StackPanel>
+          </StackPanel>
+          <TextBlock Classes="muted" FontSize="12" Text="{Binding WeatherNote}" TextWrapping="Wrap" />
+        </StackPanel>
+      </Border>
+
+      <!-- headlines -->
+      <Border Classes="card" Padding="12">
+        <StackPanel Spacing="6">
+          <TextBlock Classes="h" Text="Nieuwskoppen" />
+          <ItemsControl ItemsSource="{Binding Headlines}">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="c:HeadlineDto">
+                <DockPanel Margin="0,0,0,6">
+                  <TextBlock DockPanel.Dock="Right" Classes="muted" FontSize="11" Text="{Binding Source}" Margin="8,2,0,0" MaxWidth="140"
+                             TextTrimming="CharacterEllipsis" />
+                  <TextBlock Text="{Binding Title}" FontSize="14" TextWrapping="Wrap" />
+                </DockPanel>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+          <TextBlock Classes="muted" FontSize="12" Text="{Binding NewsNote}" TextWrapping="Wrap" />
+        </StackPanel>
+      </Border>
+
+      <!-- messages -->
+      <Border Classes="card" Padding="12">
+        <StackPanel Spacing="6">
+          <TextBlock Classes="h" Text="Laatste berichten" />
+          <TextBlock Classes="muted" Text="Nog geen berichten." IsVisible="{Binding !Messages.Count}" />
+          <ItemsControl ItemsSource="{Binding Messages}">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="c:MessageDto">
+                <TextBlock TextWrapping="Wrap" FontSize="13" Margin="0,0,0,4">
+                  <Run Text="{Binding Time, StringFormat='{}{0:HH:mm}'}" FontFamily="Consolas, monospace" Foreground="#8B95A5" />
+                  <Run Text="  " /><Run Text="{Binding Level}" Foreground="#F0B429" />
+                  <Run Text="  " /><Run Text="{Binding Text}" />
+                </TextBlock>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </StackPanel>
+      </Border>
+    </StackPanel>
+  </ScrollViewer>
+</UserControl>
