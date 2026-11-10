@@ -204,6 +204,7 @@ NewsApi.Map(api);
 AdsApi.Map(api);
 ImportApi.Map(api);
 SourcesApi.Map(api);
+FilesApi.Map(api);
 ReaRadioDj.Server.Hardware.HardwareApi.Map(api);
 WishlistApi.Map(api, options);
 api.MapGet("/commands", () => CommandBus.Commands);

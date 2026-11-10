@@ -10,6 +10,34 @@ namespace ReaRadioDj.Studio.Views;
 public static class MediaDrag
 {
     public const string Format = "application/x-rea-media";
+    /// <summary>An audio file by its path on the engine machine (from the Verkenner).</summary>
+    public const string FileFormat = "application/x-rea-file";
+
+    /// <summary>Drags a file; a file that is in the library also drags as a library item, so every target accepts it.</summary>
+    public static async Task StartFileAsync(PointerEventArgs e, string path, long? mediaId)
+    {
+        var data = new DataObject();
+        data.Set(FileFormat, path);
+        if (mediaId is long id) data.Set(Format, id.ToString(System.Globalization.CultureInfo.InvariantCulture));
+        data.Set(DataFormats.Text, System.IO.Path.GetFileNameWithoutExtension(path));
+        await DragDrop.DoDragDrop(e, data, DragDropEffects.Copy);
+    }
+
+    /// <summary>Like <see cref="AcceptDrops"/>, but also accepts files that are not in the library.</summary>
+    public static void AcceptDropsAndFiles(Control target, Func<long, DragEventArgs, Task> onDrop, Func<string, DragEventArgs, Task> onFile)
+    {
+        DragDrop.SetAllowDrop(target, true);
+        target.AddHandler(DragDrop.DragOverEvent, (_, e) =>
+        {
+            e.DragEffects = e.Data.Contains(Format) || e.Data.Contains(FileFormat) ? DragDropEffects.Copy : DragDropEffects.None;
+            e.Handled = true;
+        });
+        target.AddHandler(DragDrop.DropEvent, async (_, e) =>
+        {
+            if (e.Data.Get(Format) is string s && long.TryParse(s, out var id)) { e.Handled = true; await onDrop(id, e); }
+            else if (e.Data.Get(FileFormat) is string path) { e.Handled = true; await onFile(path, e); }
+        });
+    }
 
     public static async Task StartAsync(PointerEventArgs e, MediaDto media)
     {

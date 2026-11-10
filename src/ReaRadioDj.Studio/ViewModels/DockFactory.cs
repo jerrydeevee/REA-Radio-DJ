@@ -45,6 +45,7 @@ public sealed class DockFactory : Factory
         ("hardware", "Hardware", () => new HardwareTool()),
         ("buttons", "Eigen knoppen", () => new ButtonsTool()),
         ("item", "Itemgegevens", () => new ItemTool()),
+        ("explorer", "Verkenner", () => new ExplorerTool()),
         ("settings", "Instellingen", () => new SettingsTool()),
     ];
 
@@ -86,7 +87,7 @@ public sealed class DockFactory : Factory
         if (Workspace == "prod")
             // Production: a big library, the cue editor and the voice windows; PFL to listen without going on air.
             return Root(Row("main",
-                Column("p-left", 0.34, Tools("dock-library", "library", "wishlist")),
+                Column("p-left", 0.34, Tools("dock-library", "library", "explorer", "wishlist")),
                 Column("p-center", 0.42, Sized(0.55, "dock-editor", "cues"), Sized(0.45, "dock-voice", "voicetrack", "voice", "presenter", "transition", "news")),
                 Column("p-right", 0.24, Sized(0.5, "dock-pfl", "pfl", "item", "standby"), Sized(0.5, "dock-side", "overlays", "messages"))));
 

@@ -781,6 +781,24 @@ public sealed class MediaLibrary
         return null;
     }
 
+    /// <summary>The library item of a file, or null when the file is not in the library.</summary>
+    public MediaItem? FindByPath(string path)
+    {
+        var full = System.IO.Path.GetFullPath(path);
+        return _all.FirstOrDefault(d => string.Equals(d.Media.Path, full, StringComparison.OrdinalIgnoreCase))?.Media;
+    }
+
+    /// <summary>Library ids of the files directly inside <paramref name="folder"/>, by full path.</summary>
+    public IReadOnlyDictionary<string, long> IdsIn(string folder)
+    {
+        var full = System.IO.Path.TrimEndingDirectorySeparator(System.IO.Path.GetFullPath(folder));
+        var map = new Dictionary<string, long>(StringComparer.OrdinalIgnoreCase);
+        foreach (var d in _all)
+            if (string.Equals(System.IO.Path.GetDirectoryName(d.Media.Path), full, StringComparison.OrdinalIgnoreCase))
+                map.TryAdd(d.Media.Path, d.Media.Id);
+        return map;
+    }
+
     public MediaDetails? GetDetails(long id)
     {
         var d = _db.Query(SelectMedia + " WHERE m.id = $id", MapDetails, ("$id", id)).FirstOrDefault();

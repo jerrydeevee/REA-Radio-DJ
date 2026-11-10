@@ -160,6 +160,11 @@ public sealed record CategoryRequest(string Name, string Kind, string? Color);
 
 /// <summary>Position: null = end of the log, 0 = next.</summary>
 public sealed record AddToLogRequest(long MediaId, int? Position);
+/// <summary>A folder or audio file in the Verkenner; <c>MediaId</c> is set when the file is in the library.</summary>
+public sealed record FileEntryDto(string Name, string Path, bool IsFolder, long Size, DateTime Modified, long? MediaId);
+public sealed record FolderDto(string Path, string? Parent, IReadOnlyList<FileEntryDto> Entries, string? Error);
+/// <summary>Puts an audio file on the log (or in PFL) by its path on the engine machine.</summary>
+public sealed record FileRequest(string Path, int? Position);
 
 public sealed record AddBreakRequest(int? Position);
 

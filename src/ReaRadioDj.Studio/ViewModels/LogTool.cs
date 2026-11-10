@@ -131,4 +131,11 @@ public sealed partial class LogTool : StudioTool
         int? position = before is null ? null : Upcoming.IndexOf(before);
         return Hub.Client.PostAsync("/api/log/media", new AddToLogRequest(mediaId, position));
     }
+
+    /// <summary>A file from the Verkenner that is not in the library: the engine analyses it and puts it on the log.</summary>
+    public Task DropFile(string path, LogRow? before)
+    {
+        int? position = before is null ? null : Upcoming.IndexOf(before);
+        return Hub.Client.PostAsync("/api/files/log", new FileRequest(path, position));
+    }
 }

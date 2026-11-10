@@ -9,6 +9,8 @@ public partial class LogView : UserControl
     {
         InitializeComponent();
         MediaDrag.Bind(this);
-        MediaDrag.AcceptDrops(List, (id, e) => DataContext is LogTool t ? t.Drop(id, MediaDrag.ItemAt<LogRow>(List, e)) : Task.CompletedTask);
+        MediaDrag.AcceptDropsAndFiles(List,
+            (id, e) => DataContext is LogTool t ? t.Drop(id, MediaDrag.ItemAt<LogRow>(List, e)) : Task.CompletedTask,
+            (path, e) => DataContext is LogTool t ? t.DropFile(path, MediaDrag.ItemAt<LogRow>(List, e)) : Task.CompletedTask);
     }
 }

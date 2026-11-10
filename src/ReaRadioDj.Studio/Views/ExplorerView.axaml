@@ -1,0 +1,58 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:ReaRadioDj.Studio.ViewModels"
+             xmlns:ctl="using:ReaRadioDj.Studio.Controls"
+             x:Class="ReaRadioDj.Studio.Views.ExplorerView"
+             x:DataType="vm:ExplorerTool">
+  <DockPanel Margin="6">
+    <!-- path bar -->
+    <DockPanel DockPanel.Dock="Top" Margin="0,0,0,6">
+      <Button DockPanel.Dock="Left" Classes="small" Content="▲" Command="{Binding UpCommand}" IsEnabled="{Binding CanGoUp}"
+              ToolTip.Tip="Map omhoog" Margin="0,0,4,0" />
+      <Button DockPanel.Dock="Left" Classes="small" Content="↻" Command="{Binding RefreshCommand}" ToolTip.Tip="Opnieuw inlezen" Margin="0,0,6,0" />
+      <ToggleButton DockPanel.Dock="Right" Classes="small" Content="★" IsChecked="{Binding IsFavourite, Mode=OneWay}"
+                    Command="{Binding FavouriteCommand}" ToolTip.Tip="Deze map bewaren als favoriet (of weer weghalen)" Margin="6,0,0,0" />
+      <TextBlock Text="{Binding Heading}" FontWeight="SemiBold" VerticalAlignment="Center" TextTrimming="PrefixCharacterEllipsis"
+                 ToolTip.Tip="{Binding Heading}" />
+    </DockPanel>
+
+    <!-- actions for the chosen file -->
+    <WrapPanel DockPanel.Dock="Bottom" Margin="0,6,0,0">
+      <Button Classes="small" Content="Als volgende" Command="{Binding NextCommand}" IsEnabled="{Binding HasFile}" Margin="0,0,6,4"
+              ToolTip.Tip="Bovenaan de log, direct na het item ON AIR" />
+      <Button Classes="small" Content="Achteraan" Command="{Binding EndCommand}" IsEnabled="{Binding HasFile}" Margin="0,0,6,4"
+              ToolTip.Tip="Onderaan de log (ook: dubbelklik of Enter)" />
+      <Button Classes="small" Content="▶ PFL" Command="{Binding PflCommand}" IsEnabled="{Binding HasFile}" Margin="0,0,6,4"
+              ToolTip.Tip="Voorbeluisteren, niet op de zender" />
+    </WrapPanel>
+    <TextBlock DockPanel.Dock="Bottom" Classes="muted" FontSize="12" Text="{Binding Status}" TextTrimming="CharacterEllipsis"
+               ToolTip.Tip="{Binding Status}" />
+
+    <ctl:SplitList ListWidth="170" ListHeight="110">
+      <!-- places: this computer, favourites and library folders -->
+      <ListBox ItemsSource="{Binding Places}" x:Name="PlaceList" SelectionMode="Single">
+        <ListBox.ItemTemplate>
+          <DataTemplate x:DataType="vm:ExplorerPlace">
+            <TextBlock Text="{Binding Name}" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Path}" />
+          </DataTemplate>
+        </ListBox.ItemTemplate>
+      </ListBox>
+
+      <DockPanel>
+        <TextBox DockPanel.Dock="Top" Text="{Binding Filter}" Watermark="Filter op naam…" Margin="0,0,0,6" />
+        <ListBox x:Name="Files" ItemsSource="{Binding Entries}" SelectedItem="{Binding Selected}">
+          <ListBox.ItemTemplate>
+            <DataTemplate x:DataType="vm:ExplorerEntry">
+              <DockPanel Background="Transparent">
+                <TextBlock DockPanel.Dock="Left" Text="{Binding Icon}" Width="22" VerticalAlignment="Center" />
+                <TextBlock DockPanel.Dock="Right" Classes="muted" FontSize="12" Text="{Binding Info}" VerticalAlignment="Center" Margin="8,0,0,0" />
+                <TextBlock Text="{Binding Name}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" ToolTip.Tip="{Binding Path}"
+                           FontWeight="{Binding IsFolder, Converter={x:Static vm:Brushes.BoldIf}}" />
+              </DockPanel>
+            </DataTemplate>
+          </ListBox.ItemTemplate>
+        </ListBox>
+      </DockPanel>
+    </ctl:SplitList>
+  </DockPanel>
+</UserControl>

@@ -23,6 +23,9 @@ public sealed class StudioSettings
     /// <summary>Colour per kind of item (song, jingle, voice, other) in the log, as-run and library.</summary>
     public Dictionary<string, string> TypeColors { get; set; } = new(Appearance.DefaultTypeColors);
     public string LastLayout { get; set; } = "Standaard";
+    /// <summary>Verkenner: the last folder shown and the saved favourite folders (paths on the engine machine).</summary>
+    public string ExplorerPath { get; set; } = "";
+    public List<string> ExplorerFavorites { get; set; } = [];
     /// <summary>2 = the Standaard layout is the Live workspace (management windows moved to their own workspaces).</summary>
     public int LayoutVersion { get; set; }
 
