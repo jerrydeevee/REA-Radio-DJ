@@ -596,7 +596,7 @@ public class PresenterTests
     public void Sanitizer_removes_markup_and_stage_directions()
     {
         var text = "<think>plan</think>**Hé!** (lacht) Dat was \"Song\" van *Artiest*. [jingle] Nu iets nieuws.";
-        Assert.Equal("Hé! Dat was Song van . Nu iets nieuws.", ScriptSanitizer.Clean(text, 50));
+        Assert.Equal("Hé! Dat was Song van. Nu iets nieuws.", ScriptSanitizer.Clean(text, 50));
     }
 
     [Fact]

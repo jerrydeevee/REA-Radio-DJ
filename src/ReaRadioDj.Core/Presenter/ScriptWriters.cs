@@ -259,6 +259,7 @@ public static partial class ScriptSanitizer
         t = Markup().Replace(t, " ");                  // markdown and stray symbols
         t = t.Replace('“', ' ').Replace('”', ' ').Replace('"', ' ').Replace('„', ' ');
         t = Whitespace().Replace(t, " ").Trim();
+        t = SpaceBeforeStop().Replace(t, "$1");        // "Hooked On You ." → "Hooked On You."
         var words = t.Split(' ', StringSplitOptions.RemoveEmptyEntries);
         if (words.Length > maxWords)
         {
@@ -273,6 +274,7 @@ public static partial class ScriptSanitizer
     [GeneratedRegex(@"\([^)]*\)|\[[^\]]*\]|\*[^*]+\*")] private static partial Regex StageDirection();
     [GeneratedRegex(@"[#*_`~>|]+|^\s*[-•]\s*", RegexOptions.Multiline)] private static partial Regex Markup();
     [GeneratedRegex(@"\s+")] private static partial Regex Whitespace();
+    [GeneratedRegex(@" ([.,!?;:])")] private static partial Regex SpaceBeforeStop();
     [GeneratedRegex(@"[\p{IsCJKUnifiedIdeographs}\p{IsHiragana}\p{IsKatakana}\p{IsHangulSyllables}\p{IsCJKSymbolsandPunctuation}]+")]
     private static partial Regex ForeignScript();
 }

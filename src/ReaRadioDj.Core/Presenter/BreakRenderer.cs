@@ -152,6 +152,9 @@ public sealed class BreakRenderer(
     /// <summary>Why the language model failed the last time (shown with a trial).</summary>
     public string? LastLlmError { get; private set; }
 
+    private const int MinWords = 4;
+    private static int Words(string text) => ScriptSanitizer.Clean(text, 1000).Split(' ', StringSplitOptions.RemoveEmptyEntries).Length;
+
     private async Task<(string Script, string Source)> WriteScriptAsync(BreakContext context, CancellationToken ct)
     {
         string raw, source;
@@ -159,6 +162,9 @@ public sealed class BreakRenderer(
         {
             if (llmWriter is not { Configured: true }) throw new InvalidOperationException("No language model configured");
             raw = await llmWriter.WriteAsync(context, ct);
+            // a model now and then answers with one stray word ("REACTIE"): ask once more, then give up
+            if (Words(raw) < MinWords) raw = await llmWriter.WriteAsync(context, ct);
+            if (Words(raw) < MinWords) throw new InvalidOperationException($"te korte tekst van het taalmodel: \"{raw.Trim()}\"");
             source = llmWriter.Name;
         }
         catch (Exception ex) when (ex is not OperationCanceledException || !ct.IsCancellationRequested)

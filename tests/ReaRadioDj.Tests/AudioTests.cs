@@ -336,6 +336,22 @@ public sealed class AudioTests : IDisposable
     }
 
     [BassFact]
+    public async Task One_stray_word_from_the_model_falls_back_to_the_template()
+    {
+        var options = Options();
+        options.Presenter.RequireApproval = true;
+        var library = new MediaLibrary(options, Db());
+        var log = new PlayoutLog();
+        var brk = new LogItem { Type = LogItemType.AiBreak };
+        log.Append(brk);
+        log.Append(new LogItem { Type = LogItemType.Song, Media = new MediaItem { Path = "y", Kind = MediaKind.Song, Artist = "Parov Stelar", Title = "Hooked On You" } });
+        await new BreakRenderer(options, log, library, new FixedWriter("REACTIE"), new ToneVoice(), null).RenderAsync(brk, CancellationToken.None);
+        Assert.Equal("template", brk.ScriptSource);
+        Assert.Contains("Hooked On You", brk.Script);
+        Assert.Equal("Nu Parov Stelar met Hooked On You.", ScriptSanitizer.Clean("Nu Parov Stelar met Hooked On You .", 50));
+    }
+
+    [BassFact]
     public async Task Break_waits_for_approval_then_speaks_the_edited_script_post_processed()
     {
         var options = Options();
