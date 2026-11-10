@@ -128,7 +128,7 @@ Vragen bij stap 3:
 | ⬜ | Automix in de DJ-modus met overgangstypes; tempo-overgang ook in de automatisering | een lijst van tien nummers mixt zichzelf |
 | ⬜ | Automatisering loopt onhoorbaar door terwijl de DJ op de lucht is, met een oplichtend veld en één knop om terug te geven (vraag 9) | DJ van de lucht → automatisering is meteen hoorbaar op de juiste plek |
 | ⬜ | Bediening van decks en mengpaneel via de commandobus: MIDI leren en voorinstellingen voor Hercules en Pioneer, ook oudere typen (vraag 8) | een controller bedient start, cue, tempo, EQ en crossfader |
-| ⬜ | Mix opnemen | opname staat als bestand in de bibliotheek |
+| ✅ | Mix opnemen | opname staat als bestand in de bibliotheek (knop "● Mix opnemen" in de DJ-tafel; op en van de lucht; na stoppen in Opnamen) |
 | ⬜ | Draaiknoppen in plaats van schuiven, en het geheel passend op 1920 × 1080 zonder scrollen | — |
 | ⬜ | Stems (zang, instrumenten, bas, drums) | later; grootste onderdeel, niet nodig voor de proof of concept |
 

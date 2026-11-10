@@ -7,7 +7,7 @@
   <DockPanel Margin="8">
     <!-- What the listener hears: the automation or this desk -->
     <Border DockPanel.Dock="Top" Classes="card" Padding="12,8" Margin="0,0,0,8">
-      <Grid ColumnDefinitions="Auto,*,Auto,Auto">
+      <Grid ColumnDefinitions="Auto,*,Auto,Auto,Auto">
         <Border Grid.Column="0" BorderBrush="{DynamicResource ControlBorderBrush}" BorderThickness="1" CornerRadius="8" ClipToBounds="True" VerticalAlignment="Center">
           <StackPanel Orientation="Horizontal">
             <ToggleButton Classes="seg" Content="Alleen voorluisteren" IsChecked="{Binding !OnAir, Mode=OneWay}" Command="{Binding SetOnAirCommand}" CommandParameter="off"
@@ -21,7 +21,10 @@
                 IsVisible="{Binding CanFollow}" ToolTip.Tip="Deck A speelt mee met wat de automatisering uitzendt, zodat je naadloos kunt overnemen. Deck A moet leeg zijn." />
         <TextBlock Grid.Column="2" Foreground="{DynamicResource WarnBrush}" FontSize="13" VerticalAlignment="Center" Margin="0,0,12,0" IsVisible="{Binding !Available}"
                    Text="Deze engine heeft nog geen DJ-tafel: werk de engine bij" />
-        <Border Grid.Column="3" BorderBrush="{DynamicResource ControlBorderBrush}" BorderThickness="1" CornerRadius="8" ClipToBounds="True" VerticalAlignment="Center">
+        <ToggleButton Grid.Column="3" Classes="bar" MinHeight="36" Margin="0,0,12,0" Content="{Binding RecordText}" IsChecked="{Binding Recording, Mode=OneWay}"
+                      Command="{Binding ToggleRecordCommand}" IsVisible="{Binding Available}"
+                      ToolTip.Tip="Neemt op wat de DJ-tafel mixt, op en van de lucht. Na stoppen staat de mix in de bibliotheek bij Opnamen." />
+        <Border Grid.Column="4" BorderBrush="{DynamicResource ControlBorderBrush}" BorderThickness="1" CornerRadius="8" ClipToBounds="True" VerticalAlignment="Center">
           <StackPanel Orientation="Horizontal">
             <ToggleButton Classes="seg" Content="2 decks" IsChecked="{Binding !FourDecks, Mode=OneWay}" Command="{Binding SetDecksCommand}" CommandParameter="2" />
             <ToggleButton Classes="seg" Content="4 decks" IsChecked="{Binding FourDecks, Mode=OneWay}" Command="{Binding SetDecksCommand}" CommandParameter="4" />

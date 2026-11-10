@@ -555,7 +555,8 @@ public sealed class DjDeck
     internal void Free() { lock (_gate) Unload(); }
 }
 
-public sealed record DjMixerInfo(double Crossfader, string Curve, bool OnAir, IReadOnlyList<DjDeckInfo> Decks);
+public sealed record DjMixerInfo(double Crossfader, string Curve, bool OnAir, IReadOnlyList<DjDeckInfo> Decks,
+    string? Recording = null, double RecordingSeconds = 0);
 
 /// <summary>
 /// The DJ desk: four decks on their own mixer strip, a crossfader, and the switch that puts the desk on air. Off air
@@ -586,7 +587,67 @@ public sealed class DjMixer : ITickable, IDisposable
     public bool OnAir { get; private set; }
 
     public DjDeck? Find(string id) => Decks.FirstOrDefault(d => string.Equals(d.Id, id, StringComparison.OrdinalIgnoreCase));
-    public DjMixerInfo Info => new(Crossfader, Curve, OnAir, Decks.Select(d => d.Info).ToList());
+    public DjMixerInfo Info
+    {
+        get
+        {
+            var (file, since) = Recording;
+            return new(Crossfader, Curve, OnAir, Decks.Select(d => d.Info).ToList(), file,
+                since is { } s ? Math.Round((DateTime.Now - s).TotalSeconds, 1) : 0);
+        }
+    }
+
+    // ---- recording the mix
+    public const string MixPrefix = "dj-mix-";
+    private readonly object _recGate = new();
+    private int _encoder;
+    private string? _recFile;
+    private DateTime? _recSince;
+
+    /// <summary>The mix being recorded and since when; (null, null) when not recording.</summary>
+    public (string? File, DateTime? Since) Recording
+    {
+        get
+        {
+            lock (_recGate)
+            {
+                if (_recFile is not null && BASS_Encode_IsActive(_encoder) == BASS_ACTIVE_STOPPED) { _recFile = null; _recSince = null; }
+                return (_recFile, _recSince);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Records what the desk mixes, after the crossfader and deck faders, as MP3 in <paramref name="folder"/>. It records
+    /// on and off air, so a practice mix can be kept too. Returns the file; a running recording simply carries on.
+    /// </summary>
+    public string StartRecording(string folder, int bitrate = 192)
+    {
+        lock (_recGate)
+        {
+            if (Recording.File is { } running) return running;
+            Directory.CreateDirectory(folder);
+            var name = $"{MixPrefix}{DateTime.Now:yyyy-MM-dd-HHmmss}";
+            var path = Path.Combine(folder, name + ".mp3");
+            for (int i = 2; File.Exists(path); i++) path = Path.Combine(folder, $"{name}-{i}.mp3");
+            int enc = BASS_Encode_MP3_StartFile(_strip.Handle, $"-b{bitrate}", BASS_ENCODE_AUTOFREE | BASS_UNICODE, path);
+            if (enc == 0) throw new BassException("BASS_Encode_MP3_StartFile(dj mix)");
+            _encoder = enc; _recFile = path; _recSince = DateTime.Now;
+            return path;
+        }
+    }
+
+    /// <summary>Stops the recording; returns the finished file, or null when nothing was recorded.</summary>
+    public string? StopRecording()
+    {
+        lock (_recGate)
+        {
+            if (_recFile is not { } file) return null;
+            BASS_Encode_Stop(_encoder);
+            _recFile = null; _recSince = null; _encoder = 0;
+            return File.Exists(file) ? file : null;
+        }
+    }
 
     public void SetCrossfader(double position) => Crossfader = Math.Clamp(position, 0, 1);
     public void SetCurve(string curve) => Curve = curve == Sharp ? Sharp : Smooth;
@@ -627,6 +688,7 @@ public sealed class DjMixer : ITickable, IDisposable
 
     public void Dispose()
     {
+        StopRecording();
         foreach (var d in Decks) d.Free();
         _store.Save();
     }

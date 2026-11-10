@@ -15,8 +15,23 @@ public static class DjApi
         api.MapPost("/dj/follow", (DjMixer dj, DjHandover handover) =>
             handover.Follow() is { } problem ? Results.BadRequest(problem) : Results.Ok(Dto(dj.Info, handover.Following)));
 
-        api.MapPost("/dj/mixer", (DjMixerRequest r, DjMixer dj, DjHandover handover, MessageCenter messages) =>
+        api.MapPost("/dj/mixer", (DjMixerRequest r, DjMixer dj, DjHandover handover, MessageCenter messages, RecordingService recordings,
+            ReaRadioDj.Core.ReaRadioDjOptions options) =>
         {
+            if (r.Record is true && dj.Recording.File is null)
+            {
+                try
+                {
+                    var file = dj.StartRecording(Path.Combine(options.RecordingPath, "DJ"));
+                    messages.Info($"Mix wordt opgenomen: {Path.GetFileName(file)}");
+                }
+                catch (Exception ex) when (ex is BassException or IOException or UnauthorizedAccessException)
+                {
+                    return Results.BadRequest($"Opnemen lukte niet: {ex.Message}");
+                }
+            }
+            else if (r.Record is false && dj.StopRecording() is { } done)
+                recordings.AddToLibrary(done, "DJ-mix");
             if (r.Crossfader is double x) dj.SetCrossfader(x);
             if (r.Curve is { } curve) dj.SetCurve(curve);
             if (r.OnAir is bool on)
@@ -86,7 +101,8 @@ public static class DjApi
         return null;
     }
 
-    public static DjDto Dto(DjMixerInfo m, bool following = false) => new(m.Crossfader, m.Curve, m.OnAir, m.Decks.Select(Deck).ToList(), following);
+    public static DjDto Dto(DjMixerInfo m, bool following = false) =>
+        new(m.Crossfader, m.Curve, m.OnAir, m.Decks.Select(Deck).ToList(), following, m.Recording is { } f ? Path.GetFileName(f) : null, m.RecordingSeconds);
 
     public static DjDeckDto Deck(DjDeckInfo d) => new(d.Id, d.Media is { Id: > 0 } m ? m.Id : null, d.Media?.Title ?? "", d.Media?.Artist ?? "",
         d.Media is not null, d.Playing, d.Position, Math.Round(d.Duration, 3), d.Bpm, d.FirstBeat, d.Analysing, Math.Round(d.Tempo, 3), d.TempoRange,

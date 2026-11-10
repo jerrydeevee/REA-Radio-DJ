@@ -126,6 +126,36 @@ public sealed class DjDeckTests : IDisposable
     }
 
     [BassFact]
+    public void The_mix_is_recorded_off_air_to_an_mp3()
+    {
+        if (!BeatAnalyzer.IsAvailable) return; // the decks need bass_fx
+        var desk = Desk();
+        var a = desk.Find("A")!;
+        a.Load(ClickTrack("rec", 120, 20));
+        a.Play();
+        Assert.False(desk.OnAir);
+
+        var folder = Path.Combine(_dir, "DJ");
+        var file = desk.StartRecording(folder);
+        Assert.Equal(file, desk.StartRecording(folder));                 // a second start carries on
+        Assert.StartsWith(DjMixer.MixPrefix, Path.GetFileName(file));
+        Thread.Sleep(2500);
+        Assert.Equal(file, desk.Info.Recording);
+        Assert.InRange(desk.Info.RecordingSeconds, 2, 4);
+        Assert.Equal(file, desk.StopRecording());
+        Assert.Null(desk.Info.Recording);
+        Assert.Null(desk.StopRecording());
+
+        // About two seconds at 192 kbit/s, and it decodes to the length that was recorded.
+        Assert.InRange(new FileInfo(file).Length, 30_000, 120_000);
+        int ch = BassNative.BASS_StreamCreateFile(false, file, 0, 0, BassNative.BASS_STREAM_DECODE | BassNative.BASS_UNICODE);
+        Assert.NotEqual(0, ch);
+        double len = BassNative.BASS_ChannelBytes2Seconds(ch, BassNative.BASS_ChannelGetLength(ch, 0));
+        BassNative.BASS_StreamFree(ch);
+        Assert.InRange(len, 1.8, 3.5);
+    }
+
+    [BassFact]
     public void The_tempo_of_a_click_track_is_measured()
     {
         if (!BeatAnalyzer.IsAvailable) return; // bass_fx is optional

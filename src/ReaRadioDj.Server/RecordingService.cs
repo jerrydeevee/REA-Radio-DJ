@@ -32,7 +32,7 @@ public sealed class RecordingService(AirRecorder recorder, MediaLibrary library,
     protected override async Task ExecuteAsync(CancellationToken ct)
     {
         recorder.Settings = Load(db);
-        recorder.MicTakeDone += ToLibrary;
+        recorder.MicTakeDone += MicToLibrary;
         try
         {
             using var timer = new PeriodicTimer(TimeSpan.FromSeconds(1));
@@ -49,12 +49,15 @@ public sealed class RecordingService(AirRecorder recorder, MediaLibrary library,
         catch (OperationCanceledException) { }
         finally
         {
-            recorder.MicTakeDone -= ToLibrary;
+            recorder.MicTakeDone -= MicToLibrary;
             recorder.Dispose();
         }
     }
 
-    private void ToLibrary(string file)
+    private void MicToLibrary(string file) => AddToLibrary(file, "Microfoonopname");
+
+    /// <summary>Moves a finished recording into the library folder (jingles, category Opnamen) and scans it in.</summary>
+    public void AddToLibrary(string file, string what)
     {
         try
         {
@@ -67,7 +70,7 @@ public sealed class RecordingService(AirRecorder recorder, MediaLibrary library,
             var target = Path.Combine(LibraryFolder, Path.GetFileName(file));
             File.Move(file, target, overwrite: false);
             _ = library.ScanAsync();
-            messages.Info($"Microfoonopname in de bibliotheek (categorie Opnamen): {Path.GetFileName(target)}");
+            messages.Info($"{what} in de bibliotheek (categorie Opnamen): {Path.GetFileName(target)}");
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {

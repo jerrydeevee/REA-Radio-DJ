@@ -237,6 +237,17 @@ public sealed partial class DjTool : StudioTool
     [RelayCommand] private Task SetOnAir(string? on) => Hub.Client.PostAsync("/api/dj/mixer", new DjMixerRequest(OnAir: on == "on"));
     [RelayCommand] private Task ToggleCurve() => Hub.Client.PostAsync("/api/dj/mixer", new DjMixerRequest(Curve: Sharp ? "smooth" : "sharp"));
     [RelayCommand] private void SetDecks(string? count) => FourDecks = count == "4";
+
+    [ObservableProperty] private bool _recording;
+    [ObservableProperty] private string _recordText = "● Mix opnemen";
+
+    /// <summary>Starts or stops recording the mix; a finished mix lands in the library under Opnamen.</summary>
+    [RelayCommand]
+    private async Task ToggleRecord()
+    {
+        if (!await Hub.Client.PostAsync("/api/dj/mixer", new DjMixerRequest(Record: !Recording)))
+            Hub.Status = "Opnemen van de mix lukte niet; kijk bij Meldingen";
+    }
     [RelayCommand] private void CenterCrossfader() => Crossfader = 50;
 
     /// <summary>Deck A starts copying the track on air again (it must be empty).</summary>
@@ -259,6 +270,8 @@ public sealed partial class DjTool : StudioTool
                 : dj.Following ? "Deck A volgt de automatisering. Kies DJ op de lucht om naadloos over te nemen; de automatisering stopt dan."
                 : "DJ-tafel staat niet op de lucht: je hoort de decks alleen op voorluisteren";
             Sharp = dj.Curve == "sharp";
+            Recording = dj.Recording is not null;
+            RecordText = dj.Recording is null ? "● Mix opnemen" : $"■ Stop opname {TimeSpan.FromSeconds(dj.RecordingSeconds):h\\:mm\\:ss}";
             if ((DateTime.UtcNow - _crossTouched).TotalMilliseconds > 500) Crossfader = dj.Crossfader * 100;
         }
         finally { _fromEngine = false; }
