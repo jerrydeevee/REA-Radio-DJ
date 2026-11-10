@@ -120,7 +120,7 @@ Vragen bij stap 3:
 | Status | Werk | Af als |
 |---|---|---|
 | ⬜ | Luistertest van wat er staat: tempo, sync, loops, overnemen; bijstellen van vertraging en overgang | overnemen is onhoorbaar; een loop van 4 beats loopt strak |
-| ⬜ | Twee doorlopende golfvormen boven elkaar met beatstrepen | beats van twee decks zijn op het oog gelijk te leggen |
+| ✅ | Twee doorlopende golfvormen boven elkaar met beatstrepen | beats van twee decks zijn op het oog gelijk te leggen (boven in de DJ-tafel: 2 of 4 decks onder elkaar, afspeelpunt in het midden, dunne streep per tel en dikke per maat, tijdas met het tempo erin zodat gesynchroniseerde decks op elkaar liggen; muiswiel zoomt 2 tot 30 s. Getest met A en B na sync op 124 BPM) |
 | ✅ | Toonsoort meten; BPM, toonsoort en ReplayGain al bij het inlezen, zichtbaar in de bibliotheek: BPM en beatgrid worden bij het inlezen gemeten (`bpm:120-128`); de toonsoort komt uit de tag (TKEY/INITIALKEY) of wordt gemeten (chroma met Krumhansl-profielen), oudere nummers worden op de achtergrond nagemeten; zichtbaar als Camelot en naam (8A · Am), te zoeken met `toon:8A` en `toon:8A+` (ook wat er harmonisch bij past) en te sorteren; ReplayGain (naar -18 LUFS) staat in het detailpaneel. De meting is een benadering: met het oor nog niet tegen een grote set nagelopen | bibliotheek sorteert op BPM en toonsoort |
 | ⬜ | Quantize, loop-roll, cue-mix op de koptelefoon, begrenzer op de DJ-uitgang | — |
 | ⬜ | Effecten per deck (echo, flanger, reverb) op de beat | — |

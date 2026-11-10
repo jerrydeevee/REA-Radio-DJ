@@ -2,6 +2,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:ReaRadioDj.Studio.ViewModels"
              xmlns:v="using:ReaRadioDj.Studio.Views"
+             xmlns:ctl="using:ReaRadioDj.Studio.Controls"
              x:Class="ReaRadioDj.Studio.Views.DjView"
              x:DataType="vm:DjTool">
   <DockPanel Margin="8">
@@ -31,6 +32,12 @@
           </StackPanel>
         </Border>
       </Grid>
+    </Border>
+
+    <!-- All decks as scrolling waveforms above each other: synced beats line up under the playhead -->
+    <Border DockPanel.Dock="Top" Classes="card" Padding="0" Margin="0,0,0,8" ClipToBounds="True" IsVisible="{Binding Available}">
+      <ctl:DjTwinWave Decks="{Binding Decks}" Count="{Binding DeckCount}" Height="{Binding DeckCount, Converter={x:Static vm:Brushes.TwinWaveHeight}}"
+                      ToolTip.Tip="Golfvormen van de decks met beatstrepen (dik = elke vierde tel). Draai aan het muiswiel om in of uit te zoomen." />
     </Border>
 
     <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">

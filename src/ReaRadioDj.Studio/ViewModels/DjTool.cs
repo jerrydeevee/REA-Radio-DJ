@@ -77,6 +77,16 @@ public sealed partial class DjDeckVm : ObservableObject
     [ObservableProperty] private double _levelLeft;
     [ObservableProperty] private double _levelRight;
 
+    /// <summary>For the scrolling waveforms: beat grid in file seconds, the playback rate and when Position was reported.</summary>
+    public double Bpm { get; private set; }
+    public double FirstBeat { get; private set; }
+    public double Rate { get; private set; } = 1;
+    public DateTime PositionAt { get; private set; }
+
+    /// <summary>The position now, moved on from the last report while playing (reports come a few times a second).</summary>
+    public double PositionNow(DateTime utcNow) =>
+        !Playing ? Position : Math.Min(Duration, Position + Math.Clamp((utcNow - PositionAt).TotalSeconds, 0, 0.5) * Rate);
+
     public string TempoRangeText => $"±{TempoRange:0} %";
     partial void OnTempoRangeChanged(double value) => OnPropertyChanged(nameof(TempoRangeText));
 
@@ -138,6 +148,10 @@ public sealed partial class DjDeckVm : ObservableObject
             Artist = d.Loaded ? d.Artist : "sleep een nummer uit de bibliotheek hierheen";
             StateText = !d.Loaded ? "Leeg" : d.LoopActive && d.Playing ? "In loop" : d.Playing ? "Speelt" : d.Position >= d.Duration - 0.1 ? "Afgelopen" : "Klaar";
             double bpm = d.Bpm * (1 + d.Tempo / 100);
+            Bpm = d.Analysing ? 0 : d.Bpm;
+            FirstBeat = d.FirstBeat;
+            Rate = 1 + d.Tempo / 100;
+            PositionAt = DateTime.UtcNow;
             BpmText = d.Analysing ? "meten…" : d.Bpm > 0 ? bpm.ToString("0.0") : "---";
             TempoText = d.Tempo.ToString("+0.0;-0.0") + " %";
             Position = d.Position;
@@ -216,6 +230,9 @@ public sealed partial class DjTool : StudioTool
 
     [ObservableProperty] private bool _onAir;
     [ObservableProperty] private bool _fourDecks;
+    /// <summary>Decks shown in the scrolling waveforms.</summary>
+    public int DeckCount => FourDecks ? 4 : 2;
+    partial void OnFourDecksChanged(bool value) => OnPropertyChanged(nameof(DeckCount));
     [ObservableProperty] private bool _sharp;
     /// <summary>0 (decks A and C) .. 100 (B and D).</summary>
     [ObservableProperty] private double _crossfader = 50;
