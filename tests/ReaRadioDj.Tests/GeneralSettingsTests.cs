@@ -75,3 +75,38 @@ public sealed class GeneralSettingsTests : IDisposable
             (fresh.StationName, fresh.Mix.TargetLufs, fresh.Rotation.SongSeparation, fresh.Stream.Server, fresh.Stream.Bitrate));
     }
 }
+
+public sealed class SilenceDetectorTests
+{
+    private static readonly DateTime T0 = new(2026, 11, 10, 12, 0, 0);
+
+    [Fact]
+    public void Silence_longer_than_allowed_raises_one_alarm_and_repeats_every_minute()
+    {
+        var d = new ReaRadioDj.Core.Audio.SilenceDetector();
+        Assert.False(d.Update(-20, -45, 20, T0, out _));                       // music
+        Assert.False(d.Update(-90, -45, 20, T0.AddSeconds(1), out _));         // quiet from here
+        Assert.False(d.Update(-90, -45, 20, T0.AddSeconds(20), out _));        // 19 s: not yet
+        Assert.True(d.Update(-90, -45, 20, T0.AddSeconds(21), out _));         // 20 s: alarm
+        Assert.True(d.Silent);
+        Assert.False(d.Update(-90, -45, 20, T0.AddSeconds(40), out _));        // still quiet: no second alarm yet
+        Assert.True(d.Update(-90, -45, 20, T0.AddSeconds(81), out _));         // a minute later: again
+        Assert.False(d.Update(-12, -45, 20, T0.AddSeconds(82), out bool returned));
+        Assert.True(returned);                                                 // sound is back
+        Assert.False(d.Silent);
+    }
+
+    [Fact]
+    public void A_short_pause_starts_the_count_again()
+    {
+        var d = new ReaRadioDj.Core.Audio.SilenceDetector();
+        Assert.False(d.Update(-90, -45, 10, T0, out _));
+        Assert.False(d.Update(-30, -45, 10, T0.AddSeconds(8), out bool returned));
+        Assert.False(returned);                                                // there was no alarm, so nothing came back
+        Assert.False(d.Update(-90, -45, 10, T0.AddSeconds(9), out _));
+        Assert.False(d.Update(-90, -45, 10, T0.AddSeconds(18), out _));        // 9 s since the pause ended
+        Assert.True(d.Update(-90, -45, 10, T0.AddSeconds(19), out _));
+        Assert.Equal(-120, ReaRadioDj.Core.Audio.SilenceDetector.ToDb(0));
+        Assert.Equal(-6.02, ReaRadioDj.Core.Audio.SilenceDetector.ToDb(0.5), 2);
+    }
+}

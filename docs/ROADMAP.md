@@ -141,7 +141,7 @@ alleen in een bestand in te stellen is. Eigen opzet en eigen benamingen.
 |---|---|
 | ✅ | Venster Instellingen: station (naam, mappen, automatisch starten), geluidskaarten en microfoon, mixen en loudness, drempels voor automatische cuepunten, rotatie, stream, bediening op afstand (adres, poorten, wachtwoord) en deze studiocomputer. Wachtwoorden blijven in de engine |
 | ⬜ | Geluid uitgebreid: uitgang per kanaal kiezen (spelers, cartwalls, overlays, DJ, VoIP elk naar een eigen kaart of kanaalpaar), meer ingangen dan één microfoon (lijn-in als mengkanaal), testtoon per uitgang, buffer en samplerate instelbaar |
-| ⬜ | Stiltedetectie: is de zender een instelbare tijd stiller dan een drempel, dan een melding en naar keuze de automatisering starten of een noodband spelen |
+| 🟡 | Stiltedetectie: is de zender een instelbare tijd stiller dan een drempel, dan een alarm in Berichten en naar keuze de automatisering starten (Instellingen › Bewaking; standaard 20 s onder -45 dB). Nog open: een noodband spelen |
 | ⬜ | Gebeurtenissen koppelen aan commando's: bij start en einde van een item, microfoon open of dicht, stream weg, fout, engine gestart (bijv. een lampje, een bericht of een webadres aanroepen) |
 | ⬜ | Bibliotheek-instellingen: meer dan twee mappen, mappen automatisch opnieuw inlezen op een vast moment of bij wijziging, bestanden die elders staan (vervangende locatie), tags lezen en terugschrijven, hoezen |
 | ⬜ | Overgangen per soort item: eigen overlap en fade voor muziek, jingles, reclame, nieuws en stem; items korter dan een aantal seconden niet faden |

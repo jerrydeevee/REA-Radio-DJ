@@ -20,6 +20,17 @@ public sealed class ReaRadioDjOptions
     public StreamOptions Stream { get; set; } = new();
     public ControlOptions Control { get; set; } = new();
     public SpotifyOptions Spotify { get; set; } = new();
+    public SilenceOptions Silence { get; set; } = new();
+}
+
+/// <summary>Silence on air: under the threshold for longer than the given time raises an alarm.</summary>
+public sealed class SilenceOptions
+{
+    public bool Enabled { get; set; } = true;
+    public double ThresholdDb { get; set; } = -45;
+    public double Seconds { get; set; } = 20;
+    /// <summary>"warn" = only an alarm in the studio, "autoplay" = also start the automation.</summary>
+    public string Action { get; set; } = "autoplay";
 }
 
 /// <summary>

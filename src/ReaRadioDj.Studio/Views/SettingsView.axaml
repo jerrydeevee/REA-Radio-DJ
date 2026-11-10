@@ -112,6 +112,21 @@
         </StackPanel></ScrollViewer>
       </TabItem>
 
+      <TabItem Header="Bewaking">
+        <ScrollViewer><StackPanel Classes="page">
+          <TextBlock Classes="title" Text="Stilte op de zender" />
+          <TextBlock Classes="help" Text="De engine luistert mee met wat de zender op gaat. Blijft het te lang stil, dan komt er een alarm in het venster Berichten en doet de engine wat je hier kiest. De eerste halve minuut na het starten telt niet mee." />
+          <CheckBox Content="Stilte bewaken" IsChecked="{Binding SilenceEnabled}" Margin="0,12,0,0" />
+          <TextBlock Classes="field" Text="Stil is: zachter dan (dB)" />
+          <NumericUpDown Value="{Binding SilenceDb}" Minimum="-80" Maximum="-10" Increment="1" FormatString="0" IsEnabled="{Binding SilenceEnabled}" />
+          <TextBlock Classes="field" Text="Alarm na zoveel seconden stilte" />
+          <NumericUpDown Value="{Binding SilenceSeconds}" Minimum="3" Maximum="600" Increment="1" FormatString="0" IsEnabled="{Binding SilenceEnabled}" />
+          <TextBlock Classes="field" Text="Wat er dan gebeurt" />
+          <ComboBox ItemsSource="{Binding SilenceActions}" SelectedIndex="{Binding SilenceAction}" HorizontalAlignment="Stretch" IsEnabled="{Binding SilenceEnabled}" />
+          <TextBlock Classes="help" Text="Zolang het stil blijft, komt het alarm elke minuut terug. Kies een duur die langer is dan de langste stilte in je eigen programma (een stille passage in klassieke muziek, een pauze in een gesprek)." />
+        </StackPanel></ScrollViewer>
+      </TabItem>
+
       <TabItem Header="Rotatie">
         <ScrollViewer><StackPanel Classes="page">
           <TextBlock Classes="title" Text="Rotatie" />

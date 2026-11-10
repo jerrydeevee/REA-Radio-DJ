@@ -44,6 +44,14 @@ public sealed partial class SettingsTool : StudioTool
     [ObservableProperty] private decimal _fadeOut = 2.5m;
     [ObservableProperty] private decimal _duckLevel = 30;
 
+    // Guarding the broadcast
+    [ObservableProperty] private bool _silenceEnabled = true;
+    [ObservableProperty] private decimal _silenceDb = -45;
+    [ObservableProperty] private decimal _silenceSeconds = 20;
+    /// <summary>0 = only warn, 1 = also start the automation.</summary>
+    [ObservableProperty] private int _silenceAction = 1;
+    public IReadOnlyList<string> SilenceActions { get; } = ["Alleen melden in de studio", "Melden en de automatisering starten"];
+
     // Rotation
     [ObservableProperty] private decimal _artistSeparation = 3;
     [ObservableProperty] private decimal _songSeparation = 10;
@@ -115,6 +123,7 @@ public sealed partial class SettingsTool : StudioTool
         TargetLufs = (decimal)s.TargetLufs; CueInDb = (decimal)s.CueInDb; MixDb = (decimal)s.MixDb; CueOutDb = (decimal)s.CueOutDb;
         MaxOverlap = (decimal)s.MaxOverlap; FadeOut = (decimal)s.FadeOut; DuckLevel = Percent(s.DuckLevel);
         ArtistSeparation = s.ArtistSeparation; SongSeparation = s.SongSeparation; LookAhead = s.LookAhead;
+        SilenceEnabled = s.SilenceEnabled; SilenceDb = (decimal)s.SilenceDb; SilenceSeconds = (decimal)s.SilenceSeconds; SilenceAction = s.SilenceAction == "warn" ? 0 : 1;
         StreamEnabled = s.StreamEnabled; StreamServer = s.StreamServer; StreamBitrate = s.StreamBitrate; StreamGenre = s.StreamGenre; StreamUrl = s.StreamUrl;
         StreamPassword = "";
         StreamPasswordHint = s.StreamPasswordSet ? "er is een wachtwoord opgeslagen; leeg laten = houden" : "nog geen wachtwoord";
@@ -137,7 +146,8 @@ public sealed partial class SettingsTool : StudioTool
             (double)TargetLufs, (double)CueInDb, (double)MixDb, (double)CueOutDb, (double)MaxOverlap, (double)FadeOut, (double)DuckLevel / 100,
             (int)ArtistSeparation, (int)SongSeparation, (int)LookAhead,
             StreamEnabled, StreamServer, StreamPassword, false, StreamBitrate, StreamGenre, StreamUrl,
-            ControlBindAddress, (int)ControlTcpPort, (int)ControlOscPort, ControlPassword, false, ClearControlPassword));
+            ControlBindAddress, (int)ControlTcpPort, (int)ControlOscPort, ControlPassword, false, ClearControlPassword,
+            SilenceEnabled, (double)SilenceDb, (double)SilenceSeconds, SilenceAction == 0 ? "warn" : "autoplay"));
 
         // This computer: the engine address is used the next time the studio starts.
         Hub.Settings.EngineUrl = string.IsNullOrWhiteSpace(EngineUrl) ? Hub.Settings.EngineUrl : EngineUrl.Trim();

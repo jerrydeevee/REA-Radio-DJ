@@ -136,7 +136,8 @@ public sealed record SettingsDto(
     double TargetLufs, double CueInDb, double MixDb, double CueOutDb, double MaxOverlap, double FadeOut, double DuckLevel,
     int ArtistSeparation, int SongSeparation, int LookAhead,
     bool StreamEnabled, string StreamServer, string StreamPassword, bool StreamPasswordSet, int StreamBitrate, string StreamGenre, string StreamUrl,
-    string ControlBindAddress, int ControlTcpPort, int ControlOscPort, string ControlPassword, bool ControlPasswordSet, bool ClearControlPassword);
+    string ControlBindAddress, int ControlTcpPort, int ControlOscPort, string ControlPassword, bool ControlPasswordSet, bool ClearControlPassword,
+    bool SilenceEnabled = true, double SilenceDb = -45, double SilenceSeconds = 20, string SilenceAction = "autoplay");
 
 /// <summary>The answer to saving the settings: what was stored, and what needs a restart or a rescan.</summary>
 public sealed record SettingsSavedDto(SettingsDto Settings, IReadOnlyList<string> NeedsRestart, bool Rescanning);
