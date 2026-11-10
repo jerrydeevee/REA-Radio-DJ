@@ -16,6 +16,14 @@ public partial class MainWindow : Window
         ViewModels.Hotkeys.Changed += ApplyHotkeys;
         Closed += (_, _) => { ViewModels.Hotkeys.Changed -= ApplyHotkeys; _global?.Dispose(); };
         Opened += (_, _) => ApplyHotkeys();
+        // Workbenches need the screens: which one is where, and their size.
+        Opened += (_, _) =>
+        {
+            if (DataContext is not ViewModels.MainWindowViewModel vm) return;
+            vm.ScreenSource = () => Screens.All;
+            vm.OnWindowOpened();
+            Screens.Changed += (_, _) => vm.RefreshScreens();
+        };
         // Narrower than 1900 px the transport buttons get their own row, so the title keeps its room.
         void Arrange()
         {

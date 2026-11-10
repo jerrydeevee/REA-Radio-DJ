@@ -104,7 +104,7 @@ Vragen bij stap 2:
 | ⬜ | Spelers en cartwall in de nieuwe stijl: toestand als woord en vorm, cartknoppen van 96 px | gelijk aan het ontwerp "Spelers" |
 | ⬜ | Programmalog in de nieuwe stijl | gelijk aan het ontwerp "1 scherm" |
 | ⬜ | Werkruimtes Productie, Planning en Rapportage naast Live, DJ en Automatisering | elke werkruimte opent zijn eigen indeling |
-| ⬜ | Responsive gedrag en indelingen voor 1 tot 4 schermen, aanraakmodus voor een aanraakscherm | op 1 tot 4 schermen staat alles op zijn plek en blijft dat na een herstart |
+| 🟡 | Responsive gedrag en indelingen voor 1 tot 4 schermen, aanraakmodus voor een aanraakscherm | op 1 tot 4 schermen staat alles op zijn plek en blijft dat na een herstart (werkbladen per scherm klaar en getest op 2 schermen: menu Werkbladen, bewaard met de indeling, terug op hetzelfde scherm; aanraakmodus nog open) |
 | ⬜ | Overige vensters nalopen (planner, bibliotheek, mixer, beheer) | geen venster meer in de oude stijl |
 | ⬜ | **Cosmetische ronde over de hele studio:** in een smal of laag paneel moet je nu zoeken waar iets staat (bijv. "Mappen en shares" in de Bibliotheek pas na scrollen). Duidelijk laten zien dat er meer is (zichtbare schuifbalk, "meer ▾", inklapbare blokken), beheer naar een eigen tabblad of venster, en per paneel nalopen wat er bij de standaardindeling in beeld past | in de standaardindeling is alles vindbaar zonder te weten dat je moet scrollen |
 | ⬜ | Uiterlijk instelbaar: meerdere thema's (donker, licht en meer), afgeronde vormen, lettergrootte, aanraakmodus, kleuren per soort item (vraag 7) | in Instellingen te kiezen, direct zichtbaar |

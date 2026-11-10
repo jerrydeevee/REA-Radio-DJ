@@ -1,4 +1,7 @@
 using System.Collections.ObjectModel;
+using Avalonia;
+using Avalonia.Platform;
+using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Dock.Model.Controls;
@@ -32,6 +35,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
         Hub.PropertyChanged += (_, e) => { if (e.PropertyName is nameof(StudioHub.Status) or nameof(StudioHub.ConnectionText)) OnPropertyChanged(nameof(StatusLine)); };
         Hub.EditCuesRequested += id => ShowWindow("cues");
         Hub.TransitionRequested += _ => ShowWindow("transition");
+        WorkbenchTool.OpenRequested += OpenOnWorkbench;
         RefreshLayoutNames();
         _factory.AutomationView = _settings.LastLayout == AutomationLayoutName;
         _factory.DjView = _settings.LastLayout == DjLayoutName;
@@ -48,6 +52,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
                 ShowWindow(parts[0]);
             }
             else if (args[i] == "--float") FloatWindow(args[i + 1]);
+            else if (args[i] == "--workbench" && int.TryParse(args[i + 1], out var screen)) _startWorkbenches.Add(screen - 1);
         int ca = Array.IndexOf(args, "--cues");
         if (ca >= 0 && ca + 1 < args.Length && long.TryParse(args[ca + 1], out var cueId))
             _ = Task.Delay(1500).ContinueWith(_ => Avalonia.Threading.Dispatcher.UIThread.Post(() => Hub.RequestCueEditor(cueId)));
@@ -223,11 +228,12 @@ public sealed partial class MainWindowViewModel : ObservableObject
     private void ShowWindow(string id)
     {
         if (Layout is null) return;
-        var existing = _factory.FindDockable(Layout, d => d.Id == id);
+        var existing = FindAnywhere(d => d.Id == id);
         if (existing is not null)
         {
             _factory.SetActiveDockable(existing);
             if (existing.Owner is IDock owner) _factory.SetFocusedDockable(owner, existing);
+            WindowOf(existing)?.SetActive();
             return;
         }
         // The window was closed: open it again in the first tool area, or float it when there is none.
@@ -243,7 +249,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
     private void FloatWindow(string id)
     {
         if (Layout is null) return;
-        if (_factory.FindDockable(Layout, d => d.Id == id) is { } d) _factory.FloatDockable(d);
+        if (FindAnywhere(d => d.Id == id) is { } d) _factory.FloatDockable(d);
         else { var tool = DockFactory.Create(id); _factory.FloatDockable(tool); }
     }
 
@@ -275,6 +281,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
         // Into the DJ workspace: deck A shows what is on air (when it is free), ready to take over.
         if (dj) _ = Hub.Client.PostQuietAsync("/api/dj/follow");
         Layout = LoadLayoutFile(target) ?? NewDefaultLayout();
+        RestoreWindowsSoon();
         CurrentLayout = target;
         _settings.LastLayout = target;
         _settings.Save();
@@ -316,6 +323,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
         if (layout is null) { Hub.Status = $"indeling '{name}' niet te laden"; return; }
         CloseFloating();
         Layout = layout;
+        RestoreWindowsSoon();
         CurrentLayout = name;
         _settings.LastLayout = name;
         _settings.Save();
@@ -340,6 +348,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
     /// </summary>
     private string SerializeLayout(IRootDock layout)
     {
+        CaptureWindows();
         var json = Newtonsoft.Json.Linq.JObject.Parse(_serializer.Serialize(layout));
         var allowed = typeof(Dock.Model.Mvvm.Controls.Tool).GetProperties().Select(p => p.Name).ToHashSet();
         foreach (var obj in json.DescendantsAndSelf().OfType<Newtonsoft.Json.Linq.JObject>().ToList())
@@ -386,6 +395,149 @@ public sealed partial class MainWindowViewModel : ObservableObject
                 if (w.Layout is { } l) RenameOldTitles(l);
     }
 
+    // ------------------------------------------------------------ workbenches
+
+    /// <summary>"Nieuw werkblad op scherm n": one entry per screen, left to right.</summary>
+    public ObservableCollection<ScreenEntry> ScreenMenu { get; } = [];
+
+    /// <summary>The screens, from the main window (set when it opens).</summary>
+    public Func<IReadOnlyList<Screen>>? ScreenSource { get; set; }
+
+    private readonly List<int> _startWorkbenches = [];
+
+    private IReadOnlyList<Screen> SortedScreens() =>
+        [.. (ScreenSource?.Invoke() ?? []).OrderBy(s => s.Bounds.X).ThenBy(s => s.Bounds.Y)];
+
+    /// <summary>Called by the main window once it is shown.</summary>
+    public void OnWindowOpened()
+    {
+        RefreshScreens();
+        RestoreWindowsSoon();
+        foreach (var screen in _startWorkbenches) NewWorkbench(ScreenMenu.ElementAtOrDefault(screen));
+        _startWorkbenches.Clear();
+    }
+
+    public void RefreshScreens()
+    {
+        ScreenMenu.Clear();
+        var screens = SortedScreens();
+        for (int i = 0; i < screens.Count; i++)
+        {
+            var s = screens[i];
+            ScreenMenu.Add(new ScreenEntry(i, $"Nieuw werkblad op scherm {i + 1} ({s.Bounds.Width} × {s.Bounds.Height}{(s.IsPrimary ? ", hoofdscherm" : "")})"));
+        }
+    }
+
+    private IEnumerable<IDockWindow> FloatingWindows => Layout?.Windows ?? (IEnumerable<IDockWindow>)[];
+
+    /// <summary>Finds a window in the main window or on any workbench / floating window.</summary>
+    private IDockable? FindAnywhere(Func<IDockable, bool> match)
+    {
+        if (Layout is null) return null;
+        if (_factory.FindDockable(Layout, match) is { } found) return found;
+        foreach (var w in FloatingWindows)
+            if (w.Layout is { } l && _factory.FindDockable(l, match) is { } f) return f;
+        return null;
+    }
+
+    private IDockWindow? WindowOf(IDockable dockable) =>
+        FloatingWindows.FirstOrDefault(w => w.Layout is { } l && _factory.FindDockable(l, d => ReferenceEquals(d, dockable)) is not null);
+
+    /// <summary>
+    /// Opens a workbench: an extra studio window with its own docking area, maximised on the chosen screen. It is
+    /// saved with the layout and comes back on the same screen.
+    /// </summary>
+    [RelayCommand]
+    private void NewWorkbench(ScreenEntry? entry)
+    {
+        if (Layout is null) return;
+        int n = 2;
+        while (FindAnywhere(d => d.Id == $"werkblad{n}") is not null) n++;
+        var tool = new WorkbenchTool { Id = $"werkblad{n}", Title = $"Werkblad {n}" };
+        var dock = new Dock.Model.Mvvm.Controls.ToolDock
+        {
+            Id = $"werkblad{n}-dock", Title = $"Werkblad {n}", VisibleDockables = _factory.CreateList<IDockable>(tool),
+            ActiveDockable = tool, Alignment = Alignment.Unset,
+        };
+        var window = _factory.CreateWindowFrom(dock, new DockWindowOptions { OwnerMode = DockWindowOwnerMode.None, ShowInTaskbar = true });
+        if (window is null) { Hub.Status = "werkblad niet te openen"; return; }
+        window.Title = $"Werkblad {n} – REA-Radio-DJ";
+        var screens = SortedScreens();
+        var screen = entry is not null && entry.Index < screens.Count ? screens[entry.Index] : screens.FirstOrDefault(s => s.IsPrimary);
+        if (screen is not null) PlaceOnScreen(window, screen, maximize: false);
+        else { window.X = 100; window.Y = 100; window.Width = 1200; window.Height = 800; }
+        _factory.AddWindow(Layout, window);
+        window.Present(false);
+        if (screen is not null) PlaceOnScreen(window, screen, maximize: true);
+        Hub.Status = $"Werkblad {n} geopend{(entry is null ? "" : $" op scherm {entry.Index + 1}")}: sleep er vensters heen of kies ze op het werkblad";
+    }
+
+    [RelayCommand]
+    private void CloseWorkbenches()
+    {
+        CloseFloating();
+        Hub.Status = "werkbladen en zwevende vensters gesloten; de vensters staan in het menu Vensters";
+    }
+
+    private void OpenOnWorkbench(WorkbenchTool bench, string id)
+    {
+        if (bench.Owner is not IDock target) return;
+        var d = FindAnywhere(x => x.Id == id);
+        if (d is not null && ReferenceEquals(d.Owner, target)) { _factory.SetActiveDockable(d); return; }
+        if (d is null) d = DockFactory.Create(id);
+        else _factory.RemoveDockable(d, true);
+        _factory.AddDockable(target, d);
+        _factory.SetActiveDockable(d);
+        _factory.SetFocusedDockable(target, d);
+    }
+
+    private static void PlaceOnScreen(IDockWindow w, Screen s, bool maximize)
+    {
+        var a = s.WorkingArea;
+        double k = s.Scaling <= 0 ? 1 : s.Scaling;
+        w.X = a.X + 40; w.Y = a.Y + 40;
+        w.Width = Math.Max(400, a.Width / k - 80); w.Height = Math.Max(300, a.Height / k - 80);
+        if (w.Host is { } h)
+        {
+            h.SetWindowState(DockWindowState.Normal);
+            h.SetPosition(w.X, w.Y);
+            h.SetSize(w.Width, w.Height);
+            if (maximize) h.SetWindowState(DockWindowState.Maximized);
+        }
+        w.WindowState = maximize ? DockWindowState.Maximized : DockWindowState.Normal;
+    }
+
+    /// <summary>Copies where each workbench is (screen, size, maximised) into the layout before it is saved.</summary>
+    private void CaptureWindows()
+    {
+        foreach (var w in FloatingWindows)
+        {
+            if (w.Host is not { } h) continue;
+            var state = h.GetWindowState();
+            if (state == DockWindowState.Normal) w.Save();
+            else { h.GetPosition(out var x, out var y); w.X = x; w.Y = y; }   // maximised: keep its normal size, note the screen
+            w.WindowState = state == DockWindowState.Minimized ? DockWindowState.Normal : state;
+        }
+    }
+
+    /// <summary>After a layout opens: workbenches go back to their screen (or the main screen when it is gone) and size.</summary>
+    private void RestoreWindowsSoon() => DispatcherTimer.RunOnce(RestoreWindows, TimeSpan.FromMilliseconds(400));
+
+    private void RestoreWindows()
+    {
+        var screens = SortedScreens();
+        if (screens.Count == 0) return;
+        foreach (var w in FloatingWindows.ToList())
+        {
+            if (w.Host is not { } h) continue;
+            bool maximize = w.WindowState is DockWindowState.Maximized or DockWindowState.FullScreen;
+            var probe = new PixelPoint((int)w.X + 100, (int)w.Y + 50);
+            if (!screens.Any(s => s.WorkingArea.Contains(probe)))
+                PlaceOnScreen(w, screens.FirstOrDefault(s => s.IsPrimary) ?? screens[0], maximize);
+            else if (maximize) h.SetWindowState(DockWindowState.Maximized);
+        }
+    }
+
     private void CloseFloating()
     {
         if (Layout?.Windows is { } windows)
@@ -407,3 +559,5 @@ public sealed partial class MainWindowViewModel : ObservableObject
 }
 
 public sealed record WindowEntry(string Id, string Name);
+
+public sealed record ScreenEntry(int Index, string Name);

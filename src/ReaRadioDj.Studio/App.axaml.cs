@@ -26,6 +26,8 @@ public partial class App : Application
             var window = new MainWindow { DataContext = vm };
             window.Closing += (_, _) => vm.SaveOnExit();
             desktop.MainWindow = window;
+            // Workbenches are windows of their own; closing the main window still closes the whole studio.
+            desktop.ShutdownMode = Avalonia.Controls.ShutdownMode.OnMainWindowClose;
         }
         base.OnFrameworkInitializationCompleted();
     }
