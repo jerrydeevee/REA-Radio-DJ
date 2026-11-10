@@ -48,7 +48,7 @@ public static class Snapshot
             new LibrarySummaryDto(library.Songs.Count, library.Jingles.Count, library.Status, library.IsScanning),
             new StreamDto(s.Enabled, s.Connected, s.Server, s.BytesSent, s.Error),
             messages.LastId,
-            DjApi.Dto(sp.GetRequiredService<DjMixer>().Info));
+            DjApi.Dto(sp.GetRequiredService<DjMixer>().Info, sp.GetRequiredService<DjHandover>().Following));
     }
 
     public static string Name<T>(T value) where T : struct, Enum

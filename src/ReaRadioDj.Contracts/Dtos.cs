@@ -48,7 +48,8 @@ public sealed record DjDeckDto(string Id, long? MediaId, string Title, string Ar
     float LevelLeft, float LevelRight);
 
 /// <summary>Crossfader 0 (decks A and C) .. 1 (B and D); curve "smooth" or "sharp"; OnAir = the desk is heard on the radio.</summary>
-public sealed record DjDto(double Crossfader, string Curve, bool OnAir, IReadOnlyList<DjDeckDto> Decks);
+/// Following = deck A copies what the automation plays, ready to take over.
+public sealed record DjDto(double Crossfader, string Curve, bool OnAir, IReadOnlyList<DjDeckDto> Decks, bool Following = false);
 
 public sealed record DjCommand(long? MediaId = null, double? Value = null, int? Index = null, bool? On = null);
 

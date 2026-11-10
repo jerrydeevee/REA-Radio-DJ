@@ -259,6 +259,8 @@ public sealed partial class MainWindowViewModel : ObservableObject
         CloseFloating();
         _factory.AutomationView = automation && !dj;
         _factory.DjView = dj;
+        // Into the DJ workspace: deck A shows what is on air (when it is free), ready to take over.
+        if (dj) _ = Hub.Client.PostQuietAsync("/api/dj/follow");
         Layout = LoadLayoutFile(target) ?? NewDefaultLayout();
         CurrentLayout = target;
         _settings.LastLayout = target;

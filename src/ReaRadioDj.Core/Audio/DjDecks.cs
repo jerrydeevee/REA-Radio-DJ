@@ -139,6 +139,9 @@ public sealed class DjDeck
         }
     }
 
+    /// <summary>Where the decoder is (ahead of what you hear); the place to compare with another source on the same mixer.</summary>
+    public double Ahead { get { lock (_gate) return Decoded; } }
+
     /// <summary>What you hear now (the decoder position less the buffers on the way to the sound card).</summary>
     public double Position
     {

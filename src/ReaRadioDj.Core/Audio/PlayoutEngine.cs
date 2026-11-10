@@ -74,12 +74,15 @@ public sealed class PlayoutEngine : IDisposable
     public void SetAutoPlay(bool on) { lock (_gate) AutoPlay = on; }
 
     /// <summary>Stops automation and fades out everything that is playing.</summary>
-    public void Stop()
+    public void Stop() => Stop(1.0);
+
+    /// <summary>Stops automation with a fade of your choice (very short when another source takes over the same audio).</summary>
+    public void Stop(double fadeSeconds)
     {
         lock (_gate)
         {
             AutoPlay = false;
-            foreach (var d in _decks.Concat(_inserts)) d.FadeOutNow(1.0);
+            foreach (var d in _decks.Concat(_inserts)) d.FadeOutNow(fadeSeconds);
         }
     }
 

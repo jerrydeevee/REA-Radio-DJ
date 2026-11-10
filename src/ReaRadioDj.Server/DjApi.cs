@@ -9,19 +9,30 @@ public static class DjApi
 {
     public static void Map(RouteGroupBuilder api)
     {
-        api.MapGet("/dj", (DjMixer dj) => Dto(dj.Info));
+        api.MapGet("/dj", (DjMixer dj, DjHandover handover) => Dto(dj.Info, handover.Following));
 
-        api.MapPost("/dj/mixer", (DjMixerRequest r, DjMixer dj) =>
+        // Deck A starts copying what the automation plays (see DjHandover).
+        api.MapPost("/dj/follow", (DjMixer dj, DjHandover handover) =>
+            handover.Follow() is { } problem ? Results.BadRequest(problem) : Results.Ok(Dto(dj.Info, handover.Following)));
+
+        api.MapPost("/dj/mixer", (DjMixerRequest r, DjMixer dj, DjHandover handover, MessageCenter messages) =>
         {
             if (r.Crossfader is double x) dj.SetCrossfader(x);
             if (r.Curve is { } curve) dj.SetCurve(curve);
-            if (r.OnAir is bool on) dj.SetOnAir(on);
-            return Results.Ok(Dto(dj.Info));
+            if (r.OnAir is bool on)
+            {
+                // On air while deck A follows: the automation stops at this moment and deck A carries on.
+                if (on && !dj.OnAir && handover.TakeOver()) messages.Info("DJ-tafel heeft de uitzending overgenomen; de automatisering is gestopt");
+                dj.SetOnAir(on);
+            }
+            return Results.Ok(Dto(dj.Info, handover.Following));
         });
 
-        api.MapPost("/dj/decks/{id}/{action}", (string id, string action, DjCommand? body, DjMixer dj, MediaLibrary library) =>
+        api.MapPost("/dj/decks/{id}/{action}", (string id, string action, DjCommand? body, DjMixer dj, MediaLibrary library, DjHandover handover) =>
         {
             if (dj.Find(id) is not { } deck) return Results.NotFound();
+            // Sound shaping leaves deck A following; anything that moves the track makes it the DJ's own.
+            if (deck.Id == "A" && !Shaping.Contains(action.ToLowerInvariant())) handover.Release();
             try
             {
                 return Run(dj, deck, library, action.ToLowerInvariant(), body ?? new DjCommand()) is { } problem
@@ -32,6 +43,9 @@ public static class DjApi
             catch (DllNotFoundException) { return Results.BadRequest("bass_fx.dll ontbreekt: voer scripts\fetch-bass.ps1 uit"); }
         });
     }
+
+    private static readonly HashSet<string> Shaping =
+        ["gain", "fader", "eqlow", "eqmid", "eqhigh", "killlow", "killmid", "killhigh", "filter", "pfl", "keylock", "range"];
 
     /// <summary>Runs one deck action; returns what is wrong, or null when it is done.</summary>
     public static string? Run(DjMixer dj, DjDeck deck, MediaLibrary library, string action, DjCommand c)
@@ -72,7 +86,7 @@ public static class DjApi
         return null;
     }
 
-    public static DjDto Dto(DjMixerInfo m) => new(m.Crossfader, m.Curve, m.OnAir, m.Decks.Select(Deck).ToList());
+    public static DjDto Dto(DjMixerInfo m, bool following = false) => new(m.Crossfader, m.Curve, m.OnAir, m.Decks.Select(Deck).ToList(), following);
 
     public static DjDeckDto Deck(DjDeckInfo d) => new(d.Id, d.Media is { Id: > 0 } m ? m.Id : null, d.Media?.Title ?? "", d.Media?.Artist ?? "",
         d.Media is not null, d.Playing, d.Position, Math.Round(d.Duration, 3), d.Bpm, d.FirstBeat, d.Analysing, Math.Round(d.Tempo, 3), d.TempoRange,

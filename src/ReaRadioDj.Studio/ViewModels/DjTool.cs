@@ -220,6 +220,11 @@ public sealed partial class DjTool : StudioTool
     /// <summary>0 (decks A and C) .. 100 (B and D).</summary>
     [ObservableProperty] private double _crossfader = 50;
     [ObservableProperty] private bool _available = true;
+    [ObservableProperty] private bool _following;
+    public bool CanFollow => Available && !OnAir && !Following;
+    partial void OnFollowingChanged(bool value) => OnPropertyChanged(nameof(CanFollow));
+    partial void OnOnAirChanged(bool value) => OnPropertyChanged(nameof(CanFollow));
+    partial void OnAvailableChanged(bool value) => OnPropertyChanged(nameof(CanFollow));
     [ObservableProperty] private string _onAirText = "DJ-tafel staat niet op de lucht: je hoort de decks alleen op voorluisteren";
 
     partial void OnCrossfaderChanged(double value)
@@ -234,6 +239,13 @@ public sealed partial class DjTool : StudioTool
     [RelayCommand] private void SetDecks(string? count) => FourDecks = count == "4";
     [RelayCommand] private void CenterCrossfader() => Crossfader = 50;
 
+    /// <summary>Deck A starts copying the track on air again (it must be empty).</summary>
+    [RelayCommand]
+    private async Task Follow()
+    {
+        if (!await Hub.Client.PostAsync("/api/dj/follow")) Hub.Status = "Deck A kan de automatisering niet volgen: haal eerst het nummer van deck A, en de tafel mag niet op de lucht staan";
+    }
+
     protected override void OnState(StateDto s)
     {
         Available = s.Dj is not null;
@@ -242,8 +254,9 @@ public sealed partial class DjTool : StudioTool
         try
         {
             OnAir = dj.OnAir;
-            OnAirText = dj.OnAir
-                ? "DJ-tafel staat op de lucht: wat je mixt gaat de zender op"
+            Following = dj.Following;
+            OnAirText = dj.OnAir ? "DJ-tafel staat op de lucht: wat je mixt gaat de zender op"
+                : dj.Following ? "Deck A volgt de automatisering. Kies DJ op de lucht om naadloos over te nemen; de automatisering stopt dan."
                 : "DJ-tafel staat niet op de lucht: je hoort de decks alleen op voorluisteren";
             Sharp = dj.Curve == "sharp";
             if ((DateTime.UtcNow - _crossTouched).TotalMilliseconds > 500) Crossfader = dj.Crossfader * 100;

@@ -74,6 +74,13 @@ public sealed class EngineClient : IDisposable
 
     public Task<bool> PostAsync(string path, object? body = null) => SendAsync(HttpMethod.Post, path, body);
     public Task<bool> PutAsync(string path, object body) => SendAsync(HttpMethod.Put, path, body);
+
+    /// <summary>A request that may be refused without anybody needing to know (no error in the status line).</summary>
+    public async Task<bool> PostQuietAsync(string path)
+    {
+        try { using var response = await _http.PostAsync(path, null); return response.IsSuccessStatusCode; }
+        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException) { return false; }
+    }
     public Task<bool> DeleteAsync(string path) => SendAsync(HttpMethod.Delete, path, null);
 
     public async Task<T?> SendForAsync<T>(HttpMethod method, string path, object? body)
