@@ -176,6 +176,8 @@ public static class SoloistLauncher
                 CreateNoWindow = true,
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,
+                StandardOutputEncoding = Encoding.UTF8, // soloist writes UTF-8 (e.g. the em dash in "waiting for login")
+                StandardErrorEncoding = Encoding.UTF8,
             };
             // Only on this computer: the Soloist WebSocket has no authentication.
             foreach (var a in new[] { "--device-name", name, "--api-key", key, "--ws", s.Address }) info.ArgumentList.Add(a);
