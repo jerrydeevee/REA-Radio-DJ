@@ -59,6 +59,7 @@ RoutingSettings.Load(db, options);
 GeneralSettings.Load(db, options);
 PresenterSettings.Load(db, options);
 PresenterExtrasSettings.Load(db, options);
+CreativeSettings.Load(db, options);
 VoiceServicesSettings.Load(db, options);
 
 builder.Services.AddSingleton(options);
@@ -101,6 +102,8 @@ builder.Services.AddSingleton<PersonaStore>();
 builder.Services.AddSingleton<NoteStore>();
 builder.Services.AddSingleton(sp => new BreakExtras(sp.GetRequiredService<IHttpClientFactory>().CreateClient("extras"), options.Presenter,
     sp.GetRequiredService<NoteStore>(), sp.GetService<ILogger<BreakExtras>>()));
+builder.Services.AddSingleton(sp => new CreativePicker(sp.GetRequiredService<IHttpClientFactory>().CreateClient("extras"), options.Presenter,
+    sp.GetService<ILogger<CreativePicker>>()));
 // Wish list (Spotify metadata only) and the music report for Buma/Stemra and Sena.
 builder.Services.AddSingleton<ReaRadioDj.Core.Library.Wishlist>();
 builder.Services.AddSingleton<ReaRadioDj.Core.Studio.MusicReport>();
@@ -129,7 +132,8 @@ builder.Services.AddSingleton(sp =>
     ISpeechEngine? fallback = p.Tts.FallbackToSapi ? sp.GetRequiredService<SapiSpeechEngine>() : null;
     return new BreakRenderer(options, sp.GetRequiredService<PlayoutLog>(), sp.GetRequiredService<MediaLibrary>(),
         llm, sp.GetRequiredService<ProfileSpeechEngine>(), fallback, sp.GetService<ILogger<BreakRenderer>>(),
-        sp.GetRequiredService<PersonaStore>(), sp.GetRequiredService<BreakExtras>(), sp.GetRequiredService<SpeechCheck>());
+        sp.GetRequiredService<PersonaStore>(), sp.GetRequiredService<BreakExtras>(), sp.GetRequiredService<SpeechCheck>(),
+        sp.GetRequiredService<CreativePicker>());
 });
 builder.Services.AddSingleton<AutomationService>();
 builder.Services.AddHostedService(sp => sp.GetRequiredService<AutomationService>());

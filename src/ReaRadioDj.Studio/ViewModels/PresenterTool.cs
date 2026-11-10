@@ -40,7 +40,12 @@ public sealed partial class BreakVm : ObservableObject
         State = d.BreakState ?? "";
         Script = d.Script ?? "";
         Error = d.Error;
-        string? extra = d.Extra switch { "weather" => "weer", "news" => "nieuws", "note" => "bericht", _ => null };
+        string? extra = d.Extra switch
+        {
+            "weather" => "weer", "news" => "nieuws", "note" => "bericht",
+            { } x when x.StartsWith("theme:", StringComparison.Ordinal) => $"thema ({x[6..]})",
+            _ => null,
+        };
         Info = string.Join(" · ", new[] { d.ScriptSource, d.Voice, extra }.Where(x => !string.IsNullOrEmpty(x)));
         if (!nowWaiting) Busy = State == "rendering";
     }
@@ -50,6 +55,21 @@ public sealed partial class BreakVm : ObservableObject
 public sealed record Choice(long? Id, string Name)
 {
     public override string ToString() => Name;
+}
+
+/// <summary>A tone of the creative presenter ("random" = by the weights).</summary>
+public sealed record ToneChoice(string Key, string Name)
+{
+    public override string ToString() => Name;
+
+    public static readonly ToneChoice[] All =
+    [
+        new("random", "willekeurig (naar verhouding)"),
+        new("serieus", "altijd serieus"),
+        new("grappig", "altijd grappig"),
+        new("leuk", "altijd luchtig en leuk"),
+        new("randje", "altijd een tikkie op het randje"),
+    ];
 }
 
 /// <summary>
@@ -165,6 +185,108 @@ public sealed partial class PresenterTool : StudioTool
         if (n is not null && await Hub.Client.DeleteAsync($"/api/presenter/notes/{n.Id}")) await LoadNotesAsync();
     }
 
+    // ---------------------------------------------------------------- creative presenter
+
+    [ObservableProperty] private bool _creativeEnabled;
+    [ObservableProperty] private decimal? _creativeChance = 50;
+    [ObservableProperty] private ToneChoice _creativeTone = ToneChoice.All[0];
+    [ObservableProperty] private decimal? _weightSerious = 1;
+    [ObservableProperty] private decimal? _weightFunny = 2;
+    [ObservableProperty] private decimal? _weightLight = 3;
+    [ObservableProperty] private decimal? _weightEdgy = 1;
+    [ObservableProperty] private bool _useOwnThemes = true;
+    [ObservableProperty] private string _ownThemes = "";
+    [ObservableProperty] private bool _useBuiltIn = true;
+    [ObservableProperty] private bool _useFeeds;
+    [ObservableProperty] private string _themeFeeds = "";
+    [ObservableProperty] private decimal? _creativeMaxWords = 70;
+    [ObservableProperty] private Choice? _creativeVoice;
+    [ObservableProperty] private bool _toneVoice = true;
+    [ObservableProperty] private decimal? _repeatHours = 12;
+    [ObservableProperty] private string _creativeStatus = "";
+    [ObservableProperty] private string _creativeTrial = "";
+    [ObservableProperty] private string _themePreview = "";
+    [ObservableProperty] private ToneChoice _trialTone = ToneChoice.All[0];
+    [ObservableProperty] private string _trialTheme = "";
+    public IReadOnlyList<ToneChoice> Tones => ToneChoice.All;
+    public bool CreativeRandom => CreativeTone.Key == "random";
+    partial void OnCreativeToneChanged(ToneChoice value) => OnPropertyChanged(nameof(CreativeRandom));
+
+    private async Task LoadCreativeAsync()
+    {
+        if (await Hub.Client.GetAsync<CreativeSettingsDto>("/api/presenter/creative") is not { } c) return;
+        ShowCreative(c);
+    }
+
+    private void ShowCreative(CreativeSettingsDto c)
+    {
+        CreativeEnabled = c.Enabled;
+        CreativeChance = c.Chance;
+        CreativeTone = ToneChoice.All.FirstOrDefault(t => t.Key == c.Tone) ?? ToneChoice.All[0];
+        WeightSerious = c.Serious;
+        WeightFunny = c.Funny;
+        WeightLight = c.Light;
+        WeightEdgy = c.Edgy;
+        UseOwnThemes = c.UseOwnThemes;
+        OwnThemes = c.Themes;
+        UseBuiltIn = c.UseBuiltIn;
+        UseFeeds = c.UseFeeds;
+        ThemeFeeds = c.Feeds;
+        CreativeMaxWords = c.MaxWords;
+        CreativeVoice = VoiceChoices.FirstOrDefault(v => v.Id == c.VoiceId) ?? VoiceChoices.FirstOrDefault();
+        ToneVoice = c.ToneVoice;
+        RepeatHours = c.RepeatHours;
+        CreativeStatus = c.LlmReady ? "" : "Let op: werkt alleen met een taalmodel (zie Instellingen). Zonder taalmodel blijven het gewone aankondigingen.";
+    }
+
+    [RelayCommand]
+    private async Task SaveCreative()
+    {
+        var d = new CreativeSettingsDto(CreativeEnabled, (int)(CreativeChance ?? 50), CreativeTone.Key, (int)(WeightSerious ?? 0),
+            (int)(WeightFunny ?? 0), (int)(WeightLight ?? 0), (int)(WeightEdgy ?? 0), UseOwnThemes, OwnThemes, UseBuiltIn, UseFeeds, ThemeFeeds,
+            (int)(CreativeMaxWords ?? 70), CreativeVoice?.Id, ToneVoice, (int)(RepeatHours ?? 12));
+        if (await Hub.Client.SendForAsync<CreativeSettingsDto>(HttpMethod.Put, "/api/presenter/creative", d) is { } saved)
+        {
+            ShowCreative(saved);
+            Hub.Status = "Creatieve presentator: instellingen opgeslagen";
+        }
+    }
+
+    /// <summary>Shows which themes the presenter can choose from now (after saving), per source.</summary>
+    [RelayCommand]
+    private async Task ShowThemes()
+    {
+        ThemePreview = "ophalen…";
+        await SaveCreative();
+        var list = await Hub.Client.GetAsync<List<CreativeThemeDto>>("/api/presenter/creative/themes");
+        if (list is null) { ThemePreview = "geen antwoord"; return; }
+        ThemePreview = $"{list.Count} thema's: " + string.Join(", ", list.GroupBy(t => t.Source).Select(g => $"{g.Count()} {g.Key}")) + "\n"
+            + string.Join("\n", list.GroupBy(t => t.Source).SelectMany(g => g.Take(4))
+                .Select(t => $"• {(t.Tone is null ? "" : t.Tone + ": ")}{t.Theme}  ({t.Source})"));
+    }
+
+    [RelayCommand] private Task TryCreative() => RunCreativeTrial(false);
+    [RelayCommand] private Task TryCreativeVoice() => RunCreativeTrial(true);
+
+    /// <summary>Saves, then writes a creative break for the next two songs; with the voice it is also played on PFL (not on air).</summary>
+    private async Task RunCreativeTrial(bool speak)
+    {
+        if (Trying) return;
+        Trying = true;
+        CreativeTrial = speak ? "schrijven en inspreken…" : "schrijven…";
+        try
+        {
+            await SaveCreative();
+            var r = await Hub.Client.SendForAsync<CreativeTryDto>(HttpMethod.Post, "/api/presenter/creative/try",
+                new CreativeTryRequest(TrialTone.Key, string.IsNullOrWhiteSpace(TrialTheme) ? null : TrialTheme.Trim(), speak, speak));
+            CreativeTrial = r is null ? "geen antwoord"
+                : r.Error is { } e ? "Mislukt: " + e
+                : $"Thema: {r.Theme} ({r.ThemeSource}) · toon: {r.Tone}\n\n{r.Script}\n\n— {r.Source}, {r.Words} woorden, {r.Seconds:0.0} s"
+                  + (r.Voice is null ? "" : $" · stem: {r.Voice}{(r.Length is double l ? $", {l:0.0} s, speelt op PFL" : "")}");
+        }
+        finally { Trying = false; }
+    }
+
     // personas per daypart
     public ObservableCollection<PersonaDto> Personas { get; } = [];
     public ObservableCollection<DayChoice> PersonaDays { get; } = new(PlannerTool.DayNames.Select((n, i) => new DayChoice(i, n)));
@@ -255,6 +377,7 @@ public sealed partial class PresenterTool : StudioTool
         await LoadSettingsAsync();
         await LoadPersonasAsync(null);
         await LoadExtrasAsync();
+        await LoadCreativeAsync();
     }
 
     protected override void OnState(StateDto s)

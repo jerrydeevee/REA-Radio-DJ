@@ -21,7 +21,8 @@ public sealed class BreakRenderer(
     ILogger<BreakRenderer>? logger = null,
     PersonaStore? personas = null,
     BreakExtras? extras = null,
-    SpeechCheck? check = null)
+    SpeechCheck? check = null,
+    CreativePicker? creative = null)
 {
     private readonly ILogger _log = (ILogger?)logger ?? NullLogger.Instance;
     private readonly TemplateScriptWriter _template = new();
@@ -49,11 +50,20 @@ public sealed class BreakRenderer(
             var persona = personas?.For(airTime);
             item.Persona = persona?.Name;
             var extra = extras is null ? null : await extras.PickAsync(airTime, ct);
-            var (script, source) = await WriteScriptAsync(Context(airTime, previous, next, persona) with { Extra = extra }, ct);
+            // A creative theme instead of weather or news (a note to read out always goes first); needs a language model.
+            var idea = creative is not null && extra?.Kind != "note" && llmWriter is { Configured: true }
+                ? await creative.PickAsync(airTime, ct) : null;
+            if (idea is not null) extra = null;
+            var (script, source) = await WriteScriptAsync(Context(airTime, previous, next, persona) with { Extra = extra, Creative = idea }, ct);
             if (extra is not null)
             {
                 extras!.Used(extra, airTime);
                 item.Extra = extra.Kind;
+            }
+            if (idea is not null && source != _template.Name)
+            {
+                creative!.Used(idea, airTime);
+                item.Extra = idea.Extra;
             }
             item.Script = script;
             item.ScriptSource = source;
@@ -115,6 +125,20 @@ public sealed class BreakRenderer(
         Persona? persona = null) =>
         WriteScriptAsync(Context(DateTime.Now, previous, next, persona ?? personas?.For(DateTime.Now)), ct);
 
+    /// <summary>A trial of the creative presenter: script for a theme and tone (picked when not given), optionally spoken.</summary>
+    public async Task<CreativeTrial> TryCreativeAsync(MediaItem? previous, MediaItem? next, string? tone, string? theme,
+        string? wav, CancellationToken ct)
+    {
+        if (creative is null) throw new InvalidOperationException("Creatieve presentator niet beschikbaar");
+        var persona = personas?.For(DateTime.Now);
+        var idea = await creative.PickAsync(DateTime.Now, ct, force: true, tone: tone, theme: theme)
+                   ?? throw new InvalidOperationException("Geen thema gevonden");
+        var (script, source) = await WriteScriptAsync(Context(DateTime.Now, previous, next, persona) with { Creative = idea }, ct);
+        string? voice = null;
+        if (wav is not null) voice = await RenderVoiceAsync(script, wav, persona, ct, idea.Tone);
+        return new CreativeTrial(idea, script, source, voice);
+    }
+
     private BreakContext Context(DateTime time, MediaItem? previous, MediaItem? next, Persona? persona) => new(
         options.StationName,
         string.IsNullOrWhiteSpace(persona?.PresenterName) ? options.Presenter.PresenterName : persona.PresenterName,
@@ -124,6 +148,9 @@ public sealed class BreakRenderer(
 
     private Persona? PersonaOf(LogItem item) =>
         item.Persona is { } name ? personas?.All().FirstOrDefault(p => p.Name == name) : null;
+
+    /// <summary>Why the language model failed the last time (shown with a trial).</summary>
+    public string? LastLlmError { get; private set; }
 
     private async Task<(string Script, string Source)> WriteScriptAsync(BreakContext context, CancellationToken ct)
     {
@@ -136,11 +163,17 @@ public sealed class BreakRenderer(
         }
         catch (Exception ex) when (ex is not OperationCanceledException || !ct.IsCancellationRequested)
         {
-            if (llmWriter is { Configured: true }) _log.LogWarning("Language model failed ({Message}); using template", ex.Message);
+            if (llmWriter is { Configured: true })
+            {
+                _log.LogWarning("Language model failed ({Message}); using template", ex.Message);
+                LastLlmError = ex.Message;
+            }
             raw = await _template.WriteAsync(context, ct);
             source = _template.Name;
         }
-        int maxWords = (context.MaxWords ?? options.Presenter.MaxWords) + (context.Extra is null ? 0 : 25);
+        int maxWords = context.Creative is not null
+            ? Math.Max(context.MaxWords ?? options.Presenter.MaxWords, options.Presenter.Creative.MaxWords)
+            : (context.MaxWords ?? options.Presenter.MaxWords) + (context.Extra is null ? 0 : 25);
         var script = ScriptSanitizer.Clean(raw, maxWords);
         if (script.Length == 0)
         {
@@ -155,7 +188,8 @@ public sealed class BreakRenderer(
         Directory.CreateDirectory(_folder);
         var wav = Path.Combine(_folder, $"break-{DateTime.Now:yyyyMMdd-HHmmss}-{item.Id}.wav");
         var persona = PersonaOf(item);
-        string voice = await RenderVoiceAsync(script, wav, persona, ct);
+        string? tone = item.Extra is { } x && x.StartsWith("theme:", StringComparison.Ordinal) ? x[6..] : null;
+        string voice = await RenderVoiceAsync(script, wav, persona, ct, tone);
         item.CheckScore = null;
         if (check is { Enabled: true })
         {
@@ -178,7 +212,7 @@ public sealed class BreakRenderer(
                     item.Error = $"controle: score {r.Score:0.00}";
                     break;
                 }
-                voice = await RenderVoiceAsync(script, wav, persona, ct);
+                voice = await RenderVoiceAsync(script, wav, persona, ct, tone);
             }
         }
 
@@ -211,16 +245,23 @@ public sealed class BreakRenderer(
     }
 
     /// <summary>Speaks the script with the persona's voice (or the default) and its backups, then post-processes it.</summary>
-    private async Task<string> RenderVoiceAsync(string script, string wav, Persona? persona, CancellationToken ct)
+    /// <param name="tone">A creative break's tone: its own voice (when chosen) and, with Higgs, tone tags.</param>
+    private async Task<string> RenderVoiceAsync(string script, string wav, Persona? persona, CancellationToken ct, string? tone = null)
     {
         string voice;
         try
         {
             if (primaryVoice is ProfileSpeechEngine profiles)
             {
-                var profile = persona?.VoiceId is long voiceId ? profiles.Profile(voiceId) : null;
-                voice = profile is null ? await profiles.SpeakAsync(script, wav, profiles.Profile(0) ?? DefaultProfile(profiles), ct)
+                var c = options.Presenter.Creative;
+                var profile = tone is not null && c.VoiceId is long creativeId ? profiles.Profile(creativeId) : null;
+                profile ??= persona?.VoiceId is long voiceId ? profiles.Profile(voiceId) : null;
+                profile ??= profiles.Profile(0) ?? DefaultProfile(profiles);
+                if (tone is not null && c.ToneVoice && profile is { Engine: "higgs" })
+                    profile = profile with { Tags = CreativeTones.HiggsTags(tone) };
+                voice = profile is null ? await profiles.SpeakAsync(script, wav, null, ct)
                                         : await profiles.SpeakAsync(script, wav, profile, ct);
+                if (tone is not null) voice += $" ({tone})";
                 if (profiles.LastFallback is { } why) _log.LogWarning("Backup voice: {Why}", why);
             }
             else

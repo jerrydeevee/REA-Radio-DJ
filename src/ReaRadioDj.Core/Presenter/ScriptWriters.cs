@@ -10,7 +10,7 @@ namespace ReaRadioDj.Core.Presenter;
 /// <summary>What the presenter knows when writing a break.</summary>
 /// <param name="Character">Persona instructions for the language model; null = the general ones.</param>
 public sealed record BreakContext(string StationName, string PresenterName, DateTime Time, MediaItem? Previous, MediaItem? Next,
-    string? Character = null, int? MaxWords = null, BreakExtra? Extra = null);
+    string? Character = null, int? MaxWords = null, BreakExtra? Extra = null, CreativeIdea? Creative = null);
 
 public interface IScriptWriter
 {
@@ -118,22 +118,41 @@ public sealed class OpenAiScriptWriter(HttpClient http, PresenterOptions options
             : [];
     }
 
+    /// <summary>Servers that refused "reasoning_effort" (they get requests without it).</summary>
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, bool> NoReasoningOption = new();
+
     public async Task<string> WriteAsync(BreakContext c, CancellationToken ct)
     {
         var llm = options.Llm;
         var (system, user) = Prompt(options, c);
-
-        using var request = new HttpRequestMessage(HttpMethod.Post, Root(llm.BaseUrl) + "/v1/chat/completions")
-        {
-            Content = JsonContent.Create(new ChatRequest(llm.Model,
-                [new ChatMessage("system", system), new ChatMessage("user", user)], llm.Temperature, 200)),
-        };
-        if (!string.IsNullOrWhiteSpace(llm.ApiKey))
-            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", llm.ApiKey);
+        var root = Root(llm.BaseUrl);
 
         using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
         cts.CancelAfter(TimeSpan.FromSeconds(llm.TimeoutSeconds));
-        using var response = await http.SendAsync(request, cts.Token);
+        // Thinking models (qwen3, deepseek-r1 ...) would spend all tokens on reasoning and say nothing: ask them not to
+        // think. A server that does not know the option gets the request again without it.
+        bool noThinking = !NoReasoningOption.ContainsKey(root);
+        HttpResponseMessage response;
+        while (true)
+        {
+            using var request = new HttpRequestMessage(HttpMethod.Post, root + "/v1/chat/completions")
+            {
+                Content = JsonContent.Create(new ChatRequest(llm.Model,
+                    [new ChatMessage("system", system), new ChatMessage("user", user)], llm.Temperature, 400, noThinking ? "none" : null)),
+            };
+            if (!string.IsNullOrWhiteSpace(llm.ApiKey))
+                request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", llm.ApiKey);
+            response = await http.SendAsync(request, cts.Token);
+            if (noThinking && response.StatusCode == System.Net.HttpStatusCode.BadRequest)
+            {
+                response.Dispose();
+                NoReasoningOption[root] = true;
+                noThinking = false;
+                continue;
+            }
+            break;
+        }
+        using var _ = response;
         response.EnsureSuccessStatusCode();
         var body = await response.Content.ReadFromJsonAsync<ChatResponse>(cts.Token);
         var text = body?.Choices?.FirstOrDefault()?.Message?.Content;
@@ -148,6 +167,7 @@ public sealed class OpenAiScriptWriter(HttpClient http, PresenterOptions options
     internal static (string System, string User) Prompt(PresenterOptions options, BreakContext c)
     {
         int maxWords = c.MaxWords ?? options.MaxWords;
+        if (c.Creative is { } idea) return CreativePrompt(options, c, idea, Math.Max(maxWords, options.Creative.MaxWords));
         var system = $"""
             {(string.IsNullOrWhiteSpace(c.Character) ? options.Persona : c.Character)}
             Je heet {c.PresenterName} en presenteert op {c.StationName}.
@@ -176,11 +196,48 @@ public sealed class OpenAiScriptWriter(HttpClient http, PresenterOptions options
         return (system, user);
     }
 
+    /// <summary>
+    /// A creative break: the presenter talks about a theme in the chosen tone and then leads into the next song. The tone
+    /// changes, the limits never do.
+    /// </summary>
+    internal static (string System, string User) CreativePrompt(PresenterOptions options, BreakContext c, CreativeIdea idea, int maxWords)
+    {
+        var system = $"""
+            {(string.IsNullOrWhiteSpace(c.Character) ? options.Persona : c.Character)}
+            Je heet {c.PresenterName} en presenteert op {c.StationName}, een lokale radiozender.
+            Je bent een creatieve presentator: tussen twee nummers praat je even over een onderwerp, op een persoonlijke manier,
+            alsof je het tegen één luisteraar thuis of in de auto hebt. Je schrijft ALLEEN de tekst die je hardop zegt,
+            in correct en natuurlijk Nederlands.
+
+            Toon van deze keer: {CreativeTones.Name(idea.Tone)}.
+            {CreativeTones.Instruction(idea.Tone)}
+
+            {CreativeTones.Limits}
+
+            Regels:
+            - Hoogstens {maxWords} woorden, twee tot vier korte zinnen.
+            - Maak er iets eigens van: een observatie, een herkenbaar moment of een vraag aan de luisteraars.
+            - Eindig met een natuurlijke overgang naar het volgende nummer; noem titel en artiest precies zoals gegeven.
+            - Geen aanhalingstekens, opsommingen, regieaanwijzingen, emoji of Engelse zinnen.
+            - Begin niet met "Dat was" en niet met het onderwerp als kop.
+            """;
+        string previous = TemplateScriptWriter.Describe(c.Previous), next = TemplateScriptWriter.Describe(c.Next);
+        var user = $"""
+            Het is {TemplateScriptWriter.SpokenTime(c.Time)} op een {c.Time.ToString("dddd", new System.Globalization.CultureInfo("nl-NL"))}.
+            Net gedraaid: {(previous.Length > 0 ? previous : "(niets)")}.
+            Hierna: {(next.Length > 0 ? next : "(nog niet bekend)")}.
+            Onderwerp: {idea.Theme}
+            Schrijf de presentatie.
+            """;
+        return (system, user);
+    }
+
     private sealed record ChatRequest(
         [property: JsonPropertyName("model")] string Model,
         [property: JsonPropertyName("messages")] ChatMessage[] Messages,
         [property: JsonPropertyName("temperature")] double Temperature,
-        [property: JsonPropertyName("max_tokens")] int MaxTokens);
+        [property: JsonPropertyName("max_tokens")] int MaxTokens,
+        [property: JsonPropertyName("reasoning_effort"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? ReasoningEffort = null);
 
     private sealed record ChatMessage(
         [property: JsonPropertyName("role")] string Role,
@@ -198,6 +255,7 @@ public static partial class ScriptSanitizer
         var t = ThinkBlock().Replace(text, " ");       // reasoning models: <think>...</think>
         t = t.Replace("**", "").Replace("__", "");     // markdown bold is emphasis, not a stage direction
         t = StageDirection().Replace(t, " ");          // (lacht), [jingle], *pauze*
+        t = ForeignScript().Replace(t, "");            // multilingual models sometimes slip in a Chinese or Japanese word
         t = Markup().Replace(t, " ");                  // markdown and stray symbols
         t = t.Replace('“', ' ').Replace('”', ' ').Replace('"', ' ').Replace('„', ' ');
         t = Whitespace().Replace(t, " ").Trim();
@@ -215,4 +273,6 @@ public static partial class ScriptSanitizer
     [GeneratedRegex(@"\([^)]*\)|\[[^\]]*\]|\*[^*]+\*")] private static partial Regex StageDirection();
     [GeneratedRegex(@"[#*_`~>|]+|^\s*[-•]\s*", RegexOptions.Multiline)] private static partial Regex Markup();
     [GeneratedRegex(@"\s+")] private static partial Regex Whitespace();
+    [GeneratedRegex(@"[\p{IsCJKUnifiedIdeographs}\p{IsHiragana}\p{IsKatakana}\p{IsHangulSyllables}\p{IsCJKSymbolsandPunctuation}]+")]
+    private static partial Regex ForeignScript();
 }

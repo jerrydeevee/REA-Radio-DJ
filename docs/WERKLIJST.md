@@ -243,6 +243,13 @@ Vraag bij stap 7:
 
 15. ~~Sjabloon?~~ **Geen; eigen indeling, plus een los reclame-afspeelrapport.**
 
+### AI-presentator: creatief
+
+| | Wat | Klaar als |
+|---|---|---|
+| ✅ | **Creatieve presentator:** praat de plaatjes zelf aan elkaar en snijdt onderwerpen aan, soms serieus, soms grappig, soms leuk, soms een tikkie op het randje. Onderwerpen uit een eigen lijst (met de toon er vast bij als je wilt: "grappig: …"), uit online feeds van de zender (RSS, Atom of een tekstpagina, elk half uur opgehaald) en uit een ingebouwde lijst die past bij dagdeel, weekdag en seizoen. Toon vast of willekeurig naar verhouding (bijv. 1-2-3-1); een kans per break; hetzelfde onderwerp niet binnen 12 uur. Eigen stem te kiezen (Higgs of een andere stem); bij Higgs klinkt de toon ook in de stem. Vaste grenzen voor elke toon: niets kwetsends, geen politiek, niets grofs, geen verzonnen nieuws. Een bericht om voor te lezen gaat altijd voor. In de studio: AI-presentator › Creatieve presentator, met "Onderwerpen bekijken", "Proefscript" en "Proef met stem (PFL)". Getest met qwen3.8:27b en Higgs: vier tonen, een onderwerp uit de RSS-feed, en een gewone break in de log die zelf een onderwerp koos en ingesproken klaarstond | een break in de log kiest zelf een onderwerp en toon en wordt met de gekozen stem ingesproken |
+| ✅ | Denkende taalmodellen (qwen3, deepseek-r1): de presentator vraagt ze niet eerst te "denken", anders bleef de tekst leeg; vreemde (Chinese) woorden worden eruit gehaald. Een proef laat nu zien waarom het taalmodel niets gaf | een proef met qwen3.8 geeft tekst in plaats van de sjabloon |
+
 ## Stap 8 — Bediening en hardware
 
 | Status | Werk |

@@ -93,6 +93,60 @@ public sealed record PresenterExtrasSettings(long? OutroCategoryId, bool Weather
         NewsFeeds, NewsEveryMinutes);
 }
 
+/// <summary>The creative presenter's settings made in the studio.</summary>
+public sealed record CreativeSettings(bool Enabled, int Chance, string Tone, int Serious, int Funny, int Light, int Edgy, bool UseOwnThemes,
+    List<string> Themes, bool UseBuiltIn, bool UseFeeds, List<string> Feeds, int MaxWords, long? VoiceId, bool ToneVoice, int RepeatHours)
+{
+    public const string Key = "presenter-creative";
+
+    public static CreativeSettings From(ReaRadioDjOptions o)
+    {
+        var c = o.Presenter.Creative;
+        return new(c.Enabled, c.Chance, c.Tone, c.Serious, c.Funny, c.Light, c.Edgy, c.UseOwnThemes, [.. c.Themes], c.UseBuiltIn, c.UseFeeds,
+            [.. c.Feeds], c.MaxWords, c.VoiceId, c.ToneVoice, c.RepeatHours);
+    }
+
+    public static CreativeSettings From(CreativeSettingsDto d) => new(d.Enabled, d.Chance, d.Tone ?? "random", d.Serious, d.Funny, d.Light,
+        d.Edgy, d.UseOwnThemes, Lines(d.Themes), d.UseBuiltIn, d.UseFeeds, Lines(d.Feeds), d.MaxWords, d.VoiceId, d.ToneVoice, d.RepeatHours);
+
+    private static List<string> Lines(string? text) =>
+        (text ?? "").Split(['\n', '\r'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).Distinct().ToList();
+
+    public void ApplyTo(ReaRadioDjOptions o)
+    {
+        var c = o.Presenter.Creative;
+        c.Enabled = Enabled;
+        c.Chance = Math.Clamp(Chance, 0, 100);
+        c.Tone = CreativeTones.Keys.Contains(Tone) ? Tone : "random";
+        c.Serious = Math.Clamp(Serious, 0, 10);
+        c.Funny = Math.Clamp(Funny, 0, 10);
+        c.Light = Math.Clamp(Light, 0, 10);
+        c.Edgy = Math.Clamp(Edgy, 0, 10);
+        c.UseOwnThemes = UseOwnThemes;
+        c.Themes = (Themes ?? []).Where(t => !string.IsNullOrWhiteSpace(t)).Select(t => t.Trim()).Take(500).ToList();
+        c.UseBuiltIn = UseBuiltIn;
+        c.UseFeeds = UseFeeds;
+        c.Feeds = (Feeds ?? []).Where(f => Uri.TryCreate(f, UriKind.Absolute, out var u) && (u.Scheme == "https" || u.Scheme == "http"))
+            .Distinct().Take(20).ToList();
+        c.MaxWords = Math.Clamp(MaxWords, 20, 150);
+        c.VoiceId = VoiceId is > 0 ? VoiceId : null;
+        c.ToneVoice = ToneVoice;
+        c.RepeatHours = Math.Clamp(RepeatHours, 0, 168);
+    }
+
+    public static void Load(StationDb db, ReaRadioDjOptions o)
+    {
+        if (db.GetSetting(Key) is not { } json) return;
+        try { JsonSerializer.Deserialize<CreativeSettings>(json, JsonSerializerOptions.Web)?.ApplyTo(o); }
+        catch (JsonException) { }
+    }
+
+    public void Save(StationDb db) => db.SetSetting(Key, JsonSerializer.Serialize(this, JsonSerializerOptions.Web));
+
+    public CreativeSettingsDto Dto(bool llmReady) => new(Enabled, Chance, Tone, Serious, Funny, Light, Edgy, UseOwnThemes,
+        string.Join("\n", Themes), UseBuiltIn, UseFeeds, string.Join("\n", Feeds), MaxWords, VoiceId, ToneVoice, RepeatHours, llmReady);
+}
+
 /// <summary>Keys of online voices and the speech check, set in the studio (keys are never sent back unmasked).</summary>
 public sealed record VoiceServicesSettings(string ElevenLabsKey, string ElevenLabsModel, string AzureKey, string AzureRegion, bool CheckEnabled,
     string CheckUrl, string CheckModel, double CheckMinScore, int CheckRetries, bool CheckReject)
@@ -208,6 +262,44 @@ public static class PresenterApi
             }
             if (weather is null && headline is null) error = "weer en nieuws staan uit";
             return new ExtrasPreviewDto(weather, headline, error);
+        });
+
+        // The creative presenter: settings, the themes it can choose from, and a trial (optionally spoken and played on PFL).
+        bool LlmReady() => !string.IsNullOrWhiteSpace(options.Presenter.Llm.BaseUrl) && !string.IsNullOrWhiteSpace(options.Presenter.Llm.Model);
+        p.MapGet("/creative", () => CreativeSettings.From(options).Dto(LlmReady()));
+        p.MapPut("/creative", (CreativeSettingsDto d, StationDb db, MessageCenter messages) =>
+        {
+            CreativeSettings.From(d).ApplyTo(options);
+            var saved = CreativeSettings.From(options);
+            saved.Save(db);
+            messages.Info(saved.Enabled ? "Creatieve presentator aan" : "Creatieve presentator uit");
+            return saved.Dto(LlmReady());
+        });
+        p.MapGet("/creative/themes", async (CreativePicker picker, CancellationToken ct) =>
+            (await picker.PoolAsync(DateTime.Now, ct)).Select(t => new CreativeThemeDto(t.Theme, t.Source, t.Tone)));
+        p.MapPost("/creative/try", async (CreativeTryRequest? r, PlayoutLog log, BreakRenderer breaks, VoiceService voices, CancellationToken ct) =>
+        {
+            r ??= new CreativeTryRequest(null, null, false, false);
+            var songs = log.Upcoming.Where(i => i.Type == LogItemType.Song && i.Media is not null).Select(i => i.Media).Take(2).ToList();
+            var sw = Stopwatch.StartNew();
+            string? wav = r.Speak || r.Play ? voices.NewTestPath() : null;
+            CreativeTrial trial;
+            try
+            {
+                trial = await breaks.TryCreativeAsync(songs.ElementAtOrDefault(0), songs.ElementAtOrDefault(1),
+                    string.IsNullOrWhiteSpace(r.Tone) || r.Tone == "random" ? null : r.Tone, r.Theme, wav, ct);
+            }
+            catch (Exception ex) when (ex is InvalidOperationException or HttpRequestException or IOException && !ct.IsCancellationRequested)
+            {
+                return new CreativeTryDto(r.Theme ?? "", r.Tone ?? "", "", "", "", 0, Math.Round(sw.Elapsed.TotalSeconds, 1), null, null, null, ex.Message);
+            }
+            double? length = wav is not null && File.Exists(wav) ? voices.PlayTest(wav, $"Creatief ({trial.Idea.Tone})", r.Play) : null;
+            string? problem = trial.Source == "template"
+                ? $"het taalmodel gaf geen tekst ({breaks.LastLlmError ?? "niet ingesteld"}); dit is een gewone aankondiging zonder onderwerp"
+                : null;
+            return new CreativeTryDto(trial.Idea.Theme, trial.Idea.Tone, trial.Idea.Source, trial.Script, trial.Source,
+                trial.Script.Split(' ', StringSplitOptions.RemoveEmptyEntries).Length, Math.Round(sw.Elapsed.TotalSeconds, 1), trial.Voice,
+                length is double l ? Math.Round(l, 1) : null, wav is null ? null : Path.GetFileName(wav), problem);
         });
 
         api.MapGet("/voice/services", () => VoiceServicesSettings.From(options).Dto());

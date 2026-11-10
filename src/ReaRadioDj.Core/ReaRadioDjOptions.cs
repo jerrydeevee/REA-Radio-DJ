@@ -161,6 +161,8 @@ public sealed class PresenterOptions
     public LlmOptions Llm { get; set; } = new();
     public TtsOptions Tts { get; set; } = new();
     public SpeechCheckOptions Check { get; set; } = new();
+    /// <summary>The creative presenter: themes in a changing tone (see Presenter/CreativePresenter.cs).</summary>
+    public Presenter.CreativeOptions Creative { get; set; } = new();
 }
 
 /// <summary>Any OpenAI-compatible chat completion endpoint (Ollama, LM Studio, vLLM, OpenAI, ...).</summary>

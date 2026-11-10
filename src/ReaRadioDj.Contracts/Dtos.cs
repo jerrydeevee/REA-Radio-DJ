@@ -393,6 +393,23 @@ public sealed record PresenterExtrasDto(long? OutroCategoryId, bool WeatherEnabl
 
 public sealed record ExtrasPreviewDto(string? Weather, string? Headline, string? Error);
 
+/// <summary>
+/// The creative presenter. Tone = "random" or serieus/grappig/leuk/randje; the four weights (0..10) decide how often each
+/// tone comes up at random. Themes and Feeds: one per line.
+/// </summary>
+public sealed record CreativeSettingsDto(bool Enabled, int Chance, string Tone, int Serious, int Funny, int Light, int Edgy,
+    bool UseOwnThemes, string Themes, bool UseBuiltIn, bool UseFeeds, string Feeds, int MaxWords, long? VoiceId, bool ToneVoice,
+    int RepeatHours, bool LlmReady = false);
+
+/// <summary>A creative trial: tone and theme are picked when empty; Speak renders it with the voice, Play also plays it on PFL.</summary>
+public sealed record CreativeTryRequest(string? Tone, string? Theme, bool Speak, bool Play);
+
+public sealed record CreativeTryDto(string Theme, string Tone, string ThemeSource, string Script, string Source, int Words,
+    double Seconds, string? Voice, double? Length, string? File, string? Error);
+
+/// <summary>The themes the presenter can choose from now, with where each comes from (eigen, ingebouwd or the feed's host).</summary>
+public sealed record CreativeThemeDto(string Theme, string Source, string? Tone);
+
 public sealed record PresenterNoteDto(long Id, string Text, DateTime? Until, int MaxUses, int Used);
 
 public sealed record AddNoteRequest(string Text, DateTime? Until, int MaxUses);

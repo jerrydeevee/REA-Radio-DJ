@@ -296,6 +296,45 @@ public sealed class AudioTests : IDisposable
         }
     }
 
+    private sealed class CapturingWriter : IScriptWriter
+    {
+        public BreakContext? Last;
+        public string Name => "llm:test";
+        public Task<string> WriteAsync(BreakContext context, CancellationToken ct)
+        {
+            Last = context;
+            return Task.FromResult("Wie kent het niet: die ene sok die nooit meer terugkomt. Hier is Licht Aan van De Fietsers!");
+        }
+    }
+
+    [BassFact]
+    public async Task Creative_break_gets_a_theme_and_tone_but_a_note_goes_first()
+    {
+        var options = Options();
+        options.Presenter.RequireApproval = true;
+        options.Presenter.Creative = new CreativeOptions { Enabled = true, Chance = 100, UseBuiltIn = false, Themes = ["grappig: de verloren sok"] };
+        var library = new MediaLibrary(options, Db());
+        var log = new PlayoutLog();
+        var brk = new LogItem { Type = LogItemType.AiBreak };
+        log.Append(brk);
+        var writer = new CapturingWriter();
+        var picker = new CreativePicker(new HttpClient(), options.Presenter);
+        var renderer = new BreakRenderer(options, log, library, writer, new ToneVoice(), null, creative: picker);
+
+        await renderer.RenderAsync(brk, CancellationToken.None);
+        Assert.Equal("de verloren sok", writer.Last?.Creative?.Theme);
+        Assert.Equal("theme:grappig", brk.Extra);
+        Assert.Equal(BreakState.AwaitingApproval, brk.BreakState);
+        Assert.Contains("sok", brk.Script);
+
+        // without a language model the theme is not used (the template cannot talk about it)
+        var plain = new LogItem { Type = LogItemType.AiBreak };
+        log.Append(plain);
+        await new BreakRenderer(options, log, library, null, new ToneVoice(), null, creative: picker).RenderAsync(plain, CancellationToken.None);
+        Assert.Null(plain.Extra);
+        Assert.Equal("template", plain.ScriptSource);
+    }
+
     [BassFact]
     public async Task Break_waits_for_approval_then_speaks_the_edited_script_post_processed()
     {

@@ -165,6 +165,81 @@
         </StackPanel>
       </Expander>
 
+      <!-- creative presenter -->
+      <Expander Header="Creatieve presentator" HorizontalAlignment="Stretch">
+        <StackPanel Spacing="6">
+          <TextBlock Classes="muted" TextWrapping="Wrap"
+                     Text="De presentator praat de plaatjes zelf aan elkaar en snijdt af en toe een onderwerp aan: soms serieus, soms grappig, soms luchtig, soms een tikkie op het randje. Wel altijd radio voor iedereen: niets kwetsends, geen politiek, geen verzonnen nieuws." />
+          <TextBlock Classes="muted" Foreground="#E58A4D" TextWrapping="Wrap" Text="{Binding CreativeStatus}"
+                     IsVisible="{Binding CreativeStatus, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+          <WrapPanel>
+            <CheckBox Content="Aan" IsChecked="{Binding CreativeEnabled}" Margin="0,0,12,4" />
+            <TextBlock Classes="muted" Text="bij" VerticalAlignment="Center" Margin="0,0,4,4" />
+            <NumericUpDown Value="{Binding CreativeChance}" Minimum="0" Maximum="100" Increment="10" FormatString="0" Width="110" Margin="0,0,4,4" />
+            <TextBlock Classes="muted" Text="% van de breaks een onderwerp" VerticalAlignment="Center" Margin="0,0,0,4" />
+          </WrapPanel>
+          <DockPanel>
+            <TextBlock Text="Toon" Width="110" VerticalAlignment="Center" />
+            <ComboBox ItemsSource="{Binding Tones}" SelectedItem="{Binding CreativeTone}" MinWidth="240" />
+          </DockPanel>
+          <WrapPanel IsVisible="{Binding CreativeRandom}" Margin="110,0,0,0"
+                     ToolTip.Tip="Hoe vaak elke toon voorkomt (0 = nooit). Bijv. 1-2-3-1: meestal luchtig, af en toe serieus of op het randje.">
+            <TextBlock Classes="muted" Text="serieus" VerticalAlignment="Center" Margin="0,0,4,4" />
+            <NumericUpDown Value="{Binding WeightSerious}" Minimum="0" Maximum="10" FormatString="0" Width="95" Margin="0,0,10,4" />
+            <TextBlock Classes="muted" Text="grappig" VerticalAlignment="Center" Margin="0,0,4,4" />
+            <NumericUpDown Value="{Binding WeightFunny}" Minimum="0" Maximum="10" FormatString="0" Width="95" Margin="0,0,10,4" />
+            <TextBlock Classes="muted" Text="leuk" VerticalAlignment="Center" Margin="0,0,4,4" />
+            <NumericUpDown Value="{Binding WeightLight}" Minimum="0" Maximum="10" FormatString="0" Width="95" Margin="0,0,10,4" />
+            <TextBlock Classes="muted" Text="randje" VerticalAlignment="Center" Margin="0,0,4,4" />
+            <NumericUpDown Value="{Binding WeightEdgy}" Minimum="0" Maximum="10" FormatString="0" Width="95" Margin="0,0,0,4" />
+          </WrapPanel>
+
+          <TextBlock FontWeight="SemiBold" Text="Waar de onderwerpen vandaan komen" Margin="0,6,0,0" />
+          <CheckBox Content="Eigen onderwerpen" IsChecked="{Binding UseOwnThemes}" />
+          <TextBox Text="{Binding OwnThemes}" AcceptsReturn="True" TextWrapping="NoWrap" MinHeight="70"
+                   Watermark="één onderwerp per regel; met 'grappig:', 'serieus:', 'leuk:' of 'randje:' ervoor ligt de toon vast&#x0a;bijv. grappig: de eerste keer de tuinstoelen weer naar buiten" />
+          <CheckBox Content="Online onderwerpen van de zender (RSS, Atom of een tekstpagina met één onderwerp per regel)" IsChecked="{Binding UseFeeds}" />
+          <TextBox Text="{Binding ThemeFeeds}" AcceptsReturn="True" TextWrapping="NoWrap" MinHeight="40"
+                   Watermark="één adres per regel, bijv. de thema-feed of agenda van de eigen website" />
+          <CheckBox Content="Ingebouwde onderwerpen (passend bij dagdeel, weekdag en seizoen)" IsChecked="{Binding UseBuiltIn}" />
+
+          <TextBlock FontWeight="SemiBold" Text="Stem" Margin="0,6,0,0" />
+          <Grid ColumnDefinitions="110,*" RowDefinitions="Auto,Auto,Auto">
+            <TextBlock Text="Stem" VerticalAlignment="Center" />
+            <ComboBox Grid.Column="1" ItemsSource="{Binding VoiceChoices}" SelectedItem="{Binding CreativeVoice}" MinWidth="240" Margin="0,0,0,4"
+                      ToolTip.Tip="(standaardstem) = de stem van de persona of de standaardstem. Kies bijv. een Higgs-stem of een andere stem uit Stemmen." />
+            <CheckBox Grid.Row="1" Grid.Column="1" Content="Bij een Higgs-stem de toon ook in de stem (vrolijk, rustig, uitbundig)" IsChecked="{Binding ToneVoice}" />
+            <TextBlock Grid.Row="2" Text="Woorden" VerticalAlignment="Center" />
+            <WrapPanel Grid.Row="2" Grid.Column="1" Margin="0,4,0,0">
+              <NumericUpDown Value="{Binding CreativeMaxWords}" Minimum="20" Maximum="150" Increment="5" FormatString="0" Width="120" Margin="0,0,12,0" />
+              <TextBlock Classes="muted" Text="zelfde onderwerp niet binnen" VerticalAlignment="Center" Margin="0,0,4,0" />
+              <NumericUpDown Value="{Binding RepeatHours}" Minimum="0" Maximum="168" FormatString="0" Width="110" Margin="0,0,4,0" />
+              <TextBlock Classes="muted" Text="uur" VerticalAlignment="Center" />
+            </WrapPanel>
+          </Grid>
+
+          <WrapPanel Margin="0,6,0,0">
+            <Button Classes="small" Content="Opslaan" Command="{Binding SaveCreativeCommand}" Margin="0,0,4,4" />
+            <Button Classes="small" Content="Onderwerpen bekijken" Command="{Binding ShowThemesCommand}" Margin="0,0,4,4" />
+          </WrapPanel>
+          <SelectableTextBlock Classes="muted" Text="{Binding ThemePreview}" TextWrapping="Wrap"
+                               IsVisible="{Binding ThemePreview, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+          <TextBlock FontWeight="SemiBold" Text="Proberen" Margin="0,6,0,0" />
+          <WrapPanel>
+            <ComboBox ItemsSource="{Binding Tones}" SelectedItem="{Binding TrialTone}" MinWidth="200" Margin="0,0,4,4" />
+            <TextBox Text="{Binding TrialTheme}" Watermark="onderwerp (leeg = zelf kiezen)" MinWidth="240" Margin="0,0,4,4" />
+          </WrapPanel>
+          <WrapPanel>
+            <Button Classes="small" Content="Proefscript" Command="{Binding TryCreativeCommand}" IsEnabled="{Binding !Trying}" Margin="0,0,4,4" />
+            <Button Classes="small" Content="Proef met stem (PFL)" Command="{Binding TryCreativeVoiceCommand}" IsEnabled="{Binding !Trying}" Margin="0,0,4,4"
+                    ToolTip.Tip="Schrijft en spreekt het in met de gekozen stem en speelt het af op de voorluister (niet op de zender)." />
+          </WrapPanel>
+          <Border Classes="card" IsVisible="{Binding CreativeTrial, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+            <SelectableTextBlock Text="{Binding CreativeTrial}" TextWrapping="Wrap" />
+          </Border>
+        </StackPanel>
+      </Expander>
+
       <!-- personas per daypart -->
       <Expander Header="Persona's per dagdeel" HorizontalAlignment="Stretch">
         <StackPanel Spacing="6">

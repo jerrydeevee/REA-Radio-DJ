@@ -129,6 +129,27 @@ public sealed class VoiceService(
         return new VoiceTestResultDto(true, profile?.Engine ?? Tts.Provider, Math.Round(render, 2), Math.Round(length, 2), file, null);
     }
 
+    /// <summary>A new file in the test folder (for trials rendered elsewhere, such as the creative presenter).</summary>
+    public string NewTestPath()
+    {
+        Directory.CreateDirectory(TestFolder);
+        return Path.Combine(TestFolder, $"test-{DateTime.Now:yyyyMMdd-HHmmss-fff}.wav");
+    }
+
+    /// <summary>Length of a rendered trial and, when asked, plays it on PFL.</summary>
+    public double PlayTest(string path, string title, bool play)
+    {
+        double length = WavSeconds(path);
+        Cleanup();
+        if (play)
+        {
+            var media = new MediaItem { Path = path, Kind = MediaKind.Voice, Title = title, Duration = length, Cues = new CueSet { CueOut = length, Mix = length } };
+            try { players.Pfl.Load(media); players.Pfl.Play(); }
+            catch (BassException ex) { logger.LogWarning("PFL playback: {Error}", ex.Message); }
+        }
+        return length;
+    }
+
     public string? TestFile(string name)
     {
         if (name.Contains('/') || name.Contains('\\') || name.Contains("..") || !name.EndsWith(".wav", StringComparison.OrdinalIgnoreCase)) return null;
