@@ -99,6 +99,31 @@
               <Button Classes="bar" Content="1/2" Tag="0.5" MinWidth="48" />
               <Button Classes="bar" Content="1" Tag="1" MinWidth="48" />
             </StackPanel>
+            <!-- Beat effect: echo and flanger follow the tempo of the deck -->
+            <TextBlock Classes="lbl" Text="EFFECT" Margin="0,4,0,0" />
+            <DockPanel>
+              <ToggleButton DockPanel.Dock="Right" Classes="bar fx" Content="FX AAN" IsChecked="{Binding FxOn, Mode=OneWay}" Command="{Binding ToggleFxCommand}"
+                            ToolTip.Tip="Effect aan of uit (op de zender en in de koptelefoon)" />
+              <Border BorderBrush="{DynamicResource ControlBorderBrush}" BorderThickness="1" CornerRadius="{DynamicResource Radius8}" ClipToBounds="True"
+                      HorizontalAlignment="Left" Margin="0,0,6,0">
+                <StackPanel Orientation="Horizontal">
+                  <ToggleButton Classes="seg" Content="Echo" IsChecked="{Binding FxType, Converter={x:Static vm:Brushes.Is}, ConverterParameter=echo, Mode=OneWay}"
+                                Command="{Binding SetFxTypeCommand}" CommandParameter="echo" ToolTip.Tip="Echo: de herhaling valt op de tel" />
+                  <ToggleButton Classes="seg" Content="Flanger" IsChecked="{Binding FxType, Converter={x:Static vm:Brushes.Is}, ConverterParameter=flanger, Mode=OneWay}"
+                                Command="{Binding SetFxTypeCommand}" CommandParameter="flanger" ToolTip.Tip="Flanger: één zwaai per gekozen aantal tellen" />
+                  <ToggleButton Classes="seg" Content="Galm" IsChecked="{Binding FxType, Converter={x:Static vm:Brushes.Is}, ConverterParameter=reverb, Mode=OneWay}"
+                                Command="{Binding SetFxTypeCommand}" CommandParameter="reverb" ToolTip.Tip="Galm: meer tellen = grotere ruimte" />
+                </StackPanel>
+              </Border>
+            </DockPanel>
+            <DockPanel>
+              <Button DockPanel.Dock="Left" Classes="small" Content="◀" Command="{Binding FxBeatsStepCommand}" CommandParameter="-" ToolTip.Tip="Korter" />
+              <TextBlock DockPanel.Dock="Left" Classes="mono" FontWeight="Bold" Text="{Binding FxBeatsText}" VerticalAlignment="Center" MinWidth="92"
+                         TextAlignment="Center" />
+              <Button DockPanel.Dock="Left" Classes="small" Content="▶" Command="{Binding FxBeatsStepCommand}" CommandParameter="+" Margin="0,0,10,0" ToolTip.Tip="Langer" />
+              <TextBlock DockPanel.Dock="Left" Classes="lbl" Text="MIX" VerticalAlignment="Center" Margin="0,0,8,0" />
+              <Slider Minimum="0" Maximum="100" Value="{Binding FxMix}" ToolTip.Tip="Hoeveel van het effect je hoort" />
+            </DockPanel>
           </StackPanel>
         </StackPanel>
 

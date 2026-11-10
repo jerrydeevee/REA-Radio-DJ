@@ -68,7 +68,7 @@ public static class DjApi
     }
 
     private static readonly HashSet<string> Shaping =
-        ["gain", "fader", "eqlow", "eqmid", "eqhigh", "killlow", "killmid", "killhigh", "filter", "pfl", "keylock", "range"];
+        ["fx", "fxtype", "fxmix", "fxbeats", "gain", "fader", "eqlow", "eqmid", "eqhigh", "killlow", "killmid", "killhigh", "filter", "pfl", "keylock", "range"];
 
     /// <summary>Runs one deck action; returns what is wrong, or null when it is done.</summary>
     public static string? Run(DjMixer dj, DjDeck deck, MediaLibrary library, string action, DjCommand c)
@@ -106,6 +106,11 @@ public static class DjApi
             case "loopexit": deck.ExitLoop(); break;
             // Loop roll: On = true while the button is held (Value = beats), false on release.
             case "roll": deck.Roll(v ?? 1, c.On ?? false); break;
+            // Beat effect: type by Name (echo, flanger, reverb), on/off, mix 0..1, length in beats.
+            case "fx": deck.SetFx(c.Name, c.On ?? !deck.FxOn); break;
+            case "fxtype" when c.Name is { } fx: deck.SetFx(type: fx); break;
+            case "fxmix" when v is double fm: deck.SetFx(mix: fm); break;
+            case "fxbeats" when v is double fb: deck.SetFx(beats: fb); break;
             default: return $"onbekende opdracht '{action}' of gegevens ontbreken";
         }
         return null;
@@ -118,5 +123,5 @@ public static class DjApi
     public static DjDeckDto Deck(DjDeckInfo d) => new(d.Id, d.Media is { Id: > 0 } m ? m.Id : null, d.Media?.Title ?? "", d.Media?.Artist ?? "",
         d.Media is not null, d.Playing, d.Position, Math.Round(d.Duration, 3), d.Bpm, d.FirstBeat, d.Analysing, Math.Round(d.Tempo, 3), d.TempoRange,
         d.KeyLock, d.Synced, d.CuePoint, d.HotCues, d.LoopIn, d.LoopOut, d.LoopActive, d.LoopBeats, d.Gain, d.EqLow, d.EqMid, d.EqHigh,
-        d.KillLow, d.KillMid, d.KillHigh, d.Filter, d.Fader, d.Pfl, d.LevelLeft, d.LevelRight, d.Rolling);
+        d.KillLow, d.KillMid, d.KillHigh, d.Filter, d.Fader, d.Pfl, d.LevelLeft, d.LevelRight, d.Rolling, d.FxType, d.FxOn, d.FxMix, d.FxBeats);
 }

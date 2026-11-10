@@ -74,6 +74,13 @@ public sealed partial class DjDeckVm : ObservableObject
     [ObservableProperty] private bool _pfl;
     [ObservableProperty] private bool _loopActive;
     [ObservableProperty] private bool _rolling;
+    /// <summary>Beat effect: echo, flanger or reverb, on/off, mix 0..100 and its length in beats.</summary>
+    [ObservableProperty] private string _fxType = "echo";
+    [ObservableProperty] private bool _fxOn;
+    [ObservableProperty] private double _fxMix = 50;
+    [ObservableProperty] private string _fxBeatsText = "1";
+    private double _fxBeats = 1;
+    private static readonly double[] FxBeatSteps = [0.25, 0.5, 0.75, 1, 2, 4, 8];
     [ObservableProperty] private string _loopBeats = "4";
     [ObservableProperty] private double _levelLeft;
     [ObservableProperty] private double _levelRight;
@@ -99,6 +106,20 @@ public sealed partial class DjDeckVm : ObservableObject
     partial void OnEqMidChanged(double value) => Send("eqmid", value);
     partial void OnEqHighChanged(double value) => Send("eqhigh", value);
     partial void OnFilterChanged(double value) => Send("filter", value);
+    partial void OnFxMixChanged(double value) => Send("fxmix", value / 100);
+
+    [RelayCommand] private Task SetFxType(string? type) => Post("fxtype", new DjCommand(Name: type));
+    [RelayCommand] private Task ToggleFx() => Post("fx", new DjCommand(On: !FxOn));
+
+    [RelayCommand]
+    private Task FxBeatsStep(string? direction)
+    {
+        int i = Array.FindIndex(FxBeatSteps, b => Math.Abs(b - _fxBeats) < 0.001);
+        i = Math.Clamp((i < 0 ? 3 : i) + (direction == "-" ? -1 : 1), 0, FxBeatSteps.Length - 1);
+        return Post("fxbeats", new DjCommand(Value: FxBeatSteps[i]));
+    }
+
+    private static string BeatsText(double b) => b switch { 0.25 => "1/4", 0.5 => "1/2", 0.75 => "3/4", _ => b.ToString("0.##") };
 
     private void Send(string action, double value)
     {
@@ -168,6 +189,11 @@ public sealed partial class DjDeckVm : ObservableObject
             Pfl = d.Pfl;
             LoopActive = d.LoopActive;
             Rolling = d.Rolling;
+            FxType = d.FxType;
+            FxOn = d.FxOn;
+            _fxBeats = d.FxBeats;
+            FxBeatsText = BeatsText(d.FxBeats) + (d.FxType == "reverb" ? " (ruimte)" : " tel");
+            if (Free("fxmix")) FxMix = d.FxMix * 100;
             LoopBeats = d.LoopBeats >= 1 ? d.LoopBeats.ToString("0.##") : $"1/{1 / d.LoopBeats:0}";
             LevelLeft = d.LevelLeft * 100;
             LevelRight = d.LevelRight * 100;

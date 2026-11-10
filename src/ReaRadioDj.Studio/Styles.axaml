@@ -166,6 +166,10 @@
     <Setter Property="Background" Value="{DynamicResource SelectedBrush}" />
     <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
   </Style>
+  <Style Selector="ToggleButton.bar.fx:checked /template/ ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource AccentBrush}" />
+    <Setter Property="Foreground" Value="White" />
+  </Style>
   <Style Selector="ToggleButton.bar.mic:checked /template/ ContentPresenter">
     <Setter Property="Background" Value="{DynamicResource OnAirBrush}" />
     <Setter Property="Foreground" Value="White" />

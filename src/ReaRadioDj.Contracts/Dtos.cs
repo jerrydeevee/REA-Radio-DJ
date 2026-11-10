@@ -45,7 +45,7 @@ public sealed record DjDeckDto(string Id, long? MediaId, string Title, string Ar
     double Duration, double Bpm, double FirstBeat, bool Analysing, double Tempo, double TempoRange, bool KeyLock, bool Synced,
     double CuePoint, IReadOnlyList<double?> HotCues, double? LoopIn, double? LoopOut, bool LoopActive, double LoopBeats, double Gain,
     double EqLow, double EqMid, double EqHigh, bool KillLow, bool KillMid, bool KillHigh, double Filter, double Fader, bool Pfl,
-    float LevelLeft, float LevelRight, bool Rolling = false);
+    float LevelLeft, float LevelRight, bool Rolling = false, string FxType = "echo", bool FxOn = false, double FxMix = 0.5, double FxBeats = 1);
 
 /// <summary>Crossfader 0 (decks A and C) .. 1 (B and D); curve "smooth" or "sharp"; OnAir = the desk is heard on the radio.</summary>
 /// Following = deck A copies what the automation plays, ready to take over.
@@ -54,7 +54,7 @@ public sealed record DjDeckDto(string Id, long? MediaId, string Title, string Ar
 public sealed record DjDto(double Crossfader, string Curve, bool OnAir, IReadOnlyList<DjDeckDto> Decks, bool Following = false,
     string? Recording = null, double RecordingSeconds = 0, bool Quantize = false, double CueMix = 0, bool Limiter = true, double LimiterDb = -1);
 
-public sealed record DjCommand(long? MediaId = null, double? Value = null, int? Index = null, bool? On = null);
+public sealed record DjCommand(long? MediaId = null, double? Value = null, int? Index = null, bool? On = null, string? Name = null);
 
 public sealed record DjMixerRequest(double? Crossfader = null, string? Curve = null, bool? OnAir = null, bool? Record = null,
     bool? Quantize = null, double? CueMix = null, bool? Limiter = null, double? LimiterDb = null);

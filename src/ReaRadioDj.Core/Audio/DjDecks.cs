@@ -60,7 +60,8 @@ public sealed class DjStore
 public sealed record DjDeckInfo(string Id, MediaItem? Media, bool Playing, double Position, double Duration, double Bpm, double FirstBeat,
     bool Analysing, double Tempo, double TempoRange, bool KeyLock, bool Synced, double CuePoint, IReadOnlyList<double?> HotCues,
     double? LoopIn, double? LoopOut, bool LoopActive, double LoopBeats, double Gain, double EqLow, double EqMid, double EqHigh,
-    bool KillLow, bool KillMid, bool KillHigh, double Filter, double Fader, bool Pfl, float LevelLeft, float LevelRight, bool Rolling = false)
+    bool KillLow, bool KillMid, bool KillHigh, double Filter, double Fader, bool Pfl, float LevelLeft, float LevelRight, bool Rolling = false,
+    string FxType = DjEffects.Echo, bool FxOn = false, double FxMix = 0.5, double FxBeats = 1)
 {
     /// <summary>The tempo you hear: the measured tempo with the tempo fader applied.</summary>
     public double PlayingBpm => Bpm * (1 + Tempo / 100);
@@ -81,7 +82,8 @@ public sealed class DjDeck
     private readonly DjStore _store;
     private readonly double _targetLufs;
     private readonly object _gate = new();
-    private int _tempo, _main, _pfl, _fxLow, _fxMid, _fxHigh, _fxFilter;
+    private int _tempo, _main, _pfl, _fxLow, _fxMid, _fxHigh, _fxFilter, _fxBeat;
+    private string _fxBeatType = DjEffects.None;
     private float _sourceRate = BassRuntime.SampleRate, _loudness = 1f;
     private DjTrackMemory _memory = new();
     private double _duration, _bend;
@@ -131,6 +133,11 @@ public sealed class DjDeck
     public double Filter { get; private set; }
     public double Fader { get; private set; } = 1;
     public bool Pfl { get; private set; }
+    /// <summary>The beat effect: echo, flanger or reverb; on or off; how much is heard (0..1); its length in beats.</summary>
+    public string FxType { get; private set; } = DjEffects.Echo;
+    public bool FxOn { get; private set; }
+    public double FxMix { get; private set; } = 0.5;
+    public double FxBeats { get; private set; } = 1;
     public double Bpm => _memory.Bpm;
     public double PlayingBpm => _memory.Bpm * (1 + (Tempo + _bend) / 100);
 
@@ -173,7 +180,7 @@ public sealed class DjDeck
                 if (_main == 0 || !Playing || !BASS_Mixer_ChannelGetLevelEx(_main, levels, 0.05f, BASS_LEVEL_STEREO)) levels[0] = levels[1] = 0;
             return new DjDeckInfo(Id, Media, Playing, Math.Round(Position, 3), _duration, _memory.Bpm, _memory.FirstBeat, Analysing, Tempo, TempoRange,
                 KeyLock, Synced, CuePoint, [.. _memory.HotCues], LoopIn, LoopOut, LoopActive, LoopBeats, Gain, EqLow, EqMid, EqHigh,
-                KillLow, KillMid, KillHigh, Filter, Fader, Pfl, levels[0], levels[1], _roll is not null);
+                KillLow, KillMid, KillHigh, Filter, Fader, Pfl, levels[0], levels[1], _roll is not null, FxType, FxOn, FxMix, FxBeats);
         }
     }
 
@@ -219,6 +226,7 @@ public sealed class DjDeck
             CuePoint = Math.Clamp(media.CueIn, 0, _duration);
             ApplyTempo();
             ApplyFilters();
+            ApplyFx();
             SeekLocked(CuePoint);
         }
         if (!_memory.Analysed) Analyse(media.Path, _memory);
@@ -253,7 +261,8 @@ public sealed class DjDeck
         BASS_StreamFree(_main);
         BASS_StreamFree(_pfl);
         BASS_StreamFree(_tempo); // frees the file decoder too
-        _tempo = _main = _pfl = _fxLow = _fxMid = _fxHigh = _fxFilter = 0;
+        _tempo = _main = _pfl = _fxLow = _fxMid = _fxHigh = _fxFilter = _fxBeat = 0;
+        _fxBeatType = DjEffects.None;
         Media = null;
         Playing = false;
         Analysing = false;
@@ -321,6 +330,7 @@ public sealed class DjDeck
             Tempo = Math.Clamp(percent, -50, 50);
             Synced = synced;
             ApplyTempo();
+            if (FxOn) ApplyFx(); // the echo and flanger follow the tempo
         }
     }
 
@@ -543,6 +553,33 @@ public sealed class DjDeck
         {
             switch (band) { case "low": KillLow = on; break; case "mid": KillMid = on; break; case "high": KillHigh = on; break; default: return; }
             ApplyFilters();
+        }
+    }
+
+    /// <summary>Changes the beat effect; leave a value null to keep it.</summary>
+    public void SetFx(string? type = null, bool? on = null, double? mix = null, double? beats = null)
+    {
+        lock (_gate)
+        {
+            if (DjEffects.IsKnown(type)) FxType = type!;
+            if (on is bool o) FxOn = o;
+            if (mix is double m) FxMix = Math.Clamp(m, 0, 1);
+            if (beats is double b) FxBeats = DjEffects.Beats.MinBy(x => Math.Abs(x - b));
+            ApplyFx();
+        }
+    }
+
+    private void ApplyFx()
+    {
+        if (_tempo == 0) return;
+        try
+        {
+            _fxBeat = DjEffects.Apply(_tempo, _fxBeat, _fxBeatType, FxType, FxOn, FxMix, FxBeats, _memory.Bpm * (1 + Tempo / 100), priority: 0);
+            _fxBeatType = _fxBeat == 0 ? DjEffects.None : FxType;
+        }
+        catch (Exception ex) when (ex is BassException or DllNotFoundException or EntryPointNotFoundException)
+        {
+            FxOn = false; // no bass_fx: the deck plays without the effect
         }
     }
 
