@@ -101,8 +101,8 @@ Vragen bij stap 2:
 
 | Status | Werk | Af als |
 |---|---|---|
-| ⬜ | Spelers en cartwall in de nieuwe stijl: toestand als woord en vorm, cartknoppen van 96 px | gelijk aan het ontwerp "Spelers" |
-| ⬜ | Programmalog in de nieuwe stijl | gelijk aan het ontwerp "1 scherm" |
+| ✅ | Spelers en cartwall in de nieuwe stijl: toestand als woord en vorm, cartknoppen van 96 px | gelijk aan het ontwerp "Spelers" (Standby/PFL: toestand als woord en teken, grote resttijd, één gevulde hoofdknop; cartknoppen 96 px met "speelt" en "sleep hierheen") |
+| ✅ | Programmalog in de nieuwe stijl | gelijk aan het ontwerp "1 scherm" (tijd, kleurstreep per soort, titel met soort en details, lengte; knoppen pas bij aanwijzen of selecteren) |
 | ⬜ | Werkruimtes Productie, Planning en Rapportage naast Live, DJ en Automatisering | elke werkruimte opent zijn eigen indeling |
 | 🟡 | Responsive gedrag en indelingen voor 1 tot 4 schermen, aanraakmodus voor een aanraakscherm | op 1 tot 4 schermen staat alles op zijn plek en blijft dat na een herstart (werkbladen per scherm klaar en getest op 2 schermen: menu Werkbladen, bewaard met de indeling, terug op hetzelfde scherm; aanraakmodus nog open) |
 | ⬜ | Overige vensters nalopen (planner, bibliotheek, mixer, beheer) | geen venster meer in de oude stijl |

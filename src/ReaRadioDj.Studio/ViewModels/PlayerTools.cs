@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using Avalonia;
 using Avalonia.Media;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -25,6 +26,7 @@ public sealed partial class PlayerCard : ObservableObject
     }
 
     public string Id { get; }
+    private long? _titleFor;
     [ObservableProperty] private string _name = "";
     [ObservableProperty] private string _label = "leeg";
     [ObservableProperty] private string _state = "empty";
@@ -49,6 +51,27 @@ public sealed partial class PlayerCard : ObservableObject
     [ObservableProperty] private bool _flash;
 
     public string StateText => State switch { "playing" => "speelt", "paused" => "pauze", "cued" => "klaar", _ => "leeg" };
+
+    // The state is never colour alone: a word and a sign go with it (design "Spelers").
+    [ObservableProperty] private string _stateWord = "Leeg";
+    [ObservableProperty] private string _stateGlyph = "–";
+    [ObservableProperty] private IBrush _stateBrush = Brushes.FromHex("#6B7684");
+    [ObservableProperty] private Thickness _stateBorder = new(1);
+    [ObservableProperty] private string _title = "";
+    [ObservableProperty] private string _sub = "";
+    [ObservableProperty] private string _remainingTime = "—";
+    [ObservableProperty] private bool _loaded;
+
+    private void ShowState(bool loaded, double left)
+    {
+        var (word, glyph, color) = !loaded ? ("Leeg", "–", "#6B7684")
+            : State == "playing" && left <= 10 ? ("Laatste 10 s", "!", "#F5A524")
+            : State == "playing" ? ("Speelt", "▶", "#4C8DFF")
+            : State == "paused" ? ("Pauze", "‖", "#9AA4B2")
+            : ("Klaar", "■", "#3FB950");
+        StateWord = word; StateGlyph = glyph; StateBrush = Brushes.FromHex(color);
+        StateBorder = new Thickness(State == "playing" ? 2 : 1);
+    }
     public string StyleButtonText => Wave ? "Compact" : "Golfvorm";
     partial void OnStateChanged(string value) => OnPropertyChanged(nameof(StateText));
     partial void OnWaveChanged(bool value) => OnPropertyChanged(nameof(StyleButtonText));
@@ -74,14 +97,26 @@ public sealed partial class PlayerCard : ObservableObject
         EndState = !Playing ? "normal" : left <= 10 ? "end" : left <= 20 ? "warn" : "normal";
         Flash = EndState == "end" && DateTime.Now.Millisecond < 500;
         Intro = p.Intro is double i && i > p.Position && loaded ? $"intro {StudioHub.TimeTenths(i - p.Position)}" : "";
+        Loaded = loaded;
+        RemainingTime = !loaded ? "—" : Playing || State == "paused" ? "-" + StudioHub.Time(left) : StudioHub.Time(len);
+        if (!loaded) { Title = "Sleep een item hierheen"; Sub = ""; }
+        else if (string.IsNullOrEmpty(Title) || _titleFor != p.MediaId) Title = p.Label ?? "";
+        ShowState(loaded, left);
         Stack = p.Stack.Count == 0 ? "" : $"daarna: {string.Join(", ", p.Stack.Take(3))}{(p.Stack.Count > 3 ? $" (+{p.Stack.Count - 3})" : "")}";
     }
 
     /// <summary>Fetches the waveform and cue points of the loaded item (only when the waveform look is used).</summary>
     private async Task LoadWaveAsync(long? id)
     {
-        if (id is not long mediaId) { Peaks = null; Markers = []; return; }
+        if (id is not long mediaId) { Peaks = null; Markers = []; Sub = ""; _titleFor = null; return; }
         var media = await Hub.Client.GetAsync<MediaDto>($"/api/media/{mediaId}");
+        if (media is not null && MediaId == mediaId)
+        {
+            _titleFor = mediaId;
+            Title = string.IsNullOrWhiteSpace(media.Title) ? Label : media.Title;
+            Sub = string.Join(" · ", new[] { media.Artist, media.Category, StudioHub.Time(media.Cues.CueOut - media.Cues.CueIn),
+                media.Lufs is double l ? $"{l:0.0} LUFS" : "" }.Where(t => !string.IsNullOrWhiteSpace(t)));
+        }
         var peaks = await Hub.Client.GetAsync<PeaksDto>($"/api/media/{mediaId}/peaks");
         if (MediaId != mediaId) return; // another item was loaded in the meantime
         if (peaks is not null)

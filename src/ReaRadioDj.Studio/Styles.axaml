@@ -264,4 +264,28 @@
     <Setter Property="MinHeight" Value="30" />
     <Setter Property="Padding" Value="8,2" />
   </Style>
+
+  <!-- One filled main button per area (design rule 2) -->
+  <Style Selector="Button.primary">
+    <Setter Property="Background" Value="{DynamicResource PrimaryBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource PrimaryBrush}" />
+    <Setter Property="Foreground" Value="White" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="VerticalContentAlignment" Value="Center" />
+  </Style>
+  <Style Selector="Button.primary:pointerover /template/ ContentPresenter">
+    <Setter Property="Background" Value="#3B76F0" />
+    <Setter Property="Foreground" Value="White" />
+  </Style>
+  <!-- A player in its last 10 seconds: the border flashes -->
+  <Style Selector="Border.card.flash">
+    <Setter Property="BorderBrush" Value="{DynamicResource OnAirBrush}" />
+  </Style>
+  <!-- Log rows: the actions only show on the row under the mouse or the selected row, so the log stays calm -->
+  <Style Selector="ListBoxItem StackPanel.rowactions">
+    <Setter Property="Opacity" Value="0" />
+  </Style>
+  <Style Selector="ListBoxItem:pointerover StackPanel.rowactions, ListBoxItem:selected StackPanel.rowactions">
+    <Setter Property="Opacity" Value="1" />
+  </Style>
 </Styles>

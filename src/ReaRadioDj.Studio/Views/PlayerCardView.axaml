@@ -4,64 +4,63 @@
              xmlns:ctl="using:ReaRadioDj.Studio.Controls"
              x:Class="ReaRadioDj.Studio.Views.PlayerCardView"
              x:DataType="vm:PlayerCard">
-  <Border Classes="card" Margin="0,0,0,6" BorderBrush="{Binding Playing, Converter={x:Static vm:Brushes.Active}}">
-    <StackPanel Spacing="4">
+  <!-- One player anatomy for every player (design "Spelers"): name and state as word and sign, the biggest text is the
+       time left, title and details, waveform with cue points, one filled main button, then the stack. -->
+  <Border Classes="card" Margin="0,0,0,8" Padding="12" BorderBrush="{Binding StateBrush}" BorderThickness="{Binding StateBorder}"
+          Classes.flash="{Binding Flash}">
+    <StackPanel Spacing="8">
       <DockPanel>
-        <Button DockPanel.Dock="Right" Classes="small" Content="{Binding StyleButtonText}" Command="{Binding ToggleStyleCommand}" Margin="6,0,0,0"
-                ToolTip.Tip="Wissel tussen golfvorm (met cuepunten en grote teller) en compact, voor alle spelers" />
-        <TextBlock DockPanel.Dock="Right" Classes="muted" Text="{Binding StateText}" VerticalAlignment="Center" />
-        <TextBlock Classes="h" Text="{Binding Name}" Margin="0,0,8,0" />
-        <TextBlock Text="{Binding Label}" TextTrimming="CharacterEllipsis" FontSize="15" VerticalAlignment="Center" IsVisible="{Binding Wave}" />
+        <TextBlock DockPanel.Dock="Right" Classes="mono remaining" FontSize="34" FontWeight="Bold" VerticalAlignment="Center"
+                   Text="{Binding RemainingTime}" Margin="8,0,0,0"
+                   Classes.warn="{Binding EndState, Converter={x:Static vm:Brushes.Is}, ConverterParameter=warn}"
+                   Classes.end="{Binding EndState, Converter={x:Static vm:Brushes.Is}, ConverterParameter=end}" />
+        <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+          <TextBlock Text="{Binding Name}" FontSize="16" FontWeight="Bold" VerticalAlignment="Center" />
+          <Border CornerRadius="{DynamicResource Radius10}" Padding="8,2" BorderThickness="1" BorderBrush="{Binding StateBrush}" VerticalAlignment="Center">
+            <StackPanel Orientation="Horizontal" Spacing="5">
+              <TextBlock Text="{Binding StateGlyph}" FontSize="11" FontWeight="Bold" Foreground="{Binding StateBrush}" VerticalAlignment="Center" />
+              <TextBlock Text="{Binding StateWord}" FontSize="12" FontWeight="SemiBold" Foreground="{Binding StateBrush}" VerticalAlignment="Center" />
+            </StackPanel>
+          </Border>
+          <Button Classes="small" Content="{Binding StyleButtonText}" Command="{Binding ToggleStyleCommand}" VerticalAlignment="Center"
+                  ToolTip.Tip="Wissel tussen golfvorm (met cuepunten) en compact, voor alle spelers" />
+        </StackPanel>
       </DockPanel>
 
-      <!-- ===== waveform look: waveform with cue points on the left, big counter and transport on the right -->
-      <Grid ColumnDefinitions="*,8,170" IsVisible="{Binding Wave}">
-        <Border Grid.Column="0" CornerRadius="{DynamicResource Radius4}" ClipToBounds="True" Height="96">
-          <ctl:WaveformView x:Name="Wave" Peaks="{Binding Peaks}" BlockSeconds="{Binding BlockSeconds}" Markers="{Binding Markers}"
-                            Playhead="{Binding Position}" CueIn="{Binding CueIn}" CueOut="{Binding CueOut}"
-                            ShowCursor="False" ReadOnlyMarkers="True" EmptyText="geen item geladen"
-                            Cursor="Hand" ToolTip.Tip="Klik om te zoeken · scrollen = in- en uitzoomen" />
-        </Border>
-        <StackPanel Grid.Column="2" Spacing="4" VerticalAlignment="Center">
-          <TextBlock Classes="mono remaining" FontSize="30" FontWeight="Bold" HorizontalAlignment="Right" Text="{Binding Remaining, TargetNullValue='--', FallbackValue='--'}"
-                     Classes.warn="{Binding EndState, Converter={x:Static vm:Brushes.Is}, ConverterParameter=warn}"
-                     Classes.end="{Binding EndState, Converter={x:Static vm:Brushes.Is}, ConverterParameter=end}" />
-          <ProgressBar Classes="countdown" Value="{Binding Left}" Maximum="100" MinHeight="8" MinWidth="0"
-                       Classes.warn="{Binding EndState, Converter={x:Static vm:Brushes.Is}, ConverterParameter=warn}"
-                       Classes.end="{Binding EndState, Converter={x:Static vm:Brushes.Is}, ConverterParameter=end}"
-                       Classes.flash="{Binding Flash}" />
-          <DockPanel>
-            <TextBlock DockPanel.Dock="Left" Classes="mono muted" Text="{Binding Elapsed}" VerticalAlignment="Center" />
-            <TextBlock HorizontalAlignment="Right" FontSize="12" Foreground="#F0B429" Text="{Binding Intro}" VerticalAlignment="Center" />
-          </DockPanel>
-          <Grid ColumnDefinitions="*,4,*">
-            <Button Grid.Column="0" Classes="transport go" Content="▶ ❚❚" Command="{Binding ToggleCommand}" HorizontalAlignment="Stretch" ToolTip.Tip="Afspelen / pauze" />
-            <Button Grid.Column="2" Classes="transport stop" Content="■" Command="{Binding StopCommand}" HorizontalAlignment="Stretch" ToolTip.Tip="Stop en terug naar het begin" />
-          </Grid>
-        </StackPanel>
-      </Grid>
-
-      <!-- ===== compact look -->
-      <StackPanel Spacing="4" IsVisible="{Binding !Wave}">
-        <TextBlock Text="{Binding Label}" TextTrimming="CharacterEllipsis" FontSize="15" />
-        <ProgressBar x:Name="Bar" Value="{Binding Progress}" Maximum="100" Height="10" MinHeight="10" MinWidth="0" Cursor="Hand"
-                     ToolTip.Tip="Klik om te zoeken" />
-        <DockPanel>
-          <TextBlock DockPanel.Dock="Left" Classes="mono" Text="{Binding Elapsed}" />
-          <TextBlock DockPanel.Dock="Right" Classes="mono remaining" FontSize="16" Text="{Binding Remaining}"
-                     Classes.warn="{Binding EndState, Converter={x:Static vm:Brushes.Is}, ConverterParameter=warn}"
-                     Classes.end="{Binding EndState, Converter={x:Static vm:Brushes.Is}, ConverterParameter=end}" />
-          <TextBlock HorizontalAlignment="Center" FontSize="12" Foreground="#F0B429" Text="{Binding Intro}" />
-        </DockPanel>
+      <StackPanel Spacing="2">
+        <TextBlock Text="{Binding Title}" FontSize="17" FontWeight="Bold" TextTrimming="CharacterEllipsis"
+                   Classes.muted="{Binding !Loaded}" />
+        <TextBlock Classes="muted" Text="{Binding Sub}" FontSize="13" TextTrimming="CharacterEllipsis"
+                   IsVisible="{Binding Sub, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
       </StackPanel>
 
+      <!-- waveform look -->
+      <Border CornerRadius="{DynamicResource Radius6}" ClipToBounds="True" Height="72" IsVisible="{Binding Wave}">
+        <ctl:WaveformView x:Name="Wave" Peaks="{Binding Peaks}" BlockSeconds="{Binding BlockSeconds}" Markers="{Binding Markers}"
+                          Playhead="{Binding Position}" CueIn="{Binding CueIn}" CueOut="{Binding CueOut}"
+                          ShowCursor="False" ReadOnlyMarkers="True" EmptyText="geen item geladen"
+                          Cursor="Hand" ToolTip.Tip="Klik om te zoeken · scrollen = in- en uitzoomen" />
+      </Border>
+      <!-- compact look -->
+      <ProgressBar x:Name="Bar" Value="{Binding Progress}" Maximum="100" Height="8" MinHeight="8" MinWidth="0" Cursor="Hand"
+                   ToolTip.Tip="Klik om te zoeken" IsVisible="{Binding !Wave}" />
+
+      <WrapPanel IsVisible="{Binding Loaded}">
+        <TextBlock Classes="muted" FontSize="13" Margin="0,0,16,0">
+          <Run Text="Gespeeld" /> <Run Classes="mono" Text="{Binding Elapsed, Mode=OneWay}" Foreground="{DynamicResource TextBrush}" FontWeight="Bold" />
+        </TextBlock>
+        <TextBlock FontSize="13" Foreground="{DynamicResource WarnBrush}" Text="{Binding Intro}" FontWeight="SemiBold" />
+      </WrapPanel>
+
       <WrapPanel>
-        <Button Classes="small" Margin="0,0,4,4" Content="▶ / ❚❚" Command="{Binding ToggleCommand}" MinWidth="64" IsVisible="{Binding !Wave}" />
-        <Button Classes="small" Margin="0,0,4,4" Content="■" Command="{Binding StopCommand}" ToolTip.Tip="Stop en terug naar het begin" IsVisible="{Binding !Wave}" />
-        <Button Classes="small" Margin="0,0,4,4" Content="⏏" Command="{Binding EjectCommand}" ToolTip.Tip="Uitwerpen" />
-        <Button Classes="small" Margin="0,0,4,4" Content="Laad selectie" Command="{Binding LoadSelectedCommand}" />
-        <Button Classes="small" Margin="0,0,4,4" Content="+ stapel" Command="{Binding EnqueueSelectedCommand}" ToolTip.Tip="Selectie achter het huidige item" />
-        <Button Classes="small" Margin="0,0,4,4" Content="Cues" Command="{Binding EditCuesCommand}" />
+        <Button Classes="primary" Margin="0,0,6,6" MinWidth="132" MinHeight="44" HorizontalContentAlignment="Center"
+                Content="Start / pauze" Command="{Binding ToggleCommand}" />
+        <Button Margin="0,0,6,6" MinHeight="44" VerticalContentAlignment="Center" Content="Stop" Command="{Binding StopCommand}" ToolTip.Tip="Stop en terug naar het begin" />
+        <Button Margin="0,0,6,6" MinHeight="44" VerticalContentAlignment="Center" Content="Uitwerpen" Command="{Binding EjectCommand}" />
+        <Button Classes="small" Margin="0,0,4,6" Content="Laad selectie" Command="{Binding LoadSelectedCommand}" VerticalAlignment="Center" />
+        <Button Classes="small" Margin="0,0,4,6" Content="+ stapel" Command="{Binding EnqueueSelectedCommand}" VerticalAlignment="Center"
+                ToolTip.Tip="Selectie achter het huidige item" />
+        <Button Classes="small" Margin="0,0,4,6" Content="Cues" Command="{Binding EditCuesCommand}" VerticalAlignment="Center" />
       </WrapPanel>
       <DockPanel IsVisible="{Binding Stack, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
         <Button DockPanel.Dock="Right" Classes="small" Content="✕" Command="{Binding ClearStackCommand}" ToolTip.Tip="Stapel leegmaken" />
