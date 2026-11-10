@@ -70,7 +70,7 @@ Legenda: ✅ klaar · 🟡 deels · ⬜ open
 | ⬜ | ASIO-uitvoer |
 | ⬜ | Meerdere streamservers en codecs (AAC, Opus), HLS |
 | ⬜ | Opnemen (programma, mic) en automatische opname |
-| ⬜ | DSP/VST per kanaal |
+| ⬜ | Kanaalstrip per mengkanaal: gain, balans, equalizer, compressor, automatische niveauregeling (AGC) en vrije plekken voor VST-effecten; per kanaal aan/uit, dempen, naar de zender sturen en opnemen; een masterfader met begrenzer en een knop voor praten-over-muziek |
 | ⬜ | Watchdog en herstel na een crash |
 | ⬜ | Mixpunten per nummer met overgangstypes per categorie (knippen, faden, over de intro), bovenop de overgangseditor |
 | ⬜ | OSC uitsturen (status naar mengtafel of lichtsturing), naast het bestaande OSC-commandokanaal |
@@ -160,3 +160,4 @@ alleen in een bestand in te stellen is. Eigen opzet en eigen benamingen.
 | ⬜ | Verkenner in de studio: door mappen bladeren en een bestand dat niet in de bibliotheek staat voorluisteren of in de log zetten |
 | ⬜ | Inrichthulp bij de eerste start: stap voor stap station, mappen, geluidskaarten en stream kiezen, met een testtoon |
 | ⬜ | Informatievensters: itemgegevens van wat speelt (tags, hoes, laatst gedraaid), stationsinformatie en een webpagina naar keuze in een venster |
+| ⬜ | Regiekamer-venster: het weer voor de eigen plaats, nieuwskoppen (RSS) en berichten voor de presentator naast elkaar in beeld; de gegevens zijn er al voor de AI-presentator (Open-Meteo, zonder sleutel) |
