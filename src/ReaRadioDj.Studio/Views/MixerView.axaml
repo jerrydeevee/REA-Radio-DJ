@@ -89,6 +89,40 @@
             <Slider Grid.Row="1" Grid.Column="1" Minimum="0" Maximum="100" Value="{Binding EffectMix}" TickFrequency="5" IsSnapToTickEnabled="True" IsVisible="{Binding HasMix}" />
             <TextBlock Grid.Row="1" Grid.Column="2" Classes="mono" VerticalAlignment="Center" Text="{Binding EffectMix, StringFormat='{}{0:0}%'}" IsVisible="{Binding HasMix}" />
           </Grid>
+          <TextBlock Classes="h" Text="VST-effecten (VST 2, 64-bit)" Margin="0,8,0,0" />
+          <ItemsControl ItemsSource="{Binding VstSlots}">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="vm:VstSlotVm">
+                <StackPanel Spacing="3" Margin="0,0,0,4">
+                  <Grid ColumnDefinitions="150,*,90">
+                    <TextBlock Text="{Binding Title}" VerticalAlignment="Center" />
+                    <ComboBox Grid.Column="1" ItemsSource="{Binding Plugins}" SelectedItem="{Binding Plugin}" HorizontalAlignment="Stretch">
+                      <ComboBox.ItemTemplate><DataTemplate x:DataType="c:VstPluginDto"><TextBlock Text="{Binding Name}" /></DataTemplate></ComboBox.ItemTemplate>
+                    </ComboBox>
+                    <CheckBox Grid.Column="2" Content="Aan" IsChecked="{Binding On}" IsEnabled="{Binding HasPlugin}" Margin="8,0,0,0" />
+                  </Grid>
+                  <TextBlock Text="{Binding Error}" Foreground="#E5484D" TextWrapping="Wrap" IsVisible="{Binding HasError}" Margin="150,0,0,0" />
+                  <Button Content="{Binding ParamsText}" Command="{Binding ToggleParamsCommand}" IsVisible="{Binding HasParams}" Margin="150,0,0,0" Padding="6,2" />
+                  <ItemsControl ItemsSource="{Binding Params}" IsVisible="{Binding ShowParams}" Margin="150,0,0,0">
+                    <ItemsControl.ItemTemplate>
+                      <DataTemplate x:DataType="vm:VstParamVm">
+                        <Grid ColumnDefinitions="130,*,110">
+                          <TextBlock Text="{Binding Name}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                          <Slider Grid.Column="1" Minimum="0" Maximum="100" Value="{Binding Value}" />
+                          <TextBlock Grid.Column="2" Classes="mono" Text="{Binding Display}" VerticalAlignment="Center" Margin="8,0,0,0" TextTrimming="CharacterEllipsis" />
+                        </Grid>
+                      </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                  </ItemsControl>
+                </StackPanel>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+          <StackPanel Orientation="Horizontal" Spacing="8">
+            <Button Content="Plug-ins zoeken" Command="{Binding $parent[UserControl].DataContext.ScanVstCommand}" Padding="8,3"
+                    ToolTip.Tip="Laadt elk .dll-bestand in de VST-mappen één keer om te zien of het een bruikbaar effect is" />
+            <TextBlock Text="{Binding $parent[UserControl].DataContext.VstStatus}" VerticalAlignment="Center" TextWrapping="Wrap" MaxWidth="520" Opacity="0.8" />
+          </StackPanel>
           <CheckBox Content="Automatische niveauregeling (brengt het kanaal rustig naar een vast niveau, hooguit 12 dB)" IsChecked="{Binding AgcOn}" Margin="0,6,0,0" />
           <Button Content="Ingang verwijderen" IsVisible="{Binding IsInput}" Command="{Binding $parent[UserControl].DataContext.RemoveInputCommand}" HorizontalAlignment="Left" Margin="0,6,0,0" />
         </StackPanel>

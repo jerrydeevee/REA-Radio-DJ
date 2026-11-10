@@ -12,6 +12,13 @@ public sealed class ReaRadioDjOptions
     /// <summary>Where channel recordings go; empty = the folder "Opnamen" in the data folder.</summary>
     public string RecordingFolder { get; set; } = "";
 
+    /// <summary>Folders searched for VST 2 effect plugins (64-bit .dll).</summary>
+    public List<string> VstFolders { get; set; } =
+    [
+        @"C:\Program Files\VSTPlugins", @"C:\Program Files\Steinberg\VSTPlugins",
+        @"C:\Program Files\Common Files\VST2", @"C:\Program Files\Common Files\Steinberg\VST2",
+    ];
+
     public string RecordingPath => string.IsNullOrWhiteSpace(RecordingFolder) ? Path.Combine(DataFolder, "Opnamen") : RecordingFolder;
 
     /// <summary>-1 = default sound card, 0 = no sound card (stream only), 1.. = device index (see /api/devices).</summary>

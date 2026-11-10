@@ -12,7 +12,9 @@ namespace ReaRadioDj.Server;
 /// </summary>
 public static class ChannelsApi
 {
-    public const string ChannelsKey = "channels", InputsKey = "inputs";
+    public const string ChannelsKey = "channels", InputsKey = "inputs", VstFoldersKey = "vstfolders", VstPluginsKey = "vstplugins";
+    private static readonly object ScanGate = new();
+    private static VstPluginsDto? _plugins;
 
     public static void Load(StationDb db, ReaRadioDjOptions options)
     {
@@ -22,6 +24,9 @@ public static class ChannelsApi
                 options.Routing.Inputs = list;
             if (db.GetSetting(ChannelsKey) is { } channels && JsonSerializer.Deserialize<Dictionary<string, ChannelSettings>>(channels) is { } map)
                 options.Routing.Channels = map;
+            if (db.GetSetting(VstFoldersKey) is { } folders && JsonSerializer.Deserialize<List<string>>(folders) is { } f)
+                options.VstFolders = f;
+            if (db.GetSetting(VstPluginsKey) is { } plugins) _plugins = JsonSerializer.Deserialize<VstPluginsDto>(plugins);
         }
         catch (JsonException) { }
     }
@@ -38,6 +43,7 @@ public static class ChannelsApi
                 GainDb = body.GainDb, Pan = body.Pan, EqLowDb = body.EqLowDb, EqMidDb = body.EqMidDb, EqHighDb = body.EqHighDb,
                 CompressorOn = body.CompressorOn, CompressorThresholdDb = body.CompressorThresholdDb, CompressorRatio = body.CompressorRatio,
                 AgcOn = body.AgcOn, OnAir = body.OnAir, Effect = body.Effect ?? "", EffectOn = body.EffectOn, EffectMix = body.EffectMix,
+                Vst = router.Strip(id).Processor.Settings.Vst,
             }.Clamped();
             try { router.ApplyChannel(id, s); }
             catch (Exception ex) when (ex is BassException or DllNotFoundException)
@@ -98,7 +104,73 @@ public static class ChannelsApi
                 .Select(f => new RecordingFileDto(f.Name, f.Length, Math.Round(Math.Max(0, f.Length - 44) / (rate * 4.0), 1), f.LastWriteTime)).ToList());
         });
 
-        api.MapPost("/inputs",(InputRequest body, AudioRouter router, StationDb db, MessageCenter messages) =>
+        // ---- VST slots
+        api.MapGet("/vst/plugins", (bool? scan, StationDb db) =>
+        {
+            if (scan == true)
+            {
+                lock (ScanGate)
+                {
+                    var found = new List<VstPluginDto>();
+                    foreach (var dir in options.VstFolders.Where(Directory.Exists))
+                    {
+                        List<string> files;
+                        try { files = Directory.EnumerateFiles(dir, "*.dll", SearchOption.AllDirectories).Take(300).ToList(); }
+                        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { continue; }
+                        foreach (var file in files)
+                        {
+                            var p = VstChain.Probe(file);
+                            found.Add(new VstPluginDto(p.Path, p.Name, p.Vendor, p.Params, p.Error));
+                        }
+                    }
+                    _plugins = new VstPluginsDto(found.OrderBy(p => p.Error is not null).ThenBy(p => p.Name, StringComparer.OrdinalIgnoreCase).ToList(),
+                        options.VstFolders, DateTime.Now);
+                    db.SetSetting(VstPluginsKey, JsonSerializer.Serialize(_plugins));
+                }
+            }
+            return Results.Ok((_plugins ?? new VstPluginsDto([], options.VstFolders, null)) with { Folders = options.VstFolders });
+        });
+
+        api.MapPut("/vst/folders", (VstFoldersRequest body, StationDb db) =>
+        {
+            options.VstFolders = body.Folders.Select(f => f.Trim()).Where(f => f.Length > 0).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+            db.SetSetting(VstFoldersKey, JsonSerializer.Serialize(options.VstFolders));
+            return Results.Ok(options.VstFolders);
+        });
+
+        api.MapGet("/channels/{id}/vst", (string id, AudioRouter router) =>
+            !router.IsStarted || !router.HasStrip(id) ? Results.NotFound() : Results.Ok(VstSlots(router.Strip(id), withParams: true)));
+
+        api.MapPut("/channels/{id}/vst/{slot:int}", (string id, int slot, VstSlotRequest body, AudioRouter router, StationDb db) =>
+        {
+            if (!router.IsStarted || !router.HasStrip(id) || slot < 0 || slot >= VstChain.Slots) return Results.NotFound();
+            var strip = router.Strip(id);
+            var current = strip.Processor.Settings;
+            var slots = current.Vst.ToList();
+            while (slots.Count <= slot) slots.Add(new VstSlot(""));
+            string path = body.Path?.Trim() ?? "";
+            // The same plugin keeps its parameters; another plugin starts from its own defaults.
+            slots[slot] = path == slots[slot].Path ? slots[slot] with { On = body.On } : new VstSlot(path, body.On);
+            while (slots.Count > 0 && slots[^1].Path.Length == 0) slots.RemoveAt(slots.Count - 1);
+            try { router.ApplyChannel(id, current with { Vst = slots }); }
+            catch (Exception ex) when (ex is BassException or DllNotFoundException) { return Results.BadRequest($"VST niet gelukt: {ex.Message}"); }
+            options.Routing.Channels[id] = strip.Processor.Settings;
+            Save(db, options);
+            return Results.Ok(VstSlots(strip, withParams: true)[slot]);
+        });
+
+        api.MapPut("/channels/{id}/vst/{slot:int}/params/{index:int}", (string id, int slot, int index, VstParamRequest body, AudioRouter router, StationDb db) =>
+        {
+            if (!router.IsStarted || !router.HasStrip(id) || slot < 0 || slot >= VstChain.Slots) return Results.NotFound();
+            var strip = router.Strip(id);
+            if (!strip.Processor.SetVstParam(slot, index, body.Value)) return Results.NotFound();
+            options.Routing.Channels[id] = strip.Processor.Settings;
+            Save(db, options);
+            var p = strip.Processor.VstParams(slot).FirstOrDefault(x => x.Index == index);
+            return p is null ? Results.NotFound() : Results.Ok(new VstParamDto(p.Index, p.Name, p.Unit, p.Display, p.Value));
+        });
+
+        api.MapPost("/inputs", (InputRequest body, AudioRouter router, StationDb db, MessageCenter messages) =>
         {
             if (!router.IsStarted) return Results.Conflict("De geluidsengine draait niet");
             var name = string.IsNullOrWhiteSpace(body.Name) ? "Ingang" : body.Name.Trim();
@@ -139,6 +211,23 @@ public static class ChannelsApi
         db.SetSetting(ChannelsKey, JsonSerializer.Serialize(options.Routing.Channels));
     }
 
+    private static List<VstSlotDto> VstSlots(MixerStrip strip, bool withParams)
+    {
+        var settings = strip.Processor.Settings.Vst;
+        var list = new List<VstSlotDto>();
+        for (int i = 0; i < VstChain.Slots; i++)
+        {
+            var slot = i < settings.Count ? settings[i] : new VstSlot("");
+            var info = strip.Processor.VstInfo(i);
+            var ps = withParams && info is not null
+                ? strip.Processor.VstParams(i).Select(p => new VstParamDto(p.Index, p.Name, p.Unit, p.Display, p.Value)).ToList()
+                : null;
+            list.Add(new VstSlotDto(i, slot.Path, info?.Name ?? (slot.Path.Length > 0 ? Path.GetFileNameWithoutExtension(slot.Path) : ""),
+                info?.Vendor ?? "", slot.Path.Length > 0 && slot.On, strip.Processor.VstError(i), ps));
+        }
+        return list;
+    }
+
     private static RecordingDto Recording(MixerStrip s) =>
         new(s.Id, s.Recorder.IsRecording, s.Recorder.FilePath is { } f ? Path.GetFileName(f) : null, Math.Round(s.Recorder.Seconds, 1));
 
@@ -150,7 +239,7 @@ public static class ChannelsApi
     private static ChannelsDto Dto(AudioRouter router)
     {
         var channels = router.IsStarted
-            ? router.Strips.Select(s => new ChannelDto(s.Id, s.Name, s.Source, Settings(s.Processor.Settings))).ToList()
+            ? router.Strips.Select(s => new ChannelDto(s.Id, s.Name, s.Source, Settings(s.Processor.Settings), VstSlots(s, withParams: false))).ToList()
             : [];
         var sources = new List<OutputChoiceDto> { new(InputChannel.ToneSource, "Testtoon 1 kHz (-18 dBFS)") };
         sources.AddRange(BassRuntime.GetRecordDevices().Where(d => d.Enabled).Select(d => new OutputChoiceDto($"rec:{d.Index}", d.Name)));

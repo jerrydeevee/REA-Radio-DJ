@@ -135,6 +135,19 @@ public class ChannelSettingsTests
     }
 
     [Fact]
+    public void Vst_slots_are_limited_and_parameters_clamped()
+    {
+        var s = new ChannelSettings
+        {
+            Vst = [new(" a.dll ", true, [2f, -1f, float.NaN, 0.5f]), new("b.dll"), new("c.dll"), new("d.dll")],
+        }.Clamped();
+        Assert.Equal(VstChain.Slots, s.Vst.Count);
+        Assert.Equal("a.dll", s.Vst[0].Path);
+        Assert.Equal([1f, 0f, 0f, 0.5f], s.Vst[0].Params!);
+        Assert.Null(s.Vst[1].Params);
+    }
+
+    [Fact]
     public void Every_effect_has_a_name_and_only_some_have_a_mix()
     {
         Assert.All(ChannelEffect.Choices, c => Assert.False(string.IsNullOrWhiteSpace(c.Name)));

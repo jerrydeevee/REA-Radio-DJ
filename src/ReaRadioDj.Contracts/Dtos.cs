@@ -404,7 +404,24 @@ public sealed record RecordingDto(string Channel, bool Recording, string? File, 
 /// <summary>A recorded file in the recordings folder.</summary>
 public sealed record RecordingFileDto(string Name, long Bytes, double Seconds, DateTime Modified);
 
-public sealed record ChannelDto(string Id, string Name, string? Source, ChannelSettingsDto Settings);
+public sealed record ChannelDto(string Id, string Name, string? Source, ChannelSettingsDto Settings, IReadOnlyList<VstSlotDto>? Vst = null);
+
+/// <summary>A VST 2 plugin file found in the plugin folders; Error is set when it cannot be used.</summary>
+public sealed record VstPluginDto(string Path, string Name, string Vendor, int Params, string? Error);
+
+/// <summary>The plugins found, and the folders that were searched.</summary>
+public sealed record VstPluginsDto(IReadOnlyList<VstPluginDto> Plugins, IReadOnlyList<string> Folders, DateTime? Scanned);
+
+/// <summary>One VST slot of a channel: the plugin (empty path = empty slot), on or bypassed, and its parameters.</summary>
+public sealed record VstSlotDto(int Slot, string Path, string Name, string Vendor, bool On, string? Error, IReadOnlyList<VstParamDto>? Params = null);
+
+public sealed record VstParamDto(int Index, string Name, string Unit, string Display, float Value);
+
+public sealed record VstSlotRequest(string? Path, bool On);
+
+public sealed record VstParamRequest(float Value);
+
+public sealed record VstFoldersRequest(IReadOnlyList<string> Folders);
 
 /// <summary>All mixer channels with their settings, and the sources an input can use.</summary>
 public sealed record ChannelsDto(IReadOnlyList<ChannelDto> Channels, IReadOnlyList<OutputChoiceDto> Sources, IReadOnlyList<OutputChoiceDto>? Effects = null);

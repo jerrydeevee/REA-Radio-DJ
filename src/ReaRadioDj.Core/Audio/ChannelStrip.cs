@@ -24,9 +24,14 @@ public sealed record ChannelSettings
     public string Effect { get; init; } = "";
     public bool EffectOn { get; init; }
     public double EffectMix { get; init; } = 0.35;
+    /// <summary>VST effects in the slots of the channel (at most <see cref="VstChain.Slots"/>; an empty path is an empty slot).</summary>
+    public IReadOnlyList<VstSlot> Vst { get; init; } = [];
 
     public ChannelSettings Clamped() => this with
     {
+        Vst = (Vst ?? []).Take(VstChain.Slots)
+            .Select(v => v with { Path = v.Path?.Trim() ?? "", Params = v.Params?.Take(256).Select(x => float.IsFinite(x) ? Math.Clamp(x, 0f, 1f) : 0f).ToList() })
+            .ToList(),
         Effect = ChannelEffect.IsKnown(Effect) ? Effect ?? "" : "",
         EffectMix = Math.Clamp(EffectMix, 0, 1),
         GainDb = Math.Clamp(GainDb, -24, 24),
@@ -79,11 +84,31 @@ public sealed unsafe partial class ChannelProcessor
     private int _dsp, _low, _mid, _high, _comp;
 
     private readonly ChannelEffect _effect;
+    private readonly VstChain _vst;
 
     public ChannelProcessor(int handle)
     {
         _handle = handle;
         _effect = new ChannelEffect(handle);
+        _vst = new VstChain(handle);
+    }
+
+    /// <summary>Name and maker of the plugin in a slot, or null when the slot is empty or did not load.</summary>
+    public (string Name, string Vendor)? VstInfo(int slot) { lock (_gate) return _vst.Info(slot); }
+    public string? VstError(int slot) { lock (_gate) return _vst.Error(slot); }
+    public List<VstParam> VstParams(int slot) { lock (_gate) return _vst.Params(slot); }
+
+    /// <summary>Sets a plugin parameter and keeps the new values in the settings; false when the slot or parameter does not exist.</summary>
+    public bool SetVstParam(int slot, int index, float value)
+    {
+        lock (_gate)
+        {
+            if (_vst.SetParam(slot, index, value) is not { } values) return false;
+            var slots = Settings.Vst.ToList();
+            if (slot < slots.Count) slots[slot] = slots[slot] with { Params = values };
+            Settings = Settings with { Vst = slots };
+            return true;
+        }
     }
 
     public ChannelSettings Settings { get; private set; } = new();
@@ -126,6 +151,10 @@ public sealed unsafe partial class ChannelProcessor
         }
 
         _effect.Apply(s.Effect, s.EffectOn, s.EffectMix);
+        _vst.Apply(s.Vst);
+        // Keep what the plugins hold now, so a newly loaded plugin's defaults are stored too.
+        if (s.Vst.Count > 0)
+            Settings = s with { Vst = s.Vst.Select((v, i) => _vst.Loaded(i) ? v with { Params = _vst.Values(i) } : v).ToList() };
 
         if (_comp == 0 && s.CompressorOn)
         {

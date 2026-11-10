@@ -105,6 +105,10 @@ public sealed partial class MixerTool : StudioTool
     [ObservableProperty] private ChannelEditor? _editor;
     public ObservableCollection<OutputChoiceDto> Sources { get; } = [];
     public ObservableCollection<OutputChoiceDto> EffectChoices { get; } = [];
+    /// <summary>VST plugins found by the engine; the first entry is "no plugin".</summary>
+    public ObservableCollection<VstPluginDto> VstPlugins { get; } = [];
+    [ObservableProperty] private string _vstStatus = "";
+    [ObservableProperty] private bool _scanning;
     [ObservableProperty] private OutputChoiceDto? _newInputSource;
     [ObservableProperty] private string _newInputName = "Lijn-in";
     [ObservableProperty] private string _channelStatus = "";
@@ -123,11 +127,46 @@ public sealed partial class MixerTool : StudioTool
         foreach (var s in d.Sources) Sources.Add(s);
         NewInputSource = Sources.FirstOrDefault(s => s.Id == keep) ?? Sources.FirstOrDefault();
         if (d.Effects is { Count: > 0 } fx) { Effects.List.Clear(); Effects.List.AddRange(fx); EffectChoices.Clear(); foreach (var e in fx) EffectChoices.Add(e); }
-        if (open is not null && d.Channels.FirstOrDefault(c => c.Id == open) is { } ch) Editor = new ChannelEditor(this, ch);
+        if (open is not null)
+        {
+            if (VstPlugins.Count == 0) await LoadVstAsync(scan: false);
+            if (d.Channels.FirstOrDefault(c => c.Id == open) is { } ch)
+            {
+                var slots = await Hub.Client.GetAsync<List<VstSlotDto>>($"/api/channels/{ch.Id}/vst");
+                Editor = new ChannelEditor(this, ch, slots ?? []);
+            }
+        }
         return d;
     }
 
     [RelayCommand] private Task EditChannel(StripCard card) => LoadChannelsAsync(card.Id);
+
+    private async Task LoadVstAsync(bool scan)
+    {
+        var r = await Hub.Client.GetAsync<VstPluginsDto>(scan ? "/api/vst/plugins?scan=true" : "/api/vst/plugins");
+        if (r is null) { VstStatus = "Plug-ins ophalen mislukt."; return; }
+        VstPlugins.Clear();
+        VstPlugins.Add(new VstPluginDto("", "Geen plug-in", "", 0, null));
+        foreach (var p in r.Plugins.Where(p => p.Error is null)) VstPlugins.Add(p);
+        int bad = r.Plugins.Count(p => p.Error is not null);
+        string folders = string.Join("; ", r.Folders);
+        VstStatus = r.Scanned is null
+            ? $"Nog niet gezocht. Mappen: {folders}"
+            : $"{VstPlugins.Count - 1} plug-in(s) gevonden op {r.Scanned:dd-MM HH:mm}" + (bad > 0 ? $", {bad} bestand(en) overgeslagen" : "") + $". Mappen: {folders}";
+    }
+
+    [RelayCommand]
+    private async Task ScanVst()
+    {
+        Scanning = true;
+        VstStatus = "Zoeken naar VST-plug-ins…";
+        try
+        {
+            await LoadVstAsync(scan: true);
+            if (Editor is { } e) await LoadChannelsAsync(e.Id);
+        }
+        finally { Scanning = false; }
+    }
     [RelayCommand] private void CloseEditor() => Editor = null;
 
     [RelayCommand]
@@ -200,8 +239,9 @@ public sealed partial class ChannelEditor : ObservableObject
     private readonly MixerTool _owner;
     private readonly bool _loading;
 
-    public ChannelEditor(MixerTool owner, ChannelDto c)
+    public ChannelEditor(MixerTool owner, ChannelDto c, IReadOnlyList<VstSlotDto> vst)
     {
+        foreach (var slot in vst) VstSlots.Add(new VstSlotVm(owner, c.Id, slot));
         _owner = owner;
         Id = c.Id;
         Name = c.Name;
@@ -222,6 +262,7 @@ public sealed partial class ChannelEditor : ObservableObject
     public bool IsInput { get; }
     public string SourceText { get; }
     public ObservableCollection<OutputChoiceDto> EffectChoices => _owner.EffectChoices;
+    public ObservableCollection<VstSlotVm> VstSlots { get; } = [];
 
     [ObservableProperty] private double _gainDb;
     [ObservableProperty] private double _pan;
