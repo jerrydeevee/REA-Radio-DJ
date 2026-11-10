@@ -443,20 +443,48 @@ public static class Glow
 /// <summary>
 /// A button or tally on an Ember+ parameter: "ember 1.2.3" (on when true or not zero) or with a limit, e.g.
 /// "ember 1.3.5 > -40" for a fader that counts as open above -40 dB. Operators: &gt;, &gt;=, &lt;, &lt;=, =, !=.
+/// A parameter can also be named by the identifiers on the way to it, "ember Instance_1/Station_1/Connect": the
+/// numbers are then looked up in the tree of the device, so they may differ per device or change after a restart.
 /// </summary>
-public sealed partial record EmberAddress(int[] Path, string Op = "", double Limit = 0)
+public sealed partial record EmberAddress(int[] Path, string Op = "", double Limit = 0, string[]? Names = null)
 {
-    [GeneratedRegex(@"^\s*ember\s+(?<path>\d+(?:\.\d+)*)\s*(?:(?<op>>=|<=|!=|>|<|=)\s*(?<limit>-?\d+(?:[.,]\d+)?))?\s*$", RegexOptions.IgnoreCase)]
+    [GeneratedRegex(@"^\s*ember\s+(?:(?<path>\d+(?:\.\d+)*)|(?<names>[^\s/<>=!]+(?:/[^\s/<>=!]+)*))\s*(?:(?<op>>=|<=|!=|>|<|=)\s*(?<limit>-?\d+(?:[.,]\d+)?))?\s*$", RegexOptions.IgnoreCase)]
     private static partial Regex Pattern();
 
-    public string PathText => string.Join('.', Path);
+    public string PathText => Names is null ? string.Join('.', Path) : string.Join('/', Names);
 
     public static EmberAddress? Parse(string? text)
     {
-        if (text is null || Pattern().Match(text) is not { Success: true } m || ParsePath(m.Groups["path"].Value) is not { } path) return null;
-        if (!m.Groups["op"].Success) return new EmberAddress(path);
+        if (text is null || Pattern().Match(text) is not { Success: true } m) return null;
+        int[]? path = [];
+        string[]? names = null;
+        if (m.Groups["path"].Success) path = ParsePath(m.Groups["path"].Value);
+        else if (m.Groups["names"].Value is var n && n.Any(char.IsLetter)) names = n.Split('/');
+        else return null;
+        if (path is null) return null;
+        if (!m.Groups["op"].Success) return new EmberAddress(path, Names: names);
         double limit = double.Parse(m.Groups["limit"].Value.Replace(',', '.'), NumberStyles.Float, CultureInfo.InvariantCulture);
-        return new EmberAddress(path, m.Groups["op"].Value, limit);
+        return new EmberAddress(path, m.Groups["op"].Value, limit, names);
+    }
+
+    /// <summary>
+    /// The numbers of this address in a tree: its own, or for names those of the elements with these identifiers.
+    /// Null while a name is not known yet; <paramref name="reached"/> is then how far the tree got us.
+    /// </summary>
+    public int[]? Resolve(IEnumerable<EmberElement> tree, out int[] reached)
+    {
+        reached = Path;
+        if (Names is null) return Path;
+        int[] at = [];
+        foreach (string name in Names)
+        {
+            int[] parent = at;
+            var child = tree.FirstOrDefault(e => string.Equals(e.Identifier, name, StringComparison.OrdinalIgnoreCase)
+                && e.Numbers is var n && n.Length == parent.Length + 1 && n.AsSpan(0, parent.Length).SequenceEqual(parent));
+            if (child is null) { reached = at; return null; }
+            at = child.Numbers;
+        }
+        return reached = at;
     }
 
     public static int[]? ParsePath(string text)
@@ -471,8 +499,8 @@ public sealed partial record EmberAddress(int[] Path, string Op = "", double Lim
 
     public override string ToString() => "ember " + PathText + (Op.Length > 0 ? $" {Op} {Limit.ToString(CultureInfo.InvariantCulture)}" : "");
 
-    public bool Equals(EmberAddress? other) => other is not null && ToString() == other.ToString();
-    public override int GetHashCode() => ToString().GetHashCode(StringComparison.Ordinal);
+    public bool Equals(EmberAddress? other) => other is not null && string.Equals(ToString(), other.ToString(), StringComparison.OrdinalIgnoreCase);
+    public override int GetHashCode() => ToString().GetHashCode(StringComparison.OrdinalIgnoreCase);
 
     /// <summary>Whether a parameter value means "on"; null when the value says nothing (bytes, nothing yet).</summary>
     public bool? IsOn(object? value)

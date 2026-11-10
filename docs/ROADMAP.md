@@ -50,7 +50,7 @@ Legenda: ✅ klaar · 🟡 deels · ⬜ open
 | ✅ | Database-bibliotheken (ODBC) en metadata-opzoeking |
 | ✅ | Reclamebeheer: adverteerders, campagnes, blokken, bewijs van uitzending |
 | ✅ | Hardware-bediening: MIDI (knoppen, faders, lampjes), seriële poort (GPIO-kaarten, relais) en Livewire GPIO (LWRP) koppelen aan de commandobus; lampjes voor microfoon, op de lucht en automatisch (venster Hardware) |
-| ⬜ | Ember+ (Lawo) en mengtafel-specifieke koppelingen |
+| 🟡 | Ember+ (Lawo, LUCI Studio e.a.): knoppen, lampjes en boom-verkenner staan, adressen op nummer of op naam; nog testen tegen een echt apparaat. Mengtafel-specifieke koppelingen open |
 | 🟡 | Rapportage auteursrechten: CSV staat; kolomindeling nog afstemmen op het sjabloon van de NLPO / Buma/Stemra / Sena |
 
 ## Ronde 4 — Meerdere studio's en op afstand

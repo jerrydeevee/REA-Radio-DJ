@@ -136,6 +136,24 @@ public sealed class EmberTests
     }
 
     [Fact]
+    public void A_named_address_finds_its_numbers_in_the_tree()
+    {
+        var a = EmberAddress.Parse("ember Instance_1/Station_2/inputlevel > -30")!;
+        Assert.Equal("ember Instance_1/Station_2/inputlevel > -30", a.ToString());
+        Assert.Equal(a, EmberAddress.Parse("EMBER instance_1/station_2/InputLevel>-30"));
+        Assert.Null(EmberAddress.Parse("ember Instance_1//Status"));
+        Assert.Null(EmberAddress.Parse("ember Instance 1/Status"));
+        Assert.Null(EmberAddress.Parse("ember 1.3")!.Names);
+
+        List<EmberElement> tree = [new("1", "node", "Instance_1"), new("2", "node", "Instance_2"), new("2.4", "node", "Station_2")];
+        Assert.Null(a.Resolve(tree, out int[] reached));
+        Assert.Equal(new[] { 1 }, reached);                              // ask for the children of 1 next
+        tree.AddRange([new("1.4", "node", "Station_2"), new("1.4.7", "parameter", "InputLevel")]);
+        Assert.Equal(new[] { 1, 4, 7 }, a.Resolve(tree, out reached));
+        Assert.Equal(new[] { 1, 3 }, EmberAddress.Parse("ember 1.3")!.Resolve([], out reached));
+    }
+
+    [Fact]
     public void Tally_values_follow_the_parameter_type()
     {
         Assert.Equal(true, EmberAddress.ValueFor(EmberType.Boolean, true, ""));

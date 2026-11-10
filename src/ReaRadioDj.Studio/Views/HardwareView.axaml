@@ -85,7 +85,7 @@
                   </ListBox>
                   <TextBlock Foreground="#F0B429" TextWrapping="Wrap" Text="{Binding EmberProblem}" IsVisible="{Binding EmberProblem, Converter={x:Static ObjectConverters.IsNotNull}}" />
                   <TextBlock Classes="muted" FontSize="11" TextWrapping="Wrap"
-                             Text="Klik Bovenaan om de boom van het apparaat op te halen. Open knooppunten tot je de parameter vindt (bijv. de faderstand of de microfoonknop van een kanaal) en maak er een knop of lampje van." />
+                             Text="Klik Bovenaan om de boom van het apparaat op te halen. Open knooppunten tot je de parameter vindt (bijv. de faderstand of de microfoonknop van een kanaal) en maak er een knop of lampje van. Een parameter mag ook bij naam: ember Instance_1/Station_1/Connect (handig als de nummers per apparaat verschillen)." />
                 </StackPanel>
               </Border>
             </StackPanel>

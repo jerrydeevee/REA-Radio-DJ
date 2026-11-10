@@ -21,7 +21,7 @@ public sealed class EmberConnection : IHwConnection
     private readonly Dictionary<EmberAddress, bool> _state = [];
     private readonly object _writeLock = new();
     private volatile EmberAddress[] _watch = [];
-    private volatile int[][] _targets = [];
+    private volatile EmberAddress[] _targets = [];
     private NetworkStream? _stream;
     private volatile bool _alive;
     private DateTime _lastHeard = DateTime.UtcNow;
@@ -41,7 +41,7 @@ public sealed class EmberConnection : IHwConnection
     public void Watch(IEnumerable<string> triggers, IEnumerable<string> targets)
     {
         _watch = triggers.Select(EmberAddress.Parse).OfType<EmberAddress>().Distinct().ToArray();
-        _targets = targets.Select(EmberAddress.Parse).OfType<EmberAddress>().Select(a => a.Path).ToArray();
+        _targets = targets.Select(EmberAddress.Parse).OfType<EmberAddress>().Distinct().ToArray();
         if (_alive) RequestWatched();
     }
 
@@ -113,8 +113,9 @@ public sealed class EmberConnection : IHwConnection
         {
             var merged = _tree.AddOrUpdate(e.Path, e, (_, old) => e.Merge(old));
             if (!e.HasValue) continue;
-            foreach (var a in _watch.Where(a => a.PathText == merged.Path))
+            foreach (var a in _watch)
             {
+                if (a.Resolve(_tree.Values, out _) is not { } numbers || string.Join('.', numbers) != merged.Path) continue;
                 if (a.IsOn(merged.Value) is not bool on) continue;
                 bool known;
                 lock (_state)
@@ -133,12 +134,16 @@ public sealed class EmberConnection : IHwConnection
     /// <summary>Asks for every node on the way to a watched parameter or tally, once per connection.</summary>
     private void RequestWatched()
     {
-        foreach (var path in _watch.Select(a => a.Path).Concat(_targets))
-            for (int depth = 1; depth < path.Length; depth++)
+        foreach (var a in _watch.Concat(_targets))
+        {
+            // A named address is asked for as far as its names are known; every answer brings it a level further.
+            bool found = a.Resolve(_tree.Values, out int[] path) is not null;
+            for (int depth = a.Names is null ? 1 : 0; depth < path.Length + (found ? 0 : 1); depth++)
             {
                 string key = string.Join('.', path.Take(depth));
                 if (_requested.TryAdd(key, true)) Send(S101.EmberPacket(Glow.GetDirectory(path[..depth])));
             }
+        }
     }
 
     private bool Send(byte[] frame)
@@ -159,10 +164,10 @@ public sealed class EmberConnection : IHwConnection
 
     public void Show(HwOutput output, bool on)
     {
-        if (EmberAddress.Parse(output.Target) is not { } a) return;
-        var type = _tree.TryGetValue(a.PathText, out var known) ? known.EffectiveType : EmberType.Boolean;
+        if (EmberAddress.Parse(output.Target) is not { } a || a.Resolve(_tree.Values, out _) is not { } numbers) return;
+        var type = _tree.TryGetValue(string.Join('.', numbers), out var known) ? known.EffectiveType : EmberType.Boolean;
         if (EmberAddress.ValueFor(type, on, on ? output.OnText : output.OffText) is { } value)
-            Send(S101.EmberPacket(Glow.SetValue(a.Path, value)));
+            Send(S101.EmberPacket(Glow.SetValue(numbers, value)));
     }
 
     /// <summary>The children of a node (the top when the path is empty), asked fresh from the provider.</summary>
