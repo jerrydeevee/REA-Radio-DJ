@@ -12,7 +12,8 @@ namespace ReaRadioDj.Server.Hardware;
 /// report into commands on the command bus, and shows the studio state (microphone open, on air, automation) on
 /// lamps, relays and tallies.
 /// </summary>
-public sealed class HardwareService(HardwareStore store, CommandBus bus, PlayoutEngine engine, AudioRouter router, ILogger<HardwareService> logger)
+public sealed class HardwareService(HardwareStore store, CommandBus bus, PlayoutEngine engine, AudioRouter router, DjMidiService djMidi,
+    ILogger<HardwareService> logger)
     : BackgroundService
 {
     private readonly ConcurrentDictionary<long, IHwConnection> _open = new();
@@ -139,13 +140,34 @@ public sealed class HardwareService(HardwareStore store, CommandBus bus, Playout
         }
     }
 
+    /// <summary>
+    /// Handles a signal as if the device sent it ("ch1 note 11" with a value): to try a set-up without the hardware,
+    /// and for support. Returns false when the text is not a MIDI note or controller.
+    /// </summary>
+    public bool Simulate(long deviceId, string trigger, int value)
+    {
+        if (HwSignals.Parse(trigger) is not { Kind: "note" or "cc" } a) return false;
+        value = Math.Clamp(value, 0, 127);
+        Report(new HwEvent(deviceId, $"{a.Kind} {a.Number}", a.Kind == "note" ? value > 0 : value >= 64, Math.Max(1, a.Channel), value));
+        return true;
+    }
+
     /// <summary>A device reported something: run the commands that belong to it.</summary>
     private void Report(HwEvent e)
     {
-        lock (_last) if (!HwSignals.IsChange(_last, e)) return;
-        string device = _open.TryGetValue(e.DeviceId, out var c) ? c.Device.Name : "?";
+        // A DJ controller sends values (faders, wheels): those go to the DJ desk before the on/off filter below.
+        string? dj = null;
+        try { dj = djMidi.Handle(e); }
+        catch (Exception ex) { logger.LogWarning(ex, "DJ controller"); }
+        bool change;
+        lock (_last) change = HwSignals.IsChange(_last, e);
+        // A fader that moved is no on/off change, but what it did on the DJ desk still belongs in the list.
+        if (!change && string.IsNullOrEmpty(dj)) return;
+        string device = _open.TryGetValue(e.DeviceId, out var c) ? c.Device.Name
+            : store.Devices().FirstOrDefault(d => d.Id == e.DeviceId)?.Name ?? "?";
         var results = new List<string>();
-        foreach (var input in _inputs.Where(i => HwSignals.Matches(i, e)))
+        if (!string.IsNullOrEmpty(dj)) results.Add(dj);
+        foreach (var input in _inputs.Where(i => change && HwSignals.Matches(i, e)))
         {
             string command = e.On ? input.OnCommand : input.OffCommand;
             if (command.Length == 0) continue;

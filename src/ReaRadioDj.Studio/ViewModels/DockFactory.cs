@@ -25,6 +25,7 @@ public sealed class DockFactory : Factory
         ("cart2", "Cartwall 2", () => new CartwallTool { Id = "cart2", Title = "Cartwall 2" }),
         ("sampler", "Sampler (DJ)", () => new CartwallTool { Id = "sampler", Title = "Sampler (DJ)" }),
         ("automix", "Automix (DJ)", () => new AutomixTool()),
+        ("djmidi", "DJ-controller", () => new DjMidiTool()),
         ("library", "Bibliotheek", () => new LibraryTool()),
         ("cues", "Cue-editor", () => new CueEditorTool()),
         ("mixer", "Mixer en routing", () => new MixerTool()),
@@ -119,7 +120,7 @@ public sealed class DockFactory : Factory
                 VisibleDockables = CreateList<IDockable>(
                     Tools("dock-library", "library", "log", "asrun"),
                     new ProportionalDockSplitter(),
-                    Tools("dock-side", "automix", "sampler", "cart1", "cart2", "mixer", "pfl", "clock", "messages")),
+                    Tools("dock-side", "automix", "sampler", "cart1", "cart2", "djmidi", "mixer", "pfl", "clock", "messages")),
             };
             return Root(new ProportionalDock
             {

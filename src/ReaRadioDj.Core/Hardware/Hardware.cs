@@ -36,8 +36,11 @@ public enum HwState { Mic = 0, OnAir = 1, Auto = 2 }
 /// </summary>
 public sealed record HwOutput(long Id, long DeviceId, HwState State, string Target, string OnText = "", string OffText = "");
 
-/// <summary>Something a device reported: a key ("note 60", "cc 7", "gpi 3.1", or a serial line) and whether it is on.</summary>
-public sealed record HwEvent(long DeviceId, string Key, bool On, int Channel = 0);
+/// <summary>
+/// Something a device reported: a key ("note 60", "cc 7", "gpi 3.1", or a serial line), whether it is on, and for MIDI
+/// the value (velocity or controller value 0..127; -1 when there is none).
+/// </summary>
+public sealed record HwEvent(long DeviceId, string Key, bool On, int Channel = 0, int Value = -1);
 
 /// <summary>A parsed trigger or target.</summary>
 public sealed record HwAddress(string Kind, int Number, int Sub = 0, int Channel = 0)
@@ -99,9 +102,9 @@ public static partial class HwSignals
         int channel = (status & 0x0F) + 1;
         return (status & 0xF0) switch
         {
-            0x90 => new HwEvent(deviceId, $"note {data1}", data2 > 0, channel),
-            0x80 => new HwEvent(deviceId, $"note {data1}", false, channel),
-            0xB0 => new HwEvent(deviceId, $"cc {data1}", data2 >= 64, channel),
+            0x90 => new HwEvent(deviceId, $"note {data1}", data2 > 0, channel, data2),
+            0x80 => new HwEvent(deviceId, $"note {data1}", false, channel, 0),
+            0xB0 => new HwEvent(deviceId, $"cc {data1}", data2 >= 64, channel, data2),
             0xC0 => new HwEvent(deviceId, $"pc {data1}", true, channel),
             _ => null,
         };

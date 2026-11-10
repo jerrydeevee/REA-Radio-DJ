@@ -304,6 +304,26 @@ public sealed record HwEmberItemDto(string Path, string Identifier, string Descr
 
 public sealed record HwPortsDto(List<string> Midi, List<string> Serial);
 
+/// <summary>A DJ function a controller can operate. Kind: button, absolute (fader, knob) or relative (jog wheel).</summary>
+public sealed record DjMidiControlDto(string Id, string Name, string Group, string Kind);
+
+/// <summary>A learned control: the function, the controller and what it sends ("ch1 cc 7"); Invert turns a fader around.</summary>
+public sealed record DjMidiBindingDto(string Control, long DeviceId, string Trigger, bool Invert = false);
+
+public sealed record DjMidiPresetInfoDto(string Name, int Count);
+
+public sealed record DjMidiDeviceDto(long Id, string Name, string Port, bool Enabled);
+
+/// <summary>The DJ controller set-up: functions, learned controls, saved presets, MIDI devices and the learn state.</summary>
+public sealed record DjMidiDto(IReadOnlyList<DjMidiControlDto> Controls, IReadOnlyList<DjMidiBindingDto> Bindings,
+    IReadOnlyList<DjMidiPresetInfoDto> Presets, IReadOnlyList<DjMidiDeviceDto> Devices, string? Learning, string LearnResult, string LastSignal);
+
+/// <summary>Learn a function (Control null = stop learning), or with Invert: turn a learned fader around.</summary>
+public sealed record DjMidiLearnRequest(string? Control, bool? Invert = null);
+
+/// <summary>Save the current controls as a preset (Name only), or import one (Name and Bindings, as exported).</summary>
+public sealed record DjMidiPresetRequest(string? Name, IReadOnlyList<DjMidiBindingDto>? Bindings = null);
+
 /// <summary>Everything the hardware window shows.</summary>
 public sealed record HwOverviewDto(List<HwDeviceDto> Devices, List<HwInputDto> Inputs, List<HwOutputDto> Outputs, Dictionary<string, bool> States);
 

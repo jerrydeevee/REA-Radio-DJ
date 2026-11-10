@@ -103,7 +103,7 @@ public static class DjApi
         });
     }
 
-    private static readonly HashSet<string> Shaping =
+    internal static readonly HashSet<string> Shaping =
         ["fx", "fxtype", "fxmix", "fxbeats", "gain", "fader", "eqlow", "eqmid", "eqhigh", "killlow", "killmid", "killhigh", "filter", "pfl", "keylock", "range"];
 
     /// <summary>Runs one deck action; returns what is wrong, or null when it is done.</summary>
@@ -140,6 +140,8 @@ public static class DjApi
             case "loophalf": deck.ScaleLoop(0.5); break;
             case "loopdouble": deck.ScaleLoop(2); break;
             case "loopexit": deck.ExitLoop(); break;
+            // One button for a loop: on (Value beats, else the loop length) and off again.
+            case "looptoggle": if (deck.LoopActive) deck.ExitLoop(); else deck.Loop(v ?? deck.LoopBeats); break;
             // Loop roll: On = true while the button is held (Value = beats), false on release.
             case "roll": deck.Roll(v ?? 1, c.On ?? false); break;
             // Beat effect: type by Name (echo, flanger, reverb), on/off, mix 0..1, length in beats.

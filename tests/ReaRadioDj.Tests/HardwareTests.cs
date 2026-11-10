@@ -24,11 +24,12 @@ public sealed class HwSignalTests
     [Fact]
     public void MIDI_messages_become_on_and_off()
     {
-        Assert.Equal(new HwEvent(1, "note 60", true, 1), HwSignals.FromMidi(1, 0x7F3C90));
-        Assert.Equal(new HwEvent(1, "note 60", false, 1), HwSignals.FromMidi(1, 0x003C90)); // note on with velocity 0
-        Assert.Equal(new HwEvent(1, "note 60", false, 3), HwSignals.FromMidi(1, 0x403C82));
-        Assert.Equal(new HwEvent(1, "cc 7", true, 1), HwSignals.FromMidi(1, 0x4007B0));
-        Assert.Equal(new HwEvent(1, "cc 7", false, 1), HwSignals.FromMidi(1, 0x3F07B0));
+        // The value (velocity or controller value) comes along, for faders and knobs on a DJ controller.
+        Assert.Equal(new HwEvent(1, "note 60", true, 1, 127), HwSignals.FromMidi(1, 0x7F3C90));
+        Assert.Equal(new HwEvent(1, "note 60", false, 1, 0), HwSignals.FromMidi(1, 0x003C90)); // note on with velocity 0
+        Assert.Equal(new HwEvent(1, "note 60", false, 3, 0), HwSignals.FromMidi(1, 0x403C82));
+        Assert.Equal(new HwEvent(1, "cc 7", true, 1, 64), HwSignals.FromMidi(1, 0x4007B0));
+        Assert.Equal(new HwEvent(1, "cc 7", false, 1, 63), HwSignals.FromMidi(1, 0x3F07B0));
         Assert.Equal(new HwEvent(1, "pc 5", true, 16), HwSignals.FromMidi(1, 0x05CF));
         Assert.Null(HwSignals.FromMidi(1, 0xF8)); // clock
 

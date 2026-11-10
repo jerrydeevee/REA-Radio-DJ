@@ -49,8 +49,50 @@ public static class HardwareApi
             return Results.Ok(d with { Id = id });
         });
         g.MapDelete("/outputs/{id:long}", (long id, HardwareStore store) => store.DeleteOutput(id) ? Results.Ok() : Results.NotFound());
+        g.MapPost("/devices/{id:long}/simulate", (long id, string trigger, int value, HardwareService service) =>
+            service.Simulate(id, trigger, value) ? Results.Ok(service.Recent.FirstOrDefault()) : Results.BadRequest(new { error = "bijv. ch1 note 11 of ch1 cc 7" }));
+
+        // ---- DJ controller: what each control does, learning, presets
+        var m = api.MapGroup("/dj/midi");
+        m.MapGet("", (DjMidiService s, HardwareStore store) => Midi(s, store));
+        m.MapPost("/learn", (DjMidiLearnRequest r, DjMidiService s, HardwareStore store) =>
+            s.Learn(r.Control) ? Results.Ok(Midi(s, store)) : Results.BadRequest(new { error = "onbekende functie" }));
+        m.MapPost("/invert", (DjMidiLearnRequest r, DjMidiService s, HardwareStore store) =>
+            r.Control is { } c && s.SetInvert(c, r.Invert ?? false) ? Results.Ok(Midi(s, store)) : Results.NotFound());
+        m.MapDelete("/bindings/{control}", (string control, DjMidiService s, HardwareStore store) => { s.Remove(control); return Results.Ok(Midi(s, store)); });
+        m.MapDelete("/bindings", (DjMidiService s, HardwareStore store) => { s.Clear(); return Results.Ok(Midi(s, store)); });
+        m.MapPost("/presets", (DjMidiPresetRequest r, DjMidiService s, HardwareStore store) =>
+        {
+            if (r.Bindings is { Count: > 0 } list)
+                return s.Import(new DjMidiPreset(r.Name ?? "", list.Select(b => new DjMidiBinding(b.Control, 0, b.Trigger, b.Invert)).ToList())) is null
+                    ? Results.BadRequest(new { error = "geen bruikbare koppelingen in deze voorinstelling" })
+                    : Results.Ok(Midi(s, store));
+            return s.SavePreset(r.Name ?? "") ? Results.Ok(Midi(s, store)) : Results.BadRequest(new { error = "geef de voorinstelling een naam" });
+        });
+        m.MapGet("/presets/{name}", (string name, DjMidiService s) =>
+            s.Presets.FirstOrDefault(p => string.Equals(p.Name, name, StringComparison.OrdinalIgnoreCase)) is { } p
+                ? Results.Ok(new DjMidiPresetRequest(p.Name, p.Bindings.Select(Binding).ToList()))
+                : Results.NotFound());
+        m.MapPost("/presets/{name}/apply", (string name, long deviceId, DjMidiService s, HardwareStore store) =>
+            store.Devices().All(d => d.Id != deviceId) ? Results.BadRequest(new { error = "kies de controller" })
+            : s.ApplyPreset(name, deviceId) ? Results.Ok(Midi(s, store)) : Results.NotFound());
+        m.MapDelete("/presets/{name}", (string name, DjMidiService s, HardwareStore store) => { s.DeletePreset(name); return Results.Ok(Midi(s, store)); });
+
         g.MapPost("/outputs/{id:long}/test", (long id, bool on, HardwareService service) =>
             service.Test(id, on) ? Results.Ok() : Results.Conflict(new { error = "apparaat niet verbonden" }));
+    }
+
+    private static DjMidiBindingDto Binding(DjMidiBinding b) => new(b.Control, b.DeviceId, b.Trigger, b.Invert);
+
+    private static DjMidiDto Midi(DjMidiService s, HardwareStore store)
+    {
+        var devices = store.Devices().Where(d => d.Kind == HwKind.Midi).ToList();
+        return new DjMidiDto(
+            DjMidi.Controls.Select(c => new DjMidiControlDto(c.Id, c.Name, c.Group, c.Kind.ToString().ToLowerInvariant())).ToList(),
+            s.Bindings.Select(Binding).ToList(),
+            s.Presets.Select(p => new DjMidiPresetInfoDto(p.Name, p.Bindings.Count)).ToList(),
+            devices.Select(d => new DjMidiDeviceDto(d.Id, d.Name, d.Port, d.Enabled)).ToList(),
+            s.Learning, s.LearnResult, s.LastSignal);
     }
 
     private static HwDeviceDto Dto(HwDevice d, HardwareService service)

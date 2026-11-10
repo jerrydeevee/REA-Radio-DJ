@@ -69,6 +69,7 @@ builder.Services.AddSingleton<PlayoutLog>();
 builder.Services.AddSingleton<MediaLibrary>();
 builder.Services.AddSingleton<PlannerStore>();
 builder.Services.AddSingleton<ReaRadioDj.Core.Hardware.HardwareStore>();
+builder.Services.AddSingleton<ReaRadioDj.Server.Hardware.DjMidiService>();
 builder.Services.AddSingleton<ReaRadioDj.Server.Hardware.HardwareService>();
 builder.Services.AddHostedService(sp => sp.GetRequiredService<ReaRadioDj.Server.Hardware.HardwareService>());
 builder.Services.AddSingleton<ReaRadioDj.Core.Library.DbSourceStore>();

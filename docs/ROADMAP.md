@@ -109,7 +109,7 @@ De DJ-modus speelt op een eigen mengkanaal, zodat de automatisering kan doorlope
 | ⬜ | Effecten per deck (flanger, reverb, echo, filter) met sterkte en lengte op de beat |
 | ⬜ | Sampler: de bestaande cartwall als pads in de DJ-modus |
 | ⬜ | Automix in de DJ-modus: lijst afspelen met overgangstype (knippen, faden, tempo-overgang); mixpunten per nummer |
-| ⬜ | Bediening: decks, mengpaneel en pads op de commandobus, dus ook via MIDI-controllers en sneltoetsen |
+| 🟡 | Bediening: decks, mengpaneel en pads op de commandobus, dus ook via MIDI-controllers en sneltoetsen (DJ-controller leren en voorinstellingen klaar; ingebouwde voorinstellingen volgen) |
 | ⬜ | Stems (zang, instrumenten, bas, drums) met een open scheidingsmodel op de GPU, vooraf berekend per nummer |
 | ⬜ | Opname van de mix en tempo-overgang als overgangstype in de automatisering |
 

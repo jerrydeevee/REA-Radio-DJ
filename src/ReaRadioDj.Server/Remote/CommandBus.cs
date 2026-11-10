@@ -56,6 +56,12 @@ public sealed class CommandBus(
         new("PLAYER <1|2|PFL> LOAD <media-id>", "Item in een speler laden", "Spelers"),
         new("OVERLAY PLAY <media-id>", "Item als overlay over het programma", "Spelers"),
         new("OVERLAY STOP", "Overlays stoppen", "Spelers"),
+        new("DJ <A-D> <actie> [waarde]", "DJ-deck: TOGGLE, PLAY, PAUSE, CUE, SYNC, PFL, HOTCUE <1-8>, LOOPTOGGLE [tellen], FX, LOAD <media-id>, EJECT, "
+            + "TEMPO <%>, BEND <%>, GAIN <dB>, FADER <0-1>, EQHIGH|EQMID|EQLOW <-1..1>, FILTER <-1..1>, SEEK <s>", "DJ"),
+        new("DJ XFADER <0-1>", "Crossfader (0 = deck A en C, 1 = B en D)", "DJ"),
+        new("DJ CUEMIX <0-1>", "Koptelefoon van cue (0) naar master (1)", "DJ"),
+        new("DJ ONAIR ON|OFF|TOGGLE", "DJ-tafel op de lucht, of teruggeven aan de automatisering", "DJ"),
+        new("DJ AUTOMIX ON|OFF|TOGGLE|MIX", "Automix aan of uit, of nu naar het volgende nummer mixen", "DJ"),
         new("STREAM START|STOP", "Icecast-uitzending starten of stoppen", "Stream"),
         new("SCAN", "Bibliotheek opnieuw inlezen", "Bibliotheek"),
         new("OSC <host:poort> </adres> [argumenten]", "OSC-bericht uitsturen, bijv. OSC 192.168.1.20:8000 /licht/onair 1 (tekst met spaties tussen \"aanhalingstekens\")", "Uitsturen"),
@@ -134,6 +140,9 @@ public sealed class CommandBus(
                 if (library.Get(id) is not { } m) return CommandResult.Fail($"media {id} niet gevonden");
                 players.Overlays.Play($"cmd{id}", m.DisplayName, m, false, true, options.Routing.OverlayDuckLevel);
                 return CommandResult.Done(m.DisplayName);
+
+            case "DJ":
+                return Dj(w);
 
             case "STREAM" when Arg(1) == "START": streamer.Start(engine.MixerHandle); return CommandResult.Done();
             case "STREAM" when Arg(1) == "STOP": streamer.Stop(); return CommandResult.Done();
@@ -216,6 +225,42 @@ public sealed class CommandBus(
         }
         if (sb.Length > 0 || any) list.Add(sb.ToString());
         return list;
+    }
+
+    /// <summary>The DJ desk: a deck action, the crossfader, the cue mix, on air and automix.</summary>
+    private CommandResult Dj(List<string> w)
+    {
+        var dj = services.GetRequiredService<DjMixer>();
+        var handover = services.GetRequiredService<DjHandover>();
+        string what = w.Count > 1 ? w[1].ToUpperInvariant() : "";
+        string arg = w.Count > 2 ? w[2].ToUpperInvariant() : "";
+        switch (what)
+        {
+            case "XFADER" when Double(w, 2) is double x: dj.SetCrossfader(x); return CommandResult.Done();
+            case "CUEMIX" when Double(w, 2) is double c: dj.SetCueMix(c); return CommandResult.Done();
+            case "ONAIR":
+                return Switch(arg, dj.OnAir, on => { if (on) handover.GoOnAir(); else handover.GiveBack(); }, "DJ-tafel op de lucht");
+            case "AUTOMIX" when arg == "MIX":
+                return dj.Automix.MixNow() ? CommandResult.Done("mixen") : CommandResult.Fail("geen volgend nummer om naartoe te mixen");
+            case "AUTOMIX":
+                return Switch(arg, dj.Automix.On, on => { if (on) handover.Release(); dj.Automix.SetOn(on); }, "automix");
+        }
+        if (dj.Find(what) is not { } deck)
+            return CommandResult.Fail("DJ <A-D> <actie> [waarde], DJ XFADER <0-1>, DJ CUEMIX <0-1>, DJ ONAIR, DJ AUTOMIX");
+        string action = arg.ToLowerInvariant();
+        double? v = Double(w, 3);
+        var command = action switch
+        {
+            "hotcue" or "hotcueclear" => new Contracts.DjCommand(Index: v is double n ? (int)n - 1 : null),
+            "load" => new Contracts.DjCommand(MediaId: v is double id ? (long)id : null),
+            "fxtype" => new Contracts.DjCommand(Name: w.Count > 3 ? w[3].ToLowerInvariant() : null),
+            "fx" or "pfl" or "keylock" or "killlow" or "killmid" or "killhigh" =>
+                new Contracts.DjCommand(On: w.Count > 3 ? w[3].ToUpperInvariant() is "ON" or "1" or "AAN" : null),
+            _ => new Contracts.DjCommand(Value: v),
+        };
+        // Sound shaping leaves deck A following the automation; anything that moves the track makes it the DJ's own.
+        if (deck.Id == "A" && !DjApi.Shaping.Contains(action)) handover.Release();
+        return DjApi.Run(dj, deck, library, action, command) is { } problem ? CommandResult.Fail(problem) : CommandResult.Done();
     }
 
     private CommandResult Player(string which, string action, long? mediaId)
