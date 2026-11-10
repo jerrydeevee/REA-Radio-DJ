@@ -43,6 +43,8 @@ public sealed class DockFactory : Factory
         ("import", "Log-import", () => new ImportTool()),
         ("sources", "Databronnen", () => new SourcesTool()),
         ("hardware", "Hardware", () => new HardwareTool()),
+        ("buttons", "Eigen knoppen", () => new ButtonsTool()),
+        ("item", "Itemgegevens", () => new ItemTool()),
         ("settings", "Instellingen", () => new SettingsTool()),
     ];
 
@@ -86,7 +88,7 @@ public sealed class DockFactory : Factory
             return Root(Row("main",
                 Column("p-left", 0.34, Tools("dock-library", "library", "wishlist")),
                 Column("p-center", 0.42, Sized(0.55, "dock-editor", "cues"), Sized(0.45, "dock-voice", "voicetrack", "voice", "presenter", "transition", "news")),
-                Column("p-right", 0.24, Sized(0.5, "dock-pfl", "pfl", "standby"), Sized(0.5, "dock-side", "overlays", "messages"))));
+                Column("p-right", 0.24, Sized(0.5, "dock-pfl", "pfl", "item", "standby"), Sized(0.5, "dock-side", "overlays", "messages"))));
 
         if (Workspace == "plan")
             // Planning: clocks and the day plan wide, with ads, news and import beside it and the log to check the result.
@@ -160,7 +162,7 @@ public sealed class DockFactory : Factory
                 new ProportionalDockSplitter(),
                 Tools("dock-log", "log", "asrun"),
                 new ProportionalDockSplitter(),
-                Tools("dock-editor", "cues", "messages", "presenter")),
+                Tools("dock-editor", "cues", "item", "messages", "presenter")),
         };
         var right = new ProportionalDock
         {
@@ -168,7 +170,7 @@ public sealed class DockFactory : Factory
             VisibleDockables = CreateList<IDockable>(
                 Tools("dock-carts", "cart1", "cart2"),
                 new ProportionalDockSplitter(),
-                Tools("dock-mixer", "mixer", "clock", "overlays")),
+                Tools("dock-mixer", "mixer", "buttons", "clock", "overlays")),
         };
         var main = new ProportionalDock
         {

@@ -18,6 +18,8 @@ public sealed class StudioSettings
     public int ScalePercent { get; set; } = 100;
     /// <summary>Touch mode: buttons, list rows, tabs and scroll bars big enough for a finger.</summary>
     public bool Touch { get; set; }
+    /// <summary>The buttons of the Eigen knoppen window, in order.</summary>
+    public List<CustomButton> CustomButtons { get; set; } = CustomButton.Defaults();
     /// <summary>Colour per kind of item (song, jingle, voice, other) in the log, as-run and library.</summary>
     public Dictionary<string, string> TypeColors { get; set; } = new(Appearance.DefaultTypeColors);
     public string LastLayout { get; set; } = "Standaard";
@@ -96,4 +98,21 @@ public sealed class StudioSettings
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { }
     }
+}
+
+/// <summary>A button in the Eigen knoppen window: what it says, the engine command it runs and its colour.</summary>
+public sealed class CustomButton
+{
+    public string Label { get; set; } = "";
+    public string Command { get; set; } = "";
+    public string Color { get; set; } = "#3FA7FF";
+
+    /// <summary>A few useful buttons to start with; change or remove them under Bewerken.</summary>
+    public static List<CustomButton> Defaults() =>
+    [
+        new() { Label = "AI-break als volgende", Command = "BREAK", Color = "#A78BFA" },
+        new() { Label = "Alle carts stoppen", Command = "CARTS STOP", Color = "#F27A2E" },
+        new() { Label = "Log opnieuw vullen", Command = "REPLAN", Color = "#3FA7FF" },
+        new() { Label = "Bibliotheek inlezen", Command = "SCAN", Color = "#8B95A5" },
+    ];
 }
