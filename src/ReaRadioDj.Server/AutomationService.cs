@@ -25,6 +25,7 @@ public sealed class AutomationService(
     BreakRenderer breaks,
     IcecastStreamer streamer,
     MessageCenter messages,
+    PlayoutOutputs outputs,
     IServiceProvider services,
     ILogger<AutomationService> logger) : BackgroundService, IEventSink
 {
@@ -214,6 +215,15 @@ public sealed class AutomationService(
         try { _asRunIds[key] = asRun.Begin(source, type, media, planned, ai, note); }
         catch (Exception ex) { logger.LogError(ex, "As-run write failed"); }
         if (media.Id > 0 && media.Kind == MediaKind.Song) library.MarkPlayed(media.Id);
+        // Program log as text, and the title (stream, file, web address). Only the log changes the title: a jingle
+        // from the cartwall or an overlay over a song leaves the song title alone.
+        try
+        {
+            var item = new OutputItem(DateTime.Now, type, source, media, planned, options.StationName);
+            if (source == "automatisering") { if (outputs.Started(item) is { } title) streamer.SetTitle(title); }
+            else outputs.LogOnly(item);
+        }
+        catch (Exception ex) { logger.LogError(ex, "Title or log output failed"); }
     }
 
     private void End(string key, double played)
@@ -231,8 +241,6 @@ public sealed class AutomationService(
             Begin("log:" + item.Id, "automatisering", ai ? "ai-break" : Kind(m), m, item.PlannedLength,
                 string.IsNullOrEmpty(item.Origin) ? item.Error : $"{item.Origin}{(item.Error is null ? "" : "; " + item.Error)}", ai);
         }
-        if (item.Type == LogItemType.Song && item.Media is { } s) streamer.SetTitle(s.DisplayName);
-        else if (item.Type is LogItemType.AiBreak or LogItemType.VoiceTrack) streamer.SetTitle(options.StationName);
     }
 
     // ---------------------------------------------------------------- IEventSink

@@ -161,8 +161,8 @@ Vragen bij stap 5:
 |---|---|
 | ⬜ | Opnemen van programma en microfoon; automatisch per uur met bewaartermijn (instelbaar, standaard een jaar); direct opnemen naar de bibliotheek |
 | ⬜ | Meerdere streamservers tegelijk: Icecast en SHOUTcast v1/v2; MP3, AAC/HE-AAC, Ogg Vorbis, Opus en FLAC; HLS |
-| ⬜ | Titelupdates: eigen opmaak, soorten uitsluiten, ook naar een bestand of webadres |
-| ⬜ | Programmalog als tekstbestand met eigen opmaak en bewaartermijn |
+| ✅ | Titelupdates: eigen opmaak met velden ({artiest} {titel} {categorie} {duur} {station} …), per soort kiezen (muziek, jingles, gesproken, AI-presentator, reclame) met een eigen tekst voor de rest, naar de stream, een tekstbestand en een webadres (Stream › Titel en programmalog) |
+| ✅ | Programmalog als tekstbestand met eigen opmaak en bewaartermijn: één bestand per dag (jjjj-mm-dd.txt), ook cartwall en overlays; oudere dagbestanden gaan na de bewaartermijn weg |
 
 Vragen bij stap 6:
 

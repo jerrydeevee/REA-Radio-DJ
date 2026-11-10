@@ -135,6 +135,9 @@ builder.Services.AddSingleton(sp =>
         sp.GetRequiredService<PersonaStore>(), sp.GetRequiredService<BreakExtras>(), sp.GetRequiredService<SpeechCheck>(),
         sp.GetRequiredService<CreativePicker>());
 });
+builder.Services.AddSingleton(sp => new ReaRadioDj.Core.Studio.PlayoutOutputs(
+    sp.GetRequiredService<IHttpClientFactory>().CreateClient("titles"), sp.GetRequiredService<ILogger<ReaRadioDj.Core.Studio.PlayoutOutputs>>())
+    { Settings = TitleLogApi.Load(sp.GetRequiredService<StationDb>()) });
 builder.Services.AddSingleton<AutomationService>();
 builder.Services.AddHostedService(sp => sp.GetRequiredService<AutomationService>());
 // Remote control: one command list for TCP, OSC, HTTP, hotkeys and the planner.
@@ -168,6 +171,7 @@ StudioApi.Map(api, options);
 DjApi.Map(api);
 SystemApi.Map(api, options, args);
 OutputsApi.Map(api, options);
+TitleLogApi.Map(api, options);
 ChannelsApi.Map(api, options);
 VoiceApi.Map(api);
 PresenterApi.Map(api, options);

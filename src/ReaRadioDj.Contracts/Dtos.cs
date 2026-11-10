@@ -479,3 +479,9 @@ public sealed record VstFoldersRequest(IReadOnlyList<string> Folders);
 public sealed record ChannelsDto(IReadOnlyList<ChannelDto> Channels, IReadOnlyList<OutputChoiceDto> Sources, IReadOnlyList<OutputChoiceDto>? Effects = null);
 
 public sealed record InputRequest(string Name, string Source);
+
+/// <summary>Title updates (stream, file, web address) and the program log as a text file per day.</summary>
+public sealed record TitleLogDto(string TitleFormat, List<string> TitleKinds, string TitleOther, string TitleFile, string TitleUrl,
+    string LogFolder, string LogFormat, int LogKeepDays, string? LastTitle = null, string? TodayFile = null);
+
+public sealed record TitleLogTestDto(string Title, string LogLine, bool? UrlOk);

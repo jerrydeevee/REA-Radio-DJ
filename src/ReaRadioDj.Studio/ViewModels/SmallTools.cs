@@ -183,6 +183,69 @@ public sealed partial class StreamTool : StudioTool
 
     [RelayCommand] private Task Start() => Hub.Client.PostAsync("/api/stream/start");
     [RelayCommand] private Task Stop() => Hub.Client.PostAsync("/api/stream/stop");
+
+    // ---- title updates and the program log as text
+    public sealed partial class KindChoice(string key, string label) : ObservableObject
+    {
+        public string Key { get; } = key;
+        public string Label { get; } = label;
+        [ObservableProperty] private bool _isOn;
+    }
+
+    public List<KindChoice> TitleKinds { get; } =
+    [
+        new("song", "muziek"), new("jingle", "jingles"), new("voice", "gesproken"), new("ai-break", "AI-presentator"), new("ad", "reclame"),
+    ];
+    [ObservableProperty] private string _titleFormat = "";
+    [ObservableProperty] private string _titleOther = "";
+    [ObservableProperty] private string _titleFile = "";
+    [ObservableProperty] private string _titleUrl = "";
+    [ObservableProperty] private string _logFolder = "";
+    [ObservableProperty] private string _logFormat = "";
+    [ObservableProperty] private decimal _logKeepDays = 365;
+    [ObservableProperty] private string _titleLogText = "";
+
+    protected override void OnFirstShow() => _ = LoadTitleLogAsync();
+
+    private async Task LoadTitleLogAsync()
+    {
+        if (await Hub.Client.GetAsync<TitleLogDto>("/api/title-log") is not { } d) return;
+        Show(d);
+    }
+
+    private void Show(TitleLogDto d)
+    {
+        TitleFormat = d.TitleFormat; TitleOther = d.TitleOther; TitleFile = d.TitleFile; TitleUrl = d.TitleUrl;
+        LogFolder = d.LogFolder;
+        LogFormat = d.LogFormat.Replace(Tab, TabText);   // a tab shows as \t, so it can be typed
+        LogKeepDays = d.LogKeepDays;
+        foreach (var k in TitleKinds) k.IsOn = d.TitleKinds.Contains(k.Key);
+        TitleLogText = (d.LastTitle is { } t ? $"Nu: {t}" : "Nog geen titel verstuurd.") + (d.TodayFile is { } f ? $"  ·  log van vandaag: {f}" : "");
+    }
+
+    private TitleLogDto Current() => new(TitleFormat, TitleKinds.Where(k => k.IsOn).Select(k => k.Key).ToList(), TitleOther, TitleFile, TitleUrl,
+        LogFolder, LogFormat.Replace(TabText, Tab), (int)LogKeepDays);
+
+    private const string Tab = "\u0009", TabText = "\t";
+
+    [RelayCommand]
+    private async Task SaveTitleLog()
+    {
+        var (d, error) = await Hub.Client.SendWithErrorAsync<TitleLogDto>(HttpMethod.Put, "/api/title-log", Current());
+        if (d is null) { TitleLogText = error ?? "Niet gelukt."; return; }
+        Show(d);
+        TitleLogText = "Bewaard. " + TitleLogText;
+    }
+
+    [RelayCommand]
+    private async Task TestTitleLog()
+    {
+        await SaveTitleLog();
+        var r = await Hub.Client.SendForAsync<TitleLogTestDto>(HttpMethod.Post, "/api/title-log/test", null);
+        if (r is null) { TitleLogText = "Test niet gelukt."; return; }
+        TitleLogText = $"Titel: \"{r.Title}\"  ·  logregel: \"{r.LogLine.Replace(Tab, "  ")}\""
+            + (r.UrlOk is bool ok ? ok ? "  ·  webadres antwoordde" : "  ·  webadres gaf een fout" : "");
+    }
 }
 
 /// <summary>Messages from the engine: fixed times fired, fallbacks, errors.</summary>

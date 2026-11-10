@@ -13,5 +13,40 @@
       <Button Content="Stop stream" Command="{Binding StopCommand}" />
     </StackPanel>
     <TextBlock Classes="muted" TextWrapping="Wrap" Text="Icecast-server, mountpoint en bitrate staan in appsettings.json van de engine." />
+    <Expander Header="Titel en programmalog als tekst" HorizontalAlignment="Stretch">
+      <StackPanel Spacing="6">
+        <TextBlock Classes="muted" TextWrapping="Wrap"
+                   Text="Velden: {artiest} {titel} {categorie} {type} {bron} {duur} {tijd} {datum} {station}. De titel gaat naar de stream, een tekstbestand (website, RDS) en een webadres; alleen de log verandert de titel, cartwall en overlays niet." />
+        <TextBlock Text="Titel" FontWeight="SemiBold" />
+        <TextBox Text="{Binding TitleFormat}" Watermark="{}{artiest} - {titel}" />
+        <WrapPanel>
+          <TextBlock Text="Eigen titel voor:" VerticalAlignment="Center" Margin="0,0,6,0" />
+          <ItemsControl ItemsSource="{Binding TitleKinds}">
+            <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="vm:StreamTool+KindChoice">
+                <CheckBox Content="{Binding Label}" IsChecked="{Binding IsOn}" Margin="0,0,8,0" />
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </WrapPanel>
+        <TextBox Text="{Binding TitleOther}" Watermark="tijdens de rest (leeg = laatste titel blijft staan), bijv. {station}" />
+        <TextBox Text="{Binding TitleFile}" Watermark="tekstbestand met de titel van nu, bijv. C:\Uitzending\nu.txt (leeg = uit)" />
+        <TextBox Text="{Binding TitleUrl}" Watermark="webadres, bijv. http://rds.local/set?text={tekst} (leeg = uit)" />
+        <TextBlock Text="Programmalog als tekst" FontWeight="SemiBold" Margin="0,4,0,0" />
+        <TextBox Text="{Binding LogFolder}" Watermark="map, één bestand per dag (leeg = uit)" />
+        <TextBox Text="{Binding LogFormat}" Watermark="{}{tijd}\t{type}\t{artiest} - {titel}\t{duur}" ToolTip.Tip="\t is een tab" />
+        <StackPanel Orientation="Horizontal" Spacing="6">
+          <TextBlock Text="Bewaren" VerticalAlignment="Center" />
+          <NumericUpDown Value="{Binding LogKeepDays}" Minimum="0" Maximum="3650" Increment="30" Width="130" FormatString="0" />
+          <TextBlock Text="dagen (0 = altijd)" VerticalAlignment="Center" Classes="muted" />
+        </StackPanel>
+        <StackPanel Orientation="Horizontal" Spacing="6">
+          <Button Content="Bewaren" Command="{Binding SaveTitleLogCommand}" />
+          <Button Content="Testen" Command="{Binding TestTitleLogCommand}" ToolTip.Tip="Bewaart en stuurt een testtitel naar bestand en webadres" />
+        </StackPanel>
+        <TextBlock Classes="muted" Text="{Binding TitleLogText}" TextWrapping="Wrap" />
+      </StackPanel>
+    </Expander>
   </StackPanel>
 </UserControl>
