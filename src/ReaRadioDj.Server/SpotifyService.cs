@@ -5,6 +5,7 @@ using System.Text.Json;
 using System.Text.RegularExpressions;
 using ReaRadioDj.Contracts;
 using ReaRadioDj.Core;
+using ReaRadioDj.Core.Data;
 using ReaRadioDj.Core.Library;
 using ReaRadioDj.Core.Studio;
 
@@ -23,6 +24,26 @@ public sealed partial class SpotifyService(IHttpClientFactory http, ReaRadioDjOp
     private SpotifyOptions O => options.Spotify;
     public bool Configured => !string.IsNullOrWhiteSpace(O.ClientId) && !string.IsNullOrWhiteSpace(O.ClientSecret);
 
+    /// <summary>The keys changed: the next call signs in again.</summary>
+    public void Forget() => _token = null;
+
+    /// <summary>Signs in with the current keys (always afresh) and reports whether Spotify accepts them.</summary>
+    public async Task<SpotifyTestDto> TestAsync(CancellationToken ct)
+    {
+        if (!Configured) return new SpotifyTestDto(false, "Vul eerst de Client ID en het Client Secret in.");
+        Forget();
+        try
+        {
+            await TokenAsync(http.CreateClient("spotify"), ct);
+            return new SpotifyTestDto(true, $"Verbonden: Spotify accepteert de gegevens (aanmelding geldig tot {_tokenUntil.AddSeconds(60).ToLocalTime():HH:mm}).");
+        }
+        catch (Exception ex) when (ex is HttpRequestException or JsonException or KeyNotFoundException or TaskCanceledException)
+        {
+            logger.LogWarning("Spotify test failed: {Error}", ex.Message);
+            return new SpotifyTestDto(false, ex is TaskCanceledException ? "Spotify antwoordt niet (time-out); controleer de internetverbinding." : $"Niet verbonden: {ex.Message}");
+        }
+    }
+
     [GeneratedRegex(@"(?:playlist[/:])([A-Za-z0-9]{10,})")]
     private static partial Regex PlaylistId();
 
@@ -40,7 +61,7 @@ public sealed partial class SpotifyService(IHttpClientFactory http, ReaRadioDjOp
     {
         if (!Configured)
             return new WishImportResultDto(false, "", 0, 0, 0,
-                "Spotify is niet ingesteld: vul Spotify:ClientId en Spotify:ClientSecret in appsettings.json in (app maken op developer.spotify.com).");
+                "Spotify is niet ingesteld: vul de Client ID en het Client Secret in bij Instellingen → Spotify (app maken op developer.spotify.com).");
         if (ParsePlaylistId(link) is not { } id)
             return new WishImportResultDto(false, "", 0, 0, 0, "Geen Spotify-playlistlink herkend (open.spotify.com/playlist/…).");
         try
@@ -115,7 +136,7 @@ public sealed partial class SpotifyService(IHttpClientFactory http, ReaRadioDjOp
             Convert.ToBase64String(Encoding.UTF8.GetBytes($"{O.ClientId.Trim()}:{O.ClientSecret.Trim()}")));
         using var res = await client.SendAsync(req, ct);
         var body = await res.Content.ReadAsStringAsync(ct);
-        if (!res.IsSuccessStatusCode) throw new HttpRequestException($"aanmelden mislukt ({(int)res.StatusCode}): controleer ClientId en ClientSecret");
+        if (!res.IsSuccessStatusCode) throw new HttpRequestException($"aanmelden mislukt ({(int)res.StatusCode}): controleer de Client ID en het Client Secret");
         using var doc = JsonDocument.Parse(body);
         _token = doc.RootElement.GetProperty("access_token").GetString();
         _tokenUntil = DateTime.UtcNow.AddSeconds(doc.RootElement.GetProperty("expires_in").GetInt32() - 60);
@@ -140,10 +161,62 @@ public sealed partial class SpotifyService(IHttpClientFactory http, ReaRadioDjOp
         Math.Round(w.Duration, 1), w.CoverUrl, w.Link, w.MediaId);
 }
 
+/// <summary>
+/// The Spotify keys, set in the studio (Instellingen → Spotify) and kept in the station database; they take the place of
+/// the ones in appsettings.json. The secret is never sent back, only whether one is set.
+/// </summary>
+public sealed record SpotifySettings(string ClientId, string ClientSecret, string Market)
+{
+    public const string Key = "spotify";
+
+    public static SpotifySettings From(ReaRadioDjOptions o) => new(o.Spotify.ClientId, o.Spotify.ClientSecret, o.Spotify.Market);
+
+    public void ApplyTo(ReaRadioDjOptions o)
+    {
+        o.Spotify.ClientId = ClientId.Trim();
+        o.Spotify.ClientSecret = ClientSecret.Trim();
+        o.Spotify.Market = string.IsNullOrWhiteSpace(Market) ? "NL" : Market.Trim().ToUpperInvariant();
+    }
+
+    public static void Load(StationDb db, ReaRadioDjOptions o)
+    {
+        if (db.GetSetting(Key) is not { } json) return;
+        try { JsonSerializer.Deserialize<SpotifySettings>(json, JsonSerializerOptions.Web)?.ApplyTo(o); }
+        catch (JsonException) { }
+    }
+
+    public void Save(StationDb db) => db.SetSetting(Key, JsonSerializer.Serialize(this, JsonSerializerOptions.Web));
+
+    public SpotifySettingsDto Dto() => new(ClientId, ClientSecret.Length > 0,
+        ClientSecret.Length > 4 ? "…" + ClientSecret[^4..] : "", Market,
+        ClientId.Trim().Length > 0 && ClientSecret.Trim().Length > 0);
+}
+
 public static class WishlistApi
 {
     public static void Map(RouteGroupBuilder api, ReaRadioDjOptions options)
     {
+        // ---- the Spotify keys (developer.spotify.com): set, clear and test
+        api.MapGet("/spotify/settings", () => SpotifySettings.From(options).Dto());
+        api.MapPut("/spotify/settings", (SpotifySettingsRequest r, StationDb db, SpotifyService spotify) =>
+        {
+            var old = SpotifySettings.From(options);
+            string id = r.ClientId?.Trim() ?? old.ClientId;
+            if (id.Length > 0 && !Regex.IsMatch(id, "^[A-Za-z0-9]{16,64}$"))
+                return Results.BadRequest("De Client ID bestaat uit letters en cijfers (meestal 32 tekens); kopieer hem uit het Spotify-dashboard.");
+            string market = (r.Market ?? old.Market).Trim().ToUpperInvariant();
+            if (market.Length > 0 && !Regex.IsMatch(market, "^[A-Z]{2}$"))
+                return Results.BadRequest("De markt is een landcode van twee letters, bijv. NL of BE.");
+            // An empty secret keeps the stored one; Clear removes both keys.
+            string secret = r.Clear ? "" : string.IsNullOrWhiteSpace(r.ClientSecret) ? old.ClientSecret : r.ClientSecret.Trim();
+            var s = new SpotifySettings(r.Clear ? "" : id, secret, market);
+            s.ApplyTo(options);
+            SpotifySettings.From(options).Save(db);
+            spotify.Forget();
+            return Results.Ok(SpotifySettings.From(options).Dto());
+        });
+        api.MapPost("/spotify/test", (SpotifyService spotify, CancellationToken ct) => spotify.TestAsync(ct));
+
         var w = api.MapGroup("/wishlist");
         w.MapGet("", (Wishlist list) => list.All().Select(SpotifyService.Dto));
         w.MapGet("/status", (SpotifyService s, Wishlist list) =>

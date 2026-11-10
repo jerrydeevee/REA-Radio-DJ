@@ -274,6 +274,38 @@
         </StackPanel></ScrollViewer>
       </TabItem>
 
+      <TabItem Header="Spotify">
+        <ScrollViewer><StackPanel Classes="page">
+          <TextBlock Classes="title" Text="Spotify" />
+          <TextBlock Classes="help" TextWrapping="Wrap"
+                     Text="Voor de wensenlijst en het aanvullen van gegevens (album, jaar, ISRC, hoes). Alleen gegevens: er komt nooit geluid uit Spotify. Maak een app aan in het Spotify-dashboard en kopieer de Client ID en het Client Secret hierheen. Een Redirect URI is niet nodig; die mag je in het dashboard op http://127.0.0.1 zetten." />
+          <Button Classes="bar" Content="Spotify-dashboard openen" Command="{Binding OpenSpotifyDashboardCommand}" HorizontalAlignment="Left" Margin="0,8,0,0"
+                  ToolTip.Tip="developer.spotify.com/dashboard in je browser" />
+          <TextBlock Foreground="{DynamicResource WarnBrush}" IsVisible="{Binding !SpotifyLoaded}" Margin="0,8,0,0"
+                     Text="Deze engine kan de Spotify-gegevens nog niet instellen: werk de engine bij." />
+          <StackPanel IsEnabled="{Binding SpotifyLoaded}">
+            <TextBlock Classes="field" Text="Client ID" />
+            <TextBox Classes="mono" Text="{Binding SpotifyClientId}" Watermark="32 tekens, uit het dashboard" />
+            <TextBlock Classes="field" Text="Client Secret" />
+            <TextBox Text="{Binding SpotifySecret}" PasswordChar="●" Watermark="nieuw Client Secret" />
+            <TextBlock Classes="help" Text="{Binding SpotifySecretHint}" />
+            <TextBlock Classes="field" Text="Markt (landcode)" />
+            <TextBox Text="{Binding SpotifyMarket}" Width="80" HorizontalAlignment="Left" MaxLength="2" Watermark="NL" />
+            <TextBlock Classes="help" Text="Bepaalt welke versie van een nummer Spotify teruggeeft (beschikbaarheid per land)." />
+            <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,12,0,0">
+              <Button Classes="bar" Content="Verbinding testen" Command="{Binding TestSpotifyCommand}" IsEnabled="{Binding !SpotifyBusy}"
+                      ToolTip.Tip="Bewaart de gegevens en meldt de engine aan bij Spotify" />
+              <Button Classes="bar" Content="Gegevens wissen" Command="{Binding ClearSpotifyCommand}"
+                      ToolTip.Tip="Verwijdert de Client ID en het Client Secret uit de engine" />
+            </StackPanel>
+            <TextBlock Text="{Binding SpotifyStatus}" TextWrapping="Wrap" Margin="0,8,0,0" FontWeight="SemiBold" Foreground="{DynamicResource OkBrush}" IsVisible="{Binding SpotifyOk}" />
+            <TextBlock Text="{Binding SpotifyStatus}" TextWrapping="Wrap" Margin="0,8,0,0" FontWeight="SemiBold" Foreground="{DynamicResource WarnBrush}" IsVisible="{Binding SpotifyFailed}" />
+            <TextBlock Classes="muted" Text="{Binding SpotifyStatus}" TextWrapping="Wrap" Margin="0,8,0,0" IsVisible="{Binding SpotifyBusy}" />
+            <TextBlock Classes="help" Text="Opslaan (onderaan) bewaart de gegevens ook. Ze staan in de stationsdatabase van de engine en gaan voor op appsettings.json; het Client Secret wordt nooit teruggestuurd naar de studio." />
+          </StackPanel>
+        </StackPanel></ScrollViewer>
+      </TabItem>
+
       <TabItem Header="Op afstand">
         <ScrollViewer><StackPanel Classes="page">
           <TextBlock Classes="title" Text="Bediening op afstand" />

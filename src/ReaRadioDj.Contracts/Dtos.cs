@@ -427,6 +427,14 @@ public sealed record WishImportRequest(string? Link);
 
 public sealed record WishImportResultDto(bool Ok, string Playlist, int Total, int Added, int InLibrary, string? Error);
 
+/// <summary>The Spotify keys as the studio sees them: the Client ID in full, of the secret only whether it is set and its last four characters.</summary>
+public sealed record SpotifySettingsDto(string ClientId, bool SecretSet, string SecretHint, string Market, bool Configured);
+
+/// <summary>Change the Spotify keys. A null or empty secret keeps the stored one; Clear removes the keys.</summary>
+public sealed record SpotifySettingsRequest(string? ClientId, string? ClientSecret, string? Market, bool Clear = false);
+
+public sealed record SpotifyTestDto(bool Ok, string Message);
+
 public sealed record MusicReportSummaryDto(int Tracks, double Seconds, int WithoutIsrc, int WithoutComposer);
 
 /// <summary>AI presenter settings changed in the studio. ApiKey comes back masked; sending the mask keeps the stored key.</summary>

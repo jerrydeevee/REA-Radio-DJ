@@ -61,6 +61,7 @@ PresenterSettings.Load(db, options);
 PresenterExtrasSettings.Load(db, options);
 CreativeSettings.Load(db, options);
 VoiceServicesSettings.Load(db, options);
+SpotifySettings.Load(db, options);
 
 builder.Services.AddSingleton(options);
 builder.Services.AddSingleton(db);

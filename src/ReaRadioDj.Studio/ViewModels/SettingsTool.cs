@@ -87,6 +87,18 @@ public sealed partial class SettingsTool : StudioTool
     [ObservableProperty] private string _streamGenre = "";
     [ObservableProperty] private string _streamUrl = "";
 
+    // Spotify (developer keys, metadata only)
+    [ObservableProperty] private bool _spotifyLoaded;
+    [ObservableProperty] private string _spotifyClientId = "";
+    [ObservableProperty] private string _spotifySecret = "";
+    [ObservableProperty] private string _spotifySecretHint = "";
+    [ObservableProperty] private string _spotifyMarket = "NL";
+    [ObservableProperty] private string _spotifyStatus = "";
+    [ObservableProperty] private bool _spotifyOk;
+    [ObservableProperty] private bool _spotifyFailed;
+    [ObservableProperty] private bool _spotifyBusy;
+    private SpotifySettingsDto? _spotify;
+
     // Remote control
     [ObservableProperty] private string _controlBindAddress = "127.0.0.1";
     [ObservableProperty] private decimal _controlTcpPort = 8601;
@@ -282,6 +294,7 @@ public sealed partial class SettingsTool : StudioTool
         await LoadOutputsAsync();
         await LoadDeskModeAsync();
         await LoadAudioAsync();
+        await LoadSpotifyAsync();
         if (await Hub.Client.GetAsync<MasterDto>("/api/master") is { } m) { LimiterOn = m.LimiterOn; LimiterCeiling = (decimal)m.CeilingDb; _masterLoaded = true; }
         Outputs.Clear();
         Outputs.Add(new DeviceDto(-1, "Standaard geluidskaart van Windows", true, false));
@@ -452,6 +465,8 @@ public sealed partial class SettingsTool : StudioTool
             if (a is not null) ShowAudio(a);
         }
 
+        if (SpotifyLoaded && SpotifyChanged) await SaveSpotifyAsync();
+
         if (SystemLoaded)
         {
             var sys = await Hub.Client.SendForAsync<SystemDto>(HttpMethod.Put, "/api/system", new SystemSettingsRequest(AutoStart, DetailedLog));
@@ -470,6 +485,80 @@ public sealed partial class SettingsTool : StudioTool
         if (saved.Rescanning) notes.Add("De bibliotheek wordt opnieuw ingelezen uit de nieuwe mappen.");
         if (saved.NeedsRestart.Count > 0) notes.Add("Actief na een herstart van de engine: " + string.Join(", ", saved.NeedsRestart) + ".");
         Status = string.Join(" ", notes);
+    }
+
+    // ---------------------------------------------------------------- Spotify
+
+    private bool SpotifyChanged => _spotify is null || SpotifySecret.Trim().Length > 0
+        || SpotifyClientId.Trim() != _spotify.ClientId || !string.Equals(SpotifyMarket.Trim(), _spotify.Market, StringComparison.OrdinalIgnoreCase);
+
+    private async Task LoadSpotifyAsync()
+    {
+        var s = await Hub.Client.GetAsync<SpotifySettingsDto>("/api/spotify/settings");
+        SpotifyLoaded = s is not null;
+        if (s is not null) ShowSpotify(s);
+    }
+
+    private void ShowSpotify(SpotifySettingsDto s)
+    {
+        _spotify = s;
+        SpotifyClientId = s.ClientId;
+        SpotifyMarket = s.Market;
+        SpotifySecret = "";
+        SpotifySecretHint = s.SecretSet
+            ? $"Er is een Client Secret opgeslagen ({s.SecretHint}); leeg laten = houden."
+            : "Nog geen Client Secret opgeslagen.";
+    }
+
+    private void SpotifyResult(bool ok, string text)
+    {
+        SpotifyOk = ok;
+        SpotifyFailed = !ok;
+        SpotifyStatus = text;
+    }
+
+    private async Task<bool> SaveSpotifyAsync()
+    {
+        var (s, error) = await Hub.Client.SendWithErrorAsync<SpotifySettingsDto>(HttpMethod.Put, "/api/spotify/settings",
+            new SpotifySettingsRequest(SpotifyClientId.Trim(), SpotifySecret.Trim(), SpotifyMarket.Trim()));
+        if (s is null) { SpotifyResult(false, error ?? "Opslaan mislukt."); return false; }
+        ShowSpotify(s);
+        return true;
+    }
+
+    /// <summary>Saves the keys when they changed, then lets the engine sign in at Spotify with them.</summary>
+    [RelayCommand]
+    private async Task TestSpotify()
+    {
+        if (SpotifyBusy) return;
+        SpotifyBusy = true;
+        SpotifyResult(true, "verbinden met Spotify…");
+        SpotifyFailed = SpotifyOk = false;
+        try
+        {
+            if (SpotifyChanged && !await SaveSpotifyAsync()) return;
+            var r = await Hub.Client.SendForAsync<SpotifyTestDto>(HttpMethod.Post, "/api/spotify/test", null);
+            if (r is null) SpotifyResult(false, "De engine gaf geen antwoord.");
+            else SpotifyResult(r.Ok, r.Message);
+        }
+        finally { SpotifyBusy = false; }
+    }
+
+    [RelayCommand]
+    private async Task ClearSpotify()
+    {
+        var s = await Hub.Client.SendForAsync<SpotifySettingsDto>(HttpMethod.Put, "/api/spotify/settings",
+            new SpotifySettingsRequest(null, null, null, Clear: true));
+        if (s is null) return;
+        ShowSpotify(s);
+        SpotifyResult(true, "De Spotify-gegevens zijn gewist.");
+    }
+
+    [RelayCommand]
+    private static void OpenSpotifyDashboard()
+    {
+        try { System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo("https://developer.spotify.com/dashboard") { UseShellExecute = true }); }
+        catch (System.ComponentModel.Win32Exception) { }
     }
 }
 
