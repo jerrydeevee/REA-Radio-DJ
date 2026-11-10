@@ -10,7 +10,7 @@ namespace ReaRadioDj.Core.Data;
 /// </summary>
 public sealed class StationDb
 {
-    public const int SchemaVersion = 13;
+    public const int SchemaVersion = 14;
     private readonly string _connectionString;
 
     public StationDb(string path)
@@ -108,7 +108,7 @@ public sealed class StationDb
         {
             cmd.Transaction = tx;
             // Each step brings the database one version further; a new database runs them all.
-            cmd.CommandText = (version < 1 ? SchemaV1 : "") + (version < 2 ? SchemaV2 : "") + (version < 3 ? SchemaV3 : "") + (version < 4 ? SchemaV4 : "") + (version < 5 ? SchemaV5 : "") + (version < 6 ? SchemaV6 : "") + (version < 7 ? SchemaV7 : "") + (version < 8 ? SchemaV8 : "") + (version < 9 ? SchemaV9 : "") + (version < 10 ? SchemaV10 : "") + (version < 11 ? SchemaV11 : "") + (version < 12 ? SchemaV12 : "") + (version < 13 ? SchemaV13 : "") + $"PRAGMA user_version = {SchemaVersion};";
+            cmd.CommandText = (version < 1 ? SchemaV1 : "") + (version < 2 ? SchemaV2 : "") + (version < 3 ? SchemaV3 : "") + (version < 4 ? SchemaV4 : "") + (version < 5 ? SchemaV5 : "") + (version < 6 ? SchemaV6 : "") + (version < 7 ? SchemaV7 : "") + (version < 8 ? SchemaV8 : "") + (version < 9 ? SchemaV9 : "") + (version < 10 ? SchemaV10 : "") + (version < 11 ? SchemaV11 : "") + (version < 12 ? SchemaV12 : "") + (version < 13 ? SchemaV13 : "") + (version < 14 ? SchemaV14 : "") + $"PRAGMA user_version = {SchemaVersion};";
             cmd.ExecuteNonQuery();
         }
         tx.Commit();
@@ -125,6 +125,35 @@ public sealed class StationDb
     /// per second (the "audio verloop", also the recognition pattern of a track) and estimated intro/outro markers.
     /// Items of a removed folder are retired: hidden, but kept so a track found again later gets all its data back.
     /// </summary>
+    /// <summary>
+    /// Saved searches (slimme lijsten), the undo history of library edits, the quality check (clipping) and more tag
+    /// fields (language, mood, rating, the operator's own energy level).
+    /// </summary>
+    private const string SchemaV14 = """
+        CREATE TABLE IF NOT EXISTS smart_lists(
+            id INTEGER PRIMARY KEY,
+            name TEXT NOT NULL UNIQUE COLLATE NOCASE,
+            query TEXT NOT NULL,
+            category_id INTEGER,
+            sort TEXT NOT NULL DEFAULT '',
+            created TEXT NOT NULL);
+        INSERT OR IGNORE INTO smart_lists(name, query, sort, created) VALUES
+            ('Nieuw deze maand', 'is:nieuw is:muziek', 'added', datetime('now')),
+            ('Lang niet gespeeld', 'is:lang is:mag is:muziek', 'lastplayed', datetime('now')),
+            ('Aandacht nodig', 'is:aandacht', 'relevance', datetime('now'));
+        CREATE TABLE IF NOT EXISTS media_undo(
+            id INTEGER PRIMARY KEY,
+            time TEXT NOT NULL,
+            label TEXT NOT NULL,
+            items INTEGER NOT NULL,
+            rows TEXT NOT NULL);
+        ALTER TABLE media ADD COLUMN clip REAL;
+        ALTER TABLE media ADD COLUMN language TEXT NOT NULL DEFAULT '';
+        ALTER TABLE media ADD COLUMN mood TEXT NOT NULL DEFAULT '';
+        ALTER TABLE media ADD COLUMN rating INTEGER;
+        ALTER TABLE media ADD COLUMN energy_level INTEGER;
+        """;
+
     private const string SchemaV13 = """
         CREATE TABLE IF NOT EXISTS library_folders(
             id INTEGER PRIMARY KEY,

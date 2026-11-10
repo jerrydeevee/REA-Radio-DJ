@@ -20,6 +20,28 @@
         <Button Grid.Column="2" Classes="small" Content="⟳" Command="{Binding ScanCommand}" Margin="4,0,0,0"
                 ToolTip.Tip="Nu alles nakijken. Normaal niet nodig: nieuwe en gewijzigde bestanden worden vanzelf verwerkt." />
       </Grid>
+      <Grid ColumnDefinitions="*,Auto,Auto" Margin="0,0,0,4">
+        <ComboBox ItemsSource="{Binding SmartLists}" SelectedItem="{Binding SmartList}" HorizontalAlignment="Stretch"
+                  PlaceholderText="Bewaarde lijsten…" ToolTip.Tip="Een bewaarde zoekopdracht; de lijst toont altijd de stand van nu">
+          <ComboBox.ItemTemplate>
+            <DataTemplate x:DataType="c:SmartListDto">
+              <DockPanel>
+                <TextBlock DockPanel.Dock="Right" Classes="muted" Text="{Binding Count}" Margin="12,0,0,0" />
+                <TextBlock Text="{Binding Name}" TextTrimming="CharacterEllipsis" />
+              </DockPanel>
+            </DataTemplate>
+          </ComboBox.ItemTemplate>
+        </ComboBox>
+        <Button Grid.Column="1" Classes="small" Content="Bewaar…" Command="{Binding ToggleSaveListCommand}" Margin="4,0,0,0"
+                ToolTip.Tip="De zoekopdracht, categorie en sortering van nu bewaren onder een eigen naam" />
+        <Button Grid.Column="2" Classes="small" Content="🗑" Command="{Binding DeleteListCommand}" Margin="4,0,0,0"
+                IsVisible="{Binding SmartList, Converter={x:Static ObjectConverters.IsNotNull}}" ToolTip.Tip="Deze bewaarde lijst weggooien (de nummers blijven)" />
+      </Grid>
+      <Grid ColumnDefinitions="*,Auto,Auto" Margin="0,0,0,4" IsVisible="{Binding ShowSaveList}">
+        <TextBox Text="{Binding NewListName}" Watermark="naam, bijv. Nieuw deze maand" />
+        <Button Grid.Column="1" Classes="small" Content="Bewaren" Command="{Binding SaveListCommand}" Margin="4,0,0,0" />
+        <Button Grid.Column="2" Classes="small" Content="Annuleren" Command="{Binding ToggleSaveListCommand}" Margin="4,0,0,0" />
+      </Grid>
       <WrapPanel Margin="0,0,0,0">
         <ComboBox ItemsSource="{Binding CategoryChoices}" SelectedItem="{Binding Category}" Width="170" Margin="0,0,4,4" ToolTip.Tip="Categorie" />
         <ComboBox ItemsSource="{Binding Decades}" SelectedItem="{Binding Decade}" Width="110" Margin="0,0,4,4" ToolTip.Tip="Decennium (jaar uit de tags)" />
@@ -67,7 +89,11 @@
         <Button Classes="small" Margin="0,0,4,4" Content="PFL" Command="{Binding PflCommand}" ToolTip.Tip="Voorbeluisteren op de koptelefoon" />
         <Button Classes="small" Margin="0,0,4,4" Content="Overlay" Command="{Binding OverlayCommand}" ToolTip.Tip="Over de muziek heen (muziek dimt)" />
         <Button Classes="small" Margin="0,0,4,4" Content="Cues" Command="{Binding CuesCommand}" />
+        <Button Classes="small" Margin="0,0,4,4" Content="{Binding UndoText}" Command="{Binding UndoCommand}" IsVisible="{Binding CanUndo}"
+                ToolTip.Tip="De laatste wijziging in de bibliotheek terugzetten (Ctrl+Z)" />
       </WrapPanel>
+      <TextBlock Classes="muted" Text="{Binding BulkText}" TextWrapping="Wrap" Margin="0,0,0,4"
+                 IsVisible="{Binding BulkText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
       <Border Classes="card" Padding="6" Margin="0,0,0,4" IsVisible="{Binding HasMulti}">
         <WrapPanel>
           <TextBlock Text="{Binding SelectionText}" FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,12,0" />
@@ -77,7 +103,6 @@
           <Button Classes="small" Content="Uit" Command="{Binding BulkOffCommand}" Margin="0,0,4,0" ToolTip.Tip="Niet meer inplannen" />
           <Button Classes="small" Content="Geldigheid wissen" Command="{Binding BulkClearDatesCommand}" Margin="0,0,4,0" />
           <Button Classes="small" Content="Allemaal achteraan in de log" Command="{Binding BulkToLogCommand}" Margin="0,0,12,0" />
-          <TextBlock Classes="muted" Text="{Binding BulkText}" VerticalAlignment="Center" />
         </WrapPanel>
       </Border>
     </StackPanel>
@@ -162,8 +187,16 @@
               <TextBlock Classes="muted" FontSize="11" Text="{Binding MarkerText}" TextWrapping="Wrap" />
               <TextBlock Text="{Binding BlockText}" TextWrapping="Wrap" FontSize="12"
                          Foreground="{Binding Blocked, Converter={x:Static vm:Brushes.WarnOrOk}}" />
+              <Border Classes="card" Padding="6" IsVisible="{Binding HasIssues}">
+                <StackPanel Spacing="2">
+                  <TextBlock Text="Aandacht nodig" FontWeight="SemiBold" Foreground="#E58A4D" />
+                  <ItemsControl ItemsSource="{Binding Issues}">
+                    <ItemsControl.ItemTemplate><DataTemplate x:DataType="x:String"><TextBlock Text="{Binding StringFormat='• {0}'}" TextWrapping="Wrap" FontSize="12" /></DataTemplate></ItemsControl.ItemTemplate>
+                  </ItemsControl>
+                </StackPanel>
+              </Border>
               <TextBlock Classes="h" Text="Tags" Margin="0,4,0,0" />
-              <Grid ColumnDefinitions="80,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto" RowSpacing="3">
+              <Grid ColumnDefinitions="80,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto" RowSpacing="3">
                 <TextBlock Text="Artiest" VerticalAlignment="Center" />
                 <TextBox Grid.Column="1" Text="{Binding Artist}" />
                 <TextBlock Grid.Row="1" Text="Titel" VerticalAlignment="Center" />
@@ -174,6 +207,15 @@
                 <TextBox Grid.Row="3" Grid.Column="1" Text="{Binding Genre}" />
                 <TextBlock Grid.Row="4" Text="Jaar" VerticalAlignment="Center" />
                 <TextBox Grid.Row="4" Grid.Column="1" Text="{Binding Year}" Width="80" HorizontalAlignment="Left" />
+                <TextBlock Grid.Row="5" Text="Taal" VerticalAlignment="Center" />
+                <TextBox Grid.Row="5" Grid.Column="1" Text="{Binding Language}" Watermark="bijv. nl, en, de" />
+                <TextBlock Grid.Row="6" Text="Stemming" VerticalAlignment="Center" />
+                <TextBox Grid.Row="6" Grid.Column="1" Text="{Binding Mood}" Watermark="bijv. vrolijk, zomer, rustig" />
+                <TextBlock Grid.Row="7" Text="Waardering" VerticalAlignment="Center" />
+                <ComboBox Grid.Row="7" Grid.Column="1" ItemsSource="{x:Static vm:MediaDetailVm.Stars}" SelectedItem="{Binding Rating}" Width="140" />
+                <TextBlock Grid.Row="8" Text="Energie" VerticalAlignment="Center" />
+                <ComboBox Grid.Row="8" Grid.Column="1" ItemsSource="{x:Static vm:MediaDetailVm.Energies}" SelectedItem="{Binding EnergyLevel}" Width="140"
+                          ToolTip.Tip="Je eigen inschatting, te gebruiken in zoeken (energie:4-5) en straks in de planning" />
               </Grid>
               <WrapPanel>
                 <Button Classes="small" Content="Tags opslaan" Command="{Binding SaveTagsCommand}" Margin="0,0,4,4" />
@@ -225,6 +267,8 @@
               </TextBlock>
               <TextBlock Text="{Binding Block, StringFormat='⚠ {0}'}" Foreground="#F0B429" FontSize="11" TextTrimming="CharacterEllipsis"
                          IsVisible="{Binding !Allowed}" ToolTip.Tip="Waarom dit nu niet ingepland wordt" />
+              <TextBlock Text="{Binding IssueText, StringFormat='⚑ {0}'}" Foreground="#E58A4D" FontSize="11" TextTrimming="CharacterEllipsis"
+                         IsVisible="{Binding HasIssues}" ToolTip.Tip="{Binding IssueText}" />
             </StackPanel>
             <StackPanel Grid.Column="2" VerticalAlignment="Center">
               <TextBlock Classes="mono" HorizontalAlignment="Right" Text="{Binding Duration, Converter={x:Static vm:Brushes.Seconds}}" />

@@ -13,8 +13,13 @@ public sealed record Category(long Id, string Name, MediaKind Kind, string Color
 /// <summary>A library entry with the fields that are only needed for editing and reporting.</summary>
 public sealed record MediaDetails(MediaItem Media, string Album, bool Enabled, bool CuesManual, DateTime? ValidFrom,
     DateTime? ValidUntil, int PlayCount, DateTime? LastPlayed, bool Missing, int? Year = null, DateTime? Added = null,
-    string Genre = "", double? Bpm = null, double? FirstBeat = null, double? EstIntro = null, double? EstOutro = null)
+    string Genre = "", double? Bpm = null, double? FirstBeat = null, double? EstIntro = null, double? EstOutro = null,
+    long Size = 0, double? Clip = null, string Language = "", string Mood = "", int? Rating = null, int? EnergyLevel = null,
+    IReadOnlyList<string>? Issues = null)
 {
+    /// <summary>What the quality check found (empty = nothing).</summary>
+    public IReadOnlyList<string> Problems => Issues ?? [];
+
     public bool IsPlayable(DateTime now) => Enabled && !Missing
         && (ValidFrom is not DateTime f || f <= now) && (ValidUntil is not DateTime u || u >= now);
 }
@@ -28,6 +33,12 @@ public sealed record LibraryFolder(long Id, string Path, MediaKind Kind, string 
 {
     public const long MusicId = -1, JingleId = -2;
 }
+
+/// <summary>A saved search ("slimme lijst"): the query and category are run again each time, so the list keeps itself up to date.</summary>
+public sealed record SmartList(long Id, string Name, string Query, long? CategoryId, string Sort);
+
+/// <summary>The last change that "ongedaan maken" can put back.</summary>
+public sealed record UndoInfo(long Id, DateTime Time, string Label, int Items);
 
 /// <summary>What the last scan of a folder found.</summary>
 public sealed record FolderState(DateTime Scanned, int Files, bool Reachable, string Error);
@@ -364,7 +375,7 @@ public sealed class MediaLibrary
         bool fixedCategory = false)
     {
         var tags = ReadTags(info.FullName);
-        double duration; double? lufs; CueSet cues; ushort[]? peaks = null;
+        double duration; double? lufs; CueSet cues; ushort[]? peaks = null; double? clip = null;
 
         if (Legacy().TryGetValue(info.FullName, out var old) && old.Size == info.Length && old.Modified == info.LastWriteTimeUtc.Ticks)
         {
@@ -378,6 +389,7 @@ public sealed class MediaLibrary
             duration = analysis.Duration;
             lufs = analysis.Lufs;
             peaks = analysis.Peaks;
+            clip = Math.Round(analysis.ClipsPerMinute, 1);
             cues = new CueSet { CueIn = analysis.Cues.CueIn, Mix = analysis.Cues.MixPoint, CueOut = analysis.Cues.CueOut };
         }
         cues = cues with { Intro = ReadSidecarIntro(info.FullName) };
@@ -410,9 +422,11 @@ public sealed class MediaLibrary
             using var cmd = StationDb.Command(c, """
                 INSERT INTO media(path, kind, category_id, artist, title, album, size, modified, duration, lufs,
                                   cue_in, intro, outro, mix, cue_out, hook_in, hook_out, cues_manual, added, missing,
-                                  genre, album_artist, bpm, first_beat, est_intro, est_outro, energy, measured, retired)
+                                  genre, album_artist, bpm, first_beat, est_intro, est_outro, energy, measured, retired,
+                                  clip, language, mood, rating)
                 VALUES($path, $kind, $cat, $artist, $title, $album, $size, $mod, $dur, $lufs, $in, $intro, $outro, $mix, $out,
-                       $hi, $ho, $manual, $added, 0, $genre, $aa, $bpm, $fb, $ei, $eo, $energy, $measured, 0)
+                       $hi, $ho, $manual, $added, 0, $genre, $aa, $bpm, $fb, $ei, $eo, $energy, $measured, 0,
+                       $clip, $lang, $mood, $rating)
                 ON CONFLICT(path) DO UPDATE SET
                     kind = excluded.kind, artist = excluded.artist, title = excluded.title, album = excluded.album,
                     size = excluded.size, modified = excluded.modified, duration = excluded.duration, lufs = excluded.lufs,
@@ -421,6 +435,10 @@ public sealed class MediaLibrary
                     bpm = COALESCE(excluded.bpm, media.bpm), first_beat = COALESCE(excluded.first_beat, media.first_beat),
                     est_intro = excluded.est_intro, est_outro = excluded.est_outro,
                     energy = COALESCE(excluded.energy, media.energy), measured = MAX(media.measured, excluded.measured),
+                    clip = COALESCE(excluded.clip, media.clip),
+                    language = CASE WHEN excluded.language <> '' THEN excluded.language ELSE media.language END,
+                    mood = CASE WHEN excluded.mood <> '' THEN excluded.mood ELSE media.mood END,
+                    rating = COALESCE(excluded.rating, media.rating),
                     cue_in = CASE WHEN media.cues_manual = 1 THEN media.cue_in ELSE excluded.cue_in END,
                     intro = CASE WHEN media.cues_manual = 1 THEN media.intro ELSE excluded.intro END,
                     outro = CASE WHEN media.cues_manual = 1 THEN media.outro ELSE excluded.outro END,
@@ -436,7 +454,8 @@ public sealed class MediaLibrary
                 ("$lufs", lufs), ("$in", cues.CueIn), ("$intro", cues.Intro), ("$outro", cues.Outro), ("$mix", cues.Mix), ("$out", cues.CueOut),
                 ("$hi", cues.HookIn), ("$ho", cues.HookOut), ("$manual", inFile?.Manual == true ? 1 : 0),
                 ("$added", StationDb.Iso(DateTime.Now)), ("$genre", tags.Genre), ("$aa", tags.AlbumArtist), ("$bpm", bpm), ("$fb", firstBeat),
-                ("$ei", estIntro), ("$eo", estOutro), ("$energy", energy), ("$measured", energy is null ? 0 : 1));
+                ("$ei", estIntro), ("$eo", estOutro), ("$energy", energy), ("$measured", energy is null ? 0 : 1),
+                ("$clip", clip), ("$lang", tags.Language), ("$mood", tags.Mood), ("$rating", tags.Rating));
             cmd.Transaction = tx;
             long id = mediaId = (long)cmd.ExecuteScalar()!;
             if (peaks is not null) StorePeaks(c, tx, id, peaks);
@@ -475,6 +494,22 @@ public sealed class MediaLibrary
     /// </summary>
     private void MeasureMissing(CancellationToken ct)
     {
+        // Clipping (older items were imported before it was measured): one quick decode per file, in the background.
+        var noClip = _db.Query("SELECT id, path FROM media WHERE clip IS NULL AND missing = 0 AND retired = 0",
+            r => (Id: r.GetInt64(0), Path: r.GetString(1)));
+        int checkedN = 0;
+        foreach (var (id, path) in noClip)
+        {
+            ct.ThrowIfCancellationRequested();
+            Status = $"Kwaliteit nakijken {++checkedN}/{noClip.Count}: {Path.GetFileName(path)}";
+            try
+            {
+                if (!File.Exists(path)) continue;
+                var a = AudioAnalyzer.Analyze(path, _options.Mix);
+                _db.Execute("UPDATE media SET clip = $c WHERE id = $id", ("$c", Math.Round(a.ClipsPerMinute, 1)), ("$id", id));
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException) { _log.LogDebug(ex, "Could not check {File}", path); }
+        }
         var todo = _db.Query("SELECT id, path, kind, bpm FROM media WHERE measured = 0 AND missing = 0 AND retired = 0",
             r => (Id: r.GetInt64(0), Path: r.GetString(1), Kind: (MediaKind)r.GetInt64(2), Bpm: r.GetDoubleOrNull(3)));
         int done = 0;
@@ -615,7 +650,13 @@ public sealed class MediaLibrary
     {
         _categories = _db.Query("SELECT id, name, kind, color FROM categories ORDER BY kind, name",
             r => new Category(r.GetInt64(0), r.GetString(1), (MediaKind)r.GetInt64(2), r.GetString(3)));
-        _all = _db.Query(SelectMedia + " WHERE m.retired = 0 ORDER BY m.artist, m.title", MapDetails);
+        var all = _db.Query(SelectMedia + " WHERE m.retired = 0 ORDER BY m.artist, m.title", MapDetails);
+        var issues = LibraryQuality.All(all);
+        if (issues.Count > 0)
+            for (int i = 0; i < all.Count; i++)
+                if (issues.TryGetValue(all[i].Media.Id, out var p)) all[i] = all[i] with { Issues = p };
+        _all = all;
+        LibrarySearch.Warm(all);
         var now = DateTime.Now;
         var playable = _all.Where(d => d.IsPlayable(now)).Select(d => d.Media).ToList();
         Songs = playable.Where(m => m.Kind == MediaKind.Song).ToList();
@@ -624,8 +665,13 @@ public sealed class MediaLibrary
 
     public MediaItem? Get(long id) => GetDetails(id)?.Media;
 
-    public MediaDetails? GetDetails(long id) =>
-        _db.Query(SelectMedia + " WHERE m.id = $id", MapDetails, ("$id", id)).FirstOrDefault();
+    public MediaDetails? GetDetails(long id)
+    {
+        var d = _db.Query(SelectMedia + " WHERE m.id = $id", MapDetails, ("$id", id)).FirstOrDefault();
+        if (d is null) return null;
+        var known = _all.FirstOrDefault(x => x.Media.Id == id);
+        return known?.Issues is { } p ? d with { Issues = p } : d;
+    }
 
     /// <summary>Playable items (enabled, present, inside their validity dates) of one category.</summary>
     public IReadOnlyList<MediaItem> InCategory(long categoryId)
@@ -673,6 +719,7 @@ public sealed class MediaLibrary
     {
         var d = GetDetails(id);
         if (d is null) return null;
+        Remember([id], $"cues van {Label(d)}");
         var c = cues.Normalize(d.Media.Duration);
         _db.Execute("""
             UPDATE media SET cue_in=$in, full_level=$fl, intro=$i1, intro2=$i2, outro=$ou, fade_out=$fo, mix=$mix,
@@ -691,6 +738,7 @@ public sealed class MediaLibrary
     {
         var d = GetDetails(id);
         if (d is null) return null;
+        Remember([id], $"cues herstellen van {Label(d)}");
         var peaks = GetPeaks(id);
         var auto = CuePointCalculator.FromPeaks(peaks, AnalysisResult.BlockMilliseconds / 1000.0, _options.Mix);
         var c = new CueSet { CueIn = auto.CueIn, Mix = auto.MixPoint, CueOut = auto.CueOut, Intro = ReadSidecarIntro(d.Media.Path) }
@@ -707,6 +755,9 @@ public sealed class MediaLibrary
 
     public bool UpdateDetails(long id, long? categoryId, bool enabled, DateTime? validFrom, DateTime? validUntil)
     {
+        if (GetDetails(id) is { } before)
+            Remember([id], before.Media.CategoryId != categoryId ? $"categorie van {Label(before)}"
+                : before.Enabled != enabled ? $"{(enabled ? "aanzetten" : "uitzetten")} van {Label(before)}" : $"geldigheid van {Label(before)}");
         int n = _db.Execute("UPDATE media SET category_id=$c, enabled=$e, valid_from=$f, valid_until=$u WHERE id=$id",
             ("$c", categoryId), ("$e", enabled ? 1 : 0), ("$f", validFrom is DateTime f ? StationDb.Iso(f) : null),
             ("$u", validUntil is DateTime u ? StationDb.Iso(u) : null), ("$id", id));
@@ -722,6 +773,8 @@ public sealed class MediaLibrary
     public int UpdateMany(IReadOnlyCollection<long> ids, long? categoryId, bool? enabled, bool clearDates, DateTime? validFrom, DateTime? validUntil)
     {
         int n = 0;
+        string what = categoryId is not null ? "verplaatsen" : enabled is bool on ? (on ? "aanzetten" : "uitzetten") : "geldigheid";
+        Remember(ids, $"{what} van {ids.Count} {(ids.Count == 1 ? "nummer" : "nummers")}");
         _db.Transaction((c, tx) =>
         {
             foreach (var id in ids)
@@ -749,12 +802,21 @@ public sealed class MediaLibrary
     /// Corrects the tags of an item in the library. When its folder keeps markers in the file, the tags go into the
     /// file too; otherwise only the library has them (a later change of the file itself reads the file again).
     /// </summary>
-    public bool UpdateTags(long id, string artist, string title, string album, string genre, int? year)
+    public bool UpdateTags(long id, string artist, string title, string album, string genre, int? year,
+        string? language = null, string? mood = null, int? rating = null, int? energyLevel = null)
     {
         var d = GetDetails(id);
         if (d is null) return false;
-        _db.Execute("UPDATE media SET artist = $a, title = $t, album = $al, genre = $g WHERE id = $id",
-            ("$a", artist.Trim()), ("$t", title.Trim()), ("$al", album.Trim()), ("$g", genre.Trim()), ("$id", id));
+        Remember([id], $"tags van {Label(d)}");
+        language ??= d.Language; mood ??= d.Mood;
+        if (rating is not null) rating = Math.Clamp(rating.Value, 0, 5);
+        if (energyLevel is not null) energyLevel = Math.Clamp(energyLevel.Value, 0, 5);
+        _db.Execute("""
+            UPDATE media SET artist = $a, title = $t, album = $al, genre = $g, language = $l, mood = $m,
+                             rating = NULLIF($r, 0), energy_level = NULLIF($e, 0) WHERE id = $id
+            """,
+            ("$a", artist.Trim()), ("$t", title.Trim()), ("$al", album.Trim()), ("$g", genre.Trim()), ("$l", language.Trim()),
+            ("$m", mood.Trim()), ("$r", rating ?? d.Rating ?? 0), ("$e", energyLevel ?? d.EnergyLevel ?? 0), ("$id", id));
         _db.Transaction((c, tx) =>
         {
             using var cmd = StationDb.Command(c, """
@@ -774,6 +836,7 @@ public sealed class MediaLibrary
                     f.Tag.Album = album.Trim();
                     f.Tag.Genres = genre.Trim().Length > 0 ? [genre.Trim()] : [];
                     f.Tag.Year = year is int y and > 0 ? (uint)y : 0;
+                    WriteExtraTags(f, language.Trim(), mood.Trim(), rating ?? d.Rating);
                     f.Save();
                 }
                 var info = new FileInfo(d.Media.Path);
@@ -816,6 +879,112 @@ public sealed class MediaLibrary
         return n > 0;
     }
 
+    // ---------------------------------------------------------------- smart lists
+
+    public IReadOnlyList<SmartList> SmartLists() =>
+        _db.Query("SELECT id, name, query, category_id, sort FROM smart_lists ORDER BY name COLLATE NOCASE",
+            r => new SmartList(r.GetInt64(0), r.GetString(1), r.GetString(2), r.GetInt64OrNull(3), r.GetString(4)));
+
+    /// <summary>Saves a search under a name; the same name again replaces it.</summary>
+    public SmartList? SaveSmartList(string name, string query, long? categoryId, string sort)
+    {
+        name = name.Trim();
+        if (name.Length == 0) return null;
+        _db.Execute("""
+            INSERT INTO smart_lists(name, query, category_id, sort, created) VALUES($n, $q, $c, $s, $t)
+            ON CONFLICT(name) DO UPDATE SET query = excluded.query, category_id = excluded.category_id, sort = excluded.sort
+            """, ("$n", name), ("$q", query.Trim()), ("$c", categoryId), ("$s", sort), ("$t", StationDb.Iso(DateTime.Now)));
+        return SmartLists().FirstOrDefault(l => l.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
+    }
+
+    public bool DeleteSmartList(long id) => _db.Execute("DELETE FROM smart_lists WHERE id = $id", ("$id", id)) > 0;
+
+    /// <summary>How many items a saved list shows right now.</summary>
+    public int Count(SmartList list, Func<MediaDetails, string?>? block = null) =>
+        Search(list.Query, list.CategoryId, null, int.MaxValue, block).Count;
+
+    // ---------------------------------------------------------------- undo
+
+    private const int UndoKeep = 200;
+
+    private sealed record UndoRow(long Id, long? Category, bool Enabled, string? ValidFrom, string? ValidUntil,
+        string Artist, string Title, string Album, string Genre, string Language, string Mood, int? Rating, int? EnergyLevel,
+        double CueIn, double? FullLevel, double? Intro, double? Intro2, double? Outro, double? FadeOut, double Mix, double CueOut,
+        double? HookIn, double? HookOut, bool Manual, int? Year);
+
+    private static string Label(MediaDetails d) => d.Media.Artist.Length > 0 ? $"{d.Media.Artist} - {d.Media.Title}" : d.Media.Title;
+
+    /// <summary>Keeps how the items were before a change, so "ongedaan maken" can put them back.</summary>
+    private void Remember(IReadOnlyCollection<long> ids, string label)
+    {
+        if (ids.Count == 0) return;
+        var rows = new List<UndoRow>();
+        foreach (var chunk in ids.Chunk(500))
+        {
+            rows.AddRange(_db.Query($"""
+                SELECT m.id, m.category_id, m.enabled, m.valid_from, m.valid_until, m.artist, m.title, m.album, m.genre,
+                       m.language, m.mood, m.rating, m.energy_level, m.cue_in, m.full_level, m.intro, m.intro2, m.outro,
+                       m.fade_out, m.mix, m.cue_out, m.hook_in, m.hook_out, m.cues_manual, r.year
+                FROM media m LEFT JOIN media_rights r ON r.media_id = m.id WHERE m.id IN ({string.Join(',', chunk)})
+                """, r => new UndoRow(r.GetInt64(0), r.GetInt64OrNull(1), r.GetInt64(2) != 0, r.GetStringOrNull(3), r.GetStringOrNull(4),
+                    r.GetString(5), r.GetString(6), r.GetString(7), r.GetString(8), r.GetString(9), r.GetString(10),
+                    r.GetInt64OrNull(11) is long a ? (int)a : null, r.GetInt64OrNull(12) is long b ? (int)b : null,
+                    r.GetDouble(13), r.GetDoubleOrNull(14), r.GetDoubleOrNull(15), r.GetDoubleOrNull(16), r.GetDoubleOrNull(17),
+                    r.GetDoubleOrNull(18), r.GetDouble(19), r.GetDouble(20), r.GetDoubleOrNull(21), r.GetDoubleOrNull(22),
+                    r.GetInt64(23) != 0, r.GetInt64OrNull(24) is long y ? (int)y : null)));
+        }
+        if (rows.Count == 0) return;
+        _db.Execute("INSERT INTO media_undo(time, label, items, rows) VALUES($t, $l, $n, $r)",
+            ("$t", StationDb.Iso(DateTime.Now)), ("$l", label), ("$n", rows.Count), ("$r", JsonSerializer.Serialize(rows)));
+        _db.Execute($"DELETE FROM media_undo WHERE id NOT IN (SELECT id FROM media_undo ORDER BY id DESC LIMIT {UndoKeep})");
+    }
+
+    /// <summary>The change "ongedaan maken" would put back, or null.</summary>
+    public UndoInfo? LastChange() =>
+        _db.Query("SELECT id, time, label, items FROM media_undo ORDER BY id DESC LIMIT 1",
+            r => new UndoInfo(r.GetInt64(0), StationDb.ParseIso(r.GetString(1)) ?? DateTime.Now, r.GetString(2), (int)r.GetInt64(3))).FirstOrDefault();
+
+    /// <summary>Puts the last change back (category, on/off, dates, tags, cues). Returns what was undone, or null.</summary>
+    public UndoInfo? Undo()
+    {
+        var last = LastChange();
+        if (last is null) return null;
+        var json = _db.Scalar<string>("SELECT rows FROM media_undo WHERE id = $id", ("$id", last.Id));
+        var rows = JsonSerializer.Deserialize<List<UndoRow>>(json ?? "[]") ?? [];
+        _db.Transaction((c, tx) =>
+        {
+            foreach (var u in rows)
+            {
+                using var cmd = StationDb.Command(c, """
+                    UPDATE media SET category_id = $cat, enabled = $en, valid_from = $vf, valid_until = $vu,
+                        artist = $a, title = $t, album = $al, genre = $g, language = $l, mood = $mo, rating = $ra, energy_level = $el,
+                        cue_in = $in, full_level = $fl, intro = $i1, intro2 = $i2, outro = $ou, fade_out = $fo, mix = $mix,
+                        cue_out = $out, hook_in = $hi, hook_out = $ho, cues_manual = $man
+                    WHERE id = $id;
+                    INSERT INTO media_rights(media_id, year) VALUES($id, $y) ON CONFLICT(media_id) DO UPDATE SET year = excluded.year;
+                    """,
+                    ("$cat", u.Category), ("$en", u.Enabled ? 1 : 0), ("$vf", u.ValidFrom), ("$vu", u.ValidUntil), ("$a", u.Artist),
+                    ("$t", u.Title), ("$al", u.Album), ("$g", u.Genre), ("$l", u.Language), ("$mo", u.Mood), ("$ra", u.Rating),
+                    ("$el", u.EnergyLevel), ("$in", u.CueIn), ("$fl", u.FullLevel), ("$i1", u.Intro), ("$i2", u.Intro2), ("$ou", u.Outro),
+                    ("$fo", u.FadeOut), ("$mix", u.Mix), ("$out", u.CueOut), ("$hi", u.HookIn), ("$ho", u.HookOut),
+                    ("$man", u.Manual ? 1 : 0), ("$id", u.Id), ("$y", u.Year));
+                cmd.Transaction = tx;
+                cmd.ExecuteNonQuery();
+            }
+            using var del = StationDb.Command(c, "DELETE FROM media_undo WHERE id = $id", ("$id", last.Id));
+            del.Transaction = tx;
+            del.ExecuteNonQuery();
+        });
+        // Folders that keep markers in the file get the old markers back in the file too.
+        foreach (var u in rows)
+            if (_db.Scalar<string>("SELECT path FROM media WHERE id = $id", ("$id", u.Id)) is { } p && FolderOf(p) is { WriteTags: true })
+                WriteMarkers(u.Id);
+        Reload();
+        Changed?.Invoke();
+        _log.LogInformation("Undone: {Label}", last.Label);
+        return last;
+    }
+
     // ---------------------------------------------------------------- waveform
 
     /// <summary>The waveform (linear peak per 20 ms block, 0..65535). Analyses the file once if it is not stored yet.</summary>
@@ -851,7 +1020,8 @@ public sealed class MediaLibrary
         SELECT m.id, m.path, m.kind, m.category_id, COALESCE(c.name, ''), m.artist, m.title, m.duration, m.lufs,
                m.cue_in, m.full_level, m.intro, m.intro2, m.outro, m.fade_out, m.mix, m.cue_out, m.hook_in, m.hook_out,
                m.album, m.enabled, m.cues_manual, m.valid_from, m.valid_until, m.play_count, m.last_played, m.missing,
-               r.year, m.added, m.genre, m.bpm, m.first_beat, m.est_intro, m.est_outro
+               r.year, m.added, m.genre, m.bpm, m.first_beat, m.est_intro, m.est_outro,
+               m.size, m.clip, m.language, m.mood, m.rating, m.energy_level
         FROM media m LEFT JOIN categories c ON c.id = m.category_id LEFT JOIN media_rights r ON r.media_id = m.id
         """;
 
@@ -879,15 +1049,58 @@ public sealed class MediaLibrary
             StationDb.ParseIso(r.GetStringOrNull(22)), StationDb.ParseIso(r.GetStringOrNull(23)), (int)r.GetInt64(24),
             StationDb.ParseIso(r.GetStringOrNull(25)), r.GetInt64(26) != 0,
             r.GetInt64OrNull(27) is long y and > 0 ? (int)y : null, StationDb.ParseIso(r.GetStringOrNull(28)),
-            r.GetString(29), r.GetDoubleOrNull(30), r.GetDoubleOrNull(31), r.GetDoubleOrNull(32), r.GetDoubleOrNull(33));
+            r.GetString(29), r.GetDoubleOrNull(30), r.GetDoubleOrNull(31), r.GetDoubleOrNull(32), r.GetDoubleOrNull(33),
+            r.GetInt64(34), r.GetDoubleOrNull(35), r.GetString(36), r.GetString(37),
+            r.GetInt64OrNull(38) is long rt ? (int)rt : null, r.GetInt64OrNull(39) is long el ? (int)el : null);
     }
 
-    private sealed record Tags(string Artist, string Title, string Album, string Genre, string AlbumArtist, double? Bpm);
+    private sealed record Tags(string Artist, string Title, string Album, string Genre, string AlbumArtist, double? Bpm,
+        string Language = "", string Mood = "", int? Rating = null);
+
+    /// <summary>Language, mood and rating from ID3 (TLAN, TMOO, POPM) or Vorbis comments (LANGUAGE, MOOD, RATING).</summary>
+    private static (string Language, string Mood, int? Rating) ReadExtraTags(TagLib.File f)
+    {
+        string lang = "", mood = ""; int? rating = null;
+        if (f.GetTag(TagLib.TagTypes.Id3v2, false) is TagLib.Id3v2.Tag id3)
+        {
+            lang = id3.GetTextAsString("TLAN") ?? "";
+            mood = id3.GetTextAsString("TMOO") ?? "";
+            var popm = id3.GetFrames<TagLib.Id3v2.PopularimeterFrame>().FirstOrDefault();
+            if (popm is { Rating: > 0 }) rating = Stars(popm.Rating);
+        }
+        if (f.GetTag(TagLib.TagTypes.Xiph, false) is TagLib.Ogg.XiphComment x)
+        {
+            if (lang.Length == 0) lang = x.GetFirstField("LANGUAGE") ?? "";
+            if (mood.Length == 0) mood = x.GetFirstField("MOOD") ?? "";
+            if (rating is null && int.TryParse(x.GetFirstField("RATING"), out var r) && r > 0) rating = r <= 5 ? r : (int)Math.Clamp(Math.Round(r / 20.0), 1, 5);
+        }
+        return (lang.Trim(), mood.Trim(), rating);
+    }
+
+    // POPM 1..255 to 1..5 stars (the common Windows mapping: 1, 64, 128, 196, 255).
+    private static int Stars(byte popm) => popm switch { < 32 => 1, < 96 => 2, < 160 => 3, < 224 => 4, _ => 5 };
+    private static byte Popm(int stars) => stars switch { 1 => 1, 2 => 64, 3 => 128, 4 => 196, _ => 255 };
+
+    private static void WriteExtraTags(TagLib.File f, string language, string mood, int? rating)
+    {
+        if (f.GetTag(TagLib.TagTypes.Id3v2, true) is TagLib.Id3v2.Tag id3)
+        {
+            id3.SetTextFrame("TLAN", language.Length > 0 ? language : null);
+            id3.SetTextFrame("TMOO", mood.Length > 0 ? mood : null);
+            if (rating is int r and > 0) TagLib.Id3v2.PopularimeterFrame.Get(id3, "REA-Radio-DJ", true).Rating = Popm(r);
+        }
+        else if (f.GetTag(TagLib.TagTypes.Xiph, false) is TagLib.Ogg.XiphComment x)
+        {
+            x.SetField("LANGUAGE", language.Length > 0 ? [language] : []);
+            x.SetField("MOOD", mood.Length > 0 ? [mood] : []);
+            if (rating is int r and > 0) x.SetField("RATING", [r.ToString()]);
+        }
+    }
 
     private static Tags ReadTags(string path)
     {
-        string artist = "", title = "", album = "", genre = "", albumArtist = "";
-        double? bpm = null;
+        string artist = "", title = "", album = "", genre = "", albumArtist = "", language = "", mood = "";
+        double? bpm = null; int? rating = null;
         try
         {
             using var tagFile = TagLib.File.Create(path);
@@ -898,6 +1111,7 @@ public sealed class MediaLibrary
             genre = t.FirstGenre ?? "";
             albumArtist = t.FirstAlbumArtist ?? "";
             if (t.BeatsPerMinute is > 0 and < 300) bpm = t.BeatsPerMinute;
+            (language, mood, rating) = ReadExtraTags(tagFile);
         }
         catch (Exception) { /* untagged or unsupported: fall back to the file name */ }
 
@@ -908,7 +1122,7 @@ public sealed class MediaLibrary
             if (dash > 0 && string.IsNullOrWhiteSpace(artist)) { artist = name[..dash].Trim(); title = name[(dash + 3)..].Trim(); }
             else title = name;
         }
-        return new Tags(artist.Trim(), title.Trim(), album.Trim(), genre.Trim(), albumArtist.Trim(), bpm);
+        return new Tags(artist.Trim(), title.Trim(), album.Trim(), genre.Trim(), albumArtist.Trim(), bpm, language, mood, rating);
     }
 
     /// <summary>Reads the rights tags of one file and stores them (an empty record marks "looked, nothing there").</summary>

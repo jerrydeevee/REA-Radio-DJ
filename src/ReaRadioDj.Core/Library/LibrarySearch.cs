@@ -1,4 +1,6 @@
+using System.Collections.Concurrent;
 using System.Globalization;
+using System.Runtime.CompilerServices;
 using System.Text;
 using ReaRadioDj.Core.Model;
 
@@ -17,7 +19,8 @@ public static class LibrarySearch
         ("adele hello", "woorden uit artiest, titel, album of categorie; accenten en kleine tikfouten mogen"),
         ("\"night fever\"", "precies deze woorden achter elkaar"),
         ("-live", "zonder dit woord"),
-        ("artiest:abba", "alleen in de artiest (ook titel:, album:, cat:, genre:)"),
+        ("artiest:abba", "alleen in de artiest (ook titel:, album:, cat:, genre:, taal:, stemming:)"),
+        ("waardering:>=4  energie:4-5", "sterren en energie (1 tot 5) uit het detailpaneel of de tags"),
         ("bpm:120-128  bpm:>140", "tempo (gemeten bij het inlezen)"),
         ("jaar:1985  jaar:198  jaar:1980-1989  jaar:>2000", "jaar, decennium of bereik"),
         ("duur:<3:30  duur:3:00-4:00", "lengte van het nummer"),
@@ -29,42 +32,53 @@ public static class LibrarySearch
         ("is:ontbreekt  is:verlopen  is:uit", "bestand weg, buiten de geldigheid, uitgezet"),
         ("is:mag  is:geblokkeerd", "mag nu wel of niet ingepland worden"),
         ("is:muziek  is:jingle", "soort item"),
+        ("is:aandacht", "de kwaliteitscontrole vond iets: te zacht of te hard, clipping, stilte, lage bitrate of dubbel"),
+        ("is:dubbel  is:stil  is:clipping  is:zacht  is:hard  is:bitrate", "één soort probleem uit de kwaliteitscontrole"),
     ];
 
     public static readonly string[] Flags =
-        ["nieuw", "nooit", "lang", "zondercues", "ontbreekt", "verlopen", "uit", "mag", "geblokkeerd", "muziek", "jingle"];
+        ["nieuw", "nooit", "lang", "zondercues", "ontbreekt", "verlopen", "uit", "mag", "geblokkeerd", "muziek", "jingle",
+         "aandacht", "dubbel", "stil", "clipping", "zacht", "hard", "bitrate"];
 
     /// <summary>Searches <paramref name="items"/>. <paramref name="block"/> tells why an item may not be scheduled now (null = it may).</summary>
     public static List<MediaDetails> Run(IEnumerable<MediaDetails> items, string? query, DateTime now,
         Func<MediaDetails, string?>? block = null, int limit = 300)
     {
         var q = Parse(query);
-        var scored = new List<(MediaDetails D, int Score)>();
-        foreach (var d in items)
-        {
-            if (!q.Filters.All(f => f(d, now, block))) continue;
-            int score = 0;
-            bool ok = true;
-            var fields = Fields(d);
-            foreach (var w in q.Words)
-            {
-                int s = Score(w, fields);
-                if (s == 0) { ok = false; break; }
-                score += s;
-            }
-            if (!ok) continue;
-            foreach (var phrase in q.Phrases)
-            {
-                if (!fields.Any(f => f.Text.Contains(phrase, StringComparison.Ordinal))) { ok = false; break; }
-                score += 50;
-            }
-            if (!ok || q.Excluded.Any(x => fields.Any(f => f.Text.Contains(x, StringComparison.Ordinal)))) continue;
-            scored.Add((d, score));
-        }
+        // Whether a typed word is a typo of a word in the library is worked out once per distinct library word, not per
+        // track: 100.000 tracks share far fewer words. The tracks themselves are checked on all processor cores.
+        var typos = q.Words.Select(_ => new ConcurrentDictionary<string, bool>(StringComparer.Ordinal)).ToArray();
+        var list = items as IReadOnlyList<MediaDetails> ?? items.ToList();
+        var scored = list.AsParallel().AsOrdered().WithMergeOptions(ParallelMergeOptions.FullyBuffered)
+            .Select(d => (D: d, Score: Match(d, q, now, block, typos)))
+            .Where(x => x.Score >= 0)
+            .ToList();
         IEnumerable<(MediaDetails D, int Score)> ordered = q.Words.Count + q.Phrases.Count > 0
             ? scored.OrderByDescending(x => x.Score).ThenBy(x => x.D.Media.Artist, StringComparer.OrdinalIgnoreCase).ThenBy(x => x.D.Media.Title, StringComparer.OrdinalIgnoreCase)
             : scored;
         return ordered.Take(limit).Select(x => x.D).ToList();
+    }
+
+    /// <summary>-1 = no match, otherwise the score.</summary>
+    private static int Match(MediaDetails d, Query q, DateTime now, Func<MediaDetails, string?>? block, ConcurrentDictionary<string, bool>[] typos)
+    {
+        foreach (var f in q.Filters) if (!f(d, now, block)) return -1;
+        int score = 0;
+        var fields = Fields(d);
+        for (int i = 0; i < q.Words.Count; i++)
+        {
+            int s = Score(q.Words[i], fields, typos[i]);
+            if (s == 0) return -1;
+            score += s;
+        }
+        foreach (var phrase in q.Phrases)
+        {
+            if (!fields.Any(f => f.Text.Contains(phrase, StringComparison.Ordinal))) return -1;
+            score += 50;
+        }
+        foreach (var x in q.Excluded)
+            if (fields.Any(f => f.Text.Contains(x, StringComparison.Ordinal))) return -1;
+        return score;
     }
 
     // ---------------------------------------------------------------- parsing
@@ -124,6 +138,16 @@ public static class LibrarySearch
             case "album": return (d, _, _) => Normalize(d.Album).Contains(v, StringComparison.Ordinal);
             case "cat" or "categorie" or "category": return (d, _, _) => Normalize(d.Media.Category).Contains(v, StringComparison.Ordinal);
             case "genre": return (d, _, _) => Normalize(d.Genre).Contains(v, StringComparison.Ordinal);
+            case "taal" or "language": return (d, _, _) => Normalize(d.Language).Contains(v, StringComparison.Ordinal);
+            case "stemming" or "mood": return (d, _, _) => Normalize(d.Mood).Contains(v, StringComparison.Ordinal);
+            case "waardering" or "sterren" or "rating":
+                if (Range(value, s => int.TryParse(s, out var n) ? n : null) is not { } rr) return null;
+                var (rmin, rmax) = rr;
+                return (d, _, _) => d.Rating is int x && x >= rmin && x <= rmax;
+            case "energie" or "energy":
+                if (Range(value, s => int.TryParse(s, out var n) ? n : null) is not { } er) return null;
+                var (emin, emax) = er;
+                return (d, _, _) => d.EnergyLevel is int x && x >= emin && x <= emax;
             case "bpm" or "tempo":
                 if (Range(value, s => double.TryParse(s.Replace(',', '.'), NumberStyles.Float, CultureInfo.InvariantCulture, out var b) ? b : null) is not { } br) return null;
                 var (bmin, bmax) = br;
@@ -154,6 +178,13 @@ public static class LibrarySearch
                     "geblokkeerd" or "blocked" => (d, now, b) => (b?.Invoke(d) ?? Unplayable(d, now)) is not null,
                     "muziek" or "song" => (d, _, _) => d.Media.Kind == MediaKind.Song,
                     "jingle" => (d, _, _) => d.Media.Kind == MediaKind.Jingle,
+                    "aandacht" or "quality" => (d, _, _) => d.Problems.Count > 0,
+                    "dubbel" or "duplicate" => (d, _, _) => d.Problems.Any(p => p.StartsWith("dubbel", StringComparison.Ordinal)),
+                    "stil" or "silence" => (d, _, _) => d.Problems.Any(p => p.StartsWith("stilte", StringComparison.Ordinal)),
+                    "clipping" => (d, _, _) => d.Problems.Any(p => p.StartsWith("clipping", StringComparison.Ordinal)),
+                    "zacht" => (d, _, _) => d.Problems.Any(p => p.StartsWith("te zacht", StringComparison.Ordinal)),
+                    "hard" => (d, _, _) => d.Problems.Any(p => p.StartsWith("te hard", StringComparison.Ordinal)),
+                    "bitrate" => (d, _, _) => d.Problems.Any(p => p.StartsWith("lage bitrate", StringComparison.Ordinal)),
                     _ => null,
                 };
             default: return null;
@@ -209,11 +240,19 @@ public static class LibrarySearch
 
     private readonly record struct Field(string Text, string[] Words, int Weight, string Compact);
 
-    private static Field[] Fields(MediaDetails d) =>
+    // The normalised fields of each item are made once and kept with the item (a new item after an edit gets new ones),
+    // so a search over 100.000 tracks only compares strings.
+    private static readonly ConditionalWeakTable<MediaDetails, Field[]> Cache = new();
+
+    private static Field[] Fields(MediaDetails d) => Cache.GetValue(d, x =>
     [
-        Make(d.Media.Artist, 3), Make(d.Media.Title, 3), Make(d.Album, 2), Make(d.Media.Category, 1),
-        Make(d.Year?.ToString(CultureInfo.InvariantCulture) ?? "", 1), Make(d.Genre, 1),
-    ];
+        Make(x.Media.Artist, 3), Make(x.Media.Title, 3), Make(x.Album, 2), Make(x.Media.Category, 1),
+        Make(x.Year?.ToString(CultureInfo.InvariantCulture) ?? "", 1), Make(x.Genre, 1), Make(x.Language, 1), Make(x.Mood, 1),
+    ]);
+
+    /// <summary>Prepares the search fields of all items in the background (after a reload), so the first search is quick too.</summary>
+    public static void Warm(IReadOnlyList<MediaDetails> items) =>
+        _ = Task.Run(() => { foreach (var d in items) Fields(d); });
 
     private static Field Make(string text, int weight)
     {
@@ -222,7 +261,7 @@ public static class LibrarySearch
     }
 
     /// <summary>0 = no match; higher is better. Whole word beats word start beats inside a word beats a typo.</summary>
-    private static int Score(string w, Field[] fields)
+    private static int Score(string w, Field[] fields, ConcurrentDictionary<string, bool>? typos = null)
     {
         int best = 0;
         foreach (var f in fields)
@@ -234,7 +273,7 @@ public static class LibrarySearch
             else if (f.Words.Any(x => x.StartsWith(w, StringComparison.Ordinal))) s = 20;
             else if (f.Text.Contains(w, StringComparison.Ordinal)) s = 10;
             else if (f.Compact.Contains(w, StringComparison.Ordinal)) s = 8; // "acdc" finds "AC/DC"
-            else if (w.Length >= 4 && f.Words.Any(x => Typo(w, x))) s = 4;
+            else if (w.Length >= 4 && f.Words.Any(x => typos is null ? Typo(w, x) : typos.GetOrAdd(x, y => Typo(w, y)))) s = 4;
             best = Math.Max(best, s * f.Weight);
         }
         return best;
@@ -251,9 +290,9 @@ public static class LibrarySearch
     /// <summary>Optimal string alignment distance (swapped neighbours count as one), stops early above <paramref name="max"/>.</summary>
     public static int Distance(string a, string b, int max = int.MaxValue)
     {
-        var prev2 = new int[b.Length + 1];
-        var prev = new int[b.Length + 1];
-        var cur = new int[b.Length + 1];
+        int n = b.Length + 1;
+        Span<int> buffer = n <= 128 ? stackalloc int[n * 3] : new int[n * 3];
+        Span<int> prev2 = buffer[..n], prev = buffer.Slice(n, n), cur = buffer.Slice(2 * n, n);
         for (int j = 0; j <= b.Length; j++) prev[j] = j;
         for (int i = 1; i <= a.Length; i++)
         {
@@ -268,7 +307,7 @@ public static class LibrarySearch
                 rowMin = Math.Min(rowMin, v);
             }
             if (rowMin > max) return max + 1;
-            (prev2, prev, cur) = (prev, cur, prev2);
+            var t = prev2; prev2 = prev; prev = cur; cur = t;
         }
         return prev[b.Length];
     }

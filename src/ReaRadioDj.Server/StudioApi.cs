@@ -60,6 +60,24 @@ public static class StudioApi
         });
         api.MapGet("/library/help", () => LibrarySearch.Help.Select(h => new SearchHelpDto(h.Example, h.Meaning)));
 
+        // Saved searches: the query runs again each time, so a list is always up to date.
+        api.MapGet("/library/lists", (MediaLibrary library, PlayoutLog log) =>
+        {
+            var check = new RotationCheck(log.RecentAndPlannedSongs(), options.Rotation, DateTime.Now);
+            return library.SmartLists().Select(l => new SmartListDto(l.Id, l.Name, l.Query, l.CategoryId, l.Sort, library.Count(l, check.Reason)));
+        });
+        api.MapPost("/library/lists", (SmartListRequest r, MediaLibrary library) =>
+            library.SaveSmartList(r.Name ?? "", r.Query ?? "", r.CategoryId, r.Sort ?? "") is { } l
+                ? Results.Ok(new SmartListDto(l.Id, l.Name, l.Query, l.CategoryId, l.Sort, library.Count(l)))
+                : Results.BadRequest("Geef de lijst een naam."));
+        api.MapDelete("/library/lists/{id:long}", (long id, MediaLibrary library) => library.DeleteSmartList(id) ? Results.Ok() : Results.NotFound());
+
+        // Undo of library edits (category, on/off, dates, tags, cues).
+        api.MapGet("/media/undo", (MediaLibrary library) =>
+            library.LastChange() is { } u ? new UndoDto(u.Label, u.Time, u.Items) : new UndoDto("", DateTime.MinValue, 0));
+        api.MapPost("/media/undo", (MediaLibrary library) =>
+            library.Undo() is { } u ? new UndoDto(u.Label, u.Time, u.Items) : new UndoDto("", DateTime.MinValue, 0));
+
         // Library folders: local or on a share; removing one keeps its items (hidden) for when the tracks turn up again.
         static LibraryFolderDto Folder(MediaLibrary library, LibraryFolder f)
         {
@@ -80,7 +98,8 @@ public static class StudioApi
         api.MapPut("/media/bulk", (MediaBulkRequest r, MediaLibrary library) =>
             Results.Ok(new { changed = library.UpdateMany(r.Ids.Distinct().Take(10000).ToList(), r.CategoryId, r.Enabled, r.ClearDates, r.ValidFrom, r.ValidUntil) }));
         api.MapPut("/media/{id:long}/tags", (long id, MediaTagsRequest r, MediaLibrary library) =>
-            library.UpdateTags(id, r.Artist ?? "", r.Title ?? "", r.Album ?? "", r.Genre ?? "", r.Year is > 0 and < 3000 ? r.Year : null)
+            library.UpdateTags(id, r.Artist ?? "", r.Title ?? "", r.Album ?? "", r.Genre ?? "", r.Year is > 0 and < 3000 ? r.Year : null,
+                r.Language, r.Mood, r.Rating, r.EnergyLevel)
                 ? Results.Ok(Media(library.GetDetails(id)!)) : Results.NotFound());
         api.MapGet("/media/{id:long}/history", (long id, int? limit, AsRunLog asrun) =>
             asrun.ForMedia(id, Math.Clamp(limit ?? 10, 1, 100)).Select(e => new PlayedDto(e.Started, e.Played, e.Source)));

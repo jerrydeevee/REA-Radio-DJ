@@ -20,6 +20,9 @@ public sealed partial class MediaDetailVm : ObservableObject
         _owner = owner;
         Media = m;
         _artist = m.Artist; _title = m.Title; _album = m.Album; _genre = m.Genre; _year = m.Year?.ToString() ?? "";
+        _language = m.Language; _mood = m.Mood;
+        _rating = Stars.FirstOrDefault(s => s.Value == (m.Rating ?? 0)) ?? Stars[0];
+        _energyLevel = Energies.FirstOrDefault(s => s.Value == (m.EnergyLevel ?? 0)) ?? Energies[0];
         _ = LoadAsync();
     }
 
@@ -31,6 +34,19 @@ public sealed partial class MediaDetailVm : ObservableObject
     [ObservableProperty] private string _album;
     [ObservableProperty] private string _genre;
     [ObservableProperty] private string _year;
+    [ObservableProperty] private string _language;
+    [ObservableProperty] private string _mood;
+    [ObservableProperty] private LevelChoice _rating;
+    [ObservableProperty] private LevelChoice _energyLevel;
+
+    public static List<LevelChoice> Stars { get; } =
+        [new(0, "geen"), new(1, "★"), new(2, "★★"), new(3, "★★★"), new(4, "★★★★"), new(5, "★★★★★")];
+    public static List<LevelChoice> Energies { get; } =
+        [new(0, "niet gezet"), new(1, "1 rustig"), new(2, "2"), new(3, "3 midden"), new(4, "4"), new(5, "5 knallen")];
+
+    /// <summary>What the quality check found, one line each (empty = nothing).</summary>
+    public IReadOnlyList<string> Issues => Media.Issues ?? [];
+    public bool HasIssues => Media.HasIssues;
     [ObservableProperty] private string _saveText = "";
     [ObservableProperty] private ushort[]? _peaks;
     [ObservableProperty] private IReadOnlyList<WaveMarker> _markers = [];
@@ -42,6 +58,7 @@ public sealed partial class MediaDetailVm : ObservableObject
         StudioHub.Time(Media.Duration),
         Media.Lufs is double l ? $"{l:0.0} LUFS" : null,
         Media.Bpm is double b ? $"{b:0.0} BPM" : null,
+        Media.Bitrate is int kbps ? $"{kbps} kbps" : null,
         Media.Category,
         Media.Kind == "jingle" ? "jingle" : null,
     }.Where(x => !string.IsNullOrEmpty(x)));
@@ -110,9 +127,9 @@ public sealed partial class MediaDetailVm : ObservableObject
     {
         int? year = int.TryParse(Year.Trim(), out var y) && y is > 0 and < 3000 ? y : null;
         var r = await StudioHub.Current.Client.SendForAsync<MediaDto>(HttpMethod.Put, $"/api/media/{Id}/tags",
-            new MediaTagsRequest(Artist, Title, Album, Genre, year));
+            new MediaTagsRequest(Artist, Title, Album, Genre, year, Language, Mood, Rating.Value, EnergyLevel.Value));
         SaveText = r is null ? "Opslaan mislukt." : "Opgeslagen.";
-        if (r is not null) { Media = r; _owner.Refresh(); }
+        if (r is not null) { Media = r; _owner.Refresh(); _ = _owner.LoadUndoAsync(); }
     }
 
     [RelayCommand] private void EditCues() => StudioHub.Current.RequestCueEditor(Id);
@@ -123,6 +140,11 @@ public sealed partial class MediaDetailVm : ObservableObject
         bool ok = await StudioHub.Current.Client.PostAsync($"/api/media/{Id}/markers/write");
         SaveText = ok ? "Markers staan nu ook in het bestand." : "Schrijven in het bestand lukte niet.";
     }
+}
+
+public sealed record LevelChoice(int Value, string Name)
+{
+    public override string ToString() => Name;
 }
 
 public sealed record SortChoice(string Name, string Key)

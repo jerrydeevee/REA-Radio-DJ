@@ -71,6 +71,9 @@ public partial class LibraryView : UserControl
         KeyDown += (_, e) =>
         {
             if (e.Key == Key.F && e.KeyModifiers.HasFlag(KeyModifiers.Control)) { SearchBox.Focus(); SearchBox.SelectAll(); e.Handled = true; }
+            // Ctrl+Z outside a text box undoes the last library change (in a text box it stays the normal text undo).
+            else if (e.Key == Key.Z && e.KeyModifiers == KeyModifiers.Control && e.Source is not TextBox && DataContext is LibraryTool t && t.CanUndo)
+            { t.UndoCommand.Execute(null); e.Handled = true; }
         };
         // Folder picker for a library folder (also network locations the Windows dialog offers).
         BrowseFolder.Click += async (_, _) =>

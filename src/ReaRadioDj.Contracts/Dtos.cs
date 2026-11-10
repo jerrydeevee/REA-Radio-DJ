@@ -92,8 +92,12 @@ public sealed record CueDto(double CueIn, double? FullLevel, double? Intro, doub
 public sealed record MediaDto(long Id, string Path, string Kind, long? CategoryId, string Category, string Artist, string Title,
     string Album, double Duration, double? Lufs, CueDto Cues, bool Enabled, bool CuesManual, DateTime? ValidFrom,
     DateTime? ValidUntil, int PlayCount, DateTime? LastPlayed, bool Missing, int? Year = null, DateTime? Added = null,
-    string? Block = null, string Genre = "", double? Bpm = null, double? FirstBeat = null, double? EstIntro = null, double? EstOutro = null)
+    string? Block = null, string Genre = "", double? Bpm = null, double? FirstBeat = null, double? EstIntro = null, double? EstOutro = null,
+    IReadOnlyList<string>? Issues = null, string Language = "", string Mood = "", int? Rating = null, int? EnergyLevel = null, int? Bitrate = null)
 {
+    /// <summary>True when the quality check found something (te zacht, clipping, stilte, dubbel, ...).</summary>
+    public bool HasIssues => Issues is { Count: > 0 };
+    public string IssueText => Issues is { Count: > 0 } ? string.Join(" · ", Issues) : "";
     /// <summary>True when the item may be scheduled now (<see cref="Block"/> says why not).</summary>
     public bool Allowed => Block is null;
     public string DisplayName => string.IsNullOrWhiteSpace(Artist) ? Title : $"{Artist} - {Title}";
@@ -109,7 +113,16 @@ public sealed record LibraryFolderDto(long Id, string Path, string Kind, string 
 public sealed record MediaBulkRequest(IReadOnlyList<long> Ids, long? CategoryId = null, bool? Enabled = null, bool ClearDates = false,
     DateTime? ValidFrom = null, DateTime? ValidUntil = null);
 
-public sealed record MediaTagsRequest(string Artist, string Title, string Album = "", string Genre = "", int? Year = null);
+public sealed record MediaTagsRequest(string Artist, string Title, string Album = "", string Genre = "", int? Year = null,
+    string? Language = null, string? Mood = null, int? Rating = null, int? EnergyLevel = null);
+
+/// <summary>A saved search ("slimme lijst"); Count = how many items it shows now.</summary>
+public sealed record SmartListDto(long Id, string Name, string Query, long? CategoryId, string Sort, int Count);
+
+public sealed record SmartListRequest(string Name, string Query, long? CategoryId = null, string Sort = "");
+
+/// <summary>The last library change that can be undone.</summary>
+public sealed record UndoDto(string Label, DateTime Time, int Items);
 
 /// <summary>One time an item went on air.</summary>
 public sealed record PlayedDto(DateTime Started, double? Played, string Source);

@@ -104,8 +104,9 @@ public sealed partial class LibraryTool : StudioTool
     private async Task Bulk(MediaBulkRequest r, string done)
     {
         var res = await Hub.Client.SendForAsync<BulkResult>(HttpMethod.Put, "/api/media/bulk", r);
-        BulkText = res is null ? "Niet gelukt." : string.Format(done, res.Changed);
+        BulkText = res is null ? "Niet gelukt." : string.Format(done, res.Changed) + " Ongedaan maken kan met Ctrl+Z.";
         Refresh();
+        await LoadUndoAsync();
     }
 
     private sealed record BulkResult(int Changed);
@@ -150,6 +151,79 @@ public sealed partial class LibraryTool : StudioTool
         "added" => items.OrderByDescending(m => m.Added ?? DateTime.MinValue),
         _ => items,
     };
+    // ---- saved searches ("slimme lijsten") and undo
+    public ObservableCollection<SmartListDto> SmartLists { get; } = [];
+    [ObservableProperty] private SmartListDto? _smartList;
+    [ObservableProperty] private string _newListName = "";
+    [ObservableProperty] private bool _showSaveList;
+    [ObservableProperty] private string _undoText = "";
+    [ObservableProperty] private bool _canUndo;
+    private bool _applyingList;
+
+    public async Task LoadListsAsync()
+    {
+        var lists = await Hub.Client.GetAsync<List<SmartListDto>>("/api/library/lists");
+        if (lists is null) return;
+        var keep = SmartList?.Id;
+        _applyingList = true;
+        SmartLists.Clear();
+        foreach (var l in lists) SmartLists.Add(l);
+        SmartList = SmartLists.FirstOrDefault(l => l.Id == keep);
+        _applyingList = false;
+    }
+
+    /// <summary>Choosing a saved list puts its search, category and sort order back; the result is the state of now.</summary>
+    partial void OnSmartListChanged(SmartListDto? value)
+    {
+        if (_applyingList || value is null) return;
+        _applyingList = true;
+        Category = CategoryChoices.FirstOrDefault(c => c.Id == value.CategoryId) ?? CategoryChoices.FirstOrDefault();
+        if (value.Sort.Length > 0 && Sorts.FirstOrDefault(s => s.Key == value.Sort) is { } s) Sort = s;
+        Query = value.Query;
+        _applyingList = false;
+        Refresh();
+    }
+
+    [RelayCommand] private void ToggleSaveList() { ShowSaveList = !ShowSaveList; if (ShowSaveList && NewListName.Length == 0) NewListName = SmartList?.Name ?? ""; }
+
+    [RelayCommand]
+    private async Task SaveList()
+    {
+        if (string.IsNullOrWhiteSpace(NewListName)) { BulkText = "Geef de lijst eerst een naam."; return; }
+        var saved = await Hub.Client.SendForAsync<SmartListDto>(HttpMethod.Post, "/api/library/lists",
+            new SmartListRequest(NewListName.Trim(), Query, Category?.Id, Sort?.Key ?? ""));
+        if (saved is null) { BulkText = "Bewaren lukte niet."; return; }
+        ShowSaveList = false; NewListName = "";
+        await LoadListsAsync();
+        _applyingList = true; SmartList = SmartLists.FirstOrDefault(l => l.Id == saved.Id); _applyingList = false;
+    }
+
+    [RelayCommand]
+    private async Task DeleteList()
+    {
+        if (SmartList is not { } l) return;
+        await Hub.Client.DeleteAsync($"/api/library/lists/{l.Id}");
+        SmartList = null;
+        await LoadListsAsync();
+    }
+
+    public async Task LoadUndoAsync()
+    {
+        var u = await Hub.Client.GetAsync<UndoDto>("/api/media/undo");
+        CanUndo = u is { Label.Length: > 0 };
+        UndoText = CanUndo ? $"↶ Ongedaan maken: {u!.Label}" : "";
+    }
+
+    [RelayCommand]
+    private async Task Undo()
+    {
+        var u = await Hub.Client.SendForAsync<UndoDto>(HttpMethod.Post, "/api/media/undo", null);
+        BulkText = u is not { Label.Length: > 0 } ? "Niets meer om ongedaan te maken." : $"Teruggezet: {u.Label}.";
+        if (Detail is { } d) Detail = null; // shows the restored values once the list is fresh
+        Refresh();
+        await LoadUndoAsync();
+    }
+
     [ObservableProperty] private bool _showHelp;
     [ObservableProperty] private string _resultText = "";
     private string _libraryKey = "";
@@ -193,6 +267,7 @@ public sealed partial class LibraryTool : StudioTool
 
     partial void OnQueryChanged(string value)
     {
+        if (!_applyingList && SmartList is { } l && l.Query != value) { _applyingList = true; SmartList = null; _applyingList = false; }
         ShowHelp = value.Trim() == "?";
         SyncChips();
         if (ShowHelp) { _ = LoadHelpAsync(); return; }
@@ -237,7 +312,7 @@ public sealed partial class LibraryTool : StudioTool
 
     [RelayCommand] private void ClearSearch() => Query = "";
     [RelayCommand] private void ToggleHelp() => Query = ShowHelp ? "" : "?";
-    partial void OnCategoryChanged(CategoryChoice? value) => Refresh();
+    partial void OnCategoryChanged(CategoryChoice? value) { if (!_applyingList) Refresh(); }
     partial void OnSelectedChanged(MediaDto? value)
     {
         if (value is not null) Hub.SelectedMedia = value;
@@ -253,7 +328,8 @@ public sealed partial class LibraryTool : StudioTool
         Chips.Add(new FilterChip(this, "Lang niet gespeeld", "is:lang", "Meer dan 30 dagen niet uitgezonden"));
         Chips.Add(new FilterChip(this, "Korter dan 3:30", "duur:<3:30", "Handig vlak voor het nieuws of een vaste tijd"));
         Chips.Add(new FilterChip(this, "Zonder cues", "is:zondercues", "Cues nog niet met de hand nagekeken"));
-        Chips.Add(new FilterChip(this, "Aandacht nodig", "is:geblokkeerd", "Mag nu niet: rotatie, verlopen, uitgezet of bestand weg"));
+        Chips.Add(new FilterChip(this, "Mag nu niet", "is:geblokkeerd", "Mag nu niet: rotatie, verlopen, uitgezet of bestand weg"));
+        Chips.Add(new FilterChip(this, "Aandacht nodig", "is:aandacht", "Kwaliteitscontrole: te zacht of te hard, clipping, stilte, lage bitrate of dubbel"));
         Chips.Add(new FilterChip(this, "Ontbreekt", "is:ontbreekt", "Het bestand staat niet meer in de map"));
         Decade = Decades[0];
         _showDetails = Hub.Settings.LibraryDetails;
@@ -262,10 +338,12 @@ public sealed partial class LibraryTool : StudioTool
         _sort = Sorts.FirstOrDefault(s => s.Key == Hub.Settings.LibrarySort) ?? Sorts[0];
         _doubleClick = ClickActions.FirstOrDefault(c => c.Key == Hub.Settings.LibraryDoubleClick) ?? ClickActions[0];
         OnPropertyChanged(nameof(Sort)); OnPropertyChanged(nameof(DoubleClick));
-        Hub.LibraryChanged += () => { FillCategories(); Refresh(); _ = LoadFoldersAsync(); };
+        Hub.LibraryChanged += () => { FillCategories(); Refresh(); _ = LoadFoldersAsync(); _ = LoadListsAsync(); _ = LoadUndoAsync(); };
         FillCategories();
         Refresh();
         _ = LoadFoldersAsync();
+        _ = LoadListsAsync();
+        _ = LoadUndoAsync();
     }
 
     protected override void OnState(StateDto s)
@@ -346,6 +424,7 @@ public sealed partial class LibraryTool : StudioTool
         if (Selected is not { } m || choice is null) return;
         await Hub.Client.PutAsync($"/api/media/{m.Id}", new MediaUpdateRequest(choice.Id, m.Enabled, m.ValidFrom, m.ValidUntil));
         Refresh();
+        await LoadUndoAsync();
     }
 
     [RelayCommand]
@@ -354,6 +433,7 @@ public sealed partial class LibraryTool : StudioTool
         if (Selected is not { } m) return;
         await Hub.Client.PutAsync($"/api/media/{m.Id}", new MediaUpdateRequest(m.CategoryId, !m.Enabled, m.ValidFrom, m.ValidUntil));
         Refresh();
+        await LoadUndoAsync();
     }
 
     [RelayCommand]
