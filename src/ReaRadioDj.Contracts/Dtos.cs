@@ -336,11 +336,19 @@ public sealed record DbTestDto(bool Ok, List<string> Columns, List<string> Used,
 
 /// <summary>What a metadata lookup found for a library item; only fields that are empty now are filled in.</summary>
 public sealed record MetaProposalDto(long MediaId, string Song, string Source, string Found, string? Album, int? Year, string? Isrc,
-    string? Label, string Link, string? Genre = null, string? Composer = null, string? CoverUrl = null);
+    string? Label, string Link, string? Genre = null, string? Composer = null, string? CoverUrl = null, string? NewArtist = null,
+    string? NewTitle = null);
 
-/// <summary>The state of the metadata lookup.</summary>
+/// <summary>The state of the metadata lookup; AcoustId = recognition by sound is set up, BySound = songs recognised that way.</summary>
 public sealed record MetaStatusDto(bool Running, int Done, int Total, string Current, int NotFound, int NothingNew, bool Spotify,
-    List<MetaProposalDto> Proposals);
+    List<MetaProposalDto> Proposals, bool AcoustId = false, int BySound = 0);
+
+/// <summary>AcoustID: whether a key is set (never the key itself), whether fpcalc is there, and where to register an application.</summary>
+public sealed record AcoustIdSettingsDto(bool KeySet, string KeyHint, bool FpcalcFound, bool Usable, string RegisterUrl);
+
+public sealed record AcoustIdSettingsRequest(string? ApiKey, bool Clear = false);
+
+public sealed record AcoustIdTestDto(bool Ok, string Message);
 
 public sealed record MetaStartDto(int Limit);
 public sealed record IdListDto(List<long> Ids);

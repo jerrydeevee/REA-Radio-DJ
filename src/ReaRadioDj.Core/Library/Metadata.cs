@@ -18,14 +18,14 @@ public sealed record MetaCandidate(string Source, string Artist, string Title, s
 /// recording id, so a later lookup finds the same recording) is stored along with the rest but does not count on its own.
 /// </summary>
 public sealed record MetaProposal(long MediaId, string Artist, string Title, MetaCandidate Match, string? Album, int? Year, string? Isrc, string? Label,
-    string? Genre = null, string? Composer = null, string? CoverUrl = null, string? Mbid = null)
+    string? Genre = null, string? Composer = null, string? CoverUrl = null, string? Mbid = null, string? NewArtist = null, string? NewTitle = null)
 {
     public bool AddsSomething => Album is not null || Year is not null || Isrc is not null || Label is not null
-        || Genre is not null || Composer is not null || CoverUrl is not null;
+        || Genre is not null || Composer is not null || CoverUrl is not null || NewArtist is not null || NewTitle is not null;
 }
 
-/// <summary>Genre, composers/authors from a MusicBrainz recording lookup.</summary>
-public sealed record MetaDetails(string Genre, string Composer);
+/// <summary>Genre, composers/authors, first release year and ISRC from a MusicBrainz recording lookup.</summary>
+public sealed record MetaDetails(string Genre, string Composer, int? Year = null, string Isrc = "");
 
 /// <summary>Picks the right recording out of search results and works out what it adds.</summary>
 public static partial class MetadataMatch
@@ -74,7 +74,16 @@ public static partial class MetadataMatch
             .FirstOrDefault();
     }
 
-    /// <summary>What the match adds: only the fields that are empty in the library (a cover only when there is none).</summary>
+    [GeneratedRegex(@"^\s*$|^\s*((audio\s*)?track|nummer|titel|title|unknown|onbekend|untitled|naamloos)[\s_\-\.]*\d*\s*$", RegexOptions.IgnoreCase)]
+    private static partial Regex GenericName();
+
+    /// <summary>An empty or meaningless artist/title ("Track 01", "Onbekend"; a bare number such as "22" can be a real title), which a recognition by sound may replace.</summary>
+    public static bool IsPlaceholder(string text) => GenericName().IsMatch(text);
+
+    /// <summary>
+    /// What the match adds: only the fields that are empty in the library (a cover only when there is none). A match
+    /// found by sound (AcoustID) also names artist and title when those are empty or placeholders.
+    /// </summary>
     public static MetaProposal Propose(long mediaId, string artist, string title, string album, int? year, string isrc, string label, MetaCandidate m,
         string genre = "", string composer = "", bool hasCover = true, string mbid = "") =>
         new(mediaId, artist, title, m,
@@ -85,7 +94,9 @@ public static partial class MetadataMatch
             genre.Length == 0 && m.Genre.Length > 0 ? m.Genre : null,
             composer.Length == 0 && m.Composer.Length > 0 ? m.Composer : null,
             !hasCover && m.CoverUrl.Length > 0 ? m.CoverUrl : null,
-            mbid.Length == 0 && m.RecordingId.Length > 0 ? m.RecordingId : null);
+            mbid.Length == 0 && m.RecordingId.Length > 0 ? m.RecordingId : null,
+            m.Source == "AcoustID" && IsPlaceholder(artist) && m.Artist.Length > 0 ? m.Artist : null,
+            m.Source == "AcoustID" && IsPlaceholder(title) && m.Title.Length > 0 ? m.Title : null);
 
     private static int? Year(string? date) =>
         date is { Length: >= 4 } && int.TryParse(date[..4], NumberStyles.Integer, CultureInfo.InvariantCulture, out int y) && y > 1800 ? y : null;
@@ -150,7 +161,7 @@ public static partial class MetadataMatch
 
     /// <summary>Lookup address of a recording with its genres, tags and the writers of the work it is a performance of.</summary>
     public static string MusicBrainzRecordingUrl(string recordingId) =>
-        $"https://musicbrainz.org/ws/2/recording/{recordingId}?fmt=json&inc=genres+tags+artist-rels+work-rels+work-level-rels";
+        $"https://musicbrainz.org/ws/2/recording/{recordingId}?fmt=json&inc=genres+tags+isrcs+artist-rels+work-rels+work-level-rels";
 
     /// <summary>Lookup address of an artist with its genres (used when the recording has none).</summary>
     public static string MusicBrainzArtistUrl(string artistId) => $"https://musicbrainz.org/ws/2/artist/{artistId}?fmt=json&inc=genres";
@@ -184,8 +195,92 @@ public static partial class MetadataMatch
             foreach (var rel in rr.EnumerateArray())
                 if (Str(rel, "type") == "performance" && rel.TryGetProperty("work", out var work)) Collect(work);
         string composer = string.Join(", ", names.OrderBy(x => x.Rank).Select(x => x.Name).Distinct(StringComparer.OrdinalIgnoreCase));
-        return new MetaDetails(genre, composer);
+        string isrc = root.TryGetProperty("isrcs", out var isrcs) && isrcs.ValueKind == JsonValueKind.Array && isrcs.GetArrayLength() > 0 ? isrcs[0].GetString() ?? "" : "";
+        return new MetaDetails(genre, composer, Year(Str(root, "first-release-date")), isrc);
     }
+
+    // ---------------------------------------------------------------- AcoustID
+
+    /// <summary>The output of "fpcalc -json": length in seconds and the fingerprint. Null when it is not there.</summary>
+    public static (double Duration, string Fingerprint)? ParseFingerprint(string json)
+    {
+        try
+        {
+            using var doc = JsonDocument.Parse(json);
+            var r = doc.RootElement;
+            if (r.ValueKind != JsonValueKind.Object) return null;
+            double d = r.TryGetProperty("duration", out var du) && du.ValueKind == JsonValueKind.Number ? du.GetDouble() : 0;
+            string fp = Str(r, "fingerprint");
+            return d > 0 && fp.Length > 0 ? (d, fp) : null;
+        }
+        catch (JsonException) { return null; }
+    }
+
+    /// <summary>The error of an AcoustID answer (code 4 = wrong key), or null.</summary>
+    public static (int Code, string Message)? AcoustIdError(string json)
+    {
+        using var doc = JsonDocument.Parse(json);
+        if (Str(doc.RootElement, "status") != "error" || !doc.RootElement.TryGetProperty("error", out var e)) return null;
+        return (e.TryGetProperty("code", out var c) && c.ValueKind == JsonValueKind.Number ? c.GetInt32() : 0, Str(e, "message"));
+    }
+
+    /// <summary>
+    /// Recordings from an AcoustID lookup, scored by how well the sound matched (0-100). The album is the first album
+    /// release group (else the first release group).
+    /// </summary>
+    public static IReadOnlyList<MetaCandidate> ParseAcoustId(string json)
+    {
+        using var doc = JsonDocument.Parse(json);
+        if (Str(doc.RootElement, "status") != "ok" || !doc.RootElement.TryGetProperty("results", out var results)) return [];
+        var list = new List<MetaCandidate>();
+        foreach (var res in results.EnumerateArray())
+        {
+            int score = res.TryGetProperty("score", out var s) && s.ValueKind == JsonValueKind.Number ? (int)Math.Round(s.GetDouble() * 100) : 0;
+            if (!res.TryGetProperty("recordings", out var recs)) continue;
+            foreach (var r in recs.EnumerateArray())
+            {
+                string id = Str(r, "id"), title = Str(r, "title");
+                if (!IsMbid(id) || title.Length == 0) continue;
+                string artist = "", artistId = "";
+                if (r.TryGetProperty("artists", out var arts))
+                {
+                    var sb = new StringBuilder();
+                    foreach (var a in arts.EnumerateArray())
+                    {
+                        if (artistId.Length == 0) artistId = Str(a, "id");
+                        sb.Append(Str(a, "name")).Append(Str(a, "joinphrase"));
+                    }
+                    artist = sb.ToString();
+                }
+                string album = "", group = "";
+                if (r.TryGetProperty("releasegroups", out var groups))
+                {
+                    var all = groups.EnumerateArray().Select(g => (Title: Str(g, "title"), Id: Str(g, "id"), Type: Str(g, "type"),
+                        Compilation: g.TryGetProperty("secondarytypes", out var st) && st.EnumerateArray().Any(x => x.GetString() == "Compilation"))).ToList();
+                    var pick = all.FirstOrDefault(g => g.Type == "Album" && !g.Compilation) is { Title.Length: > 0 } a ? a : all.FirstOrDefault();
+                    album = pick.Title ?? "";
+                    group = pick.Id ?? "";
+                }
+                double? length = r.TryGetProperty("duration", out var d) && d.ValueKind == JsonValueKind.Number ? d.GetDouble() : null;
+                list.Add(new MetaCandidate("AcoustID", artist, title, album, null, "", "", length, score,
+                    "https://musicbrainz.org/recording/" + id, id, IsMbid(group) ? group : "", IsMbid(artistId) ? artistId : ""));
+            }
+        }
+        return list;
+    }
+
+    /// <summary>
+    /// The recording a fingerprint belongs to: a sound match of at least 85 %, length within 15 seconds when known. The
+    /// tags are not compared: recognition by sound is meant for files whose tags are missing or wrong.
+    /// </summary>
+    public static MetaCandidate? PickAcoustId(IEnumerable<MetaCandidate> candidates, double? length) =>
+        candidates
+            .Where(c => c.Score >= 85)
+            .Select(c => (c, diff: length is double l && c.Length is double cl ? Math.Abs(l - cl) : 0))
+            .Where(x => x.diff <= 15)
+            .OrderByDescending(x => x.c.Score - x.diff + (x.c.Album.Length > 0 ? 2 : 0))
+            .Select(x => x.c)
+            .FirstOrDefault();
 
     /// <summary>The most voted genre of an artist lookup.</summary>
     public static string ParseMusicBrainzArtistGenre(string json)

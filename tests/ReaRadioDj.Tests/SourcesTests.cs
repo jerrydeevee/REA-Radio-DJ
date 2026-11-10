@@ -268,6 +268,57 @@ public sealed class MetadataTests
         Assert.False(full.AddsSomething); // only the id would be new: not worth a proposal
     }
 
+    private const string AcoustId = """
+        {"status":"ok","results":[
+          {"id":"a","score":0.97,"recordings":[
+            {"id":"0a8e8d55-4b83-4f8a-9732-fbb5ded9f344","title":"Hello","duration":295,
+             "artists":[{"id":"cc2c9c3c-b7bc-4b8b-84d8-4fbd8779e493","name":"Adele"}],
+             "releasegroups":[
+               {"id":"11111111-1111-1111-1111-111111111111","title":"Now 92","type":"Album","secondarytypes":["Compilation"]},
+               {"id":"5537624c-3d2f-4f5c-8099-df916082c85c","title":"25","type":"Album"}]}]},
+          {"id":"b","score":0.40,"recordings":[{"id":"22222222-2222-2222-2222-222222222222","title":"Iets anders","duration":200}]},
+          {"id":"c","score":0.95,"recordings":[{"id":"not-a-guid","title":"Kapot"}]}]}
+        """;
+
+    [Fact]
+    public void AcoustId_answers_give_recordings_with_the_album_and_ids()
+    {
+        var c = MetadataMatch.ParseAcoustId(AcoustId);
+        Assert.Equal(2, c.Count); // the one without a valid id is left out
+        Assert.Equal(("AcoustID", "Adele", "Hello", "25", 97, "5537624c-3d2f-4f5c-8099-df916082c85c"),
+            (c[0].Source, c[0].Artist, c[0].Title, c[0].Album, c[0].Score, c[0].ReleaseGroupId)); // album, not the compilation
+        Assert.Equal("Hello", MetadataMatch.PickAcoustId(c, 296)?.Title);
+        Assert.Null(MetadataMatch.PickAcoustId(c, 240));   // 55 s off: another version
+        Assert.Null(MetadataMatch.PickAcoustId(c.Skip(1), 200)); // 40 %: not sure enough
+        Assert.Empty(MetadataMatch.ParseAcoustId("""{"status":"error","error":{"code":4,"message":"invalid API key"}}"""));
+        Assert.Equal((4, "invalid API key"), MetadataMatch.AcoustIdError("""{"error":{"code":4,"message":"invalid API key"},"status":"error"}"""));
+        Assert.Null(MetadataMatch.AcoustIdError(AcoustId));
+    }
+
+    [Fact]
+    public void Fpcalc_output_is_read()
+    {
+        Assert.Equal((180.53, "AQADtFua"), MetadataMatch.ParseFingerprint("""{"duration": 180.53, "fingerprint": "AQADtFua"}"""));
+        Assert.Null(MetadataMatch.ParseFingerprint("ERROR: Could not open the input file"));
+        Assert.Null(MetadataMatch.ParseFingerprint("""{"duration": 0, "fingerprint": ""}"""));
+    }
+
+    [Fact]
+    public void Recognition_by_sound_only_replaces_placeholder_artist_and_title()
+    {
+        foreach (var t in new[] { "", "Track 01", "track_7", "Audio Track 3", "Onbekend", "Untitled", "  " }) Assert.True(MetadataMatch.IsPlaceholder(t), t);
+        foreach (var t in new[] { "Hello", "Track of my tears", "1999", "22", "Nummer 1 hit" }) Assert.False(MetadataMatch.IsPlaceholder(t), t);
+        var m = MetadataMatch.ParseAcoustId(AcoustId)[0];
+        var p = MetadataMatch.Propose(1, "", "Track 01", "", null, "", "", m);
+        Assert.Equal(("Adele", "Hello", "25"), (p.NewArtist, p.NewTitle, p.Album));
+        var keep = MetadataMatch.Propose(1, "Adele", "Hello (live)", "", null, "", "", m);
+        Assert.Equal(((string?)null, (string?)null), (keep.NewArtist, keep.NewTitle)); // real tags are never overwritten
+        var text = MetadataMatch.Propose(1, "", "Track 01", "", null, "", "", m with { Source = "MusicBrainz" });
+        Assert.Null(text.NewTitle); // only a match by sound may name a song
+        var d = MetadataMatch.ParseMusicBrainzRecording("""{"first-release-date":"2015-10-23","isrcs":["GBBKS1500214"]}""");
+        Assert.Equal((2015, "GBBKS1500214"), (d.Year, d.Isrc));
+    }
+
     [Fact]
     public void Search_addresses_quote_the_title_and_artist()
     {

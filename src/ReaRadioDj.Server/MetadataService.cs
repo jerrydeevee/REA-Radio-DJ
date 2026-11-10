@@ -9,12 +9,14 @@ namespace ReaRadioDj.Server;
 
 /// <summary>
 /// Looks up missing album, year, ISRC, label, genre, composers/authors and cover for library songs, by artist, title and
-/// length: first in MusicBrainz (open data, at most one request a second), then in Spotify when its keys are set; the
-/// cover comes from the Cover Art Archive. Findings are proposals: nothing changes until they are applied, and applying
+/// length: first in MusicBrainz (open data, at most one request a second), then in Spotify when its keys are set, then
+/// by sound with AcoustID when its key is set (also for songs without usable tags); the cover comes from the Cover Art
+/// Archive. Findings are proposals: nothing changes until they are applied, and applying
 /// only fills fields that are still empty. Everything goes into the station database (a cover into the data folder);
 /// the music files themselves are not changed.
 /// </summary>
-public sealed class MetadataService(MediaLibrary library, StationDb db, SpotifyService spotify, IHttpClientFactory http, ILogger<MetadataService> logger)
+public sealed class MetadataService(MediaLibrary library, StationDb db, SpotifyService spotify, AcoustIdService acoustId, IHttpClientFactory http,
+    ILogger<MetadataService> logger)
 {
     /// <summary>MusicBrainz asks every program to name itself; no personal details are sent.</summary>
     private const string UserAgent = "REA-Radio-DJ/0.1 ( https://github.com/jerrydeevee/REA-Radio-DJ )";
@@ -24,7 +26,7 @@ public sealed class MetadataService(MediaLibrary library, StationDb db, SpotifyS
     private CancellationTokenSource? _cts;
     private DateTime _lastCall = DateTime.MinValue;
     private volatile bool _running;
-    private int _done, _total, _notFound, _nothingNew;
+    private int _done, _total, _notFound, _nothingNew, _bySound;
     private string _current = "";
 
     private readonly ConcurrentDictionary<string, string> _artistGenre = new();
@@ -34,6 +36,9 @@ public sealed class MetadataService(MediaLibrary library, StationDb db, SpotifyS
         /// <summary>Something a lookup could still add. Genre and writers only until the recording was found once.</summary>
         public bool Incomplete => Album.Length == 0 || Year is null || Isrc.Length == 0 || (Mbid.Length == 0 && (Genre.Length == 0 || Composer.Length == 0));
     }
+
+    /// <summary>Recognised by sound in the last run.</summary>
+    public int BySound => _bySound;
 
     private Dictionary<long, Known> KnownFields()
     {
@@ -48,20 +53,24 @@ public sealed class MetadataService(MediaLibrary library, StationDb db, SpotifyS
     public MetaStatusDto Status() => new(_running, _done, _total, _current, _notFound, _nothingNew, spotify.Configured,
         _proposals.Values.OrderBy(p => p.Artist).ThenBy(p => p.Title).Select(p => new MetaProposalDto(p.MediaId, $"{p.Artist} - {p.Title}",
             p.Match.Source, $"{p.Match.Artist} - {p.Match.Title}", p.Album, p.Year, p.Isrc, p.Label, p.Match.Link,
-            p.Genre, p.Composer, p.CoverUrl)).ToList());
+            p.Genre, p.Composer, p.CoverUrl, p.NewArtist, p.NewTitle)).ToList(), acoustId.Usable, _bySound);
 
     /// <summary>Starts looking up songs that miss an album, year, ISRC, genre or writers (at most <paramref name="limit"/>).</summary>
     public bool Start(int limit)
     {
         if (_running) return false;
         var known = KnownFields();
+        bool bySound = acoustId.Usable;
         var todo = library.Search(null, kind: MediaKind.Song, limit: int.MaxValue)
-            .Where(d => d.Enabled && !d.Missing && d.Media.Title.Length > 0 && !_proposals.ContainsKey(d.Media.Id))
-            .Where(d => known[d.Media.Id].Incomplete)
+            .Where(d => d.Enabled && !d.Missing && !_proposals.ContainsKey(d.Media.Id))
+            // Without a title only recognition by sound can help; it needs AcoustID.
+            .Where(d => known[d.Media.Id] is var k && (MetadataMatch.IsPlaceholder(d.Media.Title)
+                ? bySound && k.Mbid.Length == 0
+                : k.Incomplete))
             .Take(Math.Clamp(limit, 1, 1000)).ToList();
         _cts = new CancellationTokenSource();
         _running = true;
-        _done = 0; _notFound = 0; _nothingNew = 0; _total = todo.Count; _current = "";
+        _done = 0; _notFound = 0; _nothingNew = 0; _bySound = 0; _total = todo.Count; _current = "";
         var ct = _cts.Token;
         _ = Task.Run(async () =>
         {
@@ -74,13 +83,15 @@ public sealed class MetadataService(MediaLibrary library, StationDb db, SpotifyS
                     _current = m.DisplayName;
                     try
                     {
-                        var match = await FindAsync(m.Artist, m.Title, m.Duration, ct);
+                        var match = MetadataMatch.IsPlaceholder(m.Title) ? null : await FindAsync(m.Artist, m.Title, m.Duration, ct);
+                        if (match is null && bySound) match = await BySoundAsync(m, ct);
                         if (match is null) Interlocked.Increment(ref _notFound);
                         else
                         {
                             var k = known[m.Id];
                             bool hasCover = match.ReleaseGroupId.Length == 0 || library.Cover(m.Id) is not null;
-                            match = await DetailsAsync(match, k.Genre.Length == 0, k.Composer.Length == 0, !hasCover, ct);
+                            match = await DetailsAsync(match, k.Genre.Length == 0, k.Composer.Length == 0, !hasCover,
+                                match.Source == "AcoustID" && (k.Year is null || k.Isrc.Length == 0), ct);
                             var p = MetadataMatch.Propose(m.Id, m.Artist, m.Title, k.Album, k.Year, k.Isrc, k.Label, match,
                                 k.Genre, k.Composer, hasCover, k.Mbid);
                             if (p.AddsSomething) _proposals[m.Id] = p; else Interlocked.Increment(ref _nothingNew);
@@ -101,6 +112,23 @@ public sealed class MetadataService(MediaLibrary library, StationDb db, SpotifyS
     }
 
     public void Stop() => _cts?.Cancel();
+
+    /// <summary>Recognition by sound: fingerprint of the file, then AcoustID. Null when it is not recognised.</summary>
+    private async Task<MetaCandidate?> BySoundAsync(MediaItem m, CancellationToken ct)
+    {
+        try
+        {
+            if (await acoustId.FingerprintAsync(MediaPaths.Resolve(m.Path), ct) is not { } fp) return null;
+            var pick = MetadataMatch.PickAcoustId(await acoustId.LookupAsync(fp.Duration, fp.Fingerprint, ct), fp.Duration);
+            if (pick is not null) Interlocked.Increment(ref _bySound);
+            return pick;
+        }
+        catch (Exception ex) when (ex is HttpRequestException or System.Text.Json.JsonException or System.ComponentModel.Win32Exception or IOException)
+        {
+            logger.LogInformation("AcoustID for {Song} failed: {Message}", m.DisplayName, ex.Message);
+            return null;
+        }
+    }
 
     /// <summary>MusicBrainz first; Spotify when MusicBrainz has no good match.</summary>
     public async Task<MetaCandidate?> FindAsync(string artist, string title, double length, CancellationToken ct)
@@ -147,14 +175,18 @@ public sealed class MetadataService(MediaLibrary library, StationDb db, SpotifyS
     /// Adds what is still needed to a MusicBrainz match: genre and writers from the recording (the genre of the artist
     /// when the recording has none) and whether the Cover Art Archive has a front cover for the album.
     /// </summary>
-    private async Task<MetaCandidate> DetailsAsync(MetaCandidate m, bool genre, bool writers, bool cover, CancellationToken ct)
+    private async Task<MetaCandidate> DetailsAsync(MetaCandidate m, bool genre, bool writers, bool cover, bool yearIsrc, CancellationToken ct)
     {
         try
         {
-            if ((genre || writers) && m.RecordingId.Length > 0 && await MusicBrainzGetAsync(MetadataMatch.MusicBrainzRecordingUrl(m.RecordingId), ct) is { } json)
+            if ((genre || writers || yearIsrc) && m.RecordingId.Length > 0 && await MusicBrainzGetAsync(MetadataMatch.MusicBrainzRecordingUrl(m.RecordingId), ct) is { } json)
             {
                 var d = MetadataMatch.ParseMusicBrainzRecording(json);
-                m = m with { Genre = d.Genre, Composer = d.Composer };
+                m = m with
+                {
+                    Genre = d.Genre, Composer = d.Composer,
+                    Year = m.Year ?? d.Year, Isrc = m.Isrc.Length > 0 ? m.Isrc : d.Isrc,
+                };
             }
             if (genre && m.Genre.Length == 0 && m.ArtistId.Length > 0)
             {
@@ -195,6 +227,14 @@ public sealed class MetadataService(MediaLibrary library, StationDb db, SpotifyS
                     using var a = StationDb.Command(c, "UPDATE media SET album = $a WHERE id = $id AND album = ''", ("$a", p.Album), ("$id", id));
                     a.Transaction = tx;
                     a.ExecuteNonQuery();
+                }
+                if (p.NewArtist is not null || p.NewTitle is not null)
+                {
+                    // Only while artist/title are still what they were when the proposal was made.
+                    using var t = StationDb.Command(c, "UPDATE media SET artist = $na, title = $nt WHERE id = $id AND artist = $oa AND title = $ot",
+                        ("$na", p.NewArtist ?? p.Artist), ("$nt", p.NewTitle ?? p.Title), ("$oa", p.Artist), ("$ot", p.Title), ("$id", id));
+                    t.Transaction = tx;
+                    t.ExecuteNonQuery();
                 }
                 if (p.Genre is not null)
                 {

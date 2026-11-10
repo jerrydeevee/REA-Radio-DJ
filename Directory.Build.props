@@ -21,4 +21,9 @@
     <None Include="$(MSBuildThisFileDirectory)native\*.dll" Link="%(Filename)%(Extension)"
           CopyToOutputDirectory="PreserveNewest" Visible="false" />
   </ItemGroup>
+  <!-- fpcalc (Chromaprint, LGPL) for AcoustID: scripts/fetch-fpcalc.ps1 puts it in /native. -->
+  <ItemGroup Condition="Exists('$(MSBuildThisFileDirectory)native\fpcalc.exe')">
+    <None Include="$(MSBuildThisFileDirectory)native\fpcalc.exe" Link="fpcalc.exe"
+          CopyToOutputDirectory="PreserveNewest" Visible="false" />
+  </ItemGroup>
 </Project>

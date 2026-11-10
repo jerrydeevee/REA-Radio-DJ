@@ -12,6 +12,8 @@ public sealed partial class MetaRow(MetaProposalDto p) : ObservableObject
     [ObservableProperty] private bool _chosen = true;
     public string Adds => string.Join(" · ", new[]
     {
+        P.NewArtist is null ? null : $"artiest: {P.NewArtist}",
+        P.NewTitle is null ? null : $"titel: {P.NewTitle}",
         P.Album is null ? null : $"album: {P.Album}",
         P.Year is null ? null : $"jaar: {P.Year}",
         P.Isrc is null ? null : $"ISRC: {P.Isrc}",

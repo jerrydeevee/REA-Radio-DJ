@@ -99,6 +99,17 @@ public sealed partial class SettingsTool : StudioTool
     [ObservableProperty] private bool _spotifyBusy;
     private SpotifySettingsDto? _spotify;
 
+    // AcoustID (recognition by sound; the key lives in the engine)
+    [ObservableProperty] private bool _acoustIdLoaded;
+    [ObservableProperty] private string _acoustIdKey = "";
+    [ObservableProperty] private string _acoustIdKeyHint = "";
+    [ObservableProperty] private string _acoustIdFpcalc = "";
+    [ObservableProperty] private string _acoustIdStatus = "";
+    [ObservableProperty] private bool _acoustIdOk;
+    [ObservableProperty] private bool _acoustIdFailed;
+    [ObservableProperty] private bool _acoustIdBusy;
+    private string _acoustIdRegisterUrl = "https://acoustid.org/new-application";
+
     // Spotify Soloist on this computer (studio settings, not the engine)
     [ObservableProperty] private string _soloistPath = "";
     [ObservableProperty] private string _soloistDevice = "REA ontwikkeltest";
@@ -307,6 +318,7 @@ public sealed partial class SettingsTool : StudioTool
         await LoadDeskModeAsync();
         await LoadAudioAsync();
         await LoadSpotifyAsync();
+        await LoadAcoustIdAsync();
         LoadSoloist();
         if (await Hub.Client.GetAsync<MasterDto>("/api/master") is { } m) { LimiterOn = m.LimiterOn; LimiterCeiling = (decimal)m.CeilingDb; _masterLoaded = true; }
         Outputs.Clear();
@@ -479,6 +491,7 @@ public sealed partial class SettingsTool : StudioTool
         }
 
         if (SpotifyLoaded && SpotifyChanged) await SaveSpotifyAsync();
+        if (AcoustIdLoaded && AcoustIdKey.Trim().Length > 0) await SaveAcoustIdAsync();
         StoreSoloist();
 
         if (SystemLoaded)
@@ -589,6 +602,82 @@ public sealed partial class SettingsTool : StudioTool
     {
         if (!SpotifyPlayerLocal) { SpotifyResult(false, "De testpagina werkt alleen op de computer waar de engine draait."); return; }
         try { System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(SpotifyPlayerUrl) { UseShellExecute = true }); }
+        catch (System.ComponentModel.Win32Exception) { }
+    }
+
+    // ---------------------------------------------------------------- AcoustID
+
+    private async Task LoadAcoustIdAsync()
+    {
+        var s = await Hub.Client.GetAsync<AcoustIdSettingsDto>("/api/acoustid/settings");
+        AcoustIdLoaded = s is not null;
+        if (s is not null) ShowAcoustId(s);
+    }
+
+    private void ShowAcoustId(AcoustIdSettingsDto s)
+    {
+        AcoustIdKey = "";
+        AcoustIdKeyHint = s.KeySet ? $"Er is een sleutel opgeslagen ({s.KeyHint}). Leeg laten = die houden." : "Nog geen sleutel opgeslagen.";
+        AcoustIdFpcalc = s.FpcalcFound ? "fpcalc (Chromaprint) is gevonden bij de engine."
+            : "fpcalc ontbreekt bij de engine: voer scripts\\fetch-fpcalc.ps1 uit en bouw de engine opnieuw.";
+        if (s.RegisterUrl.StartsWith("https://", StringComparison.Ordinal)) _acoustIdRegisterUrl = s.RegisterUrl;
+    }
+
+    private void AcoustIdResult(bool ok, string text)
+    {
+        AcoustIdOk = ok;
+        AcoustIdFailed = !ok;
+        AcoustIdStatus = text;
+    }
+
+    private async Task<bool> SaveAcoustIdAsync()
+    {
+        var (s, error) = await Hub.Client.SendWithErrorAsync<AcoustIdSettingsDto>(HttpMethod.Put, "/api/acoustid/settings",
+            new AcoustIdSettingsRequest(AcoustIdKey.Trim()));
+        if (s is null) { AcoustIdResult(false, error ?? "Opslaan mislukt."); return false; }
+        ShowAcoustId(s);
+        return true;
+    }
+
+    /// <summary>Saves a new key, then lets the engine check it at AcoustID.</summary>
+    [RelayCommand]
+    private async Task TestAcoustId()
+    {
+        if (AcoustIdBusy) return;
+        AcoustIdBusy = true;
+        AcoustIdOk = AcoustIdFailed = false;
+        AcoustIdStatus = "verbinden met AcoustID…";
+        try
+        {
+            if (AcoustIdKey.Trim().Length > 0 && !await SaveAcoustIdAsync()) return;
+            var r = await Hub.Client.SendForAsync<AcoustIdTestDto>(HttpMethod.Post, "/api/acoustid/test", null);
+            if (r is null) AcoustIdResult(false, "De engine gaf geen antwoord.");
+            else AcoustIdResult(r.Ok, r.Message);
+        }
+        finally { AcoustIdBusy = false; }
+    }
+
+    [RelayCommand]
+    private async Task ClearAcoustId()
+    {
+        var s = await Hub.Client.SendForAsync<AcoustIdSettingsDto>(HttpMethod.Put, "/api/acoustid/settings", new AcoustIdSettingsRequest(null, Clear: true));
+        if (s is null) return;
+        ShowAcoustId(s);
+        AcoustIdResult(true, "De AcoustID-sleutel is gewist.");
+    }
+
+    /// <summary>The page on acoustid.org where an application is registered (sign in, then "Register a new application").</summary>
+    [RelayCommand]
+    private void OpenAcoustIdRegister()
+    {
+        try { System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(_acoustIdRegisterUrl) { UseShellExecute = true }); }
+        catch (System.ComponentModel.Win32Exception) { }
+    }
+
+    [RelayCommand]
+    private static void OpenAcoustIdApplications()
+    {
+        try { System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo("https://acoustid.org/my-applications") { UseShellExecute = true }); }
         catch (System.ComponentModel.Win32Exception) { }
     }
 

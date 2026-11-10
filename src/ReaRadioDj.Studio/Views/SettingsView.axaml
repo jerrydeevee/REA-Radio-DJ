@@ -355,6 +355,41 @@
         </StackPanel></ScrollViewer>
       </TabItem>
 
+      <TabItem Header="AcoustID">
+        <ScrollViewer><StackPanel Classes="page">
+          <TextBlock Classes="title" Text="AcoustID (herkennen op geluid)" />
+          <TextBlock Classes="help" TextWrapping="Wrap"
+                     Text="Herkent nummers aan het geluid zelf, ook als de tags ontbreken of niet kloppen ('Track 01'). De engine maakt met fpcalc een vingerafdruk van de eerste twee minuten en vraagt AcoustID welke opname het is; daarna vult MusicBrainz album, jaar, ISRC, genre, componist/auteur en hoes aan. Alleen de vingerafdruk gaat naar AcoustID, nooit het geluid. Gebruikt bij Databronnen → gegevens aanvullen, voor nummers die op titel en artiest niet gevonden worden." />
+          <TextBlock Classes="field" Text="1. Applicatie registreren" />
+          <TextBlock Classes="help" TextWrapping="Wrap"
+                     Text="Meld je aan op acoustid.org en registreer een applicatie (naam REA-Radio-DJ, versie 0.1.0). Je krijgt een API-sleutel; die vind je later terug onder Your applications." />
+          <WrapPanel Margin="0,6,0,0">
+            <Button Classes="bar" Content="Applicatie registreren" Command="{Binding OpenAcoustIdRegisterCommand}" Margin="0,0,8,6"
+                    ToolTip.Tip="acoustid.org/new-application in je browser" />
+            <Button Classes="bar" Content="Mijn applicaties" Command="{Binding OpenAcoustIdApplicationsCommand}" Margin="0,0,0,6"
+                    ToolTip.Tip="acoustid.org/my-applications: hier staat de API Key" />
+          </WrapPanel>
+          <TextBlock Foreground="{DynamicResource WarnBrush}" IsVisible="{Binding !AcoustIdLoaded}" Margin="0,8,0,0"
+                     Text="Deze engine kan AcoustID nog niet instellen: werk de engine bij." />
+          <StackPanel IsEnabled="{Binding AcoustIdLoaded}">
+            <TextBlock Classes="field" Text="2. API-sleutel" />
+            <TextBox Text="{Binding AcoustIdKey}" PasswordChar="●" Watermark="API Key van je applicatie" />
+            <TextBlock Classes="help" Text="{Binding AcoustIdKeyHint}" />
+            <TextBlock Classes="help" Text="{Binding AcoustIdFpcalc}" TextWrapping="Wrap" />
+            <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,12,0,0">
+              <Button Classes="bar" Content="Verbinding testen" Command="{Binding TestAcoustIdCommand}" IsEnabled="{Binding !AcoustIdBusy}"
+                      ToolTip.Tip="Bewaart de sleutel en laat de engine hem controleren bij AcoustID" />
+              <Button Classes="bar" Content="Sleutel wissen" Command="{Binding ClearAcoustIdCommand}" />
+            </StackPanel>
+            <TextBlock Text="{Binding AcoustIdStatus}" TextWrapping="Wrap" Margin="0,8,0,0" FontWeight="SemiBold" Foreground="{DynamicResource OkBrush}" IsVisible="{Binding AcoustIdOk}" />
+            <TextBlock Text="{Binding AcoustIdStatus}" TextWrapping="Wrap" Margin="0,8,0,0" FontWeight="SemiBold" Foreground="{DynamicResource WarnBrush}" IsVisible="{Binding AcoustIdFailed}" />
+            <TextBlock Classes="muted" Text="{Binding AcoustIdStatus}" TextWrapping="Wrap" Margin="0,8,0,0" IsVisible="{Binding AcoustIdBusy}" />
+            <TextBlock Classes="help" TextWrapping="Wrap"
+                       Text="Opslaan (onderaan) bewaart de sleutel ook. Hij staat in de stationsdatabase van de engine en wordt nooit teruggestuurd naar de studio. fpcalc (Chromaprint, LGPL) zit niet in de broncode: scripts\fetch-fpcalc.ps1 haalt hem op." />
+          </StackPanel>
+        </StackPanel></ScrollViewer>
+      </TabItem>
+
       <TabItem Header="Op afstand">
         <ScrollViewer><StackPanel Classes="page">
           <TextBlock Classes="title" Text="Bediening op afstand" />

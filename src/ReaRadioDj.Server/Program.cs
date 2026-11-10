@@ -113,6 +113,7 @@ builder.Services.AddSingleton(sp => new CreativePicker(sp.GetRequiredService<IHt
 builder.Services.AddSingleton<ReaRadioDj.Core.Library.Wishlist>();
 builder.Services.AddSingleton<ReaRadioDj.Core.Studio.MusicReport>();
 builder.Services.AddSingleton<SpotifyService>();
+builder.Services.AddSingleton<AcoustIdService>();
 builder.Services.AddSingleton(sp =>
 {
     var http = sp.GetRequiredService<IHttpClientFactory>().CreateClient("tts");
@@ -221,6 +222,7 @@ FilesApi.Map(api);
 api.MapGet("/control-room", (bool? refresh, ControlRoomService s, CancellationToken ct) => s.GetAsync(refresh == true, ct));
 ReaRadioDj.Server.Hardware.HardwareApi.Map(api);
 WishlistApi.Map(api, options);
+AcoustIdService.Map(api);
 api.MapGet("/commands", () => CommandBus.Commands);
 // A web address per command, for a Stream Deck, a web page or a button box: /api/do/next, /api/do/cart/1/5,
 // /api/do/mic/toggle; ?text=AUTO%20OFF runs any text. With a control password, add ?key=<password>.
