@@ -112,6 +112,41 @@ public sealed partial class SettingsTool : StudioTool
 
     protected override void OnFirstShow() => _ = LoadAsync();
 
+    // ---- the station's own recordings
+    [ObservableProperty] private bool _recProgram;
+    [ObservableProperty] private bool _recMic;
+    [ObservableProperty] private bool _recMicToLibrary;
+    [ObservableProperty] private int _recBitrate = 128;
+    [ObservableProperty] private decimal _recKeepDays = 365;
+    [ObservableProperty] private string _recFolder = "";
+    [ObservableProperty] private string _recStatus = "";
+    public int[] RecBitrates { get; } = [64, 96, 128, 160, 192, 256, 320];
+
+    private async Task LoadRecordingAsync()
+    {
+        if (await Hub.Client.GetAsync<RecordingSettingsDto>("/api/recordings/settings") is { } r) ShowRecording(r);
+    }
+
+    private void ShowRecording(RecordingSettingsDto r)
+    {
+        RecProgram = r.Program; RecMic = r.Mic; RecMicToLibrary = r.MicToLibrary; RecBitrate = r.Bitrate;
+        RecKeepDays = r.KeepDays; RecFolder = r.Folder;
+        var now = new List<string>();
+        if (r.ProgramFile is { } p) now.Add($"neemt nu op: {Path.GetFileName(p)}");
+        if (r.MicFile is { } m) now.Add($"microfoon: {Path.GetFileName(m)}");
+        RecStatus = (r.Error.Length > 0 ? r.Error + "  " : "") + $"Map: {r.FolderInUse}" + (now.Count > 0 ? "  ·  " + string.Join("  ·  ", now) : "");
+    }
+
+    [RelayCommand]
+    private async Task SaveRecording()
+    {
+        var r = await Hub.Client.SendForAsync<RecordingSettingsDto>(HttpMethod.Put, "/api/recordings/settings",
+            new RecordingSettingsDto(RecProgram, RecMic, RecMicToLibrary, RecBitrate, (int)RecKeepDays, RecFolder.Trim()));
+        if (r is null) { RecStatus = "Opslaan mislukt."; return; }
+        await Task.Delay(1500);   // the recorder starts on its next tick
+        await LoadRecordingAsync();
+    }
+
     // ---- transitions per kind of item and category
     public ObservableCollection<TransitionRuleRow> TransitionRules { get; } = [];
     public ObservableCollection<KeyChoice> RuleSides { get; } = [];
@@ -163,6 +198,7 @@ public sealed partial class SettingsTool : StudioTool
         var saved = await Hub.Client.SendForAsync<List<RuleWire>>(HttpMethod.Put, "/api/transition-rules", body);
         RuleStatus = saved is null ? "Opslaan mislukt." : $"{saved.Count} overgangsregels bewaard; ze gelden vanaf het volgende item.";
         await LoadRulesAsync();
+        await LoadRecordingAsync();
     }
 
     [RelayCommand] private Task Reload() => LoadAsync();

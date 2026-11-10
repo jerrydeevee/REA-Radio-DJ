@@ -140,6 +140,9 @@ builder.Services.AddSingleton(sp => new ReaRadioDj.Core.Studio.PlayoutOutputs(
     { Settings = TitleLogApi.Load(sp.GetRequiredService<StationDb>()) });
 builder.Services.AddSingleton<AutomationService>();
 builder.Services.AddHostedService(sp => sp.GetRequiredService<AutomationService>());
+builder.Services.AddSingleton<AirRecorder>();
+builder.Services.AddSingleton<RecordingService>();
+builder.Services.AddHostedService(sp => sp.GetRequiredService<RecordingService>());
 // Remote control: one command list for TCP, OSC, HTTP, hotkeys and the planner.
 builder.Services.AddSingleton<CommandBus>();
 builder.Services.AddHostedService<TcpControlService>();
@@ -177,6 +180,18 @@ OutputsApi.Map(api, options);
 TitleLogApi.Map(api, options);
 PathsApi.Map(api, app.Services.GetRequiredService<StationDb>());
 TransitionRulesApi.Map(api, app.Services.GetRequiredService<StationDb>(), app.Services.GetRequiredService<PlayoutEngine>());
+// The station's own recordings: the program per hour, the microphone per take, with a retention time.
+api.MapGet("/recordings/settings", (AirRecorder r) => RecordingDto(r));
+api.MapPut("/recordings/settings", (ReaRadioDj.Contracts.RecordingSettingsDto d, RecordingService service, AirRecorder r) =>
+{
+    service.Save(new RecordingSettings { Program = d.Program, Mic = d.Mic, MicToLibrary = d.MicToLibrary, Bitrate = d.Bitrate, KeepDays = d.KeepDays, Folder = d.Folder });
+    return RecordingDto(r);
+});
+static ReaRadioDj.Contracts.RecordingSettingsDto RecordingDto(AirRecorder r)
+{
+    var s = r.Settings; var st = r.Status;
+    return new(s.Program, s.Mic, s.MicToLibrary, s.Bitrate, s.KeepDays, s.Folder, r.Folder, st.Program, st.Mic, st.Error ?? "");
+}
 ChannelsApi.Map(api, options);
 VoiceApi.Map(api);
 PresenterApi.Map(api, options);

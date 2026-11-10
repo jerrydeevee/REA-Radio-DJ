@@ -151,6 +151,46 @@ public sealed class AudioTests : IDisposable
     }
 
     [BassFact]
+    public async Task The_program_is_recorded_per_hour_and_old_recordings_are_removed()
+    {
+        var options = Options();
+        options.RecordingFolder = Path.Combine(_dir, "rec");
+        var router = Router(options);
+        router.Start();
+        using var recorder = new AirRecorder(router, options) { Settings = new RecordingSettings { Program = true, Bitrate = 64, KeepDays = 30 } };
+
+        var t = new DateTime(2026, 11, 10, 10, 59, 58);
+        recorder.Tick(t);
+        var first = recorder.Status.Program;
+        Assert.NotNull(first);
+        Assert.Null(recorder.LastError);
+        await Task.Delay(1500);                 // the bus keeps running (silence), so the encoder gets audio
+        recorder.Tick(t.AddSeconds(1));
+        Assert.Equal(first, recorder.Status.Program);
+        recorder.Tick(t.AddSeconds(2));         // 11:00: a new file
+        var second = recorder.Status.Program;
+        Assert.NotEqual(first, second);
+        Assert.EndsWith("uitzending-2026-11-10-11.mp3", second);
+        Assert.Contains(Path.Combine("Uitzending", "2026-11"), second);
+        await Task.Delay(500);
+        Assert.True(new FileInfo(first!).Length > 1000, "the first hour has MP3 audio");
+
+        recorder.Settings = recorder.Settings with { Program = false };
+        recorder.Tick(t.AddSeconds(3));
+        Assert.Null(recorder.Status.Program);
+
+        // retention: only the recorder's own files, and only when older than the limit
+        File.SetLastWriteTime(first!, t.AddDays(-40));
+        var other = Path.Combine(recorder.Folder, "eigen-bestand.mp3");
+        File.WriteAllBytes(other, [1]);
+        File.SetLastWriteTime(other, t.AddDays(-40));
+        Assert.Equal(1, recorder.Cleanup(t, recorder.Settings));
+        Assert.False(File.Exists(first));
+        Assert.True(File.Exists(second));
+        Assert.True(File.Exists(other));
+    }
+
+    [BassFact]
     public async Task A_cut_rule_plays_a_song_to_its_end_before_the_next_starts()
     {
         var options = Options();

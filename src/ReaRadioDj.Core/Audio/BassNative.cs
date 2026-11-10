@@ -197,6 +197,10 @@ internal static partial class BassNative
     public const uint BASS_ENCODE_COUNT_CAST = 2;
     public const uint BASS_ACTIVE_PAUSED = 3;
 
+    /// <summary>MP3 into a file; with BASS_UNICODE the options and file name are UTF-16.</summary>
+    [LibraryImport(BassEncMp3, StringMarshalling = StringMarshalling.Utf16)]
+    public static partial int BASS_Encode_MP3_StartFile(int handle, string options, uint flags, string file);
+
     [LibraryImport(BassEncMp3, StringMarshalling = StringMarshalling.Utf8)]
     public static partial int BASS_Encode_MP3_Start(int handle, string options, uint flags, IntPtr proc, IntPtr user);
 

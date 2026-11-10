@@ -141,6 +141,10 @@ public sealed record RelocateRequest(string From, string To);
 
 public sealed record RelocateResultDto(int Changed, int Found);
 
+/// <summary>The station's own recordings: settings plus what is being recorded now.</summary>
+public sealed record RecordingSettingsDto(bool Program, bool Mic, bool MicToLibrary, int Bitrate, int KeepDays, string Folder,
+    string FolderInUse = "", string? ProgramFile = null, string? MicFile = null, string Error = "");
+
 public sealed record CategoryDto(long Id, string Name, string Kind, string Color);
 
 /// <summary>Waveform: one linear peak (0..65535) per block, little-endian UInt16, base64.</summary>

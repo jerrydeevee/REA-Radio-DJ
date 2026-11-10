@@ -159,7 +159,7 @@ Vragen bij stap 5:
 
 | Status | Werk |
 |---|---|
-| ⬜ | Opnemen van programma en microfoon; automatisch per uur met bewaartermijn (instelbaar, standaard een jaar); direct opnemen naar de bibliotheek |
+| 🟡 | Opnemen van programma en microfoon; automatisch per uur met bewaartermijn (instelbaar, standaard een jaar); direct opnemen naar de bibliotheek — klaar in Instellingen › Opnemen: de uitzending als MP3 per klokuur (getest), de microfoon apart per keer dat hij open is, optioneel direct in de bibliotheek (categorie Opnamen); bewaartermijn ruimt alleen eigen opnamen op. De microfoonopname nog niet met een echte microfoon getest. |
 | ⬜ | Meerdere streamservers tegelijk: Icecast en SHOUTcast v1/v2; MP3, AAC/HE-AAC, Ogg Vorbis, Opus en FLAC; HLS |
 | ✅ | Titelupdates: eigen opmaak met velden ({artiest} {titel} {categorie} {duur} {station} …), per soort kiezen (muziek, jingles, gesproken, AI-presentator, reclame) met een eigen tekst voor de rest, naar de stream, een tekstbestand en een webadres (Stream › Titel en programmalog) |
 | ✅ | Programmalog als tekstbestand met eigen opmaak en bewaartermijn: één bestand per dag (jjjj-mm-dd.txt), ook cartwall en overlays; oudere dagbestanden gaan na de bewaartermijn weg |
