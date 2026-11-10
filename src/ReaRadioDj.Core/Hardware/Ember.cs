@@ -443,7 +443,7 @@ public static class Glow
 /// <summary>
 /// A button or tally on an Ember+ parameter: "ember 1.2.3" (on when true or not zero) or with a limit, e.g.
 /// "ember 1.3.5 > -40" for a fader that counts as open above -40 dB. Operators: &gt;, &gt;=, &lt;, &lt;=, =, !=.
-/// A parameter can also be named by the identifiers on the way to it, "ember Instance_1/Station_1/Connect": the
+/// A parameter can also be named by the identifiers on the way to it, "ember Studio/Connection/Connect": the
 /// numbers are then looked up in the tree of the device, so they may differ per device or change after a restart.
 /// </summary>
 public sealed partial record EmberAddress(int[] Path, string Op = "", double Limit = 0, string[]? Names = null)
