@@ -12,7 +12,44 @@
       <Button Content="Start stream" Command="{Binding StartCommand}" />
       <Button Content="Stop stream" Command="{Binding StopCommand}" />
     </StackPanel>
-    <TextBlock Classes="muted" TextWrapping="Wrap" Text="Icecast-server, mountpoint en bitrate staan in appsettings.json van de engine." />
+    <TextBlock Classes="muted" TextWrapping="Wrap" Text="De hoofdstream (Icecast-server, mountpoint en bitrate) staat in appsettings.json van de engine; extra servers stel je hieronder in." />
+    <Expander Header="Extra streamservers" HorizontalAlignment="Stretch">
+      <StackPanel Spacing="6">
+        <TextBlock Classes="muted" TextWrapping="Wrap"
+                   Text="Elke server krijgt een eigen MP3-stroom met eigen kwaliteit, en de titel van wat er speelt. Icecast: host:poort/mount. SHOUTcast v1: host:poort. SHOUTcast v2: host:poort,sid. Het wachtwoord is het bronwachtwoord (of gebruiker:wachtwoord)." />
+        <ItemsControl ItemsSource="{Binding Targets}">
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="vm:StreamTargetRow">
+              <Border Classes="card" Padding="6" Margin="0,0,0,4">
+                <StackPanel Spacing="4">
+                  <DockPanel>
+                    <Button DockPanel.Dock="Right" Classes="small" Content="✕" Margin="4,0,0,0"
+                            Command="{Binding $parent[ItemsControl].DataContext.RemoveTargetCommand}" CommandParameter="{Binding}" />
+                    <CheckBox DockPanel.Dock="Left" IsChecked="{Binding Enabled}" ToolTip.Tip="Aan of uit" />
+                    <Ellipse DockPanel.Dock="Left" Width="10" Height="10" Margin="0,0,6,0" VerticalAlignment="Center"
+                             Fill="{Binding Connected, Converter={x:Static vm:Brushes.OnAir}}" />
+                    <TextBox DockPanel.Dock="Left" Width="140" Text="{Binding Name}" Watermark="naam" />
+                    <TextBlock Classes="muted" Text="{Binding StateText}" VerticalAlignment="Center" Margin="8,0,0,0" TextTrimming="CharacterEllipsis" />
+                  </DockPanel>
+                  <WrapPanel>
+                    <TextBox Width="260" Text="{Binding Server}" Watermark="stream.example.nl:8000/hoog" Margin="0,0,4,0" />
+                    <TextBox Width="160" Text="{Binding Password}" PasswordChar="•" Watermark="bronwachtwoord" Margin="0,0,4,0" />
+                    <ComboBox Width="90" ItemsSource="{Binding $parent[ItemsControl].DataContext.Bitrates}" SelectedItem="{Binding Bitrate}" />
+                    <TextBlock Text="kbit/s MP3" VerticalAlignment="Center" Margin="4,0,0,0" />
+                  </WrapPanel>
+                </StackPanel>
+              </Border>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+        <StackPanel Orientation="Horizontal" Spacing="6">
+          <Button Classes="small" Content="+ server" Command="{Binding AddTargetCommand}" />
+          <Button Content="Opslaan" Command="{Binding SaveTargetsCommand}" />
+          <Button Classes="small" Content="Ververs" Command="{Binding RefreshTargetsCommand}" />
+        </StackPanel>
+        <TextBlock Classes="muted" Text="{Binding TargetStatus}" TextWrapping="Wrap" />
+      </StackPanel>
+    </Expander>
     <Expander Header="Titel en programmalog als tekst" HorizontalAlignment="Stretch">
       <StackPanel Spacing="6">
         <TextBlock Classes="muted" TextWrapping="Wrap"

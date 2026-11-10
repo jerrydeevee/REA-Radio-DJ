@@ -17,26 +17,39 @@ public sealed class IcecastStreamer(StreamOptions options, string stationName, I
     private int _encoder;
     private string? _error;
 
+    private int _starting;
+
+    /// <summary>
+    /// Starts encoding and connects. Connecting can take seconds when a server does not answer, so it happens outside
+    /// the lock: the status stays readable meanwhile. A second call while one is connecting does nothing.
+    /// </summary>
     public void Start(int mixerHandle)
     {
         lock (_gate)
-        {
             if (_encoder != 0 && BASS_Encode_IsActive(_encoder) != BASS_ACTIVE_STOPPED) return;
-            _error = null;
+        if (Interlocked.Exchange(ref _starting, 1) == 1) return;
+        try
+        {
             int enc = BASS_Encode_MP3_Start(mixerHandle, $"-b{options.Bitrate}", BASS_ENCODE_AUTOFREE, IntPtr.Zero, IntPtr.Zero);
-            if (enc == 0) { _error = $"MP3 encoder failed (BASS error {BASS_ErrorGetCode()})"; _log.LogError("{Error}", _error); return; }
-
+            if (enc == 0) { Fail($"MP3 encoder failed (BASS error {BASS_ErrorGetCode()})"); return; }
             if (!BASS_Encode_CastInit(enc, options.Server, options.Password, "audio/mpeg", stationName,
                     string.IsNullOrWhiteSpace(options.Url) ? null : options.Url, options.Genre, null, null, (uint)options.Bitrate, 0))
             {
-                _error = $"Cannot connect to {options.Server} (BASS error {BASS_ErrorGetCode()})";
+                var code = BASS_ErrorGetCode();
                 BASS_Encode_Stop(enc);
-                _log.LogError("{Error}", _error);
+                Fail($"Cannot connect to {options.Server} (BASS error {code})");
                 return;
             }
-            _encoder = enc;
+            lock (_gate) { _encoder = enc; _error = null; }
             _log.LogInformation("Streaming to {Server} at {Bitrate} kbps", options.Server, options.Bitrate);
         }
+        finally { Volatile.Write(ref _starting, 0); }
+    }
+
+    private void Fail(string error)
+    {
+        lock (_gate) { _error = error; _encoder = 0; }
+        _log.LogError("{Error}", error);
     }
 
     private string? _pendingTitle;

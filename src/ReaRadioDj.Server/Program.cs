@@ -95,6 +95,8 @@ builder.Services.AddSingleton<Cartwall>();
 builder.Services.AddSingleton<AsRunLog>();
 builder.Services.AddSingleton<PlayoutEngine>();
 builder.Services.AddSingleton(sp => new IcecastStreamer(options.Stream, options.StationName, sp.GetService<ILogger<IcecastStreamer>>()));
+builder.Services.AddSingleton(sp => new StreamGroup(sp.GetRequiredService<IcecastStreamer>(), options.StationName, sp.GetService<ILoggerFactory>()));
+builder.Services.AddHostedService<StreamKeepalive>();
 builder.Services.AddHttpClient();
 // Presenter voice: the default voice profile chooses Higgs TTS 3 (GPU server) or Windows speech.
 builder.Services.AddSingleton<VoiceStore>();
@@ -179,6 +181,7 @@ SystemApi.Map(api, options, args);
 OutputsApi.Map(api, options);
 TitleLogApi.Map(api, options);
 PathsApi.Map(api, app.Services.GetRequiredService<StationDb>());
+StreamTargetsApi.Map(api, app.Services.GetRequiredService<StationDb>(), app.Services.GetRequiredService<ReaRadioDj.Core.Streaming.StreamGroup>());
 TransitionRulesApi.Map(api, app.Services.GetRequiredService<StationDb>(), app.Services.GetRequiredService<PlayoutEngine>());
 // The station's own recordings: the program per hour, the microphone per take, with a retention time.
 api.MapGet("/recordings/settings", (AirRecorder r) => RecordingDto(r));

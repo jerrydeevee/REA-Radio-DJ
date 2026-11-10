@@ -32,7 +32,7 @@ public sealed class CommandBus(
     StudioPlayers players,
     Cartwall cartwall,
     AudioRouter router,
-    IcecastStreamer streamer,
+    StreamGroup streamer,
     MessageCenter messages,
     IServiceProvider services,
     ILogger<CommandBus> logger)

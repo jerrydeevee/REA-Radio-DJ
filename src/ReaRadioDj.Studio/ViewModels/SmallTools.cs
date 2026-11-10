@@ -205,7 +205,54 @@ public sealed partial class StreamTool : StudioTool
     [ObservableProperty] private decimal _logKeepDays = 365;
     [ObservableProperty] private string _titleLogText = "";
 
-    protected override void OnFirstShow() => _ = LoadTitleLogAsync();
+    protected override void OnFirstShow() { _ = LoadTitleLogAsync(); _ = LoadTargetsAsync(); }
+
+    // ---- extra stream servers
+    public ObservableCollection<StreamTargetRow> Targets { get; } = [];
+    public ObservableCollection<int> Bitrates { get; } = [];
+    [ObservableProperty] private string _targetStatus = "";
+
+    private sealed record TargetWire(string Name, string Server, string Password, int Bitrate, bool Enabled, string Genre, string Url);
+    private sealed record TargetState(string Name, string Server, int Bitrate, bool Enabled, bool Connected, long BytesSent, string? Error);
+    private sealed record TargetView(List<TargetWire> Targets, List<TargetState> Status, List<int> Bitrates);
+
+    private async Task LoadTargetsAsync()
+    {
+        if (await Hub.Client.GetAsync<TargetView>("/api/stream/targets") is { } v) Show(v);
+    }
+
+    private void Show(TargetView v)
+    {
+        if (Bitrates.Count == 0) foreach (var b in v.Bitrates) Bitrates.Add(b);
+        Targets.Clear();
+        for (int i = 0; i < v.Targets.Count; i++)
+        {
+            var t = v.Targets[i];
+            var st = i < v.Status.Count ? v.Status[i] : null;
+            Targets.Add(new StreamTargetRow
+            {
+                Name = t.Name, Server = t.Server, Password = t.Password, Bitrate = t.Bitrate, Enabled = t.Enabled,
+                StateText = st is null || !t.Enabled ? "uit" : st.Connected ? $"verbonden · {st.BytesSent / 1024 / 1024} MB" : st.Error ?? "niet verbonden",
+                Connected = st?.Connected == true,
+            });
+        }
+    }
+
+    [RelayCommand] private void AddTarget() => Targets.Add(new StreamTargetRow { Name = $"Server {Targets.Count + 2}", Bitrate = 128 });
+    [RelayCommand] private void RemoveTarget(StreamTargetRow? row) { if (row is not null) Targets.Remove(row); }
+
+    [RelayCommand]
+    private async Task SaveTargets()
+    {
+        var body = Targets.Select(t => new TargetWire(t.Name, t.Server, t.Password, t.Bitrate, t.Enabled, "", "")).ToList();
+        var v = await Hub.Client.SendForAsync<TargetView>(HttpMethod.Put, "/api/stream/targets", body);
+        if (v is null) { TargetStatus = "Opslaan mislukt."; return; }
+        TargetStatus = $"{v.Targets.Count} extra servers bewaard; aangezette servers starten als de stream loopt.";
+        await Task.Delay(1500);
+        await LoadTargetsAsync();
+    }
+
+    [RelayCommand] private Task RefreshTargets() => LoadTargetsAsync();
 
     private async Task LoadTitleLogAsync()
     {
@@ -331,4 +378,16 @@ public sealed partial class AsRunTool : StudioTool
             + (r.WithoutIsrc > 0 ? $" · {r.WithoutIsrc} zonder ISRC" : "")
             + (r.WithoutComposer > 0 ? $" · {r.WithoutComposer} zonder componist" : "");
     }
+}
+
+/// <summary>One extra stream server in the studio.</summary>
+public sealed partial class StreamTargetRow : ObservableObject
+{
+    [ObservableProperty] private string _name = "";
+    [ObservableProperty] private string _server = "";
+    [ObservableProperty] private string _password = "";
+    [ObservableProperty] private int _bitrate = 128;
+    [ObservableProperty] private bool _enabled = true;
+    [ObservableProperty] private string _stateText = "";
+    [ObservableProperty] private bool _connected;
 }

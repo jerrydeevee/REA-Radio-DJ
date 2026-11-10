@@ -21,7 +21,7 @@ public static class Snapshot
         var players = sp.GetRequiredService<StudioPlayers>();
         var router = sp.GetRequiredService<AudioRouter>();
         var automation = sp.GetRequiredService<AutomationService>();
-        var streamer = sp.GetRequiredService<IcecastStreamer>();
+        var streamer = sp.GetRequiredService<StreamGroup>();
         var messages = sp.GetRequiredService<MessageCenter>();
 
         var now = DateTime.Now;

@@ -11,7 +11,7 @@ namespace ReaRadioDj.Server.Remote;
 /// Runs the event rules: an item starts (any, or only a song, jingle, AI break ...), the microphone opens or closes,
 /// the stream goes up or down. Watches the state four times a second.
 /// </summary>
-public sealed class EventCommandService(CommandBus bus, PlayoutEngine engine, AudioRouter router, IcecastStreamer streamer,
+public sealed class EventCommandService(CommandBus bus, PlayoutEngine engine, AudioRouter router, StreamGroup streamer,
     StationDb db, ReaRadioDjOptions options, ILogger<EventCommandService> logger) : BackgroundService
 {
     public const string Key = "event-commands";
@@ -55,7 +55,7 @@ public sealed class EventCommandService(CommandBus bus, PlayoutEngine engine, Au
                     bool m = router.IsStarted && router.MicOpen;
                     if (mic is bool pm && pm != m) Fire(m ? "mic-on" : "mic-off", now);
                     mic = m;
-                    bool s = streamer.GetStatus().Connected;
+                    bool s = streamer.AnyConnected;
                     if (stream is bool ps && ps != s) Fire(s ? "stream-up" : "stream-down", now);
                     stream = s;
                 }

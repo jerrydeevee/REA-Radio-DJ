@@ -23,7 +23,7 @@ public sealed class AutomationService(
     StudioPlayers players,
     AsRunLog asRun,
     BreakRenderer breaks,
-    IcecastStreamer streamer,
+    StreamGroup streamer,
     MessageCenter messages,
     PlayoutOutputs outputs,
     IServiceProvider services,
@@ -79,7 +79,8 @@ public sealed class AutomationService(
         foreach (var note in services.GetRequiredService<AudioRouter>().StartNotes) messages.Warning(note);
         if (resumed is { AutoPlay: true }) engine.Play();
         ReportRestart(resumed, again);
-        if (options.Stream.Enabled) streamer.Start(engine.MixerHandle);
+        // the main stream when it is switched on in the settings, extra servers when they are switched on themselves
+        streamer.Start(engine.MixerHandle, main: options.Stream.Enabled);
         if (resumed is null) messages.Info(engine.AutoPlay ? "Automatisering gestart" : "Gestart in live-assist");
 
         // The scan runs in the background: with a large library (tens of thousands of new files) it takes hours, and the

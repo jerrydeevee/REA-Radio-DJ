@@ -321,8 +321,8 @@ public static class StudioApi
         });
         api.MapGet("/messages", (MessageCenter m, long? since) => m.Since(since ?? 0).Select(x => new MessageDto(x.Id, x.Time, x.Level, x.Text)));
 
-        api.MapPost("/stream/start", (IcecastStreamer s, PlayoutEngine e) => { s.Start(e.MixerHandle); return Results.Ok(s.GetStatus()); });
-        api.MapPost("/stream/stop", (IcecastStreamer s) => { s.Stop(); return Results.Ok(s.GetStatus()); });
+        api.MapPost("/stream/start", (StreamGroup s, PlayoutEngine e) => { s.Start(e.MixerHandle); return Results.Ok(s.GetStatus()); });
+        api.MapPost("/stream/stop", (StreamGroup s) => { s.Stop(); return Results.Ok(s.GetStatus()); });
     }
 
     private static Func<long?, string> CategoryName(MediaLibrary l) =>
