@@ -48,7 +48,7 @@ Eerst zorgen dat de zender niet stil kan vallen; alles daarna bouwt daarop.
 
 | Status | Werk | Af als |
 |---|---|---|
-| 🟡 | Stiltedetectie op de zender: drempel, duur en actie (melden, of ook de automatisering starten) staan, in te stellen bij Instellingen › Bewaking. Nog open: een noodcategorie spelen | stilte van de ingestelde duur geeft een alarm en de gekozen actie; getest met een stille engine |
+| ✅ | Stiltedetectie op de zender: drempel, duur en actie (melden, de automatisering starten, of direct iets uit een noodcategorie spelen), in te stellen bij Instellingen › Bewaking | stilte van de ingestelde duur geeft een alarm en de gekozen actie; getest met een stille engine |
 | ✅ | Watchdog: de engine schrijft een hartslag; een klein bewakingsproces start hem opnieuw na een crash of vastloper, en hij gaat verder waar de log was | engine geforceerd stoppen → binnen 15 s weer op de lucht met dezelfde log. Getest: na 1,4 s terug, hetzelfde nummer op dezelfde plek. Een vastloper (engine reageert niet meer) is gebouwd maar niet nagebootst |
 | 🟡 | Engine bij aanmelden starten op de studio-pc, los van de studio (dienst later): Instellingen › Systeem | na herstart van de pc speelt het station zonder dat iemand iets doet. Aan- en uitzetten getest; een echte herstart van de pc nog niet |
 | ✅ | Reservekopie van instellingen, klokken, planning, cartwalls en hardware in één bestand; terugzetten | kopie terugzetten op een lege datamap geeft hetzelfde station |
@@ -63,9 +63,9 @@ Vragen bij stap 1:
 
 | Status | Werk | Af als |
 |---|---|---|
-| ⬜ | Uitgang per mengkanaal: automatisering, standby, cartwalls, overlays, DJ, VoIP en voorluisteren elk naar een eigen kaart of kanaalpaar; meerdere uitgangsbussen | elk kanaal is in Instellingen op een eigen uitgang te zetten en blijft daar na een herstart |
+| ✅ | Uitgang per mengkanaal: automatisering, standby, cartwalls, overlays, DJ, microfoon en voorluisteren elk naar een eigen Windows-kaart of kanaalpaar (1/2 t/m 7/8), Instellingen › Geluid. VoIP volgt met stap 5 | elk kanaal is in Instellingen op een eigen uitgang te zetten en blijft daar na een herstart. Getest op het apparaat "geen geluid"; een kanaalpaar 3/4 op een echte meerkanaalskaart nog niet |
 | ⬜ | Ingangen als mengkanaal: meer dan één microfoon, lijn-in (cd-speler, tweede studio), met doorzetknop | een lijn-ingang staat als kanaal in de mixer en kan op de zender |
-| ⬜ | ASIO-uitvoer en instelbare buffer en samplerate, met testtoon per uitgang | ASIO-kaart speelt zonder haperen; testtoon klinkt op de gekozen uitgang |
+| 🟡 | ASIO-uitvoer en instelbare buffer en samplerate, met testtoon per uitgang. Testtoon (1 kHz, -18 dBFS) per uitgang is klaar; ASIO, buffer en samplerate nog open | ASIO-kaart speelt zonder haperen; testtoon klinkt op de gekozen uitgang |
 | ⬜ | Kanaalstrip per mengkanaal: gain, balans, equalizer, compressor, automatische niveauregeling, dempen, naar de zender, opnemen | instellingen per kanaal hoorbaar en bewaard |
 | ⬜ | Master: begrenzer en loudness-meter op de zender | pieken boven de grens worden begrensd; LUFS zichtbaar |
 | ⬜ | Plekken voor VST-effecten per kanaal | één VST-plug-in laadt en werkt op een kanaal |

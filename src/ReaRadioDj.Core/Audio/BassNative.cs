@@ -28,6 +28,7 @@ internal static partial class BassNative
     public const uint BASS_SAMPLE_FLOAT = 0x100;
     public const uint BASS_STREAM_PRESCAN = 0x20000;
     public const uint BASS_STREAM_AUTOFREE = 0x40000;
+    public const uint BASS_STREAMPROC_END = 0x80000000;
     public const uint BASS_STREAM_DECODE = 0x200000;
     public const uint BASS_UNICODE = 0x80000000;
     /// <summary>Internet stream: download in small blocks, no seeking (live streams).</summary>

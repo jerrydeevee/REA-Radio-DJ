@@ -13,13 +13,13 @@ namespace ReaRadioDj.Core.Audio;
 /// </summary>
 public sealed class OutputBus
 {
-    internal OutputBus(string id, string name, int device)
+    internal OutputBus(string id, string name, int device, uint speakers = 0)
     {
         Id = id;
         Name = name;
         Device = device;
         BassRuntime.Use(device);
-        Handle = BassRuntime.Check(BASS_Mixer_StreamCreate(BassRuntime.SampleRate, 2, BASS_SAMPLE_FLOAT | BASS_MIXER_NONSTOP),
+        Handle = BassRuntime.Check(BASS_Mixer_StreamCreate(BassRuntime.SampleRate, 2, BASS_SAMPLE_FLOAT | BASS_MIXER_NONSTOP | speakers),
             $"BASS_Mixer_StreamCreate({id})");
         BassRuntime.Check(BASS_ChannelPlay(Handle, false), $"BASS_ChannelPlay({id})");
     }
@@ -76,7 +76,9 @@ public sealed class MixerStrip
 
     public string Id { get; }
     public string Name { get; }
-    public OutputBus Bus { get; }
+    public OutputBus Bus { get; private set; }
+    /// <summary>The bus the strip goes to when it has no output of its own.</summary>
+    internal OutputBus? HomeBus { get; set; }
     /// <summary>The decoding mixer that players add their sources to.</summary>
     public int Handle { get; }
     public float Volume { get; private set; } = 1f;
@@ -117,6 +119,17 @@ public sealed class MixerStrip
         return BASS_Mixer_ChannelGetLevelEx(Handle, l, 0.05f, BASS_LEVEL_STEREO) ? (l[0], l[1]) : (0, 0);
     }
 
+    /// <summary>Moves the strip to another output bus; what plays on it carries on.</summary>
+    internal void MoveTo(OutputBus bus)
+    {
+        if (bus == Bus) return;
+        BASS_Mixer_ChannelRemove(Handle);
+        BassRuntime.Check(BASS_Mixer_StreamAddChannel(bus.Handle, Handle, BASS_MIXER_CHAN_BUFFER | BASS_MIXER_CHAN_NORAMPIN),
+            $"BASS_Mixer_StreamAddChannel({Id} -> {bus.Id})");
+        Bus = bus;
+        Apply(0);
+    }
+
     internal void Free()
     {
         BASS_Mixer_ChannelRemove(Handle);
@@ -137,6 +150,8 @@ public sealed class AudioRouter : IDisposable
     private readonly ILogger _logger;
     private readonly List<ITickable> _tickables = [];
     private readonly Dictionary<string, MixerStrip> _strips = [];
+    private readonly Dictionary<string, OutputBus> _outputs = [];   // outputs of their own, by target id
+    private readonly object _routeGate = new();
     private Thread? _thread;
     private volatile bool _running;
     private int _push, _record;
@@ -182,6 +197,15 @@ public sealed class AudioRouter : IDisposable
         mic.Duck("closed", 0f, 0);
         if (_options.Routing.MicEnabled) StartRecording(_options.Routing.MicDevice);
         else MicStatus = "uitgeschakeld in de instellingen";
+        foreach (var s in _strips.Values) s.HomeBus = s.Bus;
+
+        // Channels with an output of their own (physical mixing desk). A card that is gone leaves the channel on air.
+        foreach (var (id, target) in _options.Routing.StripOutputs.ToList())
+        {
+            if (!_strips.ContainsKey(id)) continue;
+            try { Route(id, target); }
+            catch (BassException ex) { _logger.LogWarning("Output {Target} for {Strip} not available, stays on its normal bus: {Message}", target, id, ex.Message); }
+        }
 
         IsStarted = true;
         _running = true;
@@ -237,6 +261,81 @@ public sealed class AudioRouter : IDisposable
         MicChanged?.Invoke(open);
     }
 
+    /// <summary>The output a channel goes to ("" = its normal bus).</summary>
+    public string RouteOf(string stripId)
+    {
+        var s = Strip(stripId);
+        return s.Bus == s.HomeBus ? OutputTarget.Default : s.Bus.Id;
+    }
+
+    /// <summary>
+    /// Sends a channel to an output of its own ("dev:&lt;device&gt;:&lt;pair&gt;") or back to its normal bus (""). A channel
+    /// on an output of its own is no longer in the on-air mix, the stream or the silence check: the desk mixes it.
+    /// </summary>
+    public void Route(string stripId, string target)
+    {
+        var strip = Strip(stripId);
+        lock (_routeGate)
+        {
+            if (string.IsNullOrEmpty(target)) strip.MoveTo(strip.HomeBus ?? Program);
+            else
+            {
+                if (!OutputTarget.TryParse(target, out var t)) throw new ArgumentException($"Onbekende uitgang: {target}");
+                strip.MoveTo(Output(t));
+            }
+            // Outputs nobody uses any more are closed.
+            foreach (var (id, bus) in _outputs.ToList())
+                if (!_strips.Values.Any(s => s.Bus == bus)) { bus.Free(); _outputs.Remove(id); }
+        }
+    }
+
+    private OutputBus Output(OutputTarget t)
+    {
+        if (_outputs.TryGetValue(t.Id, out var bus)) return bus;
+        var card = BassRuntime.GetDevices().FirstOrDefault(d => d.Index == t.Device)?.Name ?? $"apparaat {t.Device}";
+        bus = new OutputBus(t.Id, $"{card}, uitgang {OutputTarget.Name(t.Pair)}", t.Device, t.SpeakerFlags);
+        _outputs[t.Id] = bus;
+        return bus;
+    }
+
+    /// <summary>Plays a short 1 kHz tone at -18 dBFS on an output: "program", "preview" or an output target.</summary>
+    public unsafe void TestTone(string output, double seconds = 1.5)
+    {
+        OutputBus bus;
+        lock (_routeGate)
+            bus = output switch
+            {
+                "program" => Program,
+                "preview" => Preview,
+                _ when OutputTarget.TryParse(output, out var t) => Output(t),
+                _ => throw new ArgumentException($"Onbekende uitgang: {output}"),
+            };
+        int rate = BassRuntime.SampleRate, frames = (int)(rate * seconds);
+        var data = new float[frames * 2];
+        float amp = (float)Math.Pow(10, -18 / 20.0);
+        for (int i = 0; i < frames; i++)
+        {
+            // 10 ms fade in and out, so the tone does not click.
+            float env = Math.Min(1f, Math.Min(i, frames - 1 - i) / (rate * 0.01f));
+            data[2 * i] = data[2 * i + 1] = amp * env * MathF.Sin(2 * MathF.PI * 1000 * i / rate);
+        }
+        int h = BassRuntime.Check(BASS_StreamCreate((uint)rate, 2, BASS_SAMPLE_FLOAT | BASS_STREAM_DECODE, STREAMPROC_PUSH, IntPtr.Zero), "BASS_StreamCreate(tone)");
+        fixed (float* p = data)
+        {
+            BASS_StreamPutData(h, (IntPtr)p, (uint)(data.Length * sizeof(float)));
+        }
+        BASS_StreamPutData(h, IntPtr.Zero, BASS_STREAMPROC_END);
+        BassRuntime.Check(BASS_Mixer_StreamAddChannel(bus.Handle, h, BASS_STREAM_AUTOFREE), "BASS_Mixer_StreamAddChannel(tone)");
+        lock (_routeGate)
+            foreach (var (id, b) in _outputs.ToList())   // a test of an unused output closes it again afterwards
+                if (b == bus && !_strips.Values.Any(s => s.Bus == b))
+                    _ = Task.Delay(TimeSpan.FromSeconds(seconds + 1)).ContinueWith(_ =>
+                    {
+                        lock (_routeGate)
+                            if (_outputs.TryGetValue(id, out var still) && !_strips.Values.Any(s => s.Bus == still)) { still.Free(); _outputs.Remove(id); }
+                    });
+    }
+
     internal void Register(ITickable t) { lock (_tickables) _tickables.Add(t); }
 
     private void Loop()
@@ -268,6 +367,7 @@ public sealed class AudioRouter : IDisposable
         if (!IsStarted) return;
         if (_record != 0) BASS_ChannelStop(_record);
         foreach (var s in _strips.Values) s.Free();
+        foreach (var b in _outputs.Values) b.Free();
         Program.Free();
         Preview.Free();
         IsStarted = false;

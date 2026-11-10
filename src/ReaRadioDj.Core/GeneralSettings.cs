@@ -14,7 +14,8 @@ public sealed record GeneralSettings(
     int ArtistSeparation, int SongSeparation, int LookAhead,
     bool StreamEnabled, string StreamServer, string StreamPassword, int StreamBitrate, string StreamGenre, string StreamUrl,
     string ControlBindAddress, int ControlTcpPort, int ControlOscPort, string ControlPassword,
-    bool SilenceEnabled = true, double SilenceDb = -45, double SilenceSeconds = 20, string SilenceAction = "autoplay")
+    bool SilenceEnabled = true, double SilenceDb = -45, double SilenceSeconds = 20, string SilenceAction = "autoplay",
+    long? SilenceCategoryId = null)
 {
     public const string Key = "general";
 
@@ -24,7 +25,7 @@ public sealed record GeneralSettings(
         o.Rotation.ArtistSeparation, o.Rotation.SongSeparation, o.Rotation.LookAhead,
         o.Stream.Enabled, o.Stream.Server, o.Stream.Password, o.Stream.Bitrate, o.Stream.Genre, o.Stream.Url,
         o.Control.BindAddress, o.Control.TcpPort, o.Control.OscPort, o.Control.Password,
-        o.Silence.Enabled, o.Silence.ThresholdDb, o.Silence.Seconds, o.Silence.Action);
+        o.Silence.Enabled, o.Silence.ThresholdDb, o.Silence.Seconds, o.Silence.Action, o.Silence.CategoryId);
 
     /// <summary>
     /// What the studio sent, made safe to use: everything out of range is pulled back, an empty name or folder keeps the
@@ -45,7 +46,7 @@ public sealed record GeneralSettings(
         ControlOscPort = Port(ControlOscPort, current.ControlOscPort),
         ControlPassword = clearControlPassword ? "" : string.IsNullOrEmpty(ControlPassword) ? current.ControlPassword : ControlPassword,
         SilenceDb = Math.Clamp(SilenceDb, -80, -10), SilenceSeconds = Math.Clamp(SilenceSeconds, 3, 600),
-        SilenceAction = SilenceAction == "warn" ? "warn" : "autoplay",
+        SilenceAction = SilenceAction is "warn" or "category" ? SilenceAction : "autoplay",
     };
 
     public static readonly int[] Bitrates = [64, 96, 128, 160, 192, 256, 320];
@@ -68,7 +69,7 @@ public sealed record GeneralSettings(
         o.Stream.Bitrate = StreamBitrate; o.Stream.Genre = StreamGenre; o.Stream.Url = StreamUrl;
         o.Control.BindAddress = ControlBindAddress; o.Control.TcpPort = ControlTcpPort; o.Control.OscPort = ControlOscPort;
         o.Control.Password = ControlPassword;
-        o.Silence.Enabled = SilenceEnabled; o.Silence.ThresholdDb = SilenceDb; o.Silence.Seconds = SilenceSeconds; o.Silence.Action = SilenceAction;
+        o.Silence.Enabled = SilenceEnabled; o.Silence.ThresholdDb = SilenceDb; o.Silence.Seconds = SilenceSeconds; o.Silence.Action = SilenceAction; o.Silence.CategoryId = SilenceCategoryId;
     }
 
     /// <summary>What only takes effect after the engine has been started again.</summary>

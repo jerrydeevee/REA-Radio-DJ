@@ -72,6 +72,10 @@
             <ComboBox.ItemTemplate><DataTemplate x:DataType="c:DeviceDto"><TextBlock Text="{Binding Name}" /></DataTemplate></ComboBox.ItemTemplate>
           </ComboBox>
           <TextBlock Classes="help" Text="Een andere kaart wordt meteen gebruikt, de uitzending loopt door. Kies voor voorluisteren een andere kaart dan voor de uitzending, anders hoort de luisteraar je voorluisteren mee." />
+          <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,8,0,0">
+            <Button Classes="bar" Content="Testtoon uitzending" Command="{Binding TestProgramCommand}" ToolTip.Tip="Let op: de testtoon gaat ook de zender en de stream op" />
+            <Button Classes="bar" Content="Testtoon voorluisteren" Command="{Binding TestPreviewCommand}" />
+          </StackPanel>
           <CheckBox Content="Microfoon gebruiken (praten over de muziek)" IsChecked="{Binding MicEnabled}" Margin="0,14,0,0" />
           <TextBlock Classes="field" Text="Microfoon-ingang" />
           <ComboBox ItemsSource="{Binding Inputs}" SelectedItem="{Binding MicDevice}" HorizontalAlignment="Stretch" IsEnabled="{Binding MicEnabled}">
@@ -85,6 +89,25 @@
           <TextBlock Classes="field" Text="Aantal standby-spelers" />
           <NumericUpDown Value="{Binding StandbyPlayers}" Minimum="1" Maximum="4" Increment="1" FormatString="0" />
           <TextBlock Classes="help" Text="Actief na een herstart van de engine." />
+
+          <TextBlock Classes="title" Text="Uitgang per mengkanaal" Margin="0,24,0,4" />
+          <TextBlock Classes="help" Text="Voor een mengtafel met een eigen fader per speler: geef een kanaal een eigen uitgang op een geluidskaart (uitgang 1/2, 3/4, 5/6 of 7/8 van een kaart met meer kanalen). Zo'n kanaal zit dan niet meer in de uitzending, de stream en de stiltebewaking; dat doet de mengtafel. Een wijziging werkt meteen en blijft na een herstart bewaard." />
+          <ItemsControl ItemsSource="{Binding StripOutputs}" Margin="0,8,0,0">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="vm:OutputRouteVm">
+                <Grid ColumnDefinitions="130,*,Auto" Margin="0,3">
+                  <TextBlock Text="{Binding Name}" VerticalAlignment="Center" />
+                  <ComboBox Grid.Column="1" ItemsSource="{Binding Choices}" SelectedItem="{Binding Target}" HorizontalAlignment="Stretch">
+                    <ComboBox.ItemTemplate><DataTemplate x:DataType="c:OutputChoiceDto"><TextBlock Text="{Binding Name}" /></DataTemplate></ComboBox.ItemTemplate>
+                  </ComboBox>
+                  <Button Grid.Column="2" Classes="bar" Content="Test" Command="{Binding TestCommand}" Margin="8,0,0,0"
+                          ToolTip.Tip="Testtoon op de uitgang van dit kanaal (bij de normale uitgang: ook op de zender)" />
+                </Grid>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+          <TextBlock Classes="help" Text="{Binding OutputStatus}" Margin="0,6,0,0" />
+          <TextBlock Classes="help" Text="ASIO-kaarten, buffer en samplerate volgen in een volgende stap." />
         </StackPanel></ScrollViewer>
       </TabItem>
 
@@ -123,6 +146,15 @@
           <NumericUpDown Value="{Binding SilenceSeconds}" Minimum="3" Maximum="600" Increment="1" FormatString="0" IsEnabled="{Binding SilenceEnabled}" />
           <TextBlock Classes="field" Text="Wat er dan gebeurt" />
           <ComboBox ItemsSource="{Binding SilenceActions}" SelectedIndex="{Binding SilenceAction}" HorizontalAlignment="Stretch" IsEnabled="{Binding SilenceEnabled}" />
+          <StackPanel IsVisible="{Binding UsesEmergencyCategory}">
+            <TextBlock Classes="field" Text="Noodcategorie" />
+            <ComboBox ItemsSource="{Binding Categories}" SelectedItem="{Binding SilenceCategory}" HorizontalAlignment="Stretch" IsEnabled="{Binding SilenceEnabled}">
+              <ComboBox.ItemTemplate>
+                <DataTemplate x:DataType="c:CategoryDto"><TextBlock Text="{Binding Name}" /></DataTemplate>
+              </ComboBox.ItemTemplate>
+            </ComboBox>
+            <TextBlock Classes="help" Text="Bij stilte start meteen een willekeurig item uit deze categorie (bijvoorbeeld een noodplaylist of stationsjingles) en daarna gaat de automatisering verder. Is de categorie leeg, dan start alleen de automatisering." />
+          </StackPanel>
           <TextBlock Classes="help" Text="Zolang het stil blijft, komt het alarm elke minuut terug. Kies een duur die langer is dan de langste stilte in je eigen programma (een stille passage in klassieke muziek, een pauze in een gesprek)." />
         </StackPanel></ScrollViewer>
       </TabItem>

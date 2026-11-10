@@ -137,7 +137,8 @@ public sealed record SettingsDto(
     int ArtistSeparation, int SongSeparation, int LookAhead,
     bool StreamEnabled, string StreamServer, string StreamPassword, bool StreamPasswordSet, int StreamBitrate, string StreamGenre, string StreamUrl,
     string ControlBindAddress, int ControlTcpPort, int ControlOscPort, string ControlPassword, bool ControlPasswordSet, bool ClearControlPassword,
-    bool SilenceEnabled = true, double SilenceDb = -45, double SilenceSeconds = 20, string SilenceAction = "autoplay");
+    bool SilenceEnabled = true, double SilenceDb = -45, double SilenceSeconds = 20, string SilenceAction = "autoplay",
+    long? SilenceCategoryId = null);
 
 /// <summary>The answer to saving the settings: what was stored, and what needs a restart or a rescan.</summary>
 public sealed record SettingsSavedDto(SettingsDto Settings, IReadOnlyList<string> NeedsRestart, bool Rescanning);
@@ -369,3 +370,12 @@ public sealed record SystemSettingsRequest(bool AutoStart, bool DetailedLog);
 public sealed record SystemLogEntryDto(long Id, DateTime Time, string Level, string Source, string Text);
 
 public sealed record BackupStagedDto(string Station, DateTime Created, string Machine, bool Restarting);
+
+/// <summary>An output a mixer channel can go to ("" = its normal bus).</summary>
+public sealed record OutputChoiceDto(string Id, string Name);
+
+public sealed record OutputRouteDto(string Strip, string Name, string Target);
+
+public sealed record OutputsDto(IReadOnlyList<OutputChoiceDto> Targets, IReadOnlyList<OutputRouteDto> Strips);
+
+public sealed record OutputRouteRequest(string? Target);

@@ -180,7 +180,7 @@ public static class StudioApi
                 d.TargetLufs, d.CueInDb, d.MixDb, d.CueOutDb, d.MaxOverlap, d.FadeOut, d.DuckLevel, d.ArtistSeparation, d.SongSeparation, d.LookAhead,
                 d.StreamEnabled, d.StreamServer, d.StreamPassword, d.StreamBitrate, d.StreamGenre, d.StreamUrl,
                 d.ControlBindAddress, d.ControlTcpPort, d.ControlOscPort, d.ControlPassword,
-                d.SilenceEnabled, d.SilenceDb, d.SilenceSeconds, d.SilenceAction).Checked(old, d.ClearControlPassword);
+                d.SilenceEnabled, d.SilenceDb, d.SilenceSeconds, d.SilenceAction, d.SilenceCategoryId).Checked(old, d.ClearControlPassword);
             s.ApplyTo(options);
             s.Save(db);
             var restart = s.NeedsRestart(old);
@@ -245,7 +245,7 @@ public static class StudioApi
         s.ArtistSeparation, s.SongSeparation, s.LookAhead,
         s.StreamEnabled, s.StreamServer, "", s.StreamPassword.Length > 0, s.StreamBitrate, s.StreamGenre, s.StreamUrl,
         s.ControlBindAddress, s.ControlTcpPort, s.ControlOscPort, "", s.ControlPassword.Length > 0, false,
-        s.SilenceEnabled, s.SilenceDb, s.SilenceSeconds, s.SilenceAction);
+        s.SilenceEnabled, s.SilenceDb, s.SilenceSeconds, s.SilenceAction, s.SilenceCategoryId);
 
     private static RoutingDto Routing(RoutingSettings s) =>
         new(s.OutputDevice, s.PreviewDevice, s.MicEnabled, s.MicDevice, s.MicDuckLevel, s.OverlayDuckLevel);

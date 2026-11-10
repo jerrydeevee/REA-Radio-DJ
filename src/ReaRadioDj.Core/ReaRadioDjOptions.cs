@@ -29,8 +29,11 @@ public sealed class SilenceOptions
     public bool Enabled { get; set; } = true;
     public double ThresholdDb { get; set; } = -45;
     public double Seconds { get; set; } = 20;
-    /// <summary>"warn" = only an alarm in the studio, "autoplay" = also start the automation.</summary>
+    /// <summary>"warn" = only an alarm in the studio, "autoplay" = also start the automation, "category" = play an item
+    /// from <see cref="CategoryId"/> right away and start the automation.</summary>
     public string Action { get; set; } = "autoplay";
+    /// <summary>Emergency category for the action "category" (an emergency playlist, station IDs, ...).</summary>
+    public long? CategoryId { get; set; }
 }
 
 /// <summary>
@@ -88,6 +91,8 @@ public sealed class RoutingOptions
     /// <summary>Automation level under overlays and overlay carts, 0..1.</summary>
     public double OverlayDuckLevel { get; set; } = 0.35;
     public int StandbyPlayers { get; set; } = 2;
+    /// <summary>Mixer channels that have an output of their own (channel id → "dev:&lt;device&gt;:&lt;pair&gt;"); the rest goes on air.</summary>
+    public Dictionary<string, string> StripOutputs { get; set; } = [];
 }
 
 /// <summary>Rotation rules used by the planner when it picks songs from a category.</summary>

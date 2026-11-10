@@ -16,6 +16,8 @@ public sealed partial class SettingsTool : StudioTool
     public ObservableCollection<DeviceDto> Outputs { get; } = [];
     public ObservableCollection<DeviceDto> Inputs { get; } = [];
     public IReadOnlyList<int> Bitrates { get; } = [64, 96, 128, 160, 192, 256, 320];
+    public ObservableCollection<OutputRouteVm> StripOutputs { get; } = [];
+    [ObservableProperty] private string _outputStatus = "";
 
     [ObservableProperty] private string _status = "";
     [ObservableProperty] private bool _loaded;
@@ -48,9 +50,13 @@ public sealed partial class SettingsTool : StudioTool
     [ObservableProperty] private bool _silenceEnabled = true;
     [ObservableProperty] private decimal _silenceDb = -45;
     [ObservableProperty] private decimal _silenceSeconds = 20;
-    /// <summary>0 = only warn, 1 = also start the automation.</summary>
-    [ObservableProperty] private int _silenceAction = 1;
-    public IReadOnlyList<string> SilenceActions { get; } = ["Alleen melden in de studio", "Melden en de automatisering starten"];
+    /// <summary>0 = only warn, 1 = also start the automation, 2 = play from the emergency category.</summary>
+    [ObservableProperty] [NotifyPropertyChangedFor(nameof(UsesEmergencyCategory))] private int _silenceAction = 1;
+    public IReadOnlyList<string> SilenceActions { get; } = ["Alleen melden in de studio", "Melden en de automatisering starten", "Melden en direct iets uit de noodcategorie spelen"];
+    [ObservableProperty] private CategoryDto? _silenceCategory;
+    public ObservableCollection<CategoryDto> Categories => Hub.Categories;
+    public bool UsesEmergencyCategory => SilenceAction == 2;
+    private static readonly string[] SilenceActionNames = ["warn", "autoplay", "category"];
 
     // Rotation
     [ObservableProperty] private decimal _artistSeparation = 3;
@@ -111,6 +117,7 @@ public sealed partial class SettingsTool : StudioTool
         }
         Show(s);
         await LoadSystemAsync();
+        await LoadOutputsAsync();
         Outputs.Clear();
         Outputs.Add(new DeviceDto(-1, "Standaard geluidskaart van Windows", true, false));
         foreach (var d in outs) Outputs.Add(d);
@@ -126,6 +133,33 @@ public sealed partial class SettingsTool : StudioTool
         Loaded = true;
         Status = "";
     }
+
+    private async Task LoadOutputsAsync()
+    {
+        StripOutputs.Clear();
+        var o = await Hub.Client.GetAsync<OutputsDto>("/api/outputs");
+        if (o is null) { OutputStatus = "De engine kent uitgangen per kanaal nog niet: werk hem bij."; return; }
+        foreach (var s in o.Strips) StripOutputs.Add(new OutputRouteVm(this, s, o.Targets));
+    }
+
+    internal async Task RouteAsync(OutputRouteVm row, OutputChoiceDto target)
+    {
+        OutputStatus = $"{row.Name} omzetten…";
+        var r = await Hub.Client.SendForAsync<OutputsDto>(HttpMethod.Put, $"/api/outputs/{row.Strip}", new OutputRouteRequest(target.Id));
+        var now = r?.Strips.FirstOrDefault(s => s.Strip == row.Strip);
+        row.Show(now?.Target ?? "");
+        OutputStatus = r is null ? $"{row.Name}: deze uitgang werkt niet (zie de statusregel)." :
+            string.IsNullOrEmpty(now?.Target) ? $"{row.Name} gaat via de normale uitgang." : $"{row.Name} heeft nu een eigen uitgang.";
+    }
+
+    internal async Task TestToneAsync(string output)
+    {
+        OutputStatus = await Hub.Client.PostAsync("/api/outputs/test", new OutputRouteRequest(output))
+            ? "Testtoon: 1 kHz, -18 dBFS, anderhalve seconde." : "Testtoon niet gelukt.";
+    }
+
+    [RelayCommand] private Task TestProgram() => TestToneAsync("program");
+    [RelayCommand] private Task TestPreview() => TestToneAsync("preview");
 
     private async Task LoadSystemAsync()
     {
@@ -192,7 +226,7 @@ public sealed partial class SettingsTool : StudioTool
         TargetLufs = (decimal)s.TargetLufs; CueInDb = (decimal)s.CueInDb; MixDb = (decimal)s.MixDb; CueOutDb = (decimal)s.CueOutDb;
         MaxOverlap = (decimal)s.MaxOverlap; FadeOut = (decimal)s.FadeOut; DuckLevel = Percent(s.DuckLevel);
         ArtistSeparation = s.ArtistSeparation; SongSeparation = s.SongSeparation; LookAhead = s.LookAhead;
-        SilenceEnabled = s.SilenceEnabled; SilenceDb = (decimal)s.SilenceDb; SilenceSeconds = (decimal)s.SilenceSeconds; SilenceAction = s.SilenceAction == "warn" ? 0 : 1;
+        SilenceEnabled = s.SilenceEnabled; SilenceDb = (decimal)s.SilenceDb; SilenceSeconds = (decimal)s.SilenceSeconds; SilenceAction = Math.Max(0, Array.IndexOf(SilenceActionNames, s.SilenceAction)); SilenceCategory = Hub.Categories.FirstOrDefault(c => c.Id == s.SilenceCategoryId);
         StreamEnabled = s.StreamEnabled; StreamServer = s.StreamServer; StreamBitrate = s.StreamBitrate; StreamGenre = s.StreamGenre; StreamUrl = s.StreamUrl;
         StreamPassword = "";
         StreamPasswordHint = s.StreamPasswordSet ? "er is een wachtwoord opgeslagen; leeg laten = houden" : "nog geen wachtwoord";
@@ -216,7 +250,7 @@ public sealed partial class SettingsTool : StudioTool
             (int)ArtistSeparation, (int)SongSeparation, (int)LookAhead,
             StreamEnabled, StreamServer, StreamPassword, false, StreamBitrate, StreamGenre, StreamUrl,
             ControlBindAddress, (int)ControlTcpPort, (int)ControlOscPort, ControlPassword, false, ClearControlPassword,
-            SilenceEnabled, (double)SilenceDb, (double)SilenceSeconds, SilenceAction == 0 ? "warn" : "autoplay"));
+            SilenceEnabled, (double)SilenceDb, (double)SilenceSeconds, SilenceActionNames[Math.Clamp(SilenceAction, 0, 2)], SilenceCategory?.Id));
 
         if (SystemLoaded)
         {
