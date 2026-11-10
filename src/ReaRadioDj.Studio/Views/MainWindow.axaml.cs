@@ -1,5 +1,6 @@
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Interactivity;
 using Avalonia.Media.Imaging;
 using Avalonia.Threading;
 
@@ -14,6 +15,35 @@ public partial class MainWindow : Window
         DataContextChanged += (_, _) => ApplyHotkeys();
         ViewModels.Hotkeys.Changed += ApplyHotkeys;
         Closed += (_, _) => ViewModels.Hotkeys.Changed -= ApplyHotkeys;
+        // Narrower than 1900 px the transport buttons get their own row, so the title keeps its room.
+        void Arrange()
+        {
+            bool wide = Bounds.Width >= 1900;
+            Grid.SetRow(Transport, wide ? 0 : 1);
+            Grid.SetColumn(Transport, wide ? 3 : 0);
+            Grid.SetColumnSpan(Transport, wide ? 1 : 6);
+            Transport.Margin = wide ? default : new Thickness(0, 10, 0, 0);
+        }
+        SizeChanged += (_, _) => Arrange();
+        Arrange();
+        // Stop interrupts the broadcast: the button only works when held for a second (the hotkey stops at once).
+        var hold = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
+        hold.Tick += (_, _) =>
+        {
+            hold.Stop();
+            StopButton.Classes.Remove("holding");
+            if (DataContext is ViewModels.MainWindowViewModel vm) vm.StopCommand.Execute(null);
+        };
+        void Release()
+        {
+            if (!hold.IsEnabled) return;
+            hold.Stop();
+            StopButton.Classes.Remove("holding");
+            if (DataContext is ViewModels.MainWindowViewModel vm) vm.Hub.Status = "Stop: houd de knop 1 seconde vast";
+        }
+        StopButton.AddHandler(PointerPressedEvent, (_, _) => { StopButton.Classes.Add("holding"); hold.Start(); }, RoutingStrategies.Tunnel);
+        StopButton.AddHandler(PointerReleasedEvent, (_, _) => Release(), RoutingStrategies.Tunnel);
+        StopButton.PointerCaptureLost += (_, _) => Release();
         // --screenshot <file.png> [seconds]: renders the window to an image and closes (documentation, tests).
         var args = Environment.GetCommandLineArgs();
         int i = Array.IndexOf(args, "--screenshot");

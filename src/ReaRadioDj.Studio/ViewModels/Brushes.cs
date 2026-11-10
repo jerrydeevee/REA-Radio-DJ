@@ -6,12 +6,17 @@ namespace ReaRadioDj.Studio.ViewModels;
 /// <summary>Small converters used by the views.</summary>
 public static class Brushes
 {
-    private static readonly IBrush Red = new SolidColorBrush(Color.Parse("#E5484D"));
+    private static readonly IBrush Red = new SolidColorBrush(Color.Parse("#C42B30"));
+    private static readonly IBrush Ok = new SolidColorBrush(Color.Parse("#3FB950"));
+    private static readonly IBrush Amber = new SolidColorBrush(Color.Parse("#F5A524"));
     private static readonly IBrush Off = new SolidColorBrush(Color.Parse("#2A3240"));
     private static readonly IBrush Green = new SolidColorBrush(Color.Parse("#3DBD7D"));
     private static readonly IBrush Transparent = new SolidColorBrush(Colors.Transparent);
 
     public static readonly IValueConverter OnAir = new FuncValueConverter<bool, IBrush>(on => on ? Red : Off);
+    public static readonly IValueConverter OnAirText = new FuncValueConverter<bool, string>(on => on ? "AAN DE LUCHT" : "STIL");
+    /// <summary>Engine connection: green when connected, amber when not (a word next to it says which).</summary>
+    public static readonly IValueConverter Connection = new FuncValueConverter<bool, IBrush>(ok => ok ? Ok : Amber);
     public static readonly IValueConverter Active = new FuncValueConverter<bool, IBrush>(on => on ? Green : Off);
     public static readonly IValueConverter Highlight = new FuncValueConverter<bool, IBrush>(on => on ? new SolidColorBrush(Color.Parse("#1F3A2C")) : Transparent);
 

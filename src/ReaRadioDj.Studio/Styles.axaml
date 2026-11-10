@@ -1,4 +1,5 @@
-<Styles xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+<Styles xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:ctl="using:ReaRadioDj.Studio.Controls">
   <Style Selector="Border.card">
     <Setter Property="Background" Value="{DynamicResource CardBrush}" />
     <Setter Property="BorderBrush" Value="{DynamicResource CardBorderBrush}" />
@@ -79,6 +80,120 @@
   </Style>
   <Style Selector="TextBlock.remaining.end">
     <Setter Property="Foreground" Value="#E5484D" />
+  </Style>
+
+  <!-- App bar and on-air bar. Rules of the layout design: one filled button per area (Volgende), everything you
+       press at least 44 px high, labels small and in capitals, counters in monospace. -->
+  <Style Selector="TextBlock.lbl">
+    <Setter Property="FontSize" Value="11" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="LetterSpacing" Value="1" />
+    <Setter Property="Foreground" Value="{DynamicResource MutedTextBrush}" />
+  </Style>
+  <Style Selector="Border.key">
+    <Setter Property="BorderBrush" Value="{DynamicResource ControlBorderBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="4" />
+    <Setter Property="Padding" Value="5,0" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+  <Style Selector="Border.key > TextBlock">
+    <Setter Property="FontFamily" Value="Consolas, Cascadia Mono, monospace" />
+    <Setter Property="FontSize" Value="11" />
+    <Setter Property="Foreground" Value="{DynamicResource MutedTextBrush}" />
+  </Style>
+  <Style Selector=":is(Button).bar">
+    <Setter Property="MinHeight" Value="44" />
+    <Setter Property="Padding" Value="16,0" />
+    <Setter Property="CornerRadius" Value="8" />
+    <Setter Property="FontSize" Value="14" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="Background" Value="{DynamicResource ControlBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource ControlBorderBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="VerticalContentAlignment" Value="Center" />
+  </Style>
+  <Style Selector="Button.bar.primary">
+    <Setter Property="MinHeight" Value="56" />
+    <Setter Property="Padding" Value="24,0" />
+    <Setter Property="FontSize" Value="16" />
+    <Setter Property="Background" Value="{DynamicResource PrimaryBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource PrimaryBrush}" />
+    <Setter Property="Foreground" Value="White" />
+  </Style>
+  <Style Selector="Button.bar.primary:pointerover /template/ ContentPresenter">
+    <Setter Property="Background" Value="#3B76F0" />
+    <Setter Property="Foreground" Value="White" />
+  </Style>
+  <Style Selector="Button.bar.primary Border.key">
+    <Setter Property="BorderBrush" Value="#6E9BF5" />
+  </Style>
+  <Style Selector="Button.bar.primary Border.key > TextBlock">
+    <Setter Property="Foreground" Value="#DCE7FF" />
+  </Style>
+  <Style Selector="Button.bar.danger">
+    <Setter Property="BorderBrush" Value="{DynamicResource OnAirBrush}" />
+    <Setter Property="Foreground" Value="#FF9B9E" />
+  </Style>
+  <Style Selector="Button.bar.danger.holding /template/ ContentPresenter">
+    <Setter Property="Background" Value="#7A1F25" />
+    <Setter Property="Foreground" Value="White" />
+  </Style>
+  <Style Selector="ToggleButton.bar:checked /template/ ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource SelectedBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
+  </Style>
+  <Style Selector="ToggleButton.bar.mic:checked /template/ ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource OnAirBrush}" />
+    <Setter Property="Foreground" Value="White" />
+  </Style>
+  <!-- Two halves of one switch -->
+  <Style Selector="ToggleButton.seg">
+    <Setter Property="MinHeight" Value="44" />
+    <Setter Property="Padding" Value="14,0" />
+    <Setter Property="CornerRadius" Value="0" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="FontSize" Value="14" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="Foreground" Value="{DynamicResource MutedTextBrush}" />
+    <Setter Property="VerticalContentAlignment" Value="Center" />
+  </Style>
+  <Style Selector="ToggleButton.seg:checked /template/ ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource SelectedBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
+  </Style>
+  <!-- Workspace tabs in the app bar: the chosen one has a line under it -->
+  <Style Selector="ToggleButton.nav">
+    <Setter Property="MinHeight" Value="36" />
+    <Setter Property="Padding" Value="14,0" />
+    <Setter Property="CornerRadius" Value="8" />
+    <Setter Property="BorderThickness" Value="0,0,0,2" />
+    <Setter Property="BorderBrush" Value="Transparent" />
+    <Setter Property="FontSize" Value="14" />
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="Foreground" Value="{DynamicResource MutedTextBrush}" />
+    <Setter Property="VerticalContentAlignment" Value="Center" />
+  </Style>
+  <Style Selector="ToggleButton.nav:checked /template/ ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource ControlBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+  </Style>
+  <Style Selector="ToggleButton.nav:checked">
+    <Setter Property="FontWeight" Value="SemiBold" />
+  </Style>
+  <Style Selector="ctl|OnAirProgress.warn">
+    <Setter Property="Fill" Value="{DynamicResource WarnBrush}" />
+  </Style>
+  <Style Selector="ctl|OnAirProgress.end">
+    <Setter Property="Fill" Value="{DynamicResource OnAirBrush}" />
+  </Style>
+  <Style Selector="ctl|OnAirProgress.end.flash">
+    <Setter Property="Track" Value="#5A1A1E" />
+  </Style>
+  <Style Selector="TextBlock.remaining.warn">
+    <Setter Property="Foreground" Value="{DynamicResource WarnBrush}" />
   </Style>
 
   <Style Selector="TabControl.compact > TabItem">

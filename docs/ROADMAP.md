@@ -86,9 +86,9 @@ aan-de-luchtbalk staat altijd bovenaan; één hoofdactie per gebied; een toestan
 
 | Status | Onderdeel |
 |---|---|
-| ⬜ | Stijlbasis: één kleurenpalet en maatvoering (kaarten, knoppen, labels, monospace-tellers) voor alle vensters |
-| ⬜ | App-balk met werkruimtes Live, Productie, Planning en Rapportage, indelingkeuze en enginestatus |
-| ⬜ | Aan-de-luchtbalk nieuw: titel met voortgang, intro- en mixmarkering, grote resterende tijd, Volgende als enige gevulde knop, Stop apart en met vasthouden |
+| 🟡 | Stijlbasis: kleurenpalet en knopstijlen van het ontwerp staan als bronnen in de app en zijn gebruikt in de bovenbalken; de vensters zelf volgen per onderdeel hieronder |
+| 🟡 | App-balk: naam, menu, werkruimtes Live en Automatisering, indelingkeuze en enginestatus staan; werkruimtes Productie, Planning en Rapportage nog open |
+| ✅ | Aan-de-luchtbalk nieuw: titel met voortgang, intro- en mixmarkering, grote resterende tijd, Volgende als enige gevulde knop, Stop apart en 1 s vasthouden (F9 stopt direct); onder 1900 px breed krijgen de knoppen een eigen rij |
 | ⬜ | Spelers en cartwall in de nieuwe stijl: toestand als woord en vorm (leeg, klaar, speelt, laatste 10 s), cartknoppen van 96 px |
 | ⬜ | Programmalog in de nieuwe stijl: tijd, kleurstreep per soort, titel met ondertitel, lengte |
 | ⬜ | Responsive: breder dan 1600 px naast elkaar, 1100-1600 px cartwall onder de spelers, smaller alles in één kolom |

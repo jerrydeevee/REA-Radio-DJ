@@ -73,15 +73,40 @@ public sealed partial class MainWindowViewModel : ObservableObject
     [ObservableProperty] private string _endState = "normal";
     [ObservableProperty] private bool _flash;
     [ObservableProperty] private string _introText = "";
+    /// <summary>Title and the line under it (artist, category, clock) of the item on air.</summary>
+    [ObservableProperty] private string _nowTitle = "";
+    [ObservableProperty] private string _nowSub = "";
+    /// <summary>0-100: how far the item on air is; the intro and mix marks are -1 when there is none.</summary>
+    [ObservableProperty] private double _nowPos;
+    [ObservableProperty] private double _introMark = -1;
+    [ObservableProperty] private double _mixMark = -1;
+    [ObservableProperty] private string _introState = "";
+    [ObservableProperty] private string _mixText = "";
+    [ObservableProperty] private string _stopHint = "";
     [ObservableProperty] private bool _automationView;
 
     public const string AutomationLayoutName = "Automatisering";
     public const string AssistLayoutName = "Standaard";
 
+    public bool StationDiffers => !string.Equals(Station, "REA-Radio-DJ", StringComparison.OrdinalIgnoreCase);
+    partial void OnStationChanged(string value) => OnPropertyChanged(nameof(StationDiffers));
     public string ModeText => AutoPlay ? "AUTOMATISCH" : "LIVE-ASSIST";
     public string StatusLine => string.IsNullOrEmpty(Hub.Status) ? Hub.ConnectionText : $"{Hub.ConnectionText} · {Hub.Status}";
 
     partial void OnAutoPlayChanged(bool value) => OnPropertyChanged(nameof(ModeText));
+
+    /// <summary>The layout picker in the app bar: choosing a name loads that layout.</summary>
+    public string? SelectedLayoutName
+    {
+        get => CurrentLayout;
+        set { if (!string.IsNullOrEmpty(value) && value != CurrentLayout) LoadLayout(value); }
+    }
+
+    /// <summary>"auto" or "assist": the two halves of the mode switch.</summary>
+    [RelayCommand]
+    private Task SetMode(string? mode) => (mode == "auto") == AutoPlay
+        ? Task.CompletedTask
+        : Hub.Client.PostAsync("/api/transport/autoplay", new SwitchRequest(mode == "auto"));
 
     private void OnState(StateDto s)
     {
@@ -98,6 +123,14 @@ public sealed partial class MainWindowViewModel : ObservableObject
         {
             NowLabel = c.Label;
             double left = Math.Max(0, c.To - c.Position), length = Math.Max(0.1, c.To - c.From);
+            NowTitle = string.IsNullOrWhiteSpace(c.Title) ? c.Label : c.Title;
+            NowSub = string.Join(" \u00b7 ", new[] { c.Artist, c.Category, s.Clock is null ? "" : $"klok {s.Clock}" }.Where(t => !string.IsNullOrWhiteSpace(t)));
+            double Mark(double at) => Math.Clamp((at - c.From) / length * 100, 0, 100);
+            NowPos = Mark(c.Position);
+            IntroMark = c.Intro is double i && i > c.From ? Mark(i) : -1;
+            MixMark = c.MixAt > c.From && c.MixAt < c.To ? Mark(c.MixAt) : -1;
+            IntroState = c.Intro is not double end ? "" : c.Position < end ? StudioHub.Time(end - c.Position) : "voorbij";
+            MixText = c.MixAt > c.Position ? StudioHub.Time(c.MixAt - c.Position) : "";
             NowRemaining = $"-{StudioHub.Time(left)}";
             NowLeft = Math.Clamp(left / length * 100, 0, 100);
             EndState = left <= 10 ? "end" : left <= 20 ? "warn" : "normal";
@@ -108,9 +141,11 @@ public sealed partial class MainWindowViewModel : ObservableObject
         {
             NowLabel = AutoPlay ? "wachten op materiaal…" : "stil — start het volgende item (F5)";
             NowRemaining = ""; NowLeft = 0; EndState = "normal"; Flash = false; IntroText = "";
+            NowTitle = NowLabel; NowSub = s.Clock is null ? "" : $"klok {s.Clock}";
+            NowPos = 0; IntroMark = -1; MixMark = -1; IntroState = ""; MixText = "";
         }
         NextLabel = s.Upcoming.FirstOrDefault() is { } n ? $"Straks: {n.Label}" : "";
-        NextEvent = s.Events.FirstOrDefault() is { } e ? $"{e.Name} {e.At:HH:mm:ss} (over {StudioHub.Time((e.At - s.Time).TotalSeconds)})" : "";
+        NextEvent = s.Events.FirstOrDefault() is { } e ? $"{e.Name} over {StudioHub.Time((e.At - s.Time).TotalSeconds)}" : "";
     }
 
     // ------------------------------------------------------------ transport (hotkeys in the window)
@@ -214,7 +249,11 @@ public sealed partial class MainWindowViewModel : ObservableObject
         RefreshLayoutNames();
     }
 
-    partial void OnCurrentLayoutChanged(string value) => AutomationView = value == AutomationLayoutName;
+    partial void OnCurrentLayoutChanged(string value)
+    {
+        AutomationView = value == AutomationLayoutName;
+        OnPropertyChanged(nameof(SelectedLayoutName));
+    }
 
     [RelayCommand]
     private void SaveLayout()
@@ -327,6 +366,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
         if (Directory.Exists(StudioSettings.LayoutFolder))
             foreach (var f in Directory.EnumerateFiles(StudioSettings.LayoutFolder, "*.json").Select(Path.GetFileNameWithoutExtension).Order())
                 if (f is not null && f != "Standaard") LayoutNames.Add(f);
+        OnPropertyChanged(nameof(SelectedLayoutName));
     }
 }
 

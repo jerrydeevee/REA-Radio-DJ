@@ -9,9 +9,18 @@
   </Application.DataTemplates>
   <Application.Resources>
     <SolidColorBrush x:Key="OnAirBrush" Color="#E5484D" />
-    <SolidColorBrush x:Key="AccentBrush" Color="#3FA7FF" />
-    <SolidColorBrush x:Key="MutedTextBrush" Color="#8B95A5" />
-    <SolidColorBrush x:Key="CardBrush" Color="#1A2029" />
+    <SolidColorBrush x:Key="AccentBrush" Color="#4C8DFF" />
+    <SolidColorBrush x:Key="PrimaryBrush" Color="#2563EB" />
+    <SolidColorBrush x:Key="WarnBrush" Color="#F5A524" />
+    <SolidColorBrush x:Key="OkBrush" Color="#3FB950" />
+    <SolidColorBrush x:Key="TextBrush" Color="#E6EAF0" />
+    <SolidColorBrush x:Key="AppBrush" Color="#0E1116" />
+    <SolidColorBrush x:Key="BarBrush" Color="#11161D" />
+    <SolidColorBrush x:Key="ControlBrush" Color="#1E2530" />
+    <SolidColorBrush x:Key="ControlBorderBrush" Color="#3A4454" />
+    <SolidColorBrush x:Key="SelectedBrush" Color="#2D3748" />
+    <SolidColorBrush x:Key="MutedTextBrush" Color="#9AA4B2" />
+    <SolidColorBrush x:Key="CardBrush" Color="#161B22" />
     <SolidColorBrush x:Key="CardBorderBrush" Color="#2A3240" />
   </Application.Resources>
   <Application.Styles>
