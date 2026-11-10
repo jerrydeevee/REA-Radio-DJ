@@ -1,0 +1,94 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:ReaRadioDj.Studio.ViewModels"
+             x:Class="ReaRadioDj.Studio.Views.SoloistView"
+             x:DataType="vm:SoloistTool">
+  <ScrollViewer>
+    <StackPanel Margin="10" Spacing="8">
+      <Border BorderBrush="{DynamicResource WarnBrush}" BorderThickness="1" CornerRadius="{DynamicResource Radius8}" Padding="10,8">
+        <TextBlock TextWrapping="Wrap" FontSize="13"
+                   Text="Ontwikkeltest van Spotify Soloist. Het geluid gaat van Soloist rechtstreeks naar Windows (standaard geluidskaart), niet via de engine, de DJ-tafel, de stream of een opname: Spotify staat uitzenden en mixen niet toe." />
+      </Border>
+
+      <!-- starting Soloist -->
+      <TextBlock Classes="muted" FontSize="13" TextWrapping="Wrap"
+                 Text="1. Download Soloist zelf (Windows x86_64) en start het met je eigen API-sleutel. Zet de sleutel in de omgevingsvariabele SOLOIST_API_KEY, niet in een bestand dat je deelt:" />
+      <TextBox Classes="mono" Text="{Binding StartCommand, Mode=OneWay}" IsReadOnly="True" TextWrapping="Wrap" />
+      <WrapPanel>
+        <Button Classes="bar" Content="Downloadpagina openen" Command="{Binding OpenDownloadsCommand}" Margin="0,0,8,0"
+                ToolTip.Tip="De officiële downloads van Spotify Soloist; een versie werkt 90 dagen" />
+      </WrapPanel>
+      <TextBlock Classes="muted" FontSize="13" TextWrapping="Wrap"
+                 Text="2. Kies het apparaat de eerste keer in de Spotify-app op hetzelfde netwerk (koppelen). 3. Verbind hier:" />
+      <WrapPanel>
+        <TextBox Text="{Binding Address}" Width="180" Margin="0,0,8,6" Watermark="127.0.0.1:9090" IsEnabled="{Binding !Connected}" />
+        <Button Classes="bar" Content="{Binding ConnectText}" Command="{Binding ConnectCommand}" Margin="0,0,8,6" />
+        <Button Classes="bar" Content="Vernieuwen" Command="{Binding RefreshCommand}" IsEnabled="{Binding LoggedIn}" Margin="0,0,0,6" />
+      </WrapPanel>
+      <TextBlock Text="{Binding State}" TextWrapping="Wrap" FontWeight="SemiBold" Foreground="{DynamicResource OkBrush}" IsVisible="{Binding StateOk}" />
+      <TextBlock Text="{Binding State}" TextWrapping="Wrap" FontWeight="SemiBold" Foreground="{DynamicResource WarnBrush}" IsVisible="{Binding StateBad}" />
+      <TextBlock Classes="muted" Text="{Binding State}" TextWrapping="Wrap" IsVisible="{Binding StateNeutral}" />
+
+      <!-- now playing -->
+      <Border Classes="card" Padding="10" Background="{DynamicResource CardBrush}" IsEnabled="{Binding LoggedIn}">
+        <StackPanel Spacing="8">
+          <DockPanel>
+            <Border DockPanel.Dock="Left" Width="96" Height="96" CornerRadius="{DynamicResource Radius8}" ClipToBounds="True"
+                    Background="{DynamicResource ControlBorderBrush}" Margin="0,0,12,0">
+              <Image Source="{Binding Cover}" Stretch="UniformToFill" />
+            </Border>
+            <StackPanel VerticalAlignment="Center" Spacing="2">
+              <TextBlock Text="{Binding Title}" FontSize="17" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+              <TextBlock Classes="muted" Text="{Binding Artist}" TextTrimming="CharacterEllipsis" />
+              <TextBlock Classes="muted" FontSize="12" Text="{Binding Album}" TextTrimming="CharacterEllipsis" />
+              <TextBlock Classes="muted" FontSize="12" Text="{Binding Context, StringFormat='uit: {0}'}" IsVisible="{Binding Context, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" TextTrimming="CharacterEllipsis" />
+              <TextBlock Classes="mono" FontSize="12" Text="{Binding TimeText}" />
+            </StackPanel>
+          </DockPanel>
+          <ProgressBar Minimum="0" Maximum="100" Value="{Binding Progress}" Height="4" />
+          <WrapPanel>
+            <Button Classes="bar" Content="⏮" Command="{Binding PreviousCommand}" Margin="0,0,4,6" ToolTip.Tip="Vorige" />
+            <Button Classes="bar" Content="−15 s" Command="{Binding JumpCommand}" CommandParameter="-15" Margin="0,0,4,6" />
+            <ToggleButton Classes="bar fx" Content="Afspelen / pauze" IsChecked="{Binding Playing, Mode=OneWay}" Command="{Binding PlayPauseCommand}" Margin="0,0,4,6" />
+            <Button Classes="bar" Content="+15 s" Command="{Binding JumpCommand}" CommandParameter="15" Margin="0,0,4,6" />
+            <Button Classes="bar" Content="⏭" Command="{Binding NextCommand}" Margin="0,0,12,6" ToolTip.Tip="Volgende" />
+            <ToggleButton Classes="bar" Content="Shuffle" IsChecked="{Binding Shuffle, Mode=OneWay}" Command="{Binding ToggleShuffleCommand}" Margin="0,0,12,6" />
+            <TextBlock Classes="muted" Text="Volume" VerticalAlignment="Center" Margin="0,0,6,6" />
+            <Slider Minimum="0" Maximum="100" Value="{Binding Volume}" Width="140" Margin="0,0,0,6" />
+          </WrapPanel>
+          <DockPanel>
+            <Button DockPanel.Dock="Right" Classes="bar" Content="In wachtrij" Command="{Binding QueueUriCommand}" Margin="6,0,0,0"
+                    ToolTip.Tip="Alleen losse nummers" />
+            <Button DockPanel.Dock="Right" Classes="bar" Content="Speel af" Command="{Binding PlayUriCommand}" Margin="6,0,0,0" />
+            <TextBox Text="{Binding Link}" Watermark="Spotify-link of URI van een nummer, album of playlist" />
+          </DockPanel>
+        </StackPanel>
+      </Border>
+
+      <!-- queue and log -->
+      <TextBlock Classes="muted" FontSize="12" FontWeight="SemiBold" Text="WACHTRIJ" Margin="0,4,0,0" />
+      <TextBlock Classes="muted" FontSize="13" Text="Leeg (of nog niet opgevraagd)." IsVisible="{Binding QueueEmpty}" />
+      <ItemsControl ItemsSource="{Binding Queue}">
+        <ItemsControl.ItemTemplate>
+          <DataTemplate x:DataType="vm:SoloistQueueRow">
+            <DockPanel Margin="0,2">
+              <TextBlock DockPanel.Dock="Left" Classes="muted" Text="{Binding Number}" MinWidth="28" />
+              <TextBlock DockPanel.Dock="Right" Classes="muted" FontSize="12" Text="{Binding Source}" Margin="8,0,0,0" />
+              <TextBlock TextTrimming="CharacterEllipsis">
+                <Run Text="{Binding Title}" FontWeight="SemiBold" /><Run Text="  " /><Run Text="{Binding Artist}" Foreground="{DynamicResource MutedTextBrush}" />
+              </TextBlock>
+            </DockPanel>
+          </DataTemplate>
+        </ItemsControl.ItemTemplate>
+      </ItemsControl>
+      <TextBlock Classes="muted" FontSize="12" FontWeight="SemiBold" Text="LOGBOEK" Margin="0,4,0,0" />
+      <ItemsControl ItemsSource="{Binding Log}">
+        <ItemsControl.ItemTemplate>
+          <DataTemplate x:DataType="x:String">
+            <TextBlock Classes="mono" FontSize="12" Text="{Binding}" TextWrapping="Wrap" />
+          </DataTemplate>
+        </ItemsControl.ItemTemplate>
+      </ItemsControl>
+    </StackPanel>
+  </ScrollViewer>
+</UserControl>

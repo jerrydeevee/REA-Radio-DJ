@@ -26,6 +26,7 @@ public sealed class DockFactory : Factory
         ("sampler", "Sampler (DJ)", () => new CartwallTool { Id = "sampler", Title = "Sampler (DJ)" }),
         ("automix", "Automix (DJ)", () => new AutomixTool()),
         ("djmidi", "DJ-controller", () => new DjMidiTool()),
+        ("soloist", "Soloist (ontwikkeltest)", () => new SoloistTool()),
         ("library", "Bibliotheek", () => new LibraryTool()),
         ("cues", "Cue-editor", () => new CueEditorTool()),
         ("mixer", "Mixer en routing", () => new MixerTool()),
