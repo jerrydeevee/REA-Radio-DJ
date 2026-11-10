@@ -87,6 +87,42 @@ public sealed class VoiceStore
         return id;
     }
 
+    /// <summary>Ready-made voices: Higgs in a few characters, each with the Dutch Windows voice as backup.</summary>
+    public static readonly (string Name, string Tags, double Temperature)[] HiggsPresets =
+    [
+        ("Higgs · Warm", "<|emotion:contentment|>", 0.7),
+        ("Higgs · Enthousiast", "<|emotion:enthusiasm|><|prosody:expressive_high|>", 0.85),
+        ("Higgs · Vlot (ochtend)", "<|emotion:elation|><|prosody:speed_fast|>", 0.8),
+        ("Higgs · Rustig (nacht)", "<|emotion:contentment|><|prosody:speed_slow|><|prosody:pitch_low|>", 0.6),
+        ("Higgs · Zakelijk (nieuws)", "<|emotion:determination|>", 0.4),
+    ];
+
+    public const string WindowsPresetName = "Windows · Nederlands";
+
+    /// <summary>
+    /// Adds the ready-made voices that are not there yet (by name). The Windows voice uses the first installed Dutch
+    /// Windows voice (or the first one at all). Returns the number added.
+    /// </summary>
+    public int AddPresets(IReadOnlyList<string> sapiVoices)
+    {
+        int added = 0;
+        var windows = Profiles.FirstOrDefault(p => p.Name == WindowsPresetName);
+        if (windows is null)
+        {
+            var nl = sapiVoices.FirstOrDefault(v => v.Contains("nl-", StringComparison.OrdinalIgnoreCase)) ?? sapiVoices.FirstOrDefault() ?? "";
+            long id = Save(new VoiceProfile(0, WindowsPresetName, "sapi", "", "", "", 0.8, nl.Split(" (")[0], false, "", false));
+            windows = Get(id);
+            added++;
+        }
+        foreach (var (name, tags, temperature) in HiggsPresets)
+        {
+            if (Profiles.Any(p => p.Name == name)) continue;
+            Save(new VoiceProfile(0, name, "higgs", "", "", tags, temperature, "", false, "", false, windows?.Id));
+            added++;
+        }
+        return added;
+    }
+
     public void SetDefault(long id)
     {
         _db.Execute("UPDATE voice_profiles SET is_default = CASE WHEN id=$id THEN 1 ELSE 0 END", ("$id", id));

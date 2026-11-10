@@ -97,7 +97,7 @@ public static class Watchdog
                 if (DateTime.Now - started < StartGrace) { if (Alive(http, health)) started = DateTime.MinValue; continue; }
                 misses = Alive(http, health) ? 0 : misses + 1;
                 if (misses < MissesBeforeRestart) continue;
-                reason = "de engine reageerde niet meer";
+                reason = "de engine reageerde niet meer of het geluid liep niet meer door";
                 try { engine.Kill(entireProcessTree: true); engine.WaitForExit(5000); }
                 catch (Exception ex) when (ex is InvalidOperationException or System.ComponentModel.Win32Exception) { }
             }

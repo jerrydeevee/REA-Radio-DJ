@@ -244,6 +244,12 @@ public static class VoiceApi
             m.Info($"Presentatorstem: {p.Name}");
             return Results.Ok();
         });
+        v.MapPost("/profiles/presets", (VoiceStore st, MessageCenter m) =>
+        {
+            int added = st.AddPresets(SapiSpeechEngine.InstalledVoices().ToList());
+            if (added > 0) m.Info($"{added} standaardstemmen toegevoegd");
+            return Results.Ok(new { added });
+        });
         v.MapPost("/test", async (VoiceTestRequest r, VoiceService s, CancellationToken ct) => await s.TestAsync(r, ct));
         v.MapGet("/test/{file}", (string file, VoiceService s) => s.TestFile(file) is { } path ? Results.File(path, "audio/wav") : Results.NotFound());
         v.MapPost("/server/start", (VoiceService s) => Results.Ok(new { result = s.StartServer() }));

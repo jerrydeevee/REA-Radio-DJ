@@ -51,6 +51,10 @@ public sealed partial class VoiceTool : StudioTool
 
     // editor
     [ObservableProperty] private VoiceProfileDto? _selected;
+    /// <summary>The voice the automation speaks with (the default profile); choosing another one sets it at once.</summary>
+    [ObservableProperty] private VoiceProfileDto? _presenterVoice;
+    [ObservableProperty] private string _presenterVoiceNote = "";
+    private bool _settingPresenter;
     [ObservableProperty] private string _name = "";
     [ObservableProperty] private int _engine;
     [ObservableProperty] private string _referenceAudio = "";
@@ -142,6 +146,40 @@ public sealed partial class VoiceTool : StudioTool
         Profiles.Clear();
         foreach (var p in list) Profiles.Add(p);
         Selected = Profiles.FirstOrDefault(p => p.Id == keep) ?? Profiles.FirstOrDefault(p => p.IsDefault) ?? Profiles.FirstOrDefault();
+        _settingPresenter = true;
+        PresenterVoice = Profiles.FirstOrDefault(p => p.IsDefault) ?? Profiles.FirstOrDefault();
+        _settingPresenter = false;
+        PresenterVoiceNote = PresenterVoice is { } d ? Describe(d) : "Nog geen stem: voeg de standaardstemmen toe.";
+    }
+
+    private string Describe(VoiceProfileDto p)
+    {
+        var engine = p.Engine switch { "higgs" => "Higgs (GPU)", "sapi" => "Windows-spraak", "elevenlabs" => "ElevenLabs", "azure" => "Azure", _ => p.Engine };
+        var backup = Profiles.FirstOrDefault(x => x.Id == p.FallbackId)?.Name;
+        var text = $"De automatisering spreekt AI-breaks in met {p.Name} ({engine})";
+        if (backup is not null) text += $"; lukt dat niet, dan met {backup}";
+        if (p.Engine == "higgs" && !ServerOnline) text += ". Let op: de Higgs-server is nu offline, dan wordt de reserve gebruikt";
+        return text + ". Een presentator (venster AI-presentator) kan een eigen stem hebben.";
+    }
+
+    partial void OnPresenterVoiceChanged(VoiceProfileDto? value)
+    {
+        if (_settingPresenter || value is null || value.IsDefault) return;
+        _ = SetPresenterAsync(value);
+    }
+
+    private async Task SetPresenterAsync(VoiceProfileDto p)
+    {
+        if (await Hub.Client.PostAsync($"/api/voice/profiles/{p.Id}/default")) Hub.Status = $"'{p.Name}' is nu de presentatorstem";
+        await ReloadAsync();
+    }
+
+    [RelayCommand]
+    private async Task AddPresets()
+    {
+        var r = await Hub.Client.SendForAsync<PresetsAddedDto>(HttpMethod.Post, "/api/voice/profiles/presets", null);
+        Hub.Status = r is null ? "standaardstemmen toevoegen mislukt" : r.Added == 0 ? "de standaardstemmen staan er al" : $"{r.Added} standaardstemmen toegevoegd";
+        await ReloadAsync();
     }
 
     private async Task RefreshStatusAsync()

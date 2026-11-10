@@ -50,7 +50,16 @@ public sealed class PlayoutEngine : IDisposable
     /// False when the control loop has not gone round for five seconds (the engine hangs). Before the engine has started
     /// there is nothing to hang, so it counts as healthy.
     /// </summary>
-    public bool Healthy => !_running || Environment.TickCount64 - Interlocked.Read(ref _lastTick) < 5000;
+    public bool Healthy => !_running || (Environment.TickCount64 - Interlocked.Read(ref _lastTick) < 5000 && !Stalled);
+
+    private double _lastPosition = -1;
+    private long _lastMove = Environment.TickCount64;
+
+    /// <summary>
+    /// True when an item is on air but its position has not moved for eight seconds: the sound card no longer takes
+    /// audio (taken by another program, driver hung). The watchdog then restarts the engine.
+    /// </summary>
+    public bool Stalled => _running && Volatile.Read(ref _lastPosition) >= 0 && Environment.TickCount64 - Interlocked.Read(ref _lastMove) > 8000;
 
     /// <summary>The log item on air and its position in the file, or null when nothing plays.</summary>
     public (LogItem Item, double Position)? OnAir()
@@ -168,6 +177,14 @@ public sealed class PlayoutEngine : IDisposable
         }
     }
 
+    private void WatchPosition()
+    {
+        var d = _decks.LastOrDefault();
+        double pos = d is null ? -1 : d.Position;
+        if (pos < 0 || Math.Abs(pos - _lastPosition) > 0.001) Interlocked.Exchange(ref _lastMove, Environment.TickCount64);
+        Volatile.Write(ref _lastPosition, pos);
+    }
+
     private bool Finished(Deck d)
     {
         if (!d.IsDone()) return false;
@@ -180,6 +197,7 @@ public sealed class PlayoutEngine : IDisposable
 
     private void Tick()
     {
+        WatchPosition();
         _decks.RemoveAll(Finished);
         _inserts.RemoveAll(Finished);
         foreach (var d in _inserts) d.Update();

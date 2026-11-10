@@ -385,3 +385,5 @@ public sealed record AudioSettingsDto(string ProgramAsio, string PreviewAsio, in
     IReadOnlyList<OutputChoiceDto> AsioChoices, bool AsioAvailable, string ProgramNow, string PreviewNow, bool NeedsRestart);
 
 public sealed record AudioSettingsRequest(string ProgramAsio, string PreviewAsio, int SampleRate, int BufferMs, int AsioBuffer);
+
+public sealed record PresetsAddedDto(int Added);

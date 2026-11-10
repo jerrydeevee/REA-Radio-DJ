@@ -25,7 +25,7 @@ public static class SystemApi
     public static void Map(RouteGroupBuilder api, ReaRadioDjOptions options, string[] args)
     {
         api.MapGet("/health", (PlayoutEngine engine) =>
-            engine.Healthy ? Results.Ok(new { ok = true }) : Results.Json(new { ok = false }, statusCode: 503));
+            engine.Healthy ? Results.Ok(new { ok = true }) : Results.Json(new { ok = false, stalled = engine.Stalled }, statusCode: 503));
 
         api.MapGet("/system", (StationDb db) => Dto(options, db, args));
 
