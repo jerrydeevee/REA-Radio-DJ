@@ -84,7 +84,7 @@ public sealed class LogStore(string path)
 
     private static LogItem? FromEntry(Entry e)
     {
-        var media = e.Media is { } m && File.Exists(m.Path) ? m : null;
+        var media = e.Media is { } m && Library.MediaPaths.Exists(m.Path) ? m : null;
         if (e.Media is not null && media is null && e.Type != LogItemType.AiBreak) return null;
         // A news bulletin whose audio is gone is not rendered again as an ordinary break: it was for another hour.
         if (e.Type == LogItemType.AiBreak && media is null && e.Extra == "nieuws") return null;
@@ -104,7 +104,7 @@ public sealed class LogStore(string path)
             Script = rerender ? null : e.Script,
             ScriptSource = rerender ? null : e.ScriptSource,
             Voice = rerender ? null : e.Voice,
-            MixIn = e.MixIn is { Insert: { } ins } t && !File.Exists(ins.Path) ? t with { Insert = null } : e.MixIn,
+            MixIn = e.MixIn is { Insert: { } ins } t && !Library.MediaPaths.Exists(ins.Path) ? t with { Insert = null } : e.MixIn,
             AdPlayId = e.AdPlayId,
             ImportHour = e.ImportHour,
             ImportIndex = e.ImportIndex,

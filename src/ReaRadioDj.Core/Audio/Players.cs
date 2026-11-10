@@ -22,7 +22,7 @@ internal sealed class Clip
                 BASS_StreamCreateURL(media.Path, 0, BASS_STREAM_DECODE | BASS_SAMPLE_FLOAT | BASS_UNICODE | BASS_STREAM_BLOCK, IntPtr.Zero, IntPtr.Zero),
                 $"BASS_StreamCreateURL({media.Path})")
             : BassRuntime.Check(
-                BASS_StreamCreateFile(false, media.Path, 0, 0, BASS_STREAM_DECODE | BASS_SAMPLE_FLOAT | BASS_UNICODE),
+                BASS_StreamCreateFile(false, Library.MediaPaths.Resolve(media.Path), 0, 0, BASS_STREAM_DECODE | BASS_SAMPLE_FLOAT | BASS_UNICODE),
                 $"BASS_StreamCreateFile({Path.GetFileName(media.Path)})");
         if (from > 0) BASS_ChannelSetPosition(Handle, BASS_ChannelSeconds2Bytes(Handle, from), BASS_POS_BYTE);
         BASS_ChannelSetAttribute(Handle, BASS_ATTRIB_VOL, fadeIn > 0 ? 0 : gain);

@@ -5,6 +5,17 @@ using ReaRadioDj.Studio.Services;
 
 namespace ReaRadioDj.Studio.ViewModels;
 
+/// <summary>A replacement location in the studio: a file missing under From is looked for under To.</summary>
+public sealed partial class SubstituteRow : ObservableObject
+{
+    [ObservableProperty] private string _from = "";
+    [ObservableProperty] private string _to = "";
+    [ObservableProperty] private bool _enabled = true;
+    [ObservableProperty] private bool _reachable = true;
+    [ObservableProperty] [NotifyPropertyChangedFor(nameof(RelocateText))] private bool _confirmRelocate;
+    public string RelocateText => ConfirmRelocate ? "Zeker? Omzetten" : "Definitief omzetten";
+}
+
 /// <summary>One folder of the library in the folder list: its settings, what the last scan found, and removing it.</summary>
 public sealed partial class LibraryFolderVm : ObservableObject
 {

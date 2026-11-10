@@ -131,6 +131,13 @@ public sealed record PlayedDto(DateTime Started, double? Played, string Source);
 public sealed record LibraryFolderRequest(string Path, string Kind = "song", string Category = "", bool Watch = true, bool WriteTags = false,
     bool Enabled = true);
 
+/// <summary>A replacement location: a file missing under From is looked up under To. Reachable: the To folder is there now.</summary>
+public sealed record PathSubstituteDto(string From, string To, bool Enabled = true, bool Reachable = false);
+
+public sealed record RelocateRequest(string From, string To);
+
+public sealed record RelocateResultDto(int Changed, int Found);
+
 public sealed record CategoryDto(long Id, string Name, string Kind, string Color);
 
 /// <summary>Waveform: one linear peak (0..65535) per block, little-endian UInt16, base64.</summary>

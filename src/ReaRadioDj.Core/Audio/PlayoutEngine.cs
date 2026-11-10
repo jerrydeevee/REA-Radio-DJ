@@ -328,7 +328,7 @@ public sealed class PlayoutEngine : IDisposable
             To = hook ? cues.HookOut!.Value : cues.CueOut;
 
             _handle = BassRuntime.Check(
-                BASS_StreamCreateFile(false, media.Path, 0, 0, BASS_STREAM_DECODE | BASS_SAMPLE_FLOAT | BASS_UNICODE),
+                BASS_StreamCreateFile(false, Library.MediaPaths.Resolve(media.Path), 0, 0, BASS_STREAM_DECODE | BASS_SAMPLE_FLOAT | BASS_UNICODE),
                 $"BASS_StreamCreateFile({Path.GetFileName(media.Path)})");
             if (From > 0) BASS_ChannelSetPosition(_handle, BASS_ChannelSeconds2Bytes(_handle, From), BASS_POS_BYTE);
 

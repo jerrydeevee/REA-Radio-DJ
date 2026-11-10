@@ -69,7 +69,7 @@ public sealed class SilenceWatch(ReaRadioDjOptions options, AudioRouter router, 
     /// <summary>A random playable item from the emergency category, or null (then a random song is taken instead).</summary>
     private LogItem? Emergency(long? categoryId)
     {
-        var items = categoryId is { } id ? library.InCategory(id).Where(m => File.Exists(m.Path)).ToList() : [];
+        var items = categoryId is { } id ? library.InCategory(id).Where(m => MediaPaths.Exists(m.Path)).ToList() : [];
         if (items.Count == 0) { messages.Warning("Noodcategorie is leeg of niet gevonden; er wordt een willekeurig nummer uit de bibliotheek gespeeld"); return null; }
         return Item(Pick(items), EmergencyOrigin);
     }
@@ -82,7 +82,7 @@ public sealed class SilenceWatch(ReaRadioDjOptions options, AudioRouter router, 
         for (int i = 0; i < Math.Min(20, songs.Count); i++)
         {
             var m = Pick(songs);
-            if (File.Exists(m.Path)) return Item(m, RandomOrigin);
+            if (MediaPaths.Exists(m.Path)) return Item(m, RandomOrigin);
         }
         messages.Warning("Geen speelbaar nummer in de bibliotheek gevonden; de automatisering wordt gestart");
         return null;

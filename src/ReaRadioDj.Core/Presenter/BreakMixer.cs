@@ -71,7 +71,7 @@ public static class BreakMixer
         try
         {
             int source = BassRuntime.Check(
-                BASS_StreamCreateFile(false, path, 0, 0, BASS_STREAM_DECODE | BASS_SAMPLE_FLOAT | BASS_UNICODE),
+                BASS_StreamCreateFile(false, Library.MediaPaths.Resolve(path), 0, 0, BASS_STREAM_DECODE | BASS_SAMPLE_FLOAT | BASS_UNICODE),
                 $"BASS_StreamCreateFile({Path.GetFileName(path)})");
             BassRuntime.Check(BASS_Mixer_StreamAddChannel(mixer, source, BASS_STREAM_AUTOFREE), "BASS_Mixer_StreamAddChannel(bed)");
             var all = new List<float>(rate * 2 * 30);

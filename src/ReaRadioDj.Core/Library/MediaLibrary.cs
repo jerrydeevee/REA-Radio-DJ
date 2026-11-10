@@ -166,6 +166,49 @@ public sealed class MediaLibrary
     }
 
     /// <summary>
+    /// Moves the library for good: every stored path (and added folder) under <paramref name="from"/> now points under
+    /// <paramref name="to"/>, keeping all data. For when the music moved for good (another drive letter, a new server);
+    /// a path already taken under the new folder is left alone. Returns (paths changed, of those found at the new place).
+    /// </summary>
+    public (int Changed, int Found) Relocate(string from, string to)
+    {
+        var rule = MediaPaths.Clean([new PathSubstitute(from, to)]).FirstOrDefault();
+        if (rule is null) return (0, 0);
+        var paths = _db.Query("SELECT id, path FROM media WHERE substr(path, 1, $n) = $f COLLATE NOCASE",
+            r => (Id: r.GetInt64(0), Path: r.GetString(1)), ("$n", rule.From.Length), ("$f", rule.From));
+        int changed = 0, found = 0;
+        _db.Transaction((c, tx) =>
+        {
+            foreach (var (id, path) in paths)
+            {
+                var moved = rule.To + path[rule.From.Length..];
+                using var cmd = c.CreateCommand();
+                cmd.Transaction = tx;
+                cmd.CommandText = "UPDATE OR IGNORE media SET path = $p WHERE id = $id";
+                cmd.Parameters.AddWithValue("$p", moved);
+                cmd.Parameters.AddWithValue("$id", id);
+                if (cmd.ExecuteNonQuery() == 0) continue;
+                changed++;
+                if (File.Exists(moved)) found++;
+            }
+            using var folders = c.CreateCommand();
+            folders.Transaction = tx;
+            folders.CommandText = "UPDATE OR IGNORE library_folders SET path = $t || substr(path || '\\', $n + 1) WHERE substr(path || '\\', 1, $n) = $f COLLATE NOCASE";
+            folders.Parameters.AddWithValue("$t", rule.To);
+            folders.Parameters.AddWithValue("$n", rule.From.Length);
+            folders.Parameters.AddWithValue("$f", rule.From);
+            folders.ExecuteNonQuery();
+            folders.CommandText = "UPDATE library_folders SET path = rtrim(path, '\\') WHERE path LIKE '%\\' AND length(path) > 3";
+            folders.ExecuteNonQuery();
+        });
+        _log.LogInformation("Relocated {Count} items from {From} to {To} ({Found} found there)", changed, rule.From, rule.To, found);
+        Reload();
+        Watch();
+        Changed?.Invoke();
+        return (changed, found);
+    }
+
+    /// <summary>
     /// Removes a folder from the library. Its items are kept (hidden) with all their data, so they come back complete when
     /// the folder is added again, or when the same track turns up somewhere else. Returns the number of items kept.
     /// </summary>
@@ -705,7 +748,8 @@ public sealed class MediaLibrary
     /// </summary>
     public (byte[] Data, string Mime)? Cover(long id)
     {
-        if (Get(id) is not { } m || !File.Exists(m.Path)) return null;
+        if (Get(id) is not { } item || MediaPaths.Resolve(item.Path) is not { } path || !File.Exists(path)) return null;
+        var m = item with { Path = path };
         try
         {
             using var f = TagLib.File.Create(m.Path);

@@ -179,7 +179,7 @@ public sealed class DjDeck
         {
             Unload();
             int decode = BassRuntime.Check(
-                BASS_StreamCreateFile(false, media.Path, 0, 0, BASS_STREAM_DECODE | BASS_SAMPLE_FLOAT | BASS_STREAM_PRESCAN | BASS_UNICODE),
+                BASS_StreamCreateFile(false, Library.MediaPaths.Resolve(media.Path), 0, 0, BASS_STREAM_DECODE | BASS_SAMPLE_FLOAT | BASS_STREAM_PRESCAN | BASS_UNICODE),
                 $"BASS_StreamCreateFile({Path.GetFileName(media.Path)})");
             BASS_ChannelGetAttribute(decode, BASS_ATTRIB_FREQ, out _sourceRate);
             _duration = BASS_ChannelBytes2Seconds(decode, BASS_ChannelGetLength(decode, BASS_POS_BYTE));

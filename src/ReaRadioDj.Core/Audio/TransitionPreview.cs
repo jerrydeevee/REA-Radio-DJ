@@ -55,7 +55,7 @@ public static class TransitionPreview
     internal static float[] Read(string path, double from, double seconds, int rate)
     {
         if (seconds <= 0) return [];
-        int source = BassRuntime.Check(BASS_StreamCreateFile(false, path, 0, 0, BASS_STREAM_DECODE | BASS_SAMPLE_FLOAT | BASS_UNICODE),
+        int source = BassRuntime.Check(BASS_StreamCreateFile(false, Library.MediaPaths.Resolve(path), 0, 0, BASS_STREAM_DECODE | BASS_SAMPLE_FLOAT | BASS_UNICODE),
             $"BASS_StreamCreateFile({Path.GetFileName(path)})");
         int mixer = 0;
         try

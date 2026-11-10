@@ -188,6 +188,35 @@
             <Button Classes="small" Content="Toevoegen" Command="{Binding AddFolderCommand}" />
           </WrapPanel>
           <TextBlock Classes="muted" Text="{Binding FolderStatus}" TextWrapping="Wrap" />
+          <TextBlock Classes="h" Text="Vervangende locaties" Margin="0,6,0,0" />
+          <TextBlock Classes="muted" TextWrapping="Wrap"
+                     Text="Staat een bestand niet op zijn pad (share weg, andere stationsletter, andere pc), dan zoekt de engine hetzelfde bestand onder de vervangende map. Bijvoorbeeld Y:\Muziek → \\nas\muziek. 'Definitief omzetten' past de paden in de bibliotheek blijvend aan." />
+          <ItemsControl ItemsSource="{Binding Substitutes}">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="vm:SubstituteRow">
+                <DockPanel Margin="0,0,0,3">
+                  <Button DockPanel.Dock="Right" Classes="small" Content="✕" Margin="4,0,0,0"
+                          Command="{Binding $parent[ItemsControl].DataContext.RemoveSubstituteCommand}" CommandParameter="{Binding}" />
+                  <Button DockPanel.Dock="Right" Classes="small" Content="{Binding RelocateText}" Margin="4,0,0,0"
+                          Command="{Binding $parent[ItemsControl].DataContext.RelocateCommand}" CommandParameter="{Binding}"
+                          ToolTip.Tip="Zet de opgeslagen paden blijvend om naar de nieuwe map (alle gegevens blijven)" />
+                  <CheckBox DockPanel.Dock="Left" IsChecked="{Binding Enabled}" ToolTip.Tip="Aan of uit" />
+                  <TextBlock DockPanel.Dock="Right" Text="niet bereikbaar" Foreground="#F0B429" FontSize="11" VerticalAlignment="Center"
+                             Margin="4,0,0,0" IsVisible="{Binding !Reachable}" />
+                  <Grid ColumnDefinitions="*,Auto,*">
+                    <TextBox Grid.Column="0" Text="{Binding From}" Watermark="oude map, bijv. Y:\Muziek" />
+                    <TextBlock Grid.Column="1" Text=" → " VerticalAlignment="Center" />
+                    <TextBox Grid.Column="2" Text="{Binding To}" Watermark="vervangende map, bijv. \\nas\muziek" />
+                  </Grid>
+                </DockPanel>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+          <StackPanel Orientation="Horizontal" Spacing="4">
+            <Button Classes="small" Content="+ vervangende locatie" Command="{Binding AddSubstituteCommand}" />
+            <Button Classes="small" Content="Opslaan" Command="{Binding SaveSubstitutesCommand}" />
+          </StackPanel>
+          <TextBlock Classes="muted" Text="{Binding SubstituteStatus}" TextWrapping="Wrap" />
         </StackPanel>
       </Expander>
     </StackPanel>

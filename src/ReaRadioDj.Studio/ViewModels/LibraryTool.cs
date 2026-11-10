@@ -301,6 +301,51 @@ public sealed partial class LibraryTool : StudioTool
         if (list is null) return;
         Folders.Clear();
         foreach (var f in list) Folders.Add(new LibraryFolderVm(this, f));
+        await LoadSubstitutesAsync();
+    }
+
+    // ---- replacement locations
+    public ObservableCollection<SubstituteRow> Substitutes { get; } = [];
+    [ObservableProperty] private string _substituteStatus = "";
+
+    private async Task LoadSubstitutesAsync()
+    {
+        if (await Hub.Client.GetAsync<List<PathSubstituteDto>>("/api/library/substitutes") is not { } list) return;
+        Substitutes.Clear();
+        foreach (var d in list) Substitutes.Add(new SubstituteRow { From = d.From, To = d.To, Enabled = d.Enabled, Reachable = d.Reachable });
+    }
+
+    [RelayCommand] private void AddSubstitute() => Substitutes.Add(new SubstituteRow());
+    [RelayCommand] private void RemoveSubstitute(SubstituteRow? row) { if (row is not null) Substitutes.Remove(row); }
+
+    [RelayCommand]
+    private async Task SaveSubstitutes()
+    {
+        var body = Substitutes.Where(r => r.From.Trim().Length > 0 && r.To.Trim().Length > 0)
+            .Select(r => new PathSubstituteDto(r.From.Trim(), r.To.Trim(), r.Enabled)).ToList();
+        var saved = await Hub.Client.SendForAsync<List<PathSubstituteDto>>(HttpMethod.Put, "/api/library/substitutes", body);
+        SubstituteStatus = saved is null ? "Opslaan mislukt." : $"{saved.Count} vervangende locaties bewaard.";
+        await LoadSubstitutesAsync();
+    }
+
+    /// <summary>Moves the stored paths for good; asks for a second click first.</summary>
+    [RelayCommand]
+    private async Task Relocate(SubstituteRow? row)
+    {
+        if (row is null || row.From.Trim().Length == 0 || row.To.Trim().Length == 0) return;
+        if (!row.ConfirmRelocate)
+        {
+            foreach (var r in Substitutes) r.ConfirmRelocate = false;
+            row.ConfirmRelocate = true;
+            SubstituteStatus = $"Nog een keer klikken zet alle paden onder {row.From} definitief om naar {row.To} (alle gegevens blijven).";
+            return;
+        }
+        row.ConfirmRelocate = false;
+        var (r2, error) = await Hub.Client.SendWithErrorAsync<RelocateResultDto>(HttpMethod.Post, "/api/library/relocate",
+            new RelocateRequest(row.From.Trim(), row.To.Trim()));
+        SubstituteStatus = r2 is null ? error ?? "Omzetten mislukt."
+            : $"{r2.Changed} paden omgezet naar {row.To}; {r2.Found} daarvan staan er nu ook echt.";
+        await LoadFoldersAsync();
     }
 
     [RelayCommand]

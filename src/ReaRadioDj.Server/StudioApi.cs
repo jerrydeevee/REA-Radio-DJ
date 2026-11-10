@@ -132,12 +132,12 @@ public static class StudioApi
         // The audio file itself, with range support (browser pre-listen and waveform scrubbing).
         api.MapGet("/media/{id:long}/audio", (long id, MediaLibrary library) =>
         {
-            if (library.Get(id) is not { } m || !File.Exists(m.Path)) return Results.NotFound();
-            var type = Path.GetExtension(m.Path).ToLowerInvariant() switch
+            if (library.Get(id) is not { } m || MediaPaths.Resolve(m.Path) is not { } file || !File.Exists(file)) return Results.NotFound();
+            var type = Path.GetExtension(file).ToLowerInvariant() switch
             {
                 ".mp3" => "audio/mpeg", ".wav" => "audio/wav", ".flac" => "audio/flac", ".ogg" => "audio/ogg", _ => "application/octet-stream",
             };
-            return Results.File(m.Path, type, enableRangeProcessing: true);
+            return Results.File(file, type, enableRangeProcessing: true);
         });
 
         api.MapGet("/categories", (MediaLibrary library) => library.Categories.Select(Category));

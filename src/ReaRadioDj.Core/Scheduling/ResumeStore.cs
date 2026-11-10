@@ -57,7 +57,7 @@ public sealed class ResumeStore(string path)
     {
         if (state is not { Type: { } type, Media: { } media }) return null;
         if (now - state.SavedAt > ContinueItemWithin) return null;
-        if (!File.Exists(media.Path)) return null;
+        if (!Library.MediaPaths.Exists(media.Path)) return null;
         double from = state.Position + Math.Max(0, (now - state.SavedAt).TotalSeconds);
         if (from <= media.CueIn + 1 || from > media.CueOut - MinimumLeft) return null;
         return new LogItem

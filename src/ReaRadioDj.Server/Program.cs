@@ -175,6 +175,7 @@ DjApi.Map(api);
 SystemApi.Map(api, options, args);
 OutputsApi.Map(api, options);
 TitleLogApi.Map(api, options);
+PathsApi.Map(api, app.Services.GetRequiredService<StationDb>());
 ChannelsApi.Map(api, options);
 VoiceApi.Map(api);
 PresenterApi.Map(api, options);
