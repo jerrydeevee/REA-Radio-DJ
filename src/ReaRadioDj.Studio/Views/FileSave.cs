@@ -11,12 +11,14 @@ public static class FileSave
     public static async Task<bool> FromEngineAsync(Visual owner, string title, string suggestedName, string url)
     {
         if (TopLevel.GetTopLevel(owner)?.StorageProvider is not { } storage) return false;
+        // the type follows the suggested name: .csv, .pdf, .json ...
+        var ext = Path.GetExtension(suggestedName).TrimStart('.') is { Length: > 0 } e ? e.ToLowerInvariant() : "csv";
         var file = await storage.SaveFilePickerAsync(new FilePickerSaveOptions
         {
             Title = title,
             SuggestedFileName = suggestedName,
-            DefaultExtension = "csv",
-            FileTypeChoices = [new FilePickerFileType("CSV") { Patterns = ["*.csv"] }],
+            DefaultExtension = ext,
+            FileTypeChoices = [new FilePickerFileType(ext.ToUpperInvariant()) { Patterns = [$"*.{ext}"] }],
         });
         if (file is null) return false;
         var bytes = await StudioHub.Current.Client.GetBytesAsync(url);

@@ -66,6 +66,34 @@ public sealed class MusicReport(StationDb db)
         return sb.ToString();
     }
 
+    /// <summary>The same report as a PDF to print or send: every broadcast, or one line per track (<paramref name="summary"/>).</summary>
+    public static byte[] Pdf(IReadOnlyList<MusicReportRow> rows, string station, DateOnly from, DateOnly to, bool summary)
+    {
+        var nl = CultureInfo.GetCultureInfo("nl-NL");
+        double total = rows.Sum(r => r.Seconds);
+        var intro = new List<string>
+        {
+            $"{station}  ·  periode {from.ToString("d MMMM yyyy", nl)} t/m {to.ToString("d MMMM yyyy", nl)}",
+            $"{rows.Count} uitzendingen van muziek, samen {Duration(total)}; zonder ISRC: {rows.Count(r => r.Isrc.Length == 0)}, zonder componist/auteur: {rows.Count(r => r.Composer.Length == 0)}.",
+        };
+        string footer = $"Opgemaakt {DateTime.Now.ToString("d-M-yyyy HH:mm", nl)} door REA-Radio-DJ, uit de uitzendregistratie";
+        if (!summary)
+        {
+            PdfColumn[] cols = [new("Datum", 52), new("Tijd", 40), new("Duur", 36, true), new("Uitvoerende", 130), new("Titel", 150),
+                new("Componist / auteur", 125), new("Label", 85), new("ISRC", 78), new("Jaar", 30, true)];
+            var lines = rows.Select(x => (IReadOnlyList<string>)[x.Started.ToString("d-M-yyyy", nl), x.Started.ToString("HH:mm:ss", nl),
+                Duration(x.Seconds), x.Artist, x.Title, x.Composer, x.Label, x.Isrc, x.Year?.ToString(nl) ?? ""]);
+            return PdfTable.Build($"Muziekrapport {station}", intro, cols, lines, footer);
+        }
+        PdfColumn[] sum = [new("Uitvoerende", 150), new("Titel", 170), new("Componist / auteur", 140), new("Label", 90), new("ISRC", 82),
+            new("Keer", 34, true), new("Totale duur", 56, true)];
+        var groups = rows.GroupBy(x => (x.Isrc.Length > 0 ? x.Isrc : $"{x.Artist}|{x.Title}").ToUpperInvariant())
+            .OrderByDescending(g => g.Count()).ThenBy(g => g.First().Artist)
+            .Select(g => (IReadOnlyList<string>)[g.First().Artist, g.First().Title, g.First().Composer, g.First().Label, g.First().Isrc,
+                g.Count().ToString(nl), Duration(g.Sum(y => y.Seconds))]);
+        return PdfTable.Build($"Muziekrapport {station} (per nummer)", intro, sum, groups, footer);
+    }
+
     private static string Duration(double s) => TimeSpan.FromSeconds(Math.Round(s)).ToString(s >= 3600 ? @"h\:mm\:ss" : @"m\:ss", CultureInfo.InvariantCulture);
 
     private static string F(string? s) => s is null ? "" : s.Contains(';') || s.Contains('"') || s.Contains('\n') ? $"\"{s.Replace("\"", "\"\"")}\"" : s;

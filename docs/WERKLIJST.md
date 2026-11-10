@@ -177,7 +177,7 @@ Vragen bij stap 6:
 | ✅ | Tags lezen en terugschrijven, hoezen — Markers, beatgrid en BPM gaan per map optioneel het bestand in (ID3v2 TXXX "REA-RADIO-DJ" of Vorbis-commentaar REA_RADIO_DJ, plus de gewone BPM-tag) en worden bij het inlezen teruggelezen; Op verzoek gaat alles wat de bibliotheek weet het bestand in (artiest, titel, album, genre, jaar, taal, sfeer, waardering, BPM, toonsoort, ISRC, componist, label, ReplayGain), per nummer of voor een selectie; hoes kiezen of weghalen in het detailvenster. |
 | ✅ | Overgangen en mixpunten per soort item en per nummer — per nummer met de cue-editor en het overgangsvenster; per soort (nummer, jingle, stem, voicetrack, AI-break, reclame) en per categorie met regels in Instellingen › Mix: automatisch, achter elkaar, overlap of uitfaden in N seconden. De bovenste passende regel telt; een handgemaakte overgang gaat voor. |
 | ⬜ | Centrale bibliotheek voor meerdere studio's |
-| 🟡 | Rapportage auteursrechten in een eigen indeling (CSV en PDF); er is geen voorgeschreven sjabloon |
+| ✅ | Rapportage auteursrechten in een eigen indeling (CSV en PDF); er is geen voorgeschreven sjabloon — in As-run: elke uitzending of een overzicht per nummer, als CSV of PDF (A4 liggend, met periode, totalen en ontbrekende ISRC/componist). |
 | ✅ | Reclame-afspeelrapport per adverteerder en campagne, als bewijs voor klanten en stichtingen; export als CSV en JSON om later te koppelen: Reclame › Uitzendbewijs filtert op periode, adverteerder of campagne, toont totalen (gepland, uitgezonden, volledig, gemist, zendtijd) en exporteert het uitzendbewijs (CSV), het overzicht (CSV) en alles samen (JSON) |
 
 ### Bibliotheek: slimmer en gebruiksvriendelijker

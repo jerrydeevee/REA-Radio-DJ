@@ -167,6 +167,12 @@ public static class WishlistApi
             var csv = summary == true ? MusicReport.SummaryCsv(rows, options.StationName) : MusicReport.Csv(rows, options.StationName);
             return Results.File(Bom(csv), "text/csv", $"muziekrapport-{(summary == true ? "overzicht-" : "")}{from:yyyy-MM-dd}-{to:yyyy-MM-dd}.csv");
         });
+        api.MapGet("/reports/music.pdf", (MusicReport report, DateOnly from, DateOnly to, bool? summary) =>
+        {
+            var rows = report.Rows(from.ToDateTime(TimeOnly.MinValue), to.AddDays(1).ToDateTime(TimeOnly.MinValue));
+            return Results.File(MusicReport.Pdf(rows, options.StationName, from, to, summary == true), "application/pdf",
+                $"muziekrapport-{(summary == true ? "overzicht-" : "")}{from:yyyy-MM-dd}-{to:yyyy-MM-dd}.pdf");
+        });
         api.MapGet("/reports/music", (MusicReport report, DateOnly from, DateOnly to) =>
         {
             var rows = report.Rows(from.ToDateTime(TimeOnly.MinValue), to.AddDays(1).ToDateTime(TimeOnly.MinValue));

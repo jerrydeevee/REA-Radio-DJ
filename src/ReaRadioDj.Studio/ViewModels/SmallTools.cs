@@ -318,8 +318,8 @@ public sealed partial class AsRunTool : StudioTool
 
     private string FromText => (ReportFrom ?? DateTime.Today).ToString("yyyy-MM-dd");
     private string ToText => (ReportTo ?? DateTime.Today).ToString("yyyy-MM-dd");
-    public string ReportUrl(bool summary) => $"/api/reports/music.csv?from={FromText}&to={ToText}&summary={(summary ? "true" : "false")}";
-    public string ReportFileName(bool summary) => $"muziekrapport-{(summary ? "overzicht-" : "")}{FromText}-{ToText}.csv";
+    public string ReportUrl(bool summary, string type = "csv") => $"/api/reports/music.{type}?from={FromText}&to={ToText}&summary={(summary ? "true" : "false")}";
+    public string ReportFileName(bool summary, string type = "csv") => $"muziekrapport-{(summary ? "overzicht-" : "")}{FromText}-{ToText}.{type}";
 
     [RelayCommand]
     private async Task LoadReportAsync()

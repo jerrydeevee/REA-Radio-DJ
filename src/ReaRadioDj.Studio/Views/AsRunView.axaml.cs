@@ -28,6 +28,14 @@ public partial class AsRunView : UserControl
         {
             if (DataContext is AsRunTool t) await FileSave.FromEngineAsync(this, "Muziekrapport opslaan", t.ReportFileName(false), t.ReportUrl(false));
         };
+        ReportPdf.Click += async (_, _) =>
+        {
+            if (DataContext is AsRunTool t) await FileSave.FromEngineAsync(this, "Muziekrapport als PDF opslaan", t.ReportFileName(false, "pdf"), t.ReportUrl(false, "pdf"));
+        };
+        ReportSumPdf.Click += async (_, _) =>
+        {
+            if (DataContext is AsRunTool t) await FileSave.FromEngineAsync(this, "Overzicht als PDF opslaan", t.ReportFileName(true, "pdf"), t.ReportUrl(true, "pdf"));
+        };
         ReportSum.Click += async (_, _) =>
         {
             if (DataContext is AsRunTool t) await FileSave.FromEngineAsync(this, "Overzicht per nummer opslaan", t.ReportFileName(true), t.ReportUrl(true));
