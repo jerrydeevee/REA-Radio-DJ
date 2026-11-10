@@ -37,6 +37,17 @@ public sealed class AsRunLog(StationDb db)
                 r.GetStringOrNull(9), r.GetDoubleOrNull(10), r.GetDoubleOrNull(11), r.GetInt64(12) != 0, r.GetStringOrNull(13)),
             ("$f", StationDb.Iso(from)), ("$t", StationDb.Iso(to)));
 
+    /// <summary>The last times one library item went on air, newest first.</summary>
+    public IReadOnlyList<AsRunEntry> ForMedia(long mediaId, int limit = 10) =>
+        db.Query("""
+            SELECT id, started, ended, source, type, media_id, path, artist, title, category, planned, played, ai, note
+            FROM asrun WHERE media_id = $m ORDER BY started DESC LIMIT $l
+            """,
+            r => new AsRunEntry(r.GetInt64(0), StationDb.ParseIso(r.GetString(1)) ?? default, StationDb.ParseIso(r.GetStringOrNull(2)),
+                r.GetString(3), r.GetString(4), r.GetInt64OrNull(5), r.GetStringOrNull(6), r.GetStringOrNull(7), r.GetStringOrNull(8),
+                r.GetStringOrNull(9), r.GetDoubleOrNull(10), r.GetDoubleOrNull(11), r.GetInt64(12) != 0, r.GetStringOrNull(13)),
+            ("$m", mediaId), ("$l", limit));
+
     public IReadOnlyList<AsRunEntry> Day(DateOnly day) =>
         Range(day.ToDateTime(TimeOnly.MinValue), day.AddDays(1).ToDateTime(TimeOnly.MinValue));
 

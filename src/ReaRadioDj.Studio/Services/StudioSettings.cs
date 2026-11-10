@@ -27,6 +27,12 @@ public sealed class StudioSettings
     public string CounterColor { get; set; } = "#F5F7FA";
     public bool DecksHorizontal { get; set; } = true;
 
+    /// <summary>Library window: detail pane, large rows for touch, sort order, what a double click does.</summary>
+    public bool LibraryDetails { get; set; } = true;
+    public bool LibraryLarge { get; set; }
+    public string LibrarySort { get; set; } = "relevance";
+    public string LibraryDoubleClick { get; set; } = "pfl";
+
     /// <summary>Key (Avalonia gesture text, e.g. "F5", "Ctrl+B", "Shift+F1") → engine command.</summary>
     public Dictionary<string, string> Hotkeys { get; set; } = DefaultHotkeys();
 

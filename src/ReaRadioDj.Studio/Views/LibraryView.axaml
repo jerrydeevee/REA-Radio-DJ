@@ -2,124 +2,218 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:ReaRadioDj.Studio.ViewModels"
              xmlns:c="using:ReaRadioDj.Contracts"
+             xmlns:ctl="using:ReaRadioDj.Studio.Controls"
              x:Class="ReaRadioDj.Studio.Views.LibraryView"
              x:DataType="vm:LibraryTool">
-  <DockPanel Margin="6">
-    <DockPanel DockPanel.Dock="Top" Margin="0,0,0,4">
-      <Button DockPanel.Dock="Right" Classes="small" Content="⟳" Command="{Binding ScanCommand}" Margin="4,0,0,0"
-              ToolTip.Tip="Nu alles nakijken. Normaal niet nodig: nieuwe en gewijzigde bestanden worden vanzelf verwerkt." />
-      <ComboBox DockPanel.Dock="Right" ItemsSource="{Binding Decades}" SelectedItem="{Binding Decade}" Width="110" Margin="4,0,0,0"
-                ToolTip.Tip="Decennium (jaar uit de tags)" />
-      <ComboBox DockPanel.Dock="Right" ItemsSource="{Binding CategoryChoices}" SelectedItem="{Binding Category}" Width="170" Margin="4,0,0,0" />
-      <Button DockPanel.Dock="Right" Classes="small" Content="?" Command="{Binding ToggleHelpCommand}" Margin="4,0,0,0"
-              ToolTip.Tip="Zoekmogelijkheden" />
-      <TextBox x:Name="SearchBox" Text="{Binding Query}" Watermark="Zoek artiest, titel, album, jaar… (? = hulp)">
-        <TextBox.InnerRightContent>
-          <Button Classes="small" Content="✕" Command="{Binding ClearSearchCommand}" Padding="6,0" Background="Transparent" BorderThickness="0"
-                  IsVisible="{Binding Query, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" ToolTip.Tip="Zoekvak leegmaken (Esc)" />
-        </TextBox.InnerRightContent>
-      </TextBox>
-    </DockPanel>
-    <ItemsControl DockPanel.Dock="Top" ItemsSource="{Binding Chips}" Margin="0,0,0,4">
-      <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
-      <ItemsControl.ItemTemplate>
-        <DataTemplate x:DataType="vm:FilterChip">
-          <ToggleButton Classes="chip" Content="{Binding Label}" IsChecked="{Binding IsOn}" ToolTip.Tip="{Binding Tip}" Margin="0,0,4,4" />
-        </DataTemplate>
-      </ItemsControl.ItemTemplate>
-    </ItemsControl>
-    <DockPanel DockPanel.Dock="Top" Margin="0,0,0,4">
-      <TextBlock DockPanel.Dock="Right" Classes="muted" Text="{Binding ResultText}" />
-      <TextBlock Classes="muted" Text="{Binding Status}" TextTrimming="CharacterEllipsis" />
-    </DockPanel>
-    <Border DockPanel.Dock="Top" IsVisible="{Binding ShowHelp}" Classes="card" Padding="8" Margin="0,0,0,4">
-      <StackPanel Spacing="2">
-        <TextBlock Classes="h" Text="Zoeken" />
-        <ItemsControl ItemsSource="{Binding HelpLines}">
-          <ItemsControl.ItemTemplate>
-            <DataTemplate x:DataType="c:SearchHelpDto">
-              <Grid ColumnDefinitions="260,*">
-                <TextBlock Classes="mono" Text="{Binding Example}" TextWrapping="Wrap" />
-                <TextBlock Grid.Column="1" Text="{Binding Meaning}" TextWrapping="Wrap" Margin="8,0,0,0" />
-              </Grid>
-            </DataTemplate>
-          </ItemsControl.ItemTemplate>
-        </ItemsControl>
-        <TextBlock Classes="muted" TextWrapping="Wrap" Text="Filters en woorden mag je combineren, bijvoorbeeld: is:mag jaar:198 duur:&lt;4:00 queen" />
-      </StackPanel>
-    </Border>
-    <WrapPanel DockPanel.Dock="Top" Margin="0,0,0,4">
-      <Button Classes="small" Margin="0,0,4,4" Content="Volgende" Command="{Binding NextCommand}" />
-      <Button Classes="small" Margin="0,0,4,4" Content="Achteraan" Command="{Binding EndCommand}" />
-      <Button Classes="small" Margin="0,0,4,4" Content="Standby 1" Command="{Binding StandbyCommand}" CommandParameter="standby1" />
-      <Button Classes="small" Margin="0,0,4,4" Content="Standby 2" Command="{Binding StandbyCommand}" CommandParameter="standby2" />
-      <Button Classes="small" Margin="0,0,4,4" Content="PFL" Command="{Binding PflCommand}" ToolTip.Tip="Voorbeluisteren op de koptelefoon" />
-      <Button Classes="small" Margin="0,0,4,4" Content="Overlay" Command="{Binding OverlayCommand}" ToolTip.Tip="Over de muziek heen (muziek dimt)" />
-      <Button Classes="small" Margin="0,0,4,4" Content="Cues" Command="{Binding CuesCommand}" />
-    </WrapPanel>
-    <Expander DockPanel.Dock="Bottom" Header="Mappen en shares" Margin="0,4,0,0" HorizontalAlignment="Stretch">
-      <StackPanel Spacing="6">
-        <TextBlock Classes="muted" TextWrapping="Wrap"
-                   Text="Kies zelf waar de bibliotheek leest: een map op deze pc, een andere schijf of een share (\\server\muziek). Nieuwe bestanden worden vanzelf ingelezen; tags, beat, verloop en markers worden gemeten en bewaard. Een map verwijderen bewaart de nummers met al hun gegevens: komt een nummer later terug, hier of elders, dan wordt het herkend." />
-        <ItemsControl ItemsSource="{Binding Folders}">
-          <ItemsControl.ItemTemplate>
-            <DataTemplate x:DataType="vm:LibraryFolderVm">
-              <Border Classes="card" Padding="6" Margin="0,0,0,4">
-                <StackPanel Spacing="3">
-                  <DockPanel>
-                    <Button DockPanel.Dock="Right" Classes="small" Content="{Binding RemoveText}" Command="{Binding RemoveCommand}" IsVisible="{Binding Editable}"
-                            ToolTip.Tip="Haalt de map uit de bibliotheek; de nummers en hun gegevens blijven bewaard" />
-                    <TextBlock Text="{Binding Title}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" FontWeight="SemiBold" />
-                  </DockPanel>
-                  <TextBlock Classes="muted" Text="{Binding StateText}" />
-                  <TextBlock Text="Niet bereikbaar: de nummers van deze map blijven gewoon bewaard en komen terug zodra de map er weer is."
-                             Foreground="#F0B429" FontSize="11" TextWrapping="Wrap" IsVisible="{Binding Offline}" />
-                  <WrapPanel IsVisible="{Binding Editable}">
-                    <TextBlock Text="{Binding KindText, StringFormat='Soort: {0}'}" VerticalAlignment="Center" Margin="0,0,12,0" />
-                    <TextBox Text="{Binding Category}" Watermark="categorie (leeg = submappen)" Width="200" Margin="0,0,4,0" />
-                    <Button Classes="small" Content="Opslaan" Command="{Binding SaveCategoryCommand}" Margin="0,0,12,0" />
-                    <CheckBox Content="Bewaken" IsChecked="{Binding Watch}" Margin="0,0,12,0" ToolTip.Tip="Nieuwe en gewijzigde bestanden direct verwerken" />
-                    <CheckBox Content="Markers in het bestand" IsChecked="{Binding WriteTags}" Margin="0,0,12,0"
-                              ToolTip.Tip="Cues, beat en BPM ook in de tags van het audiobestand zetten, zodat ze met het bestand meegaan" />
-                    <CheckBox Content="Aan" IsChecked="{Binding Enabled}" />
-                  </WrapPanel>
-                </StackPanel>
-              </Border>
-            </DataTemplate>
-          </ItemsControl.ItemTemplate>
-        </ItemsControl>
-        <TextBlock Classes="h" Text="Map toevoegen" />
-        <DockPanel>
-          <Button x:Name="BrowseFolder" DockPanel.Dock="Right" Classes="small" Content="Bladeren…" Margin="4,0,0,0" />
-          <TextBox Text="{Binding NewFolderPath}" Watermark="D:\Muziek of \\server\muziek" />
-        </DockPanel>
+  <Grid Margin="6" RowDefinitions="Auto,*,Auto">
+    <ScrollViewer x:Name="TopArea" Grid.Row="0" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+    <StackPanel>
+      <Grid ColumnDefinitions="*,Auto,Auto" Margin="0,0,0,4">
+        <TextBox x:Name="SearchBox" Text="{Binding Query}" Watermark="Zoek artiest, titel, album, jaar… (? = hulp)">
+          <TextBox.InnerRightContent>
+            <Button Classes="small" Content="✕" Command="{Binding ClearSearchCommand}" Padding="6,0" Background="Transparent" BorderThickness="0"
+                    IsVisible="{Binding Query, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" ToolTip.Tip="Zoekvak leegmaken (Esc)" />
+          </TextBox.InnerRightContent>
+        </TextBox>
+        <Button Grid.Column="1" Classes="small" Content="?" Command="{Binding ToggleHelpCommand}" Margin="4,0,0,0"
+                ToolTip.Tip="Zoekmogelijkheden en sneltoetsen" />
+        <Button Grid.Column="2" Classes="small" Content="⟳" Command="{Binding ScanCommand}" Margin="4,0,0,0"
+                ToolTip.Tip="Nu alles nakijken. Normaal niet nodig: nieuwe en gewijzigde bestanden worden vanzelf verwerkt." />
+      </Grid>
+      <WrapPanel Margin="0,0,0,0">
+        <ComboBox ItemsSource="{Binding CategoryChoices}" SelectedItem="{Binding Category}" Width="170" Margin="0,0,4,4" ToolTip.Tip="Categorie" />
+        <ComboBox ItemsSource="{Binding Decades}" SelectedItem="{Binding Decade}" Width="110" Margin="0,0,4,4" ToolTip.Tip="Decennium (jaar uit de tags)" />
+        <ComboBox ItemsSource="{Binding Sorts}" SelectedItem="{Binding Sort}" Width="150" Margin="0,0,4,4" ToolTip.Tip="Sorteren" />
+        <ComboBox ItemsSource="{Binding ClickActions}" SelectedItem="{Binding DoubleClick}" Width="200" Margin="0,0,4,4"
+                  ToolTip.Tip="Wat dubbelklikken (of dubbel tikken) op een nummer doet" />
+        <ToggleButton Classes="chip" Content="Details" IsChecked="{Binding ShowDetails}" Margin="0,0,4,4"
+                      ToolTip.Tip="Detailpaneel naast de lijst (verschijnt zodra het paneel breed genoeg is)" />
+        <ToggleButton Classes="chip" Content="Grote regels" IsChecked="{Binding LargeRows}" Margin="0,0,4,4" ToolTip.Tip="Grotere regels voor het touchscreen" />
+      </WrapPanel>
+      <ItemsControl ItemsSource="{Binding Chips}" Margin="0,0,0,4">
+        <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+        <ItemsControl.ItemTemplate>
+          <DataTemplate x:DataType="vm:FilterChip">
+            <ToggleButton Classes="chip" Content="{Binding Label}" IsChecked="{Binding IsOn}" ToolTip.Tip="{Binding Tip}" Margin="0,0,4,4" />
+          </DataTemplate>
+        </ItemsControl.ItemTemplate>
+      </ItemsControl>
+      <DockPanel Margin="0,0,0,4">
+        <TextBlock DockPanel.Dock="Right" Classes="muted" Text="{Binding ResultText}" />
+        <TextBlock Classes="muted" Text="{Binding Status}" TextTrimming="CharacterEllipsis" />
+      </DockPanel>
+      <Border IsVisible="{Binding ShowHelp}" Classes="card" Padding="8" Margin="0,0,0,4">
+        <StackPanel Spacing="2">
+          <TextBlock Classes="h" Text="Zoeken" />
+          <ItemsControl ItemsSource="{Binding HelpLines}">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="c:SearchHelpDto">
+                <Grid ColumnDefinitions="260,*">
+                  <TextBlock Classes="mono" Text="{Binding Example}" TextWrapping="Wrap" />
+                  <TextBlock Grid.Column="1" Text="{Binding Meaning}" TextWrapping="Wrap" Margin="8,0,0,0" />
+                </Grid>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+          <TextBlock Classes="muted" TextWrapping="Wrap" Text="Sneltoetsen in de lijst: Enter = volgende · Ctrl+Enter = achteraan · spatie = voorluisteren · Esc = stoppen · Ctrl/Shift = meer kiezen · rechtsklik = menu · gewoon typen = zoeken" />
+          <TextBlock Classes="muted" TextWrapping="Wrap" Text="Filters en woorden mag je combineren, bijvoorbeeld: is:mag jaar:198 duur:&lt;4:00 queen" />
+        </StackPanel>
+      </Border>
+      <WrapPanel Margin="0,0,0,4">
+        <Button Classes="small" Margin="0,0,4,4" Content="Volgende" Command="{Binding NextCommand}" />
+        <Button Classes="small" Margin="0,0,4,4" Content="Achteraan" Command="{Binding EndCommand}" />
+        <Button Classes="small" Margin="0,0,4,4" Content="Standby 1" Command="{Binding StandbyCommand}" CommandParameter="standby1" />
+        <Button Classes="small" Margin="0,0,4,4" Content="Standby 2" Command="{Binding StandbyCommand}" CommandParameter="standby2" />
+        <Button Classes="small" Margin="0,0,4,4" Content="PFL" Command="{Binding PflCommand}" ToolTip.Tip="Voorbeluisteren op de koptelefoon" />
+        <Button Classes="small" Margin="0,0,4,4" Content="Overlay" Command="{Binding OverlayCommand}" ToolTip.Tip="Over de muziek heen (muziek dimt)" />
+        <Button Classes="small" Margin="0,0,4,4" Content="Cues" Command="{Binding CuesCommand}" />
+      </WrapPanel>
+      <Border Classes="card" Padding="6" Margin="0,0,0,4" IsVisible="{Binding HasMulti}">
         <WrapPanel>
-          <CheckBox Content="Jingles" IsChecked="{Binding NewFolderIsJingle}" Margin="0,0,12,0" />
-          <TextBox Text="{Binding NewFolderCategory}" Watermark="vaste categorie (leeg = submappen)" Width="230" Margin="0,0,12,0" />
-          <CheckBox Content="Markers in het bestand" IsChecked="{Binding NewFolderWriteTags}" Margin="0,0,12,0" />
-          <Button Classes="small" Content="Toevoegen" Command="{Binding AddFolderCommand}" />
+          <TextBlock Text="{Binding SelectionText}" FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,12,0" />
+          <ComboBox ItemsSource="{Binding CategoryChoices}" SelectedItem="{Binding BulkCategory}" Width="170" Margin="0,0,4,0" />
+          <Button Classes="small" Content="Verplaatsen" Command="{Binding BulkMoveCommand}" Margin="0,0,12,0" />
+          <Button Classes="small" Content="Aan" Command="{Binding BulkOnCommand}" Margin="0,0,4,0" />
+          <Button Classes="small" Content="Uit" Command="{Binding BulkOffCommand}" Margin="0,0,4,0" ToolTip.Tip="Niet meer inplannen" />
+          <Button Classes="small" Content="Geldigheid wissen" Command="{Binding BulkClearDatesCommand}" Margin="0,0,4,0" />
+          <Button Classes="small" Content="Allemaal achteraan in de log" Command="{Binding BulkToLogCommand}" Margin="0,0,12,0" />
+          <TextBlock Classes="muted" Text="{Binding BulkText}" VerticalAlignment="Center" />
         </WrapPanel>
-        <TextBlock Classes="muted" Text="{Binding FolderStatus}" TextWrapping="Wrap" />
-      </StackPanel>
-    </Expander>
-    <Expander DockPanel.Dock="Bottom" Header="Categorieën en item" Margin="0,4,0,0" HorizontalAlignment="Stretch">
-      <StackPanel Spacing="6">
-        <DockPanel>
-          <Button DockPanel.Dock="Right" Classes="small" Content="Verplaats selectie" Margin="4,0,0,0"
-                  Command="{Binding MoveToCategoryCommand}" CommandParameter="{Binding #MoveTarget.SelectedItem}" />
-          <ComboBox x:Name="MoveTarget" ItemsSource="{Binding CategoryChoices}" HorizontalAlignment="Stretch" />
-        </DockPanel>
-        <Button Classes="small" Content="Selectie aan/uit (niet meer inplannen)" Command="{Binding ToggleEnabledCommand}" />
-        <DockPanel>
-          <Button DockPanel.Dock="Right" Classes="small" Content="Toevoegen" Command="{Binding AddCategoryCommand}" Margin="4,0,0,0" />
-          <CheckBox DockPanel.Dock="Right" Content="jingle" IsChecked="{Binding NewCategoryIsJingle}" Margin="4,0,0,0" />
-          <TextBox Text="{Binding NewCategory}" Watermark="nieuwe categorie" />
-        </DockPanel>
-        <TextBlock Classes="muted" TextWrapping="Wrap"
-                   Text="Tip: elke submap van de muziek- of jinglemap wordt bij het inlezen een categorie." />
-      </StackPanel>
-    </Expander>
-    <ListBox x:Name="List" ItemsSource="{Binding Items}" SelectedItem="{Binding Selected}">
+      </Border>
+    </StackPanel>
+    </ScrollViewer>
+    <ScrollViewer x:Name="BottomArea" Grid.Row="2" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+    <StackPanel>
+      <Expander Header="Categorieën en item" Margin="0,4,0,0" HorizontalAlignment="Stretch">
+        <StackPanel Spacing="6">
+          <DockPanel>
+            <Button DockPanel.Dock="Right" Classes="small" Content="Verplaats selectie" Margin="4,0,0,0"
+                    Command="{Binding MoveToCategoryCommand}" CommandParameter="{Binding #MoveTarget.SelectedItem}" />
+            <ComboBox x:Name="MoveTarget" ItemsSource="{Binding CategoryChoices}" HorizontalAlignment="Stretch" />
+          </DockPanel>
+          <Button Classes="small" Content="Selectie aan/uit (niet meer inplannen)" Command="{Binding ToggleEnabledCommand}" />
+          <DockPanel>
+            <Button DockPanel.Dock="Right" Classes="small" Content="Toevoegen" Command="{Binding AddCategoryCommand}" Margin="4,0,0,0" />
+            <CheckBox DockPanel.Dock="Right" Content="jingle" IsChecked="{Binding NewCategoryIsJingle}" Margin="4,0,0,0" />
+            <TextBox Text="{Binding NewCategory}" Watermark="nieuwe categorie" />
+          </DockPanel>
+          <TextBlock Classes="muted" TextWrapping="Wrap"
+                     Text="Tip: elke submap van de muziek- of jinglemap wordt bij het inlezen een categorie." />
+        </StackPanel>
+      </Expander>
+      <Expander Header="Mappen en shares" Margin="0,4,0,0" HorizontalAlignment="Stretch">
+        <StackPanel Spacing="6">
+          <TextBlock Classes="muted" TextWrapping="Wrap"
+                     Text="Kies zelf waar de bibliotheek leest: een map op deze pc, een andere schijf of een share (\\server\muziek). Nieuwe bestanden worden vanzelf ingelezen; tags, beat, verloop en markers worden gemeten en bewaard. Een map verwijderen bewaart de nummers met al hun gegevens: komt een nummer later terug, hier of elders, dan wordt het herkend." />
+          <ItemsControl ItemsSource="{Binding Folders}">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="vm:LibraryFolderVm">
+                <Border Classes="card" Padding="6" Margin="0,0,0,4">
+                  <StackPanel Spacing="3">
+                    <DockPanel>
+                      <Button DockPanel.Dock="Right" Classes="small" Content="{Binding RemoveText}" Command="{Binding RemoveCommand}" IsVisible="{Binding Editable}"
+                              ToolTip.Tip="Haalt de map uit de bibliotheek; de nummers en hun gegevens blijven bewaard" />
+                      <TextBlock Text="{Binding Title}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" FontWeight="SemiBold" />
+                    </DockPanel>
+                    <TextBlock Classes="muted" Text="{Binding StateText}" />
+                    <TextBlock Text="Niet bereikbaar: de nummers van deze map blijven gewoon bewaard en komen terug zodra de map er weer is."
+                               Foreground="#F0B429" FontSize="11" TextWrapping="Wrap" IsVisible="{Binding Offline}" />
+                    <WrapPanel IsVisible="{Binding Editable}">
+                      <TextBlock Text="{Binding KindText, StringFormat='Soort: {0}'}" VerticalAlignment="Center" Margin="0,0,12,0" />
+                      <TextBox Text="{Binding Category}" Watermark="categorie (leeg = submappen)" Width="200" Margin="0,0,4,0" />
+                      <Button Classes="small" Content="Opslaan" Command="{Binding SaveCategoryCommand}" Margin="0,0,12,0" />
+                      <CheckBox Content="Bewaken" IsChecked="{Binding Watch}" Margin="0,0,12,0" ToolTip.Tip="Nieuwe en gewijzigde bestanden direct verwerken" />
+                      <CheckBox Content="Markers in het bestand" IsChecked="{Binding WriteTags}" Margin="0,0,12,0"
+                                ToolTip.Tip="Cues, beat en BPM ook in de tags van het audiobestand zetten, zodat ze met het bestand meegaan" />
+                      <CheckBox Content="Aan" IsChecked="{Binding Enabled}" />
+                    </WrapPanel>
+                  </StackPanel>
+                </Border>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+          <TextBlock Classes="h" Text="Map toevoegen" />
+          <DockPanel>
+            <Button x:Name="BrowseFolder" DockPanel.Dock="Right" Classes="small" Content="Bladeren…" Margin="4,0,0,0" />
+            <TextBox Text="{Binding NewFolderPath}" Watermark="D:\Muziek of \\server\muziek" />
+          </DockPanel>
+          <WrapPanel>
+            <CheckBox Content="Jingles" IsChecked="{Binding NewFolderIsJingle}" Margin="0,0,12,0" />
+            <TextBox Text="{Binding NewFolderCategory}" Watermark="vaste categorie (leeg = submappen)" Width="230" Margin="0,0,12,0" />
+            <CheckBox Content="Markers in het bestand" IsChecked="{Binding NewFolderWriteTags}" Margin="0,0,12,0" />
+            <Button Classes="small" Content="Toevoegen" Command="{Binding AddFolderCommand}" />
+          </WrapPanel>
+          <TextBlock Classes="muted" Text="{Binding FolderStatus}" TextWrapping="Wrap" />
+        </StackPanel>
+      </Expander>
+    </StackPanel>
+    </ScrollViewer>
+    <Grid x:Name="Body" Grid.Row="1" ColumnDefinitions="*,Auto,Auto" MinHeight="120">
+    <ScrollViewer x:Name="DetailPane" Grid.Column="2" Width="380" IsVisible="{Binding DetailVisible}" Margin="6,0,0,0">
+      <ContentControl Content="{Binding Detail}">
+        <ContentControl.ContentTemplate>
+          <DataTemplate x:DataType="vm:MediaDetailVm">
+            <StackPanel Spacing="6">
+              <TextBlock Classes="h" Text="{Binding Media.Title}" TextWrapping="Wrap" />
+              <TextBlock Text="{Binding Media.Artist}" TextWrapping="Wrap" />
+              <TextBlock Classes="muted" Text="{Binding Facts}" TextWrapping="Wrap" />
+              <ctl:WaveformView Height="70" Peaks="{Binding Peaks}" Markers="{Binding Markers}" ReadOnlyMarkers="True" ShowCursor="False"
+                                CueIn="{Binding Media.Cues.CueIn}" CueOut="{Binding Media.Cues.CueOut}" EmptyText="Golfvorm laden…" />
+              <TextBlock Classes="muted" FontSize="11" Text="{Binding MarkerText}" TextWrapping="Wrap" />
+              <TextBlock Text="{Binding BlockText}" TextWrapping="Wrap" FontSize="12"
+                         Foreground="{Binding Blocked, Converter={x:Static vm:Brushes.WarnOrOk}}" />
+              <TextBlock Classes="h" Text="Tags" Margin="0,4,0,0" />
+              <Grid ColumnDefinitions="80,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto" RowSpacing="3">
+                <TextBlock Text="Artiest" VerticalAlignment="Center" />
+                <TextBox Grid.Column="1" Text="{Binding Artist}" />
+                <TextBlock Grid.Row="1" Text="Titel" VerticalAlignment="Center" />
+                <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding Title}" />
+                <TextBlock Grid.Row="2" Text="Album" VerticalAlignment="Center" />
+                <TextBox Grid.Row="2" Grid.Column="1" Text="{Binding Album}" />
+                <TextBlock Grid.Row="3" Text="Genre" VerticalAlignment="Center" />
+                <TextBox Grid.Row="3" Grid.Column="1" Text="{Binding Genre}" />
+                <TextBlock Grid.Row="4" Text="Jaar" VerticalAlignment="Center" />
+                <TextBox Grid.Row="4" Grid.Column="1" Text="{Binding Year}" Width="80" HorizontalAlignment="Left" />
+              </Grid>
+              <WrapPanel>
+                <Button Classes="small" Content="Tags opslaan" Command="{Binding SaveTagsCommand}" Margin="0,0,4,4" />
+                <Button Classes="small" Content="Cues bewerken" Command="{Binding EditCuesCommand}" Margin="0,0,4,4" />
+                <Button Classes="small" Content="Markers in het bestand" Command="{Binding WriteMarkersCommand}" Margin="0,0,4,4"
+                        ToolTip.Tip="Cues, beatgrid en BPM nu in de tags van dit bestand zetten" />
+              </WrapPanel>
+              <TextBlock Classes="muted" Text="{Binding SaveText}" />
+              <TextBlock Classes="h" Text="Uitgezonden" Margin="0,4,0,0" />
+              <TextBlock Text="{Binding PlayText}" TextWrapping="Wrap" />
+              <ItemsControl ItemsSource="{Binding History}">
+                <ItemsControl.ItemTemplate><DataTemplate x:DataType="x:String"><TextBlock Classes="mono" FontSize="12" Text="{Binding}" /></DataTemplate></ItemsControl.ItemTemplate>
+              </ItemsControl>
+              <TextBlock Classes="muted" Text="{Binding HistoryText}" />
+              <TextBlock Classes="muted" FontSize="11" Text="{Binding AddedText}" />
+              <TextBlock Classes="muted" FontSize="11" Text="{Binding ValidText}" />
+              <SelectableTextBlock Classes="muted" FontSize="11" Text="{Binding Media.Path}" TextWrapping="Wrap" />
+            </StackPanel>
+          </DataTemplate>
+        </ContentControl.ContentTemplate>
+      </ContentControl>
+    </ScrollViewer>
+    <GridSplitter x:Name="DetailSplit" Grid.Column="1" Width="4" IsVisible="{Binding DetailVisible}" Background="Transparent" />
+    <ListBox x:Name="List" ItemsSource="{Binding Items}" SelectedItem="{Binding Selected}" SelectionMode="Multiple"
+             Classes.large="{Binding LargeRows}"
+             ToolTip.Tip="Enter = volgende · Ctrl+Enter = achteraan · spatie = voorluisteren · Ctrl/Shift = meer kiezen · rechtsklik = menu">
+      <ListBox.ContextMenu>
+        <ContextMenu>
+          <MenuItem Header="Als volgende in de log (Enter)" Command="{Binding NextCommand}" />
+          <MenuItem Header="Achteraan in de log (Ctrl+Enter)" Command="{Binding EndCommand}" />
+          <MenuItem Header="In standby 1" Command="{Binding StandbyCommand}" CommandParameter="standby1" />
+          <MenuItem Header="In standby 2" Command="{Binding StandbyCommand}" CommandParameter="standby2" />
+          <MenuItem Header="Voorluisteren (spatie)" Command="{Binding PflCommand}" />
+          <MenuItem Header="Voorluisteren stoppen" Command="{Binding PflStopCommand}" />
+          <MenuItem Header="Als overlay over de muziek" Command="{Binding OverlayCommand}" />
+          <Separator />
+          <MenuItem Header="Cues bewerken" Command="{Binding CuesCommand}" />
+          <MenuItem Header="Aan / uit (niet meer inplannen)" Command="{Binding ToggleEnabledCommand}" />
+        </ContextMenu>
+      </ListBox.ContextMenu>
       <ListBox.ItemTemplate>
         <DataTemplate x:DataType="c:MediaDto">
           <Grid ColumnDefinitions="6,*,Auto" Opacity="{Binding Enabled, Converter={x:Static vm:Brushes.EnabledOpacity}}">
@@ -140,5 +234,6 @@
         </DataTemplate>
       </ListBox.ItemTemplate>
     </ListBox>
-  </DockPanel>
+    </Grid>
+  </Grid>
 </UserControl>

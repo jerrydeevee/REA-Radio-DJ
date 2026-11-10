@@ -106,6 +106,14 @@ public sealed record SearchHelpDto(string Example, string Meaning);
 public sealed record LibraryFolderDto(long Id, string Path, string Kind, string Category, bool Watch, bool WriteTags, bool Enabled,
     bool Fixed, int? Files, bool? Reachable, string Error, DateTime? Scanned);
 
+public sealed record MediaBulkRequest(IReadOnlyList<long> Ids, long? CategoryId = null, bool? Enabled = null, bool ClearDates = false,
+    DateTime? ValidFrom = null, DateTime? ValidUntil = null);
+
+public sealed record MediaTagsRequest(string Artist, string Title, string Album = "", string Genre = "", int? Year = null);
+
+/// <summary>One time an item went on air.</summary>
+public sealed record PlayedDto(DateTime Started, double? Played, string Source);
+
 public sealed record LibraryFolderRequest(string Path, string Kind = "song", string Category = "", bool Watch = true, bool WriteTags = false,
     bool Enabled = true);
 

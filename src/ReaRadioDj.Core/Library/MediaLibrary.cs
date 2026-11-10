@@ -715,6 +715,77 @@ public sealed class MediaLibrary
         return n > 0;
     }
 
+    /// <summary>
+    /// Changes several items at once (null = leave as it is). Returns how many were changed. One reload at the end, so
+    /// moving hundreds of tracks to another category stays quick.
+    /// </summary>
+    public int UpdateMany(IReadOnlyCollection<long> ids, long? categoryId, bool? enabled, bool clearDates, DateTime? validFrom, DateTime? validUntil)
+    {
+        int n = 0;
+        _db.Transaction((c, tx) =>
+        {
+            foreach (var id in ids)
+            {
+                using var cmd = StationDb.Command(c, """
+                    UPDATE media SET
+                        category_id = CASE WHEN $setc = 1 THEN $c ELSE category_id END,
+                        enabled = COALESCE($e, enabled),
+                        valid_from = CASE WHEN $clear = 1 THEN NULL WHEN $f IS NOT NULL THEN $f ELSE valid_from END,
+                        valid_until = CASE WHEN $clear = 1 THEN NULL WHEN $u IS NOT NULL THEN $u ELSE valid_until END
+                    WHERE id = $id
+                    """, ("$setc", categoryId is null ? 0 : 1), ("$c", categoryId), ("$e", enabled is bool b ? (b ? 1 : 0) : null),
+                    ("$clear", clearDates ? 1 : 0), ("$f", validFrom is DateTime f ? StationDb.Iso(f) : null),
+                    ("$u", validUntil is DateTime u ? StationDb.Iso(u) : null), ("$id", id));
+                cmd.Transaction = tx;
+                n += cmd.ExecuteNonQuery();
+            }
+        });
+        Reload();
+        Changed?.Invoke();
+        return n;
+    }
+
+    /// <summary>
+    /// Corrects the tags of an item in the library. When its folder keeps markers in the file, the tags go into the
+    /// file too; otherwise only the library has them (a later change of the file itself reads the file again).
+    /// </summary>
+    public bool UpdateTags(long id, string artist, string title, string album, string genre, int? year)
+    {
+        var d = GetDetails(id);
+        if (d is null) return false;
+        _db.Execute("UPDATE media SET artist = $a, title = $t, album = $al, genre = $g WHERE id = $id",
+            ("$a", artist.Trim()), ("$t", title.Trim()), ("$al", album.Trim()), ("$g", genre.Trim()), ("$id", id));
+        _db.Transaction((c, tx) =>
+        {
+            using var cmd = StationDb.Command(c, """
+                INSERT INTO media_rights(media_id, year) VALUES($id, $y) ON CONFLICT(media_id) DO UPDATE SET year = excluded.year
+                """, ("$id", id), ("$y", year));
+            cmd.Transaction = tx;
+            cmd.ExecuteNonQuery();
+        });
+        if (FolderOf(d.Media.Path) is { WriteTags: true } && File.Exists(d.Media.Path))
+        {
+            try
+            {
+                using (var f = TagLib.File.Create(d.Media.Path))
+                {
+                    f.Tag.Performers = artist.Trim().Length > 0 ? [artist.Trim()] : [];
+                    f.Tag.Title = title.Trim();
+                    f.Tag.Album = album.Trim();
+                    f.Tag.Genres = genre.Trim().Length > 0 ? [genre.Trim()] : [];
+                    f.Tag.Year = year is int y and > 0 ? (uint)y : 0;
+                    f.Save();
+                }
+                var info = new FileInfo(d.Media.Path);
+                _db.Execute("UPDATE media SET size = $s, modified = $m WHERE id = $id", ("$s", info.Length), ("$m", info.LastWriteTimeUtc.Ticks), ("$id", id));
+            }
+            catch (Exception ex) { _log.LogWarning(ex, "Could not write tags into {File}", d.Media.Path); }
+        }
+        Reload();
+        Changed?.Invoke();
+        return true;
+    }
+
     public void MarkPlayed(long id) =>
         _db.Execute("UPDATE media SET play_count = play_count + 1, last_played = $t WHERE id = $id",
             ("$t", StationDb.Iso(DateTime.Now)), ("$id", id));

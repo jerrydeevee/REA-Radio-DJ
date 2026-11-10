@@ -51,6 +51,105 @@ public sealed partial class LibraryTool : StudioTool
         new("jaren 90", "jaar:199"), new("jaren 00", "jaar:200"), new("jaren 10", "jaar:201"), new("jaren 20", "jaar:202"),
     ];
     [ObservableProperty] private DecadeChoice? _decade;
+
+    // ---- detail pane, selection, sorting, touch
+    public List<SortChoice> Sorts { get; } =
+    [
+        new("Beste treffer", "relevance"), new("Artiest", "artist"), new("Titel", "title"), new("Jaar", "year"),
+        new("BPM", "bpm"), new("Duur", "duration"), new("Laatst gespeeld", "lastplayed"), new("Vaakst gespeeld", "plays"),
+        new("Nieuwste eerst", "added"),
+    ];
+    public List<ClickChoice> ClickActions { get; } =
+    [
+        new("Dubbelklik: voorluisteren", "pfl"), new("Dubbelklik: als volgende", "next"), new("Dubbelklik: achteraan", "end"),
+        new("Dubbelklik: standby 1", "standby1"), new("Dubbelklik: cues", "cues"),
+    ];
+    [ObservableProperty] private SortChoice? _sort;
+    [ObservableProperty] private ClickChoice? _doubleClick;
+    [ObservableProperty] private bool _showDetails = true;
+    [ObservableProperty] private bool _largeRows;
+    /// <summary>Set by the view: the panel is wide enough for the detail pane next to the list.</summary>
+    [ObservableProperty] private bool _wide = true;
+    public bool DetailVisible => ShowDetails && Wide;
+    partial void OnWideChanged(bool value) => OnPropertyChanged(nameof(DetailVisible));
+    [ObservableProperty] private MediaDetailVm? _detail;
+    [ObservableProperty] private int _selectionCount;
+    [ObservableProperty] private CategoryChoice? _bulkCategory;
+    [ObservableProperty] private string _bulkText = "";
+    private List<MediaDto> _selection = [];
+    public bool HasMulti => SelectionCount > 1;
+    public string SelectionText => $"{SelectionCount} geselecteerd";
+
+    partial void OnSelectionCountChanged(int value) { OnPropertyChanged(nameof(HasMulti)); OnPropertyChanged(nameof(SelectionText)); }
+    partial void OnSortChanged(SortChoice? value) { if (value is null) return; Hub.Settings.LibrarySort = value.Key; Hub.Settings.Save(); Refresh(); }
+    partial void OnDoubleClickChanged(ClickChoice? value) { if (value is null) return; Hub.Settings.LibraryDoubleClick = value.Key; Hub.Settings.Save(); }
+    partial void OnShowDetailsChanged(bool value)
+    {
+        Hub.Settings.LibraryDetails = value; Hub.Settings.Save();
+        OnPropertyChanged(nameof(DetailVisible));
+        Detail = value && Selected is { } m ? new MediaDetailVm(this, m) : null;
+    }
+    partial void OnLargeRowsChanged(bool value) { Hub.Settings.LibraryLarge = value; Hub.Settings.Save(); }
+
+    /// <summary>The view reports the selected rows (Ctrl and Shift select several).</summary>
+    public void SetSelection(IEnumerable<MediaDto> items)
+    {
+        _selection = items.ToList();
+        SelectionCount = _selection.Count;
+        BulkText = "";
+    }
+
+    private IReadOnlyList<long> SelectedIds => _selection.Count > 0 ? _selection.Select(m => m.Id).ToList() : Selected is { } s ? [s.Id] : [];
+
+    private async Task Bulk(MediaBulkRequest r, string done)
+    {
+        var res = await Hub.Client.SendForAsync<BulkResult>(HttpMethod.Put, "/api/media/bulk", r);
+        BulkText = res is null ? "Niet gelukt." : string.Format(done, res.Changed);
+        Refresh();
+    }
+
+    private sealed record BulkResult(int Changed);
+
+    [RelayCommand] private Task BulkMove() => BulkCategory?.Id is long c ? Bulk(new MediaBulkRequest(SelectedIds, CategoryId: c), "{0} nummers verplaatst.") : Task.CompletedTask;
+    [RelayCommand] private Task BulkOn() => Bulk(new MediaBulkRequest(SelectedIds, Enabled: true), "{0} nummers aangezet.");
+    [RelayCommand] private Task BulkOff() => Bulk(new MediaBulkRequest(SelectedIds, Enabled: false), "{0} nummers uitgezet (worden niet meer ingepland).");
+    [RelayCommand] private Task BulkClearDates() => Bulk(new MediaBulkRequest(SelectedIds, ClearDates: true), "Geldigheid van {0} nummers gewist.");
+
+    [RelayCommand]
+    private async Task BulkToLog()
+    {
+        int n = 0;
+        foreach (var id in SelectedIds) if (await Hub.AddToLog(id, false)) n++;
+        BulkText = $"{n} nummers achteraan in de log gezet.";
+    }
+
+    /// <summary>What a double click (or a tap on the touchscreen) does, as chosen by the operator.</summary>
+    public void DoubleClickSelected()
+    {
+        switch (DoubleClick?.Key ?? "pfl")
+        {
+            case "next": NextCommand.Execute(null); break;
+            case "end": EndCommand.Execute(null); break;
+            case "standby1": StandbyCommand.Execute("standby1"); break;
+            case "cues": CuesCommand.Execute(null); break;
+            default: PflCommand.Execute(null); break;
+        }
+    }
+
+    [RelayCommand] private Task PflStop() => Hub.PlayerCommand("pfl", "stop");
+
+    private IEnumerable<MediaDto> Sorted(IEnumerable<MediaDto> items) => (Sort?.Key ?? "relevance") switch
+    {
+        "artist" => items.OrderBy(m => m.Artist, StringComparer.CurrentCultureIgnoreCase).ThenBy(m => m.Title, StringComparer.CurrentCultureIgnoreCase),
+        "title" => items.OrderBy(m => m.Title, StringComparer.CurrentCultureIgnoreCase),
+        "year" => items.OrderByDescending(m => m.Year ?? 0),
+        "bpm" => items.OrderBy(m => m.Bpm ?? double.MaxValue),
+        "duration" => items.OrderBy(m => m.Duration),
+        "lastplayed" => items.OrderByDescending(m => m.LastPlayed ?? DateTime.MinValue),
+        "plays" => items.OrderByDescending(m => m.PlayCount),
+        "added" => items.OrderByDescending(m => m.Added ?? DateTime.MinValue),
+        _ => items,
+    };
     [ObservableProperty] private bool _showHelp;
     [ObservableProperty] private string _resultText = "";
     private string _libraryKey = "";
@@ -139,7 +238,12 @@ public sealed partial class LibraryTool : StudioTool
     [RelayCommand] private void ClearSearch() => Query = "";
     [RelayCommand] private void ToggleHelp() => Query = ShowHelp ? "" : "?";
     partial void OnCategoryChanged(CategoryChoice? value) => Refresh();
-    partial void OnSelectedChanged(MediaDto? value) { if (value is not null) Hub.SelectedMedia = value; }
+    partial void OnSelectedChanged(MediaDto? value)
+    {
+        if (value is not null) Hub.SelectedMedia = value;
+        if (ShowDetails && value is not null && Detail?.Id != value.Id) Detail = new MediaDetailVm(this, value);
+        else if (value is null) Detail = null;
+    }
 
     protected override void OnFirstShow()
     {
@@ -152,6 +256,12 @@ public sealed partial class LibraryTool : StudioTool
         Chips.Add(new FilterChip(this, "Aandacht nodig", "is:geblokkeerd", "Mag nu niet: rotatie, verlopen, uitgezet of bestand weg"));
         Chips.Add(new FilterChip(this, "Ontbreekt", "is:ontbreekt", "Het bestand staat niet meer in de map"));
         Decade = Decades[0];
+        _showDetails = Hub.Settings.LibraryDetails;
+        _largeRows = Hub.Settings.LibraryLarge;
+        OnPropertyChanged(nameof(ShowDetails)); OnPropertyChanged(nameof(LargeRows)); OnPropertyChanged(nameof(DetailVisible));
+        _sort = Sorts.FirstOrDefault(s => s.Key == Hub.Settings.LibrarySort) ?? Sorts[0];
+        _doubleClick = ClickActions.FirstOrDefault(c => c.Key == Hub.Settings.LibraryDoubleClick) ?? ClickActions[0];
+        OnPropertyChanged(nameof(Sort)); OnPropertyChanged(nameof(DoubleClick));
         Hub.LibraryChanged += () => { FillCategories(); Refresh(); _ = LoadFoldersAsync(); };
         FillCategories();
         Refresh();
@@ -195,8 +305,9 @@ public sealed partial class LibraryTool : StudioTool
             {
                 var keep = Selected?.Id;
                 Items.Clear();
-                foreach (var i in items) Items.Add(i);
+                foreach (var i in Sorted(items)) Items.Add(i);
                 Selected = Items.FirstOrDefault(i => i.Id == keep);
+                if (Detail is { } d && Items.FirstOrDefault(i => i.Id == d.Id) is { } fresh && fresh != d.Media && ShowDetails) Detail = new MediaDetailVm(this, fresh);
                 int blocked = items.Count(i => !i.Allowed);
                 ResultText = items.Count == 0
                     ? (Query.Length > 0 ? "Niets gevonden. Typ ? voor de zoekmogelijkheden." : "De bibliotheek is leeg.")
@@ -208,7 +319,7 @@ public sealed partial class LibraryTool : StudioTool
     private long? SelId => Selected?.Id;
 
     [RelayCommand] private Task Next() => SelId is long id ? Hub.AddToLog(id, true) : Task.CompletedTask;
-    [RelayCommand] private Task End() => SelId is long id ? Hub.AddToLog(id, false) : Task.CompletedTask;
+    [RelayCommand] private Task End() => _selection.Count > 1 ? BulkToLog() : SelId is long id ? Hub.AddToLog(id, false) : Task.CompletedTask;
     [RelayCommand] private Task Standby(string player) => SelId is long id ? Hub.LoadPlayer(player, id) : Task.CompletedTask;
 
     [RelayCommand]

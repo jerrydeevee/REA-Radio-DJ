@@ -49,6 +49,17 @@
     <Setter Property="Background" Value="#7A1F25" />
     <Setter Property="Foreground" Value="White" />
   </Style>
+  <!-- Large rows for the touchscreen (library: "Grote regels"). -->
+  <Style Selector="ListBox.large ListBoxItem">
+    <Setter Property="MinHeight" Value="60" />
+    <Setter Property="Padding" Value="10,8" />
+  </Style>
+  <Style Selector="ListBox.large ListBoxItem TextBlock">
+    <Setter Property="FontSize" Value="16" />
+  </Style>
+  <Style Selector="ListBox.large ListBoxItem TextBlock.muted">
+    <Setter Property="FontSize" Value="14" />
+  </Style>
   <Style Selector="ToggleButton.chip">
     <Setter Property="FontSize" Value="12" />
     <Setter Property="Padding" Value="10,3" />

@@ -153,6 +153,32 @@ public class LibraryFolderTests : IDisposable
     }
 
     [BassFact]
+    public async Task Several_items_change_at_once_and_tags_can_be_corrected()
+    {
+        var (library, options) = Library();
+        for (int i = 0; i < 3; i++) WritePatterned(Path.Combine(options.MusicFolder, "Pop", $"X - Song {i}.wav"), seed: 10 + i, seconds: 12);
+        await library.ScanAsync();
+        var ids = library.Songs.Select(s => s.Id).ToList();
+        var rock = library.AddCategory("Rock", MediaKind.Song, null);
+        Assert.Equal(3, library.UpdateMany(ids, rock.Id, enabled: false, clearDates: false, null, new DateTime(2030, 1, 1)));
+        Assert.Empty(library.Songs); // switched off
+        var d = library.GetDetails(ids[0])!;
+        Assert.Equal("Rock", d.Media.Category);
+        Assert.Equal(new DateTime(2030, 1, 1), d.ValidUntil);
+        library.UpdateMany(ids, null, enabled: true, clearDates: true, null, null);
+        Assert.Equal(3, library.Songs.Count);
+        Assert.Null(library.GetDetails(ids[0])!.ValidUntil);
+        Assert.Equal("Rock", library.GetDetails(ids[0])!.Media.Category); // category untouched when not given
+
+        Assert.True(library.UpdateTags(ids[1], "Nieuwe Artiest", "Andere Titel", "Album", "Nederpop", 1984));
+        var t = library.GetDetails(ids[1])!;
+        Assert.Equal(("Nieuwe Artiest", "Andere Titel", "Nederpop", 1984), (t.Media.Artist, t.Media.Title, t.Genre, t.Year));
+        Assert.Single(library.Search("genre:nederpop jaar:198"));
+        await library.ScanAsync(); // an unchanged file keeps the corrected tags
+        Assert.Equal("Andere Titel", library.GetDetails(ids[1])!.Media.Title);
+    }
+
+    [BassFact]
     public async Task Markers_can_be_written_into_the_file_and_are_read_back_by_another_library()
     {
         var (library, _) = Library();

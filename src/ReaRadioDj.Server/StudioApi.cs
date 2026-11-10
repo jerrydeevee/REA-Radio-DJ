@@ -77,6 +77,13 @@ public static class StudioApi
             library.UpdateFolder(id, r.Category ?? "", r.Watch, r.WriteTags, r.Enabled) is { } f ? Results.Ok(Folder(library, f)) : Results.NotFound());
         api.MapDelete("/library/folders/{id:long}", (long id, MediaLibrary library) =>
             library.RemoveFolder(id) is int kept and >= 0 ? Results.Ok(new { kept }) : Results.NotFound());
+        api.MapPut("/media/bulk", (MediaBulkRequest r, MediaLibrary library) =>
+            Results.Ok(new { changed = library.UpdateMany(r.Ids.Distinct().Take(10000).ToList(), r.CategoryId, r.Enabled, r.ClearDates, r.ValidFrom, r.ValidUntil) }));
+        api.MapPut("/media/{id:long}/tags", (long id, MediaTagsRequest r, MediaLibrary library) =>
+            library.UpdateTags(id, r.Artist ?? "", r.Title ?? "", r.Album ?? "", r.Genre ?? "", r.Year is > 0 and < 3000 ? r.Year : null)
+                ? Results.Ok(Media(library.GetDetails(id)!)) : Results.NotFound());
+        api.MapGet("/media/{id:long}/history", (long id, int? limit, AsRunLog asrun) =>
+            asrun.ForMedia(id, Math.Clamp(limit ?? 10, 1, 100)).Select(e => new PlayedDto(e.Started, e.Played, e.Source)));
         api.MapPost("/media/{id:long}/markers/write", (long id, MediaLibrary library) =>
             library.WriteMarkers(id) ? Results.Ok() : Results.BadRequest("Schrijven in het bestand lukte niet (formaat of alleen-lezen)."));
         api.MapPost("/library/scan", (MediaLibrary library) => { _ = library.ScanAsync(); return Results.Accepted(); });
