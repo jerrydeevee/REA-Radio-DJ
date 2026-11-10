@@ -17,8 +17,14 @@
         <Button Classes="small" Margin="0,0,4,4" Content="Opslaan" Command="{Binding SaveCommand}" IsEnabled="{Binding Dirty}" Background="#2F9E6A" />
       </WrapPanel>
     </StackPanel>
-    <Grid RowDefinitions="*,Auto,Auto">
-      <Border Grid.Row="0" Classes="card" Padding="0" MinHeight="140">
+    <!-- In a low panel the waveform shrinks (never below 60 px) instead of running over the text under it. -->
+    <Grid>
+      <Grid.RowDefinitions>
+        <RowDefinition Height="*" MinHeight="60" />
+        <RowDefinition Height="Auto" />
+        <RowDefinition Height="Auto" />
+      </Grid.RowDefinitions>
+      <Border Grid.Row="0" Classes="card" Padding="0" ClipToBounds="True">
         <ctl:WaveformView x:Name="Wave" Peaks="{Binding Peaks}" BlockSeconds="{Binding BlockSeconds}" Markers="{Binding Markers}"
                           CursorSeconds="{Binding Cursor, Mode=TwoWay}" Playhead="{Binding Playhead}"
                           CueIn="{Binding CueInValue}" CueOut="{Binding CueOutValue}" />

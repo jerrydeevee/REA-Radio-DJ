@@ -17,6 +17,8 @@ public sealed class StudioSettings
     /// <summary>Size of the whole studio in percent (80-150).</summary>
     public int ScalePercent { get; set; } = 100;
     public string LastLayout { get; set; } = "Standaard";
+    /// <summary>2 = the Standaard layout is the Live workspace (management windows moved to their own workspaces).</summary>
+    public int LayoutVersion { get; set; }
 
     /// <summary>Tijd window: studio, analog or digital; counter size 0-3; flash colour when an item ends.</summary>
     public string ClockStyle { get; set; } = "studio";

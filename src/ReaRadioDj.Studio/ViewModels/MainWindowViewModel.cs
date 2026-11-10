@@ -37,11 +37,14 @@ public sealed partial class MainWindowViewModel : ObservableObject
         Hub.EditCuesRequested += id => ShowWindow("cues");
         Hub.TransitionRequested += _ => ShowWindow("transition");
         WorkbenchTool.OpenRequested += OpenOnWorkbench;
+        KeepOldDefaultLayout();
         RefreshLayoutNames();
-        _factory.AutomationView = _settings.LastLayout == AutomationLayoutName;
-        _factory.DjView = _settings.LastLayout == DjLayoutName;
+        _factory.Workspace = WorkspaceOf(_settings.LastLayout);
         Layout = LoadLayoutFile(_settings.LastLayout) ?? NewDefaultLayout();
         CurrentLayout = _settings.LastLayout;
+        // --workspace live|dj|auto|prod|plan|report: start in that workspace.
+        int wa = Array.IndexOf(args, "--workspace");
+        if (wa >= 0 && wa + 1 < args.Length) SwitchView(args[wa + 1]);
         // --show <window id> (repeatable): bring windows to the front at start; --cues <media id>: open in the cue editor.
         for (int i = 0; i < args.Length - 1; i++)
             if (args[i] == "--show")
@@ -99,15 +102,54 @@ public sealed partial class MainWindowViewModel : ObservableObject
     [ObservableProperty] private string _introState = "";
     [ObservableProperty] private string _mixText = "";
     [ObservableProperty] private string _stopHint = "";
-    [ObservableProperty] private bool _automationView;
 
     public const string AutomationLayoutName = "Automatisering";
     public const string AssistLayoutName = "Standaard";
     public const string DjLayoutName = "DJ";
-    [ObservableProperty] private bool _djWorkspace;
-    public bool LiveWorkspace => !AutomationView && !DjWorkspace;
-    partial void OnDjWorkspaceChanged(bool value) => OnPropertyChanged(nameof(LiveWorkspace));
-    partial void OnAutomationViewChanged(bool value) => OnPropertyChanged(nameof(LiveWorkspace));
+
+    /// <summary>Each workspace (button in the app bar) and the name its arrangement is saved under.</summary>
+    private static readonly (string Key, string Layout)[] Workspaces =
+    [
+        ("live", AssistLayoutName), ("dj", DjLayoutName), ("auto", AutomationLayoutName),
+        ("prod", "Productie"), ("plan", "Planning"), ("report", "Rapportage"),
+    ];
+
+    /// <summary>The workspace a layout belongs to; a layout saved under another name counts as Live.</summary>
+    private static string WorkspaceOf(string layout) => Workspaces.FirstOrDefault(w => w.Layout == layout).Key ?? "live";
+
+    [ObservableProperty] private string _workspace = "live";
+    public bool LiveWorkspace => Workspace == "live";
+    public bool DjWorkspace => Workspace == "dj";
+    public bool AutomationView => Workspace == "auto";
+    public bool ProductionWorkspace => Workspace == "prod";
+    public bool PlanningWorkspace => Workspace == "plan";
+    public bool ReportWorkspace => Workspace == "report";
+
+    partial void OnWorkspaceChanged(string value)
+    {
+        foreach (var name in new[] { nameof(LiveWorkspace), nameof(DjWorkspace), nameof(AutomationView),
+                                     nameof(ProductionWorkspace), nameof(PlanningWorkspace), nameof(ReportWorkspace) })
+            OnPropertyChanged(name);
+    }
+
+    /// <summary>
+    /// Since the workspaces Productie, Planning and Rapportage the Live default holds only what a presenter needs.
+    /// A Standaard layout saved before that is kept as "Standaard (oud)", so nothing someone arranged is lost.
+    /// </summary>
+    private void KeepOldDefaultLayout()
+    {
+        if (_settings.LayoutVersion >= 2) return;
+        try
+        {
+            var old = Path.Combine(StudioSettings.LayoutFolder, AssistLayoutName + ".json");
+            var kept = Path.Combine(StudioSettings.LayoutFolder, AssistLayoutName + " (oud).json");
+            if (File.Exists(old) && !File.Exists(kept)) File.Move(old, kept);
+            else if (File.Exists(old)) File.Delete(old);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { }
+        _settings.LayoutVersion = 2;
+        _settings.Save();
+    }
 
     public bool StationDiffers => !string.Equals(Station, "REA-Radio-DJ", StringComparison.OrdinalIgnoreCase);
     partial void OnStationChanged(string value) => OnPropertyChanged(nameof(StationDiffers));
@@ -124,9 +166,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
         {
             if (string.IsNullOrEmpty(value) || value == CurrentLayout) return;
             // A workspace switches the way its button does (it may not have been saved yet); other names are saved layouts.
-            if (value == DjLayoutName) SwitchView("dj");
-            else if (value == AutomationLayoutName) SwitchView("auto");
-            else if (value == AssistLayoutName) SwitchView("assist");
+            if (Workspaces.Any(w => w.Layout == value)) SwitchView(WorkspaceOf(value));
             else LoadLayout(value);
         }
     }
@@ -258,29 +298,32 @@ public sealed partial class MainWindowViewModel : ObservableObject
     private void ResetLayout()
     {
         CloseFloating();
-        _factory.AutomationView = CurrentLayout == AutomationLayoutName;
-        _factory.DjView = CurrentLayout == DjLayoutName;
+        _factory.Workspace = WorkspaceOf(CurrentLayout);
         Layout = NewDefaultLayout();
         Hub.Status = "standaardindeling hersteld";
     }
 
     /// <summary>
-    /// One click between the calm automation view and the full live-assist studio. Each view remembers its own
-    /// arrangement (saved as a layout under its own name).
+    /// One click to another workspace: Live, DJ, Automatisering, Productie, Planning or Rapportage. Each remembers its
+    /// own arrangement (saved as a layout under its own name). Without a workspace it toggles automation and Live.
     /// </summary>
     [RelayCommand]
     private void SwitchView(string? view)
     {
-        bool automation = view == "auto" || (view is null && !AutomationView);
-        bool dj = view == "dj";
-        string target = dj ? DjLayoutName : automation ? AutomationLayoutName : AssistLayoutName;
+        string key = view switch
+        {
+            null => AutomationView ? "live" : "auto",
+            "assist" => "live",
+            _ when Workspaces.Any(w => w.Key == view) => view,
+            _ => "live",
+        };
+        string target = Workspaces.First(w => w.Key == key).Layout;
         if (target == CurrentLayout) return;
         SaveOnExit();
         CloseFloating();
-        _factory.AutomationView = automation && !dj;
-        _factory.DjView = dj;
+        _factory.Workspace = key;
         // Into the DJ workspace: deck A shows what is on air (when it is free), ready to take over.
-        if (dj) _ = Hub.Client.PostQuietAsync("/api/dj/follow");
+        if (key == "dj") _ = Hub.Client.PostQuietAsync("/api/dj/follow");
         Layout = LoadLayoutFile(target) ?? NewDefaultLayout();
         RestoreWindowsSoon();
         CurrentLayout = target;
@@ -291,8 +334,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
 
     partial void OnCurrentLayoutChanged(string value)
     {
-        AutomationView = value == AutomationLayoutName;
-        DjWorkspace = value == DjLayoutName;
+        Workspace = WorkspaceOf(value);
         OnPropertyChanged(nameof(SelectedLayoutName));
     }
 
@@ -553,7 +595,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
             foreach (var f in Directory.EnumerateFiles(StudioSettings.LayoutFolder, "*.json").Select(Path.GetFileNameWithoutExtension).Order())
                 if (f is not null && f != "Standaard") LayoutNames.Add(f);
         // The workspaces are always in the list, also before they were saved for the first time.
-        foreach (var workspace in new[] { AutomationLayoutName, DjLayoutName })
+        foreach (var (_, workspace) in Workspaces)
             if (!LayoutNames.Contains(workspace)) LayoutNames.Add(workspace);
         OnPropertyChanged(nameof(SelectedLayoutName));
     }

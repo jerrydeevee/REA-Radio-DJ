@@ -103,9 +103,9 @@ Vragen bij stap 2:
 |---|---|---|
 | ✅ | Spelers en cartwall in de nieuwe stijl: toestand als woord en vorm, cartknoppen van 96 px | gelijk aan het ontwerp "Spelers" (Standby/PFL: toestand als woord en teken, grote resttijd, één gevulde hoofdknop; cartknoppen 96 px met "speelt" en "sleep hierheen") |
 | ✅ | Programmalog in de nieuwe stijl | gelijk aan het ontwerp "1 scherm" (tijd, kleurstreep per soort, titel met soort en details, lengte; knoppen pas bij aanwijzen of selecteren) |
-| ⬜ | Werkruimtes Productie, Planning en Rapportage naast Live, DJ en Automatisering | elke werkruimte opent zijn eigen indeling |
+| ✅ | Werkruimtes Productie, Planning en Rapportage naast Live, DJ en Automatisering | elke werkruimte opent zijn eigen indeling (zes knoppen in de balk; Live houdt alleen het live-werk, beheervensters staan in hun eigen werkruimte; een oude Standaard-indeling blijft bewaard als "Standaard (oud)") |
 | 🟡 | Responsive gedrag en indelingen voor 1 tot 4 schermen, aanraakmodus voor een aanraakscherm | op 1 tot 4 schermen staat alles op zijn plek en blijft dat na een herstart (werkbladen per scherm klaar en getest op 2 schermen: menu Werkbladen, bewaard met de indeling, terug op hetzelfde scherm; aanraakmodus nog open) |
-| ⬜ | Overige vensters nalopen (planner, bibliotheek, mixer, beheer) | geen venster meer in de oude stijl |
+| 🟡 | Overige vensters nalopen (planner, bibliotheek, mixer, beheer) — beheervensters krijgen de ruimte in hun eigen werkruimte; cue-editor loopt niet meer over zijn tekst heen. Nog open: reclame, nieuws en hardware (lijst links en formulier rechts) stapelen in een smal paneel, kleine knoppen van planner en log | geen venster meer in de oude stijl |
 | ⬜ | **Cosmetische ronde over de hele studio:** in een smal of laag paneel moet je nu zoeken waar iets staat (bijv. "Mappen en shares" in de Bibliotheek pas na scrollen). Duidelijk laten zien dat er meer is (zichtbare schuifbalk, "meer ▾", inklapbare blokken), beheer naar een eigen tabblad of venster, en per paneel nalopen wat er bij de standaardindeling in beeld past | in de standaardindeling is alles vindbaar zonder te weten dat je moet scrollen |
 | 🟡 | Uiterlijk instelbaar: meerdere thema's (donker, licht en meer), afgeronde vormen, lettergrootte, aanraakmodus, kleuren per soort item (vraag 7) | in Instellingen te kiezen, direct zichtbaar (Instellingen › Uiterlijk: vier stijlen, drie hoekvormen, grootte 80–150 % voor alle vensters en werkbladen; nog open: aanraakmodus en kleuren per soort item) |
 | ⬜ | Eigen knoppen, regiekamer-venster (weer, nieuwskoppen, berichten), itemgegevens, verkenner | vensters aanwezig en te docken |
@@ -279,7 +279,7 @@ Vraag bij stap 8:
 | Status | Werk |
 |---|---|
 | ⬜ | Inrichthulp bij de eerste start |
-| ⬜ | Installatieprogramma, controle op nieuwe versies, pagina Over |
+| 🟡 | Installatieprogramma, controle op nieuwe versies, pagina Over — pagina Over klaar: opstartscherm en Info › Over REA-Radio-DJ (gemaakt door ICT Holland, DVC-it; versie, licentie, BASS, broncode). Installatieprogramma en versiecontrole nog open |
 | ⬜ | Handleiding voor de studio en voor de beheerder |
 
 ## Wat niet op de lijst staat

@@ -83,9 +83,14 @@
           <ToggleButton Classes="nav" Content="DJ" IsChecked="{Binding DjWorkspace, Mode=OneWay}" Command="{Binding SwitchViewCommand}" CommandParameter="dj"
                         ToolTip.Tip="DJ-mengtafel: decks, mengpaneel en crossfader om met de hand te mixen" />
           <ToggleButton Classes="nav" Content="Automatisering" IsChecked="{Binding AutomationView, Mode=OneWay}" Command="{Binding SwitchViewCommand}" CommandParameter="auto" />
+          <ToggleButton Classes="nav" Content="Productie" IsChecked="{Binding ProductionWorkspace, Mode=OneWay}" Command="{Binding SwitchViewCommand}" CommandParameter="prod"
+                        ToolTip.Tip="Productie: bibliotheek, cue-editor, voicetracking, stemmen en AI-presentator" />
+          <ToggleButton Classes="nav" Content="Planning" IsChecked="{Binding PlanningWorkspace, Mode=OneWay}" Command="{Binding SwitchViewCommand}" CommandParameter="plan"
+                        ToolTip.Tip="Planning: klokken en dagplanning, reclame, nieuws, log-import en databronnen" />
+          <ToggleButton Classes="nav" Content="Rapportage" IsChecked="{Binding ReportWorkspace, Mode=OneWay}" Command="{Binding SwitchViewCommand}" CommandParameter="report"
+                        ToolTip.Tip="Rapportage en techniek: as-run, muziekrapport, stream, hardware en bediening" />
         </StackPanel>
         <StackPanel Grid.Column="4" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center" Margin="0,0,16,0">
-          <TextBlock Classes="muted" Text="Indeling" FontSize="13" VerticalAlignment="Center" />
           <ComboBox ItemsSource="{Binding LayoutNames}" SelectedItem="{Binding SelectedLayoutName}" MinWidth="170" MinHeight="36" CornerRadius="{DynamicResource Radius8}"
                     ToolTip.Tip="Kies een opgeslagen indeling" />
         </StackPanel>

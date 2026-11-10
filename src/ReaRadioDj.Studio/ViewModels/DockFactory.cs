@@ -48,11 +48,12 @@ public sealed class DockFactory : Factory
 
     public static StudioTool Create(string id) => Windows.First(w => w.Id == id).Create();
 
-    /// <summary>True = the calm automation view (log, time, levels, messages); false = the full live-assist studio.</summary>
-    public bool AutomationView { get; set; }
-
-    /// <summary>True = the DJ workspace: the DJ desk on top, the library and the rest of the studio under it.</summary>
-    public bool DjView { get; set; }
+    /// <summary>
+    /// The workspace whose default arrangement CreateLayout builds: live (presenting), auto (calm automation view),
+    /// dj (the DJ desk), prod (production: library, cues, voice tracks), plan (planning: clocks, ads, news, import)
+    /// or report (as-run, music report, stream and technical windows).
+    /// </summary>
+    public string Workspace { get; set; } = "live";
 
     public override IRootDock CreateLayout()
     {
@@ -63,7 +64,43 @@ public sealed class DockFactory : Factory
             return dock;
         }
 
-        if (DjView)
+        ProportionalDock Column(string id, double proportion, params IDockable[] parts) => new()
+        {
+            Id = id, Proportion = proportion, Orientation = Orientation.Vertical, VisibleDockables = CreateList(Between(parts)),
+        };
+        ProportionalDock Row(string id, params IDockable[] parts) => new()
+        {
+            Id = id, Orientation = Orientation.Horizontal, VisibleDockables = CreateList(Between(parts)),
+        };
+        static IDockable[] Between(IDockable[] parts) =>
+            [.. parts.SelectMany((p, i) => i == 0 ? new[] { p } : new IDockable[] { new ProportionalDockSplitter(), p })];
+        ToolDock Sized(double proportion, string id, params string[] ids)
+        {
+            var dock = Tools(id, ids);
+            dock.Proportion = proportion;
+            return dock;
+        }
+
+        if (Workspace == "prod")
+            // Production: a big library, the cue editor and the voice windows; PFL to listen without going on air.
+            return Root(Row("main",
+                Column("p-left", 0.34, Tools("dock-library", "library", "wishlist")),
+                Column("p-center", 0.42, Sized(0.55, "dock-editor", "cues"), Sized(0.45, "dock-voice", "voicetrack", "voice", "presenter", "transition", "news")),
+                Column("p-right", 0.24, Sized(0.5, "dock-pfl", "pfl", "standby"), Sized(0.5, "dock-side", "overlays", "messages"))));
+
+        if (Workspace == "plan")
+            // Planning: clocks and the day plan wide, with ads, news and import beside it and the log to check the result.
+            return Root(Row("main",
+                Column("pl-left", 0.52, Tools("dock-planner", "planner", "sources")),
+                Column("pl-right", 0.48, Sized(0.62, "dock-plan-side", "ads", "news", "import"), Sized(0.38, "dock-log", "log", "library"))));
+
+        if (Workspace == "report")
+            // Reports and technique: what went out, the music report, the stream, hardware and control.
+            return Root(Row("main",
+                Column("r-left", 0.58, Tools("dock-asrun", "asrun", "log")),
+                Column("r-right", 0.42, Sized(0.6, "dock-tech", "stream", "hardware", "control"), Sized(0.4, "dock-status", "messages", "clock"))));
+
+        if (Workspace == "dj")
         {
             var desk = new ProportionalDock
             {
@@ -85,7 +122,7 @@ public sealed class DockFactory : Factory
             });
         }
 
-        if (AutomationView)
+        if (Workspace == "auto")
         {
             var log = new ProportionalDock
             {
@@ -111,7 +148,7 @@ public sealed class DockFactory : Factory
         {
             Id = "left", Proportion = 0.27, Orientation = Orientation.Vertical,
             VisibleDockables = CreateList<IDockable>(
-                Tools("dock-library", "library", "planner", "news", "ads", "import", "sources"),
+                Tools("dock-library", "library", "wishlist"),
                 new ProportionalDockSplitter(),
                 Tools("dock-players", "standby", "pfl")),
         };
@@ -123,7 +160,7 @@ public sealed class DockFactory : Factory
                 new ProportionalDockSplitter(),
                 Tools("dock-log", "log", "asrun"),
                 new ProportionalDockSplitter(),
-                Tools("dock-editor", "cues", "transition", "presenter", "voice", "messages", "control", "hardware")),
+                Tools("dock-editor", "cues", "messages", "presenter")),
         };
         var right = new ProportionalDock
         {
@@ -131,7 +168,7 @@ public sealed class DockFactory : Factory
             VisibleDockables = CreateList<IDockable>(
                 Tools("dock-carts", "cart1", "cart2"),
                 new ProportionalDockSplitter(),
-                Tools("dock-mixer", "mixer", "clock", "overlays", "stream")),
+                Tools("dock-mixer", "mixer", "clock", "overlays")),
         };
         var main = new ProportionalDock
         {
