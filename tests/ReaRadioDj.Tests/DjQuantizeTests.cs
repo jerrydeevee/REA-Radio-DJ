@@ -35,6 +35,15 @@ public sealed class DjQuantizeTests
     }
 
     [Fact]
+    public void A_quantized_pad_waits_for_the_next_beat_of_the_leading_deck()
+    {
+        Assert.Equal(0.375, DjMixer.UntilNextBeat(10.225, firstBeat: 0.1, Beat, rate: 1), 6); // a quarter into the beat
+        Assert.Equal(0, DjMixer.UntilNextBeat(10.12, 0.1, Beat, 1));                          // 20 ms late: start now
+        Assert.Equal(0.125, DjMixer.UntilNextBeat(10.35, 0.1, Beat, 2), 6);                   // halfway, twice as fast: half of 0.25 s
+        Assert.Equal(0, DjMixer.UntilNextBeat(10.35, 0.1, 0, 1));                             // no tempo: now
+    }
+
+    [Fact]
     public void The_cue_mix_goes_from_cue_only_to_master_only_with_both_full_in_the_middle()
     {
         Assert.Equal((1f, 0f), DjMixer.CueMixGains(0));

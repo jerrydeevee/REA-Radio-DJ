@@ -119,7 +119,7 @@ public sealed class CommandBus(
                 return Switch(Arg(2), strip.Muted, on => strip.SetVolume(strip.Volume, on), $"{strip.Name} gedempt");
 
             case "CART" when Long(w, 1) is long wall && Long(w, 2) is long slot:
-                if (wall is < 1 or > Cartwall.Walls || slot is < 1 or > Cartwall.SlotsPerWall) return CommandResult.Fail("wand 1-2, knop 1-64");
+                if (wall is < 1 or > Cartwall.SamplerWall + 1 || slot is < 1 or > Cartwall.SlotsPerWall) return CommandResult.Fail("wand 1-2 (3 = DJ-sampler), knop 1-64");
                 return cartwall.Press((int)wall - 1, (int)slot - 1) ? CommandResult.Done() : CommandResult.Fail("knop is leeg");
             case "CARTS" when Arg(1) == "STOP":
                 cartwall.StopAll();

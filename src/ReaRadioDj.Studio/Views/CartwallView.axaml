@@ -5,7 +5,7 @@
              x:DataType="vm:CartwallTool">
   <DockPanel Margin="6">
     <DockPanel DockPanel.Dock="Top" Margin="0,0,0,6">
-      <Button DockPanel.Dock="Right" Classes="small" Content="Alles stop (F10)" Command="{Binding StopAllCommand}" />
+      <Button DockPanel.Dock="Right" Classes="small" Content="{Binding StopText}" Command="{Binding StopAllCommand}" />
       <StackPanel Orientation="Horizontal" Spacing="4">
         <RadioButton Content="1" IsChecked="{Binding Page1}" GroupName="{Binding Id}" />
         <RadioButton Content="2" IsChecked="{Binding Page2}" GroupName="{Binding Id}" />
@@ -14,6 +14,8 @@
         <TextBlock Classes="muted" Text="{Binding PlayingText}" VerticalAlignment="Center" Margin="8,0,0,0" />
       </StackPanel>
     </DockPanel>
+    <TextBlock DockPanel.Dock="Top" Classes="muted" FontSize="12" TextWrapping="Wrap" Margin="0,0,0,6" IsVisible="{Binding IsSampler}"
+               Text="Pads spelen via de DJ-tafel: OFF AIR in de koptelefoon, ON AIR op de zender. Met Quantize start een pad op de volgende tel." />
     <ScrollViewer HorizontalScrollBarVisibility="Disabled">
     <ItemsControl x:Name="Grid" ItemsSource="{Binding Buttons}">
       <ItemsControl.ItemsPanel>

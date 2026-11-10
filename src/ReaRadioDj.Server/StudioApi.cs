@@ -211,7 +211,7 @@ public static class StudioApi
         });
 
         // ------------------------------------------------------------ cartwalls and overlays
-        api.MapGet("/carts/{wall:int}", (int wall, Cartwall c) => wall is >= 0 and < Cartwall.Walls ? Results.Ok(c.Get(wall).Select(Cart)) : Results.NotFound());
+        api.MapGet("/carts/{wall:int}", (int wall, Cartwall c) => Cartwall.IsWall(wall) ? Results.Ok(c.Get(wall).Select(Cart)) : Results.NotFound());
         api.MapPut("/carts/{wall:int}/{slot:int}", (int wall, int slot, CartRequest r, Cartwall c) =>
         {
             try { c.Assign(new CartSlot(wall, slot, r.MediaId, r.Label ?? "", r.Color ?? "", r.Loop, r.Overlay)); return Results.Ok(); }
@@ -227,7 +227,7 @@ public static class StudioApi
             try { return Results.Ok(new { started = c.Press(wall, slot) }); }
             catch (ArgumentOutOfRangeException) { return Results.NotFound(); }
         });
-        api.MapPost("/carts/stop", (Cartwall c) => { c.StopAll(); return Results.Ok(); });
+        api.MapPost("/carts/stop", (int? wall, Cartwall c) => { c.StopAll(wall); return Results.Ok(); });
 
         api.MapPost("/overlays/play", (MediaRequest r, StudioPlayers p, MediaLibrary library) =>
         {

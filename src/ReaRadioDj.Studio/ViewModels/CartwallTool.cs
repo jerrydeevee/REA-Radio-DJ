@@ -52,7 +52,10 @@ public sealed partial class CartwallTool : StudioTool
         for (int i = 0; i < 16; i++) Buttons.Add(new CartButton(this, i));
     }
 
-    public int Wall => Id == "cart2" ? 1 : 0;
+    /// <summary>0 and 1 = the cartwalls; 2 = the DJ sampler (plays through the DJ desk).</summary>
+    public int Wall => Id switch { "cart2" => 1, "sampler" => 2, _ => 0 };
+    public bool IsSampler => Wall == 2;
+    public string StopText => IsSampler ? "Pads stop" : "Alles stop (F10)";
     public ObservableCollection<CartButton> Buttons { get; } = [];
     public IReadOnlyList<string> ColorChoices => Colors;
     [ObservableProperty] private int _page;
@@ -155,6 +158,6 @@ public sealed partial class CartwallTool : StudioTool
         if (await Hub.Client.DeleteAsync($"/api/carts/{Wall}/{Page * 16 + b.Slot}")) await ReloadAsync();
     }
 
-    [RelayCommand] private Task StopAll() => Hub.Client.PostAsync("/api/carts/stop");
+    [RelayCommand] private Task StopAll() => Hub.Client.PostAsync(IsSampler ? "/api/carts/stop?wall=2" : "/api/carts/stop");
     [RelayCommand] private Task Reload() => ReloadAsync();
 }

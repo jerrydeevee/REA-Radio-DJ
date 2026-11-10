@@ -139,6 +139,7 @@ public sealed class DjDeck
     public double FxMix { get; private set; } = 0.5;
     public double FxBeats { get; private set; } = 1;
     public double Bpm => _memory.Bpm;
+    public double FirstBeat => _memory.FirstBeat;
     public double PlayingBpm => _memory.Bpm * (1 + (Tempo + _bend) / 100);
 
     /// <summary>Where the decoder is: ahead of what you hear while the deck plays.</summary>
@@ -685,6 +686,8 @@ public sealed class DjMixer : ITickable, IDisposable
         _strip = router.Strip(AudioRouter.DjStrip);
         var pfl = router.Strip(AudioRouter.PflStrip);
         Decks = new[] { "A", "B", "C", "D" }.Select(id => new DjDeck(id, _strip, pfl, store, options.Mix.TargetLufs)).ToList();
+        Sampler = new ClipBank(router, _strip, options.Mix.TargetLufs);
+        SamplerCue = new ClipBank(router, pfl, options.Mix.TargetLufs);
         SetOnAir(false);
         _limiter.Attach(_strip.Handle);
         try { SetLimiter(true, -1); }
@@ -693,6 +696,33 @@ public sealed class DjMixer : ITickable, IDisposable
     }
 
     private readonly MasterProcessor _limiter = new();
+
+    /// <summary>
+    /// The sampler pads play on the DJ strip (through the limiter, into the mix recording, on air with the desk), or on
+    /// the pre-listen strip while the desk is off air, so you hear them in the headphones.
+    /// </summary>
+    public ClipBank Sampler { get; }
+    public ClipBank SamplerCue { get; }
+
+    /// <summary>
+    /// Seconds to the next beat of the leading deck (the loudest playing deck with a tempo), at the tempo you hear;
+    /// null when no deck has a beat to follow. Just after a beat it answers 0, so a pad pressed a hair late still starts now.
+    /// </summary>
+    public double? SecondsToNextBeat()
+    {
+        var lead = Decks.Where(d => d.Playing && d.Bpm > 0).OrderByDescending(d => d.Fader * CrossfadeGain(Crossfader, d.Left, Curve)).FirstOrDefault();
+        if (lead is null) return null;
+        return UntilNextBeat(lead.Position, lead.FirstBeat, 60 / lead.Bpm, 1 + lead.Tempo / 100);
+    }
+
+    /// <summary>Real seconds from <paramref name="position"/> (file seconds) to the next beat; 0 within 30 ms after a beat.</summary>
+    public static double UntilNextBeat(double position, double firstBeat, double beatSeconds, double rate)
+    {
+        if (beatSeconds <= 0 || rate <= 0) return 0;
+        double phase = DjDeck.Phase(position, firstBeat, beatSeconds);
+        if (phase * beatSeconds / rate < 0.03) return 0;
+        return (1 - phase) * beatSeconds / rate;
+    }
 
     /// <summary>Hot cues, loops and rolls land on the beat.</summary>
     public bool Quantize { get; private set; }

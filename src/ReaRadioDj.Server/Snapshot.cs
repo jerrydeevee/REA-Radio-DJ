@@ -41,7 +41,7 @@ public static class Snapshot
             log.History.Take(20).Select(i => Item(i, default)).ToList(),
             players.Standby.Select(p => Player(p.Info)).ToList(),
             Player(players.Pfl.Info),
-            players.Carts.Active.Select(Clip).ToList(),
+            players.Carts.Active.Concat(sp.GetRequiredService<Cartwall>().SamplerActive).Select(Clip).ToList(),
             players.Overlays.Active.Select(Clip).ToList(),
             Mixer(router),
             automation.UpcomingEvents(6).Select(e => new UpcomingEventDto(e.Id, e.Name, e.At, Name(e.Timing), e.Prepared)).ToList(),
