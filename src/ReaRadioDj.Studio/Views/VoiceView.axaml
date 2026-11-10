@@ -72,7 +72,7 @@
         <TextBox Text="{Binding TestText}" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="54" MaxHeight="110" />
         <DockPanel>
           <Button DockPanel.Dock="Left" Classes="transport go" Content="▶ Genereer en beluister" Command="{Binding TestCommand}"
-                  IsEnabled="{Binding !Busy}" ToolTip.Tip="Rendert de tekst met de stem uit de editor en speelt hem af op PFL (niet op de lucht)" />
+                  IsEnabled="{Binding !Busy}" ToolTip.Tip="Rendert de tekst met de stem uit de editor en speelt hem af op PFL (niet ON AIR)" />
           <TextBlock Text="{Binding LastResult}" VerticalAlignment="Center" Margin="10,0,0,0" TextWrapping="Wrap" />
         </DockPanel>
         <ListBox ItemsSource="{Binding Results}" MaxHeight="80" FontSize="11" Classes="mono" />

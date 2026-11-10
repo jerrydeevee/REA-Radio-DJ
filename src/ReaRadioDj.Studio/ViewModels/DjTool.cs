@@ -225,7 +225,7 @@ public sealed partial class DjTool : StudioTool
     partial void OnFollowingChanged(bool value) => OnPropertyChanged(nameof(CanFollow));
     partial void OnOnAirChanged(bool value) => OnPropertyChanged(nameof(CanFollow));
     partial void OnAvailableChanged(bool value) => OnPropertyChanged(nameof(CanFollow));
-    [ObservableProperty] private string _onAirText = "DJ-tafel staat niet op de lucht: je hoort de decks alleen op voorluisteren";
+    [ObservableProperty] private string _onAirText = "DJ-tafel is OFF AIR: je hoort de decks alleen op PFL";
 
     partial void OnCrossfaderChanged(double value)
     {
@@ -254,7 +254,7 @@ public sealed partial class DjTool : StudioTool
     [RelayCommand]
     private async Task Follow()
     {
-        if (!await Hub.Client.PostAsync("/api/dj/follow")) Hub.Status = "Deck A kan de automatisering niet volgen: haal eerst het nummer van deck A, en de tafel mag niet op de lucht staan";
+        if (!await Hub.Client.PostAsync("/api/dj/follow")) Hub.Status = "Deck A kan de automatisering niet volgen: haal eerst het nummer van deck A, en de tafel mag niet ON AIR zijn";
     }
 
     protected override void OnState(StateDto s)
@@ -266,9 +266,9 @@ public sealed partial class DjTool : StudioTool
         {
             OnAir = dj.OnAir;
             Following = dj.Following;
-            OnAirText = dj.OnAir ? "DJ-tafel staat op de lucht: wat je mixt gaat de zender op"
-                : dj.Following ? "Deck A volgt de automatisering. Kies DJ op de lucht om naadloos over te nemen; de automatisering stopt dan."
-                : "DJ-tafel staat niet op de lucht: je hoort de decks alleen op voorluisteren";
+            OnAirText = dj.OnAir ? "DJ-tafel is ON AIR: wat je mixt gaat de zender op"
+                : dj.Following ? "Deck A volgt de automatisering. Kies DJ ON AIR om naadloos over te nemen; de automatisering stopt dan."
+                : "DJ-tafel is OFF AIR: je hoort de decks alleen op PFL";
             Sharp = dj.Curve == "sharp";
             Recording = dj.Recording is not null;
             RecordText = dj.Recording is null ? "● Mix opnemen" : $"■ Stop opname {TimeSpan.FromSeconds(dj.RecordingSeconds):h\\:mm\\:ss}";

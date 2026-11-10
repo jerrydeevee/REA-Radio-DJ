@@ -10,9 +10,9 @@
       <Grid ColumnDefinitions="Auto,*,Auto,Auto,Auto">
         <Border Grid.Column="0" BorderBrush="{DynamicResource ControlBorderBrush}" BorderThickness="1" CornerRadius="8" ClipToBounds="True" VerticalAlignment="Center">
           <StackPanel Orientation="Horizontal">
-            <ToggleButton Classes="seg" Content="Alleen voorluisteren" IsChecked="{Binding !OnAir, Mode=OneWay}" Command="{Binding SetOnAirCommand}" CommandParameter="off"
+            <ToggleButton Classes="seg" Content="Alleen PFL" IsChecked="{Binding !OnAir, Mode=OneWay}" Command="{Binding SetOnAirCommand}" CommandParameter="off"
                           ToolTip.Tip="De DJ-tafel gaat niet de zender op; de automatisering loopt gewoon door" />
-            <ToggleButton Classes="seg onair" Content="DJ op de lucht" IsChecked="{Binding OnAir, Mode=OneWay}" Command="{Binding SetOnAirCommand}" CommandParameter="on"
+            <ToggleButton Classes="seg onair" Content="DJ ON AIR" IsChecked="{Binding OnAir, Mode=OneWay}" Command="{Binding SetOnAirCommand}" CommandParameter="on"
                           ToolTip.Tip="Wat je mixt gaat de zender op. De automatisering stop je zelf met Stop of Assist in de balk bovenin." />
           </StackPanel>
         </Border>
@@ -23,7 +23,7 @@
                    Text="Deze engine heeft nog geen DJ-tafel: werk de engine bij" />
         <ToggleButton Grid.Column="3" Classes="bar" MinHeight="36" Margin="0,0,12,0" Content="{Binding RecordText}" IsChecked="{Binding Recording, Mode=OneWay}"
                       Command="{Binding ToggleRecordCommand}" IsVisible="{Binding Available}"
-                      ToolTip.Tip="Neemt op wat de DJ-tafel mixt, op en van de lucht. Na stoppen staat de mix in de bibliotheek bij Opnamen." />
+                      ToolTip.Tip="Neemt op wat de DJ-tafel mixt, ON AIR en OFF AIR. Na stoppen staat de mix in de bibliotheek bij Opnamen." />
         <Border Grid.Column="4" BorderBrush="{DynamicResource ControlBorderBrush}" BorderThickness="1" CornerRadius="8" ClipToBounds="True" VerticalAlignment="Center">
           <StackPanel Orientation="Horizontal">
             <ToggleButton Classes="seg" Content="2 decks" IsChecked="{Binding !FourDecks, Mode=OneWay}" Command="{Binding SetDecksCommand}" CommandParameter="2" />

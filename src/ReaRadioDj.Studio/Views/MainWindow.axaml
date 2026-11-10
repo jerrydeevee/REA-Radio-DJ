@@ -154,7 +154,7 @@
               </ToggleButton>
             </StackPanel>
           </Border>
-          <Button Classes="bar" Command="{Binding SkipCommand}" ToolTip.Tip="Het item op de lucht overslaan">
+          <Button Classes="bar" Command="{Binding SkipCommand}" ToolTip.Tip="Het item dat ON AIR is overslaan">
             <StackPanel Orientation="Horizontal" Spacing="8">
               <TextBlock Text="Overslaan" VerticalAlignment="Center" />
               <Border Classes="key"><TextBlock Text="F7" /></Border>

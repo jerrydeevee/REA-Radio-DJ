@@ -54,7 +54,7 @@ public sealed partial class HardwareTool : StudioTool
 
     public static readonly string[] KindNames = ["MIDI", "Serieel (COM-poort)", "Livewire (GPIO via LWRP)", "Ember+ (Lawo-mengtafel e.a.)"];
     private static readonly string[] KindValues = ["midi", "serial", "livewire", "ember"];
-    public static readonly string[] StateNames = ["Microfoon open", "Op de lucht (er speelt iets)", "Automatisch"];
+    public static readonly string[] StateNames = ["Microfoon open", "ON AIR (er speelt iets)", "Automatisch"];
     private static readonly string[] StateValues = ["mic", "onair", "auto"];
     public static string StateLabel(string state) => StateNames[Math.Max(0, Array.IndexOf(StateValues, state))];
 
@@ -122,7 +122,7 @@ public sealed partial class HardwareTool : StudioTool
     }
 
     private void ShowStates(Dictionary<string, bool> s) => StateLine =
-        $"Nu: microfoon {(s.GetValueOrDefault("mic") ? "OPEN" : "dicht")} · op de lucht {(s.GetValueOrDefault("onair") ? "ja" : "nee")} · automatisch {(s.GetValueOrDefault("auto") ? "aan" : "uit")}";
+        $"Nu: microfoon {(s.GetValueOrDefault("mic") ? "OPEN" : "dicht")} · on air {(s.GetValueOrDefault("onair") ? "ja" : "nee")} · automatisch {(s.GetValueOrDefault("auto") ? "aan" : "uit")}";
 
     private static string StatusText(HwDeviceDto d) => (d.Connected ? "● " : "○ ") + d.Status;
 

@@ -61,7 +61,7 @@ public sealed partial class LibraryTool : StudioTool
     ];
     public List<ClickChoice> ClickActions { get; } =
     [
-        new("Dubbelklik: voorluisteren", "pfl"), new("Dubbelklik: als volgende", "next"), new("Dubbelklik: achteraan", "end"),
+        new("Dubbelklik: PFL", "pfl"), new("Dubbelklik: als volgende", "next"), new("Dubbelklik: achteraan", "end"),
         new("Dubbelklik: standby 1", "standby1"), new("Dubbelklik: cues", "cues"),
     ];
     // ---- own columns: which fields show under the title, in which order
@@ -202,6 +202,14 @@ public sealed partial class LibraryTool : StudioTool
         camelot is { Length: >= 2 } c && int.TryParse(c[..^1], out int n) ? n * 2 + (c[^1] == 'B' ? 1 : 0) : int.MaxValue;
 
     [RelayCommand] private Task PflStop() => Hub.PlayerCommand("pfl", "stop");
+    [RelayCommand] private Task PflPause() => Hub.PlayerCommand("pfl", "toggle");
+
+    // ---- the pre-listen bar: what plays on PFL, with play/pause and stop right in the library
+    [ObservableProperty] private bool _pflActive;
+    [ObservableProperty] private bool _pflPlayingNow;
+    [ObservableProperty] private string _pflText = "";
+
+    private static string Clock(double seconds) => TimeSpan.FromSeconds(Math.Max(0, seconds)).ToString(@"m\:ss");
 
     private IEnumerable<MediaDto> Sorted(IEnumerable<MediaDto> items) => (Sort?.Key ?? "relevance") switch
     {
@@ -461,6 +469,9 @@ public sealed partial class LibraryTool : StudioTool
     {
         Status = $"{s.Library.Songs} nummers · {s.Library.Jingles} jingles · {s.Library.Status}";
         if (Detail is { } d) d.Playhead = s.Pfl.MediaId == d.Id && s.Pfl.State is "playing" or "paused" ? s.Pfl.Position : -1;
+        PflActive = s.Pfl.State is "playing" or "paused";
+        PflPlayingNow = s.Pfl.State == "playing";
+        PflText = PflActive ? $"{s.Pfl.Label}   {Clock(s.Pfl.Position - s.Pfl.CueIn)} / {Clock(s.Pfl.CueOut - s.Pfl.CueIn)}" : "";
         // The engine watches the folders; when a scan finished or another song started, the list (and its "may play now") is fresh again.
         string key = $"{s.Library.Songs}/{s.Library.Jingles}/{s.Library.Status}";
         bool scanning = s.Library.Status.StartsWith("Analyseren", StringComparison.Ordinal) || s.Library.Status.StartsWith("Inlezen", StringComparison.Ordinal)

@@ -232,7 +232,7 @@
           <WrapPanel>
             <Button Classes="small" Content="Proefscript" Command="{Binding TryCreativeCommand}" IsEnabled="{Binding !Trying}" Margin="0,0,4,4" />
             <Button Classes="small" Content="Proef met stem (PFL)" Command="{Binding TryCreativeVoiceCommand}" IsEnabled="{Binding !Trying}" Margin="0,0,4,4"
-                    ToolTip.Tip="Schrijft en spreekt het in met de gekozen stem en speelt het af op de voorluister (niet op de zender)." />
+                    ToolTip.Tip="Schrijft en spreekt het in met de gekozen stem en speelt het af op PFL (niet ON AIR)." />
           </WrapPanel>
           <Border Classes="card" IsVisible="{Binding CreativeTrial, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
             <SelectableTextBlock Text="{Binding CreativeTrial}" TextWrapping="Wrap" />

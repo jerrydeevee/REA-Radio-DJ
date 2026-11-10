@@ -43,11 +43,11 @@
       </Grid>
     </Grid>
     <ToggleButton Classes="bar" IsChecked="{Binding Pfl, Mode=OneWay}" Command="{Binding TogglePflCommand}" HorizontalAlignment="Stretch"
-                  HorizontalContentAlignment="Center" ToolTip.Tip="Dit deck op de koptelefoon (voorluisteren), ook met de fader dicht">
+                  HorizontalContentAlignment="Center" ToolTip.Tip="Dit deck op de koptelefoon (PFL), ook met de fader dicht">
       <StackPanel Orientation="Horizontal" Spacing="8">
         <Path Data="M2,13 V8 A6,6 0 0 1 14,8 V13 M1,8 H4 V13 H1 Z M12,8 H15 V13 H12 Z" Stroke="{Binding $parent[ToggleButton].Foreground}" StrokeThickness="1.6"
               Width="16" Height="14" Stretch="None" VerticalAlignment="Center" />
-        <TextBlock Text="Voorluisteren" VerticalAlignment="Center" />
+        <TextBlock Text="PFL" VerticalAlignment="Center" />
       </StackPanel>
     </ToggleButton>
   </StackPanel>

@@ -37,7 +37,7 @@
                        Text="{Binding ItemRemaining}" HorizontalAlignment="Right" />
           </StackPanel>
           <StackPanel VerticalAlignment="Center" Margin="0,0,10,0">
-            <TextBlock Text="OP DE LUCHT" FontSize="11" FontWeight="Bold" Foreground="{Binding CounterForeground}" Opacity="0.75" />
+            <TextBlock Text="ON AIR" FontSize="11" FontWeight="Bold" Foreground="{Binding CounterForeground}" Opacity="0.75" />
             <TextBlock Text="{Binding NowLabel}" FontWeight="SemiBold" Foreground="{Binding CounterForeground}" TextTrimming="CharacterEllipsis" />
             <TextBlock Classes="mono" Text="{Binding ItemElapsed, StringFormat='gespeeld {0}'}" FontSize="12" Foreground="{Binding CounterForeground}" Opacity="0.7" />
           </StackPanel>

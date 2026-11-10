@@ -38,7 +38,7 @@ public sealed class DjHandover : IDisposable
     {
         lock (_gate)
         {
-            if (_dj.OnAir) return "de DJ-tafel staat al op de lucht";
+            if (_dj.OnAir) return "de DJ-tafel is al ON AIR";
             if (Following) return null;
             if (DeckA.Media is not null) return "deck A heeft al een nummer; haal het eraf om de automatisering te volgen";
             Following = true;

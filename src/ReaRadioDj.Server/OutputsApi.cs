@@ -150,7 +150,7 @@ public static class OutputsApi
 
     private static OutputsDto Dto(AudioRouter router)
     {
-        var targets = new List<OutputChoiceDto> { new("", "Normale uitgang (uitzending, of PFL voor voorbeluisteren)") };
+        var targets = new List<OutputChoiceDto> { new("", "Normale uitgang (uitzending, of PFL)") };
         foreach (var d in BassRuntime.GetDevices().Where(d => d.Enabled && d.Index > 0))
             for (int pair = 0; pair < OutputTarget.Pairs; pair++)
                 targets.Add(new(new OutputTarget(d.Index, pair).Id, $"{d.Name} · uitgang {OutputTarget.Name(pair)}"));

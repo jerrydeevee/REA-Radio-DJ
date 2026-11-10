@@ -14,7 +14,7 @@ public static class Brushes
     private static readonly IBrush Transparent = new SolidColorBrush(Colors.Transparent);
 
     public static readonly IValueConverter OnAir = new FuncValueConverter<bool, IBrush>(on => on ? Red : Off);
-    public static readonly IValueConverter OnAirText = new FuncValueConverter<bool, string>(on => on ? "AAN DE LUCHT" : "STIL");
+    public static readonly IValueConverter OnAirText = new FuncValueConverter<bool, string>(on => on ? "ON AIR" : "STIL");
     /// <summary>Engine connection: green when connected, amber when not (a word next to it says which).</summary>
     public static readonly IValueConverter WarnOrOk = new FuncValueConverter<bool, IBrush>(warn => warn ? Amber : Green);
     public static readonly IValueConverter Connection =new FuncValueConverter<bool, IBrush>(ok => ok ? Ok : Amber);

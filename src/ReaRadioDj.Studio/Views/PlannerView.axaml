@@ -407,7 +407,7 @@
             <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" Spacing="4" Margin="0,4,0,0">
               <Button Classes="small" Content="Nieuwe stream" Command="{Binding NewWatchCommand}" />
               <Button Classes="small" Content="Live stream stoppen" Command="{Binding StopLiveWatchCommand}" Background="#B4232F"
-                      ToolTip.Tip="Haalt de stream die nu live is van de lucht; het programma gaat verder" />
+                      ToolTip.Tip="Haalt de stream die nu live is OFF AIR; het programma gaat verder" />
             </StackPanel>
             <ListBox ItemsSource="{Binding Watches}" SelectedItem="{Binding SelectedWatch}">
               <ListBox.ItemTemplate>
@@ -449,7 +449,7 @@
                 <Button Content="Verwijderen" Command="{Binding DeleteWatchCommand}" />
               </StackPanel>
               <TextBlock Classes="muted" TextWrapping="Wrap"
-                         Text="Binnen het tijdvenster kijkt de engine of de stream uitzendt. Is hij live, dan gaat hij de lucht in. Stopt de stream of eindigt het venster, dan gaat het programma verder." />
+                         Text="Binnen het tijdvenster kijkt de engine of de stream uitzendt. Is hij live, dan gaat hij ON AIR. Stopt de stream of eindigt het venster, dan gaat het programma verder." />
             </StackPanel>
           </ScrollViewer>
         </Grid>

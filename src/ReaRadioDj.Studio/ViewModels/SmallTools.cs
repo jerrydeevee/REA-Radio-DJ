@@ -133,7 +133,7 @@ public sealed partial class ClockTool : StudioTool
         else
         {
             _secondsLeft = 999;
-            NowLabel = "niets op de lucht"; ItemRemaining = "—"; ItemElapsed = ""; ItemLeft = -1; ItemSecondsLeft = 999;
+            NowLabel = "niets ON AIR"; ItemRemaining = "—"; ItemElapsed = ""; ItemLeft = -1; ItemSecondsLeft = 999;
             EndState = "normal"; HasIntro = false; IntroText = "";
         }
 

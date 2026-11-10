@@ -71,7 +71,7 @@ public sealed class TrayIcon(PlayoutEngine engine, IHostApplicationLifetime life
                 }
                 var state = engine.GetState();
                 var now = state.Current;
-                string line = now is null ? (state.AutoPlay ? "Wacht op muziek" : "Stil (live-assist)") : $"Op de lucht: {now.Label}";
+                string line = now is null ? (state.AutoPlay ? "Wacht op muziek" : "Stil (live-assist)") : $"ON AIR: {now.Label}";
                 status.Text = line.Length > 60 ? line[..57] + "…" : line;
                 auto.Checked = state.AutoPlay;
                 icon.Icon = now is null ? idle : live;

@@ -103,7 +103,7 @@ public sealed partial class DeckVm(int index) : ObservableObject
     public void OnAir(NowPlayingDto c, DateTime now)
     {
         Empty = false;
-        Status = "OP DE LUCHT";
+        Status = "ON AIR";
         Title = string.IsNullOrWhiteSpace(c.Title) ? c.Label : c.Title;
         Artist = c.Artist;
         Type = c.Category;

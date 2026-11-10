@@ -392,7 +392,7 @@ public sealed partial class PlannerTool : StudioTool
     [RelayCommand]
     private async Task StopLiveWatch()
     {
-        if (await Hub.Client.PostAsync("/api/watches/stop")) { Hub.Status = "externe stream van de lucht gehaald"; await ReloadAsync(); }
+        if (await Hub.Client.PostAsync("/api/watches/stop")) { Hub.Status = "externe stream OFF AIR gehaald"; await ReloadAsync(); }
     }
 }
 

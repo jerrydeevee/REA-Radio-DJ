@@ -7,6 +7,6 @@
   <StackPanel Margin="6">
     <v:PlayerCardView DataContext="{Binding Player}" />
     <TextBlock Classes="muted" TextWrapping="Wrap"
-               Text="PFL speelt op de voorbeluister-uitgang (koptelefoon), nooit op de zender. Ctrl+P = afspelen/pauze." />
+               Text="PFL speelt op de PFL-uitgang (koptelefoon), nooit op de zender. Ctrl+P = afspelen/pauze." />
   </StackPanel>
 </UserControl>

@@ -20,7 +20,7 @@ public sealed class DockFactory : Factory
         ("dj", "DJ-mengtafel", () => new DjTool()),
         ("log", "Programmalog", () => new LogTool()),
         ("standby", "Standby-spelers", () => new StandbyTool()),
-        ("pfl", "PFL / voorbeluisteren", () => new PflTool()),
+        ("pfl", "PFL", () => new PflTool()),
         ("cart1", "Cartwall 1", () => new CartwallTool { Id = "cart1", Title = "Cartwall 1" }),
         ("cart2", "Cartwall 2", () => new CartwallTool { Id = "cart2", Title = "Cartwall 2" }),
         ("library", "Bibliotheek", () => new LibraryTool()),

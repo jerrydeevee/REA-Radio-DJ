@@ -158,7 +158,7 @@
           <ComboBox ItemsSource="{Binding Outputs}" SelectedItem="{Binding OutputDevice}" HorizontalAlignment="Stretch">
             <ComboBox.ItemTemplate><DataTemplate x:DataType="c:DeviceDto"><TextBlock Text="{Binding Name}" /></DataTemplate></ComboBox.ItemTemplate>
           </ComboBox>
-          <TextBlock Text="PFL / voorbeluisteren (koptelefoon)" />
+          <TextBlock Text="PFL (koptelefoon)" />
           <ComboBox ItemsSource="{Binding Outputs}" SelectedItem="{Binding PreviewDevice}" HorizontalAlignment="Stretch">
             <ComboBox.ItemTemplate><DataTemplate x:DataType="c:DeviceDto"><TextBlock Text="{Binding Name}" /></DataTemplate></ComboBox.ItemTemplate>
           </ComboBox>
