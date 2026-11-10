@@ -16,6 +16,11 @@ public partial class MainWindow : Window
         ViewModels.Hotkeys.Changed += ApplyHotkeys;
         Closed += (_, _) => { ViewModels.Hotkeys.Changed -= ApplyHotkeys; _global?.Dispose(); };
         Opened += (_, _) => ApplyHotkeys();
+        // The size setting (Instellingen › Uiterlijk) scales everything in the window.
+        void Rescale() => Zoom.LayoutTransform = new Avalonia.Media.ScaleTransform(Services.Appearance.Scale, Services.Appearance.Scale);
+        Rescale();
+        Services.Appearance.ScaleChanged += Rescale;
+        Closed += (_, _) => Services.Appearance.ScaleChanged -= Rescale;
         // Workbenches need the screens: which one is where, and their size.
         Opened += (_, _) =>
         {

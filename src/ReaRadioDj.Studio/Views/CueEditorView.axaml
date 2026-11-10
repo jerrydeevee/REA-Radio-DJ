@@ -34,7 +34,7 @@
             <DataTemplate x:DataType="vm:CueRow">
               <Border Classes="card" Margin="0,0,4,4" Padding="6,4" Width="250" ToolTip.Tip="{Binding Help}">
                 <DockPanel>
-                  <Border DockPanel.Dock="Left" Width="4" Background="{Binding Brush}" CornerRadius="2" Margin="0,0,6,0" />
+                  <Border DockPanel.Dock="Left" Width="4" Background="{Binding Brush}" CornerRadius="{DynamicResource Radius2}" Margin="0,0,6,0" />
                   <TextBlock DockPanel.Dock="Left" Text="{Binding Label}" Width="56" VerticalAlignment="Center" />
                   <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="2">
                     <Button Classes="small" Content="⌖" ToolTip.Tip="Zet op de cursor" Command="{Binding SetHereCommand}" />

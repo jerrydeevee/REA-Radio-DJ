@@ -5,21 +5,21 @@
              x:Class="ReaRadioDj.Studio.Views.DjDeckView"
              x:DataType="vm:DjDeckVm">
   <!-- One deck: the coloured line on top says which deck it is, together with the letter -->
-  <Border Classes="card" Padding="0" CornerRadius="10" ClipToBounds="True">
+  <Border Classes="card" Padding="0" CornerRadius="{DynamicResource Radius10}" ClipToBounds="True">
     <DockPanel>
       <Border DockPanel.Dock="Top" Height="3" Background="{Binding Brush}" />
       <Grid Margin="16,12,16,16" RowDefinitions="Auto,Auto,Auto,Auto,Auto" ColumnDefinitions="*,Auto">
 
         <!-- Title, state and tempo -->
         <Grid Grid.Row="0" Grid.ColumnSpan="2" ColumnDefinitions="Auto,*,Auto,Auto" Margin="0,0,0,10">
-          <Border Grid.Column="0" Width="40" Height="40" CornerRadius="8" Background="{Binding Brush}" Margin="0,0,12,0">
+          <Border Grid.Column="0" Width="40" Height="40" CornerRadius="{DynamicResource Radius8}" Background="{Binding Brush}" Margin="0,0,12,0">
             <TextBlock Text="{Binding Id}" FontSize="20" FontWeight="Bold" Foreground="#0E1116" HorizontalAlignment="Center" VerticalAlignment="Center" />
           </Border>
           <StackPanel Grid.Column="1" VerticalAlignment="Center">
             <TextBlock Text="{Binding Title}" FontSize="19" FontWeight="Bold" TextTrimming="CharacterEllipsis" />
             <TextBlock Classes="muted" FontSize="13" Text="{Binding Artist}" TextTrimming="CharacterEllipsis" />
           </StackPanel>
-          <Border Grid.Column="2" BorderBrush="{Binding Brush}" BorderThickness="1" CornerRadius="12" Padding="10,2" Margin="12,0" VerticalAlignment="Center">
+          <Border Grid.Column="2" BorderBrush="{Binding Brush}" BorderThickness="1" CornerRadius="{DynamicResource Radius12}" Padding="10,2" Margin="12,0" VerticalAlignment="Center">
             <TextBlock Text="{Binding StateText}" FontSize="12" Foreground="{Binding Brush}" />
           </Border>
           <StackPanel Grid.Column="3" VerticalAlignment="Center">
@@ -29,7 +29,7 @@
         </Grid>
 
         <!-- Waveform of the whole track: click to jump -->
-        <Border Grid.Row="1" Grid.ColumnSpan="2" CornerRadius="6" ClipToBounds="True" Height="72" Background="#0B0E12">
+        <Border Grid.Row="1" Grid.ColumnSpan="2" CornerRadius="{DynamicResource Radius6}" ClipToBounds="True" Height="72" Background="#0B0E12">
           <ctl:WaveformView x:Name="Wave" Peaks="{Binding Peaks}" BlockSeconds="{Binding BlockSeconds}" Markers="{Binding Markers}"
                             Playhead="{Binding Position}" CueOut="{Binding Duration}" ShowCursor="False" ReadOnlyMarkers="True"
                             EmptyText="sleep een nummer hierheen" Cursor="Hand" ToolTip.Tip="Klik om te springen · scrollen = in- en uitzoomen" />

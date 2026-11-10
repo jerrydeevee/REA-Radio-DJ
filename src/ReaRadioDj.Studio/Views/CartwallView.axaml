@@ -55,7 +55,7 @@
               <StackPanel Grid.Row="2" Spacing="2">
                 <TextBlock Classes="mono" FontSize="13" FontWeight="Bold" Text="{Binding Sub}" HorizontalAlignment="Center" Foreground="White" />
                 <ProgressBar Value="{Binding Left}" Maximum="100" MinHeight="5" Height="5" MinWidth="0" IsVisible="{Binding Loaded}"
-                             Foreground="#3DBD7D" Background="#33000000" CornerRadius="2" />
+                             Foreground="#3DBD7D" Background="#33000000" CornerRadius="{DynamicResource Radius2}" />
               </StackPanel>
             </Grid>
           </Button>

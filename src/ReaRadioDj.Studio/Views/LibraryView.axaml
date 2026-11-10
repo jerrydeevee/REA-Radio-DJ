@@ -241,7 +241,7 @@
           <DataTemplate x:DataType="vm:MediaDetailVm">
             <StackPanel Spacing="6">
               <DockPanel>
-                <Border DockPanel.Dock="Left" Width="84" Height="84" CornerRadius="4" ClipToBounds="True" Margin="0,0,10,0"
+                <Border DockPanel.Dock="Left" Width="84" Height="84" CornerRadius="{DynamicResource Radius4}" ClipToBounds="True" Margin="0,0,10,0"
                         IsVisible="{Binding Cover, Converter={x:Static ObjectConverters.IsNotNull}}">
                   <Image Source="{Binding Cover}" Stretch="UniformToFill" />
                 </Border>
@@ -337,7 +337,7 @@
       <ListBox.ItemTemplate>
         <DataTemplate x:DataType="c:MediaDto">
           <Grid ColumnDefinitions="6,Auto,*,Auto" Opacity="{Binding Enabled, Converter={x:Static vm:Brushes.EnabledOpacity}}">
-            <Border Grid.Column="0" Background="{Binding Kind, Converter={x:Static vm:Brushes.TypeColor}}" CornerRadius="2" Margin="0,2" />
+            <Border Grid.Column="0" Background="{Binding Kind, Converter={x:Static vm:Brushes.TypeColor}}" CornerRadius="{DynamicResource Radius2}" Margin="0,2" />
             <Button Grid.Column="1" Classes="small" Content="▶" Padding="6,2" Margin="6,0,0,0" VerticalAlignment="Center"
                     Command="{Binding $parent[UserControl].DataContext.PflRowCommand}" CommandParameter="{Binding}"
                     ToolTip.Tip="PFL; nog eens klikken stopt" />

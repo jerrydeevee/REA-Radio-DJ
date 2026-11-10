@@ -8,7 +8,7 @@
     <!-- What the listener hears: the automation or this desk -->
     <Border DockPanel.Dock="Top" Classes="card" Padding="12,8" Margin="0,0,0,8">
       <Grid ColumnDefinitions="Auto,*,Auto,Auto,Auto">
-        <Border Grid.Column="0" BorderBrush="{DynamicResource ControlBorderBrush}" BorderThickness="1" CornerRadius="8" ClipToBounds="True" VerticalAlignment="Center">
+        <Border Grid.Column="0" BorderBrush="{DynamicResource ControlBorderBrush}" BorderThickness="1" CornerRadius="{DynamicResource Radius8}" ClipToBounds="True" VerticalAlignment="Center">
           <StackPanel Orientation="Horizontal">
             <ToggleButton Classes="seg" Content="Alleen PFL" IsChecked="{Binding !OnAir, Mode=OneWay}" Command="{Binding SetOnAirCommand}" CommandParameter="off"
                           ToolTip.Tip="De DJ-tafel gaat niet de zender op; de automatisering loopt gewoon door" />
@@ -24,7 +24,7 @@
         <ToggleButton Grid.Column="3" Classes="bar" MinHeight="36" Margin="0,0,12,0" Content="{Binding RecordText}" IsChecked="{Binding Recording, Mode=OneWay}"
                       Command="{Binding ToggleRecordCommand}" IsVisible="{Binding Available}"
                       ToolTip.Tip="Neemt op wat de DJ-tafel mixt, ON AIR en OFF AIR. Na stoppen staat de mix in de bibliotheek bij Opnamen." />
-        <Border Grid.Column="4" BorderBrush="{DynamicResource ControlBorderBrush}" BorderThickness="1" CornerRadius="8" ClipToBounds="True" VerticalAlignment="Center">
+        <Border Grid.Column="4" BorderBrush="{DynamicResource ControlBorderBrush}" BorderThickness="1" CornerRadius="{DynamicResource Radius8}" ClipToBounds="True" VerticalAlignment="Center">
           <StackPanel Orientation="Horizontal">
             <ToggleButton Classes="seg" Content="2 decks" IsChecked="{Binding !FourDecks, Mode=OneWay}" Command="{Binding SetDecksCommand}" CommandParameter="2" />
             <ToggleButton Classes="seg" Content="4 decks" IsChecked="{Binding FourDecks, Mode=OneWay}" Command="{Binding SetDecksCommand}" CommandParameter="4" />
@@ -41,7 +41,7 @@
         <Panel Grid.Row="1" Grid.Column="4" Margin="0,8,0,0" IsVisible="{Binding FourDecks}"><v:DjDeckView DataContext="{Binding D}" /></Panel>
 
         <!-- Mixer -->
-        <Border Grid.Row="0" Grid.RowSpan="2" Grid.Column="2" Classes="card" Padding="16" CornerRadius="10" VerticalAlignment="Top">
+        <Border Grid.Row="0" Grid.RowSpan="2" Grid.Column="2" Classes="card" Padding="16" CornerRadius="{DynamicResource Radius10}" VerticalAlignment="Top">
           <StackPanel Spacing="12">
             <Grid ColumnDefinitions="250,20,250">
               <v:DjStripView Grid.Column="0" DataContext="{Binding A}" />

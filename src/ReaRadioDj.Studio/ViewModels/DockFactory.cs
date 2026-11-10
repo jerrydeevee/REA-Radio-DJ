@@ -157,7 +157,7 @@ public sealed class DockFactory : Factory
     {
         HostWindowLocator = new Dictionary<string, Func<IHostWindow?>>
         {
-            [nameof(IDockWindow)] = () => new HostWindow { Icon = AppIcon.Value },
+            [nameof(IDockWindow)] = () => new Controls.ScaledHostWindow { Icon = AppIcon.Value },
         };
         base.InitLayout(layout);
     }

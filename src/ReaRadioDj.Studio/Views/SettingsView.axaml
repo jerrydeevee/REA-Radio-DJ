@@ -334,6 +334,20 @@
         </StackPanel></ScrollViewer>
       </TabItem>
 
+      <TabItem Header="Uiterlijk">
+        <ScrollViewer><StackPanel Classes="page">
+          <TextBlock Classes="title" Text="Uiterlijk van deze studiocomputer" />
+          <TextBlock Classes="help" Text="Wijzigingen zie je meteen, in alle vensters en werkbladen. Ze gelden alleen voor deze computer." />
+          <TextBlock Classes="field" Text="Stijl" />
+          <ComboBox ItemsSource="{Binding ThemeNames}" SelectedIndex="{Binding ThemeIndex}" MinWidth="320" />
+          <TextBlock Classes="help" Text="Studio donker is het standaardontwerp. Nacht is gedimd voor een donkere studio, Licht is voor veel daglicht, Hoog contrast voor wie het scherp wil zien." />
+          <TextBlock Classes="field" Text="Hoeken" />
+          <ComboBox ItemsSource="{Binding CornerNames}" SelectedIndex="{Binding CornerIndex}" MinWidth="320" />
+          <TextBlock Classes="field" Text="Grootte van alles" />
+          <ComboBox ItemsSource="{Binding ScaleNames}" SelectedIndex="{Binding ScaleIndex}" MinWidth="320" />
+          <TextBlock Classes="help" Text="Groter voor een aanraakscherm of een scherm op afstand, kleiner om meer kwijt te kunnen op een laptop. Knoppen, tekst en vensters groeien mee." />
+        </StackPanel></ScrollViewer>
+      </TabItem>
       <TabItem Header="Deze studio">
         <ScrollViewer><StackPanel Classes="page">
           <TextBlock Classes="title" Text="Deze studiocomputer" />

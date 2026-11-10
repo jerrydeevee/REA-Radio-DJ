@@ -92,7 +92,7 @@ public sealed partial class CartwallTool : StudioTool
             b.Sub = c is { MediaId: not null } ? StudioHub.Time(c.Length) : "";
             b.Loop = c?.Loop ?? false;
             b.Overlay = c?.Overlay ?? false;
-            b.Background = Brushes.FromHex(c is { MediaId: not null } ? (string.IsNullOrWhiteSpace(c.Color) ? "#334155" : c.Color) : null);
+            b.Background = c is { MediaId: not null } ? Brushes.FromHex(string.IsNullOrWhiteSpace(c.Color) ? "#334155" : c.Color) : Brushes.Themed("CartEmptyBrush");
             b.Loaded = c is { MediaId: not null };
             b.Left = b.Loaded ? 100 : 0;
             b.Playing = false;
@@ -124,7 +124,7 @@ public sealed partial class CartwallTool : StudioTool
                 b.Progress = 0;
                 b.Left = b.Loaded ? 100 : 0;
                 b.Sub = b.Data is { MediaId: not null } d ? StudioHub.Time(d.Length) : "";
-                b.Background = Brushes.FromHex(b.Data is { MediaId: not null } d2 ? (string.IsNullOrWhiteSpace(d2.Color) ? "#334155" : d2.Color) : null);
+                b.Background = b.Data is { MediaId: not null } d2 ? Brushes.FromHex(string.IsNullOrWhiteSpace(d2.Color) ? "#334155" : d2.Color) : Brushes.Themed("CartEmptyBrush");
             }
         }
         var others = active.Keys.Where(k => k / 16 != Page).Select(k => $"p{k / 16 + 1}:{k % 16 + 1}").ToList();

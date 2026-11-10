@@ -10,7 +10,12 @@ public sealed class StudioSettings
     public string? EnginePath { get; set; }
     public string? EngineWorkingDirectory { get; set; }
     public bool StartEngine { get; set; } = true;
+    /// <summary>Colour style: dark, night, light or contrast (see Appearance).</summary>
     public string Theme { get; set; } = "dark";
+    /// <summary>Corner shape: square, normal or round.</summary>
+    public string Corners { get; set; } = "normal";
+    /// <summary>Size of the whole studio in percent (80-150).</summary>
+    public int ScalePercent { get; set; } = 100;
     public string LastLayout { get; set; } = "Standaard";
 
     /// <summary>Tijd window: studio, analog or digital; counter size 0-3; flash colour when an item ends.</summary>

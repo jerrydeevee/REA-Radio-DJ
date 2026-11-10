@@ -1,3 +1,4 @@
+using ReaRadioDj.Studio.Services;
 using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -108,6 +109,24 @@ public sealed partial class SettingsTool : StudioTool
 
     // This studio computer
     [ObservableProperty] private string _engineUrl = "";
+
+    // ---- appearance of this computer: applied at once, saved in studio.json
+    public IReadOnlyList<string> ThemeNames { get; } = [.. Appearance.Themes.Select(t => t.Name)];
+    public IReadOnlyList<string> CornerNames { get; } = [.. Appearance.Corners.Select(c => c.Name)];
+    public IReadOnlyList<string> ScaleNames { get; } = [.. Appearance.Scales.Select(p => $"{p} %")];
+    [ObservableProperty] private int _themeIndex = Math.Max(0, Array.FindIndex(Appearance.Themes, t => t.Key == StudioHub.Current.Settings.Theme));
+    [ObservableProperty] private int _cornerIndex = Math.Max(0, Array.FindIndex(Appearance.Corners, c => c.Key == StudioHub.Current.Settings.Corners));
+    [ObservableProperty] private int _scaleIndex = Math.Max(0, Array.IndexOf(Appearance.Scales, StudioHub.Current.Settings.ScalePercent));
+
+    partial void OnThemeIndexChanged(int value) { if (value >= 0) { Hub.Settings.Theme = Appearance.Themes[value].Key; ApplyLook(); } }
+    partial void OnCornerIndexChanged(int value) { if (value >= 0) { Hub.Settings.Corners = Appearance.Corners[value].Key; ApplyLook(); } }
+    partial void OnScaleIndexChanged(int value) { if (value >= 0) { Hub.Settings.ScalePercent = Appearance.Scales[value]; ApplyLook(); } }
+
+    private void ApplyLook()
+    {
+        Appearance.Apply(Hub.Settings);
+        Hub.Settings.Save();
+    }
     [ObservableProperty] private bool _startEngine;
 
     protected override void OnFirstShow() => _ = LoadAsync();

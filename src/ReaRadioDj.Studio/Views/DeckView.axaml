@@ -34,7 +34,7 @@
               </Border>
               <StackPanel Grid.Column="1" Margin="8,6" Spacing="4">
                 <DockPanel>
-                  <Border DockPanel.Dock="Right" Background="#F0B429" CornerRadius="3" Padding="6,1"
+                  <Border DockPanel.Dock="Right" Background="#F0B429" CornerRadius="{DynamicResource Radius3}" Padding="6,1"
                           IsVisible="{Binding Intro, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
                     <TextBlock Text="{Binding Intro}" Classes="mono" FontWeight="Bold" Foreground="#11161D" />
                   </Border>
@@ -50,7 +50,7 @@
                   <TextBlock Grid.Column="1" Classes="mono" FontSize="32" FontWeight="Bold" Margin="8,0,0,0"
                              Text="{Binding Counter}" Foreground="{Binding CounterBrush}" />
                 </Grid>
-                <Border CornerRadius="4" ClipToBounds="True" Height="70">
+                <Border CornerRadius="{DynamicResource Radius4}" ClipToBounds="True" Height="70">
                   <ctl:WaveformView Peaks="{Binding Peaks}" BlockSeconds="{Binding BlockSeconds}" Markers="{Binding Markers}"
                                     Playhead="{Binding Position}" CueIn="{Binding CueIn}" CueOut="{Binding CueOut}"
                                     ShowCursor="False" ReadOnlyMarkers="True" EmptyText="—" />

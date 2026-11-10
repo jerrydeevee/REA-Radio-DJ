@@ -8,7 +8,7 @@
     <Border DockPanel.Dock="Top" Classes="card" Margin="0,0,0,6">
       <StackPanel Spacing="4">
         <DockPanel>
-          <Border DockPanel.Dock="Left" CornerRadius="3" Padding="6,1" Margin="0,0,8,0" Background="#E5484D"
+          <Border DockPanel.Dock="Left" CornerRadius="{DynamicResource Radius3}" Padding="6,1" Margin="0,0,8,0" Background="#E5484D"
                   IsVisible="{Binding NowType, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
             <TextBlock Text="{Binding NowType}" FontSize="11" FontWeight="Bold" Foreground="White" />
           </Border>
@@ -16,7 +16,7 @@
           <TextBlock Text="{Binding NowLabel}" FontSize="18" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
         </DockPanel>
         <TextBlock Classes="muted" Text="{Binding NowDetail}" TextTrimming="CharacterEllipsis" />
-        <ProgressBar Value="{Binding Progress}" Maximum="100" Height="14" MinHeight="14" CornerRadius="3" />
+        <ProgressBar Value="{Binding Progress}" Maximum="100" Height="14" MinHeight="14" CornerRadius="{DynamicResource Radius3}" />
         <DockPanel>
           <TextBlock DockPanel.Dock="Left" Classes="mono muted" Text="{Binding NowPosition}" />
           <TextBlock DockPanel.Dock="Right" Classes="muted" Text="{Binding NowMix}" />
@@ -56,12 +56,12 @@
           <Grid ColumnDefinitions="Auto,56,*,Auto,Auto">
             <Border Grid.Column="0" Grid.ColumnSpan="5" Margin="-6,-2" Background="{Binding DeckBrush}" Opacity="0.14" IsHitTestVisible="False" />
             <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
-              <Border Background="{Binding DeckBrush}" CornerRadius="2" Width="14" IsVisible="{Binding Deck, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+              <Border Background="{Binding DeckBrush}" CornerRadius="{DynamicResource Radius2}" Width="14" IsVisible="{Binding Deck, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
                 <TextBlock Text="{Binding Deck}" FontSize="10" FontWeight="Black" Foreground="#11161D" HorizontalAlignment="Center" />
               </Border>
               <TextBlock Classes="mono" Text="{Binding StartsAt}" VerticalAlignment="Center" />
             </StackPanel>
-            <Border Grid.Column="1" CornerRadius="3" Padding="4,0" VerticalAlignment="Center" HorizontalAlignment="Left" Margin="6,0,0,0"
+            <Border Grid.Column="1" CornerRadius="{DynamicResource Radius3}" Padding="4,0" VerticalAlignment="Center" HorizontalAlignment="Left" Margin="6,0,0,0"
                     BorderThickness="1" BorderBrush="{Binding Type, Converter={x:Static vm:Brushes.TypeColor}}">
               <TextBlock Text="{Binding TypeText}" FontSize="11" Foreground="{Binding Type, Converter={x:Static vm:Brushes.TypeColor}}" />
             </Border>

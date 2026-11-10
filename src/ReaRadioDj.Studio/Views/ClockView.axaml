@@ -30,7 +30,7 @@
 
     <!-- counters: always readable, the item counter flashes at the end -->
     <StackPanel DockPanel.Dock="Bottom" Spacing="6" Margin="0,6,0,0">
-      <Border CornerRadius="8" Padding="12,6" Background="{Binding CounterBackground}">
+      <Border CornerRadius="{DynamicResource Radius8}" Padding="12,6" Background="{Binding CounterBackground}">
         <DockPanel>
           <StackPanel DockPanel.Dock="Right" VerticalAlignment="Center" HorizontalAlignment="Right">
             <TextBlock Classes="mono" FontWeight="Bold" FontSize="{Binding CounterFont}" Foreground="{Binding CounterForeground}"

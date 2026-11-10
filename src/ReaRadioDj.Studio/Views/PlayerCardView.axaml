@@ -16,7 +16,7 @@
 
       <!-- ===== waveform look: waveform with cue points on the left, big counter and transport on the right -->
       <Grid ColumnDefinitions="*,8,170" IsVisible="{Binding Wave}">
-        <Border Grid.Column="0" CornerRadius="4" ClipToBounds="True" Height="96">
+        <Border Grid.Column="0" CornerRadius="{DynamicResource Radius4}" ClipToBounds="True" Height="96">
           <ctl:WaveformView x:Name="Wave" Peaks="{Binding Peaks}" BlockSeconds="{Binding BlockSeconds}" Markers="{Binding Markers}"
                             Playhead="{Binding Position}" CueIn="{Binding CueIn}" CueOut="{Binding CueOut}"
                             ShowCursor="False" ReadOnlyMarkers="True" EmptyText="geen item geladen"

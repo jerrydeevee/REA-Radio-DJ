@@ -9,6 +9,7 @@
         Icon="/Assets/rea.ico"
         Background="{DynamicResource AppBrush}"
         WindowStartupLocation="CenterScreen">
+  <LayoutTransformControl x:Name="Zoom">
   <DockPanel>
     <!-- App bar: name, menu, workspaces, layout and engine state -->
     <Border DockPanel.Dock="Top" Padding="16,6" Background="{DynamicResource BarBrush}" BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="0,0,0,1">
@@ -79,7 +80,7 @@
         </StackPanel>
         <StackPanel Grid.Column="4" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center" Margin="0,0,16,0">
           <TextBlock Classes="muted" Text="Indeling" FontSize="13" VerticalAlignment="Center" />
-          <ComboBox ItemsSource="{Binding LayoutNames}" SelectedItem="{Binding SelectedLayoutName}" MinWidth="170" MinHeight="36" CornerRadius="8"
+          <ComboBox ItemsSource="{Binding LayoutNames}" SelectedItem="{Binding SelectedLayoutName}" MinWidth="170" MinHeight="36" CornerRadius="{DynamicResource Radius8}"
                     ToolTip.Tip="Kies een opgeslagen indeling" />
         </StackPanel>
         <StackPanel Grid.Column="5" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
@@ -103,7 +104,7 @@
     <!-- On-air bar: always visible, whatever the layout -->
     <Border DockPanel.Dock="Top" Padding="24,12" Background="{DynamicResource BarBrush}" BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="0,0,0,1">
       <Grid x:Name="OnAirGrid" ColumnDefinitions="Auto,*,Auto,Auto,Auto,Auto" RowDefinitions="Auto,Auto">
-        <Border Grid.Column="0" CornerRadius="8" Padding="12,8" Margin="0,0,24,0" VerticalAlignment="Center"
+        <Border Grid.Column="0" CornerRadius="{DynamicResource Radius8}" Padding="12,8" Margin="0,0,24,0" VerticalAlignment="Center"
                 Background="{Binding OnAir, Converter={x:Static vm:Brushes.OnAir}}">
           <StackPanel Orientation="Horizontal" Spacing="8">
             <Panel Width="12" Height="12" VerticalAlignment="Center">
@@ -115,7 +116,7 @@
         </Border>
         <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="6" ClipToBounds="True">
           <DockPanel>
-            <Border DockPanel.Dock="Right" Background="{DynamicResource WarnBrush}" CornerRadius="4" Padding="8,1" Margin="12,0,0,0" VerticalAlignment="Center"
+            <Border DockPanel.Dock="Right" Background="{DynamicResource WarnBrush}" CornerRadius="{DynamicResource Radius4}" Padding="8,1" Margin="12,0,0,0" VerticalAlignment="Center"
                     IsVisible="{Binding IntroText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" ToolTip.Tip="Tijd tot de zang begint: zolang kun je praten">
               <TextBlock Text="{Binding IntroText}" Foreground="#1A1206" FontWeight="Bold" Classes="mono" />
             </Border>
@@ -152,7 +153,7 @@
               <Border Classes="key"><TextBlock Text="F5" /></Border>
             </StackPanel>
           </Button>
-          <Border BorderBrush="{DynamicResource ControlBorderBrush}" BorderThickness="1" CornerRadius="8" ClipToBounds="True" VerticalAlignment="Center">
+          <Border BorderBrush="{DynamicResource ControlBorderBrush}" BorderThickness="1" CornerRadius="{DynamicResource Radius8}" ClipToBounds="True" VerticalAlignment="Center">
             <StackPanel Orientation="Horizontal">
               <ToggleButton Classes="seg" Content="Automatisch" IsChecked="{Binding AutoPlay, Mode=OneWay}" Command="{Binding SetModeCommand}" CommandParameter="auto"
                             ToolTip.Tip="De engine start elk volgend item zelf" />
@@ -182,7 +183,7 @@
           <Border Width="1" Height="40" Background="{DynamicResource CardBorderBrush}" Margin="8,0" />
           <Button x:Name="StopButton" Classes="bar danger" ToolTip.Tip="Houd 1 seconde vast om de automatisering te stoppen (F9 stopt direct)">
             <StackPanel Orientation="Horizontal" Spacing="8">
-              <Border Width="12" Height="12" CornerRadius="2" Background="#FF9B9E" VerticalAlignment="Center" />
+              <Border Width="12" Height="12" CornerRadius="{DynamicResource Radius2}" Background="#FF9B9E" VerticalAlignment="Center" />
               <TextBlock Text="Stop" VerticalAlignment="Center" />
               <Border Classes="key"><TextBlock Text="F9" /></Border>
             </StackPanel>
@@ -204,4 +205,5 @@
 
     <DockControl Layout="{Binding Layout}" Margin="2" />
   </DockPanel>
+  </LayoutTransformControl>
 </Window>

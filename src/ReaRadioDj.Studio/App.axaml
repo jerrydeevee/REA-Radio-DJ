@@ -22,6 +22,14 @@
     <SolidColorBrush x:Key="MutedTextBrush" Color="#9AA4B2" />
     <SolidColorBrush x:Key="CardBrush" Color="#161B22" />
     <SolidColorBrush x:Key="CardBorderBrush" Color="#2A3240" />
+    <CornerRadius x:Key="Radius2">2</CornerRadius>
+    <CornerRadius x:Key="Radius3">3</CornerRadius>
+    <CornerRadius x:Key="Radius4">4</CornerRadius>
+    <CornerRadius x:Key="Radius5">5</CornerRadius>
+    <CornerRadius x:Key="Radius6">6</CornerRadius>
+    <CornerRadius x:Key="Radius8">8</CornerRadius>
+    <CornerRadius x:Key="Radius10">10</CornerRadius>
+    <CornerRadius x:Key="Radius12">12</CornerRadius>
   </Application.Resources>
   <Application.Styles>
     <FluentTheme />

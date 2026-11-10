@@ -36,6 +36,11 @@ public static class Brushes
     public static readonly IValueConverter Hex = new FuncValueConverter<string?, IBrush>(s =>
         !string.IsNullOrWhiteSpace(s) && Color.TryParse(s, out var c) ? new SolidColorBrush(c) : Off);
 
+    /// <summary>A colour of the current style (Instellingen › Uiterlijk), e.g. "ControlBrush".</summary>
+    public static IBrush Themed(string key, string fallback = "#2A3240") =>
+        Avalonia.Application.Current?.TryGetResource(key, Avalonia.Application.Current.ActualThemeVariant, out var r) == true && r is IBrush b
+            ? b : FromHex(fallback);
+
     public static IBrush FromHex(string? s, string fallback = "#2A3240") =>
         new SolidColorBrush(!string.IsNullOrWhiteSpace(s) && Color.TryParse(s, out var c) ? c : Color.Parse(fallback));
 

@@ -26,6 +26,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
         int pa = Array.IndexOf(args, "--profile");
         if (pa >= 0 && pa + 1 < args.Length) StudioSettings.FolderOverride = Path.GetFullPath(args[pa + 1]);
         _settings = StudioSettings.Load();
+        Appearance.Apply(_settings);
         int ea = Array.IndexOf(args, "--engine");
         if (ea >= 0 && ea + 1 < args.Length) _settings.SessionEngineUrl = args[ea + 1];
         if (args.Contains("--no-engine")) _settings.StartEngine = false;

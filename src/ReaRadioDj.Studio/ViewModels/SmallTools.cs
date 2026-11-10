@@ -48,7 +48,7 @@ public sealed partial class ClockTool : StudioTool
     [ObservableProperty] private string _introText = "";
     [ObservableProperty] private bool _hasIntro;
     [ObservableProperty] private string _endState = "normal";
-    [ObservableProperty] private Avalonia.Media.IBrush _counterBackground = Brushes.FromHex("#1A2029");
+    [ObservableProperty] private Avalonia.Media.IBrush _counterBackground = Brushes.Themed("ControlBrush", "#1A2029");
     [ObservableProperty] private Avalonia.Media.IBrush _counterForeground = Brushes.FromHex("#E6EAF0");
 
     // choices
@@ -100,12 +100,12 @@ public sealed partial class ClockTool : StudioTool
         bool on = DateTime.Now.Millisecond < 500;
         if (_secondsLeft <= 10 && ItemLeft >= 0)
         {
-            CounterBackground = on ? FlashBrush : Brushes.FromHex("#1A2029");
+            CounterBackground = on ? FlashBrush : Brushes.Themed("ControlBrush", "#1A2029");
             CounterForeground = on ? Brushes.FromHex(FlashIndex == 2 ? "#0B0F14" : "#FFFFFF") : FlashBrush;
         }
         else
         {
-            CounterBackground = Brushes.FromHex("#1A2029");
+            CounterBackground = Brushes.Themed("ControlBrush", "#1A2029");
             CounterForeground = Brushes.FromHex(_secondsLeft <= 20 && ItemLeft >= 0 ? "#F0B429" : "#E6EAF0");
         }
     }

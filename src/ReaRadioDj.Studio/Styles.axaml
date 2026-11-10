@@ -4,7 +4,7 @@
     <Setter Property="Background" Value="{DynamicResource CardBrush}" />
     <Setter Property="BorderBrush" Value="{DynamicResource CardBorderBrush}" />
     <Setter Property="BorderThickness" Value="1" />
-    <Setter Property="CornerRadius" Value="6" />
+    <Setter Property="CornerRadius" Value="{DynamicResource Radius6}" />
     <Setter Property="Padding" Value="8" />
   </Style>
   <Style Selector="TextBlock.muted">
@@ -63,7 +63,7 @@
   <Style Selector="ToggleButton.chip">
     <Setter Property="FontSize" Value="12" />
     <Setter Property="Padding" Value="10,3" />
-    <Setter Property="CornerRadius" Value="12" />
+    <Setter Property="CornerRadius" Value="{DynamicResource Radius12}" />
   </Style>
   <Style Selector="ToggleButton.chip:checked /template/ ContentPresenter">
     <Setter Property="Background" Value="{DynamicResource AccentBrush}" />
@@ -84,7 +84,7 @@
   <Style Selector="ProgressBar.countdown">
     <Setter Property="Foreground" Value="#3DBD7D" />
     <Setter Property="Background" Value="#1A2029" />
-    <Setter Property="CornerRadius" Value="4" />
+    <Setter Property="CornerRadius" Value="{DynamicResource Radius4}" />
   </Style>
   <Style Selector="ProgressBar.countdown.warn">
     <Setter Property="Foreground" Value="#F0B429" />
@@ -113,7 +113,7 @@
   <Style Selector="Border.key">
     <Setter Property="BorderBrush" Value="{DynamicResource ControlBorderBrush}" />
     <Setter Property="BorderThickness" Value="1" />
-    <Setter Property="CornerRadius" Value="4" />
+    <Setter Property="CornerRadius" Value="{DynamicResource Radius4}" />
     <Setter Property="Padding" Value="5,0" />
     <Setter Property="VerticalAlignment" Value="Center" />
   </Style>
@@ -125,7 +125,7 @@
   <Style Selector=":is(Button).bar">
     <Setter Property="MinHeight" Value="44" />
     <Setter Property="Padding" Value="16,0" />
-    <Setter Property="CornerRadius" Value="8" />
+    <Setter Property="CornerRadius" Value="{DynamicResource Radius8}" />
     <Setter Property="FontSize" Value="14" />
     <Setter Property="FontWeight" Value="SemiBold" />
     <Setter Property="Background" Value="{DynamicResource ControlBrush}" />
@@ -181,7 +181,7 @@
   <Style Selector="Button.pad">
     <Setter Property="MinHeight" Value="48" />
     <Setter Property="Padding" Value="2" />
-    <Setter Property="CornerRadius" Value="8" />
+    <Setter Property="CornerRadius" Value="{DynamicResource Radius8}" />
     <Setter Property="HorizontalContentAlignment" Value="Center" />
     <Setter Property="Background" Value="#141920" />
     <Setter Property="BorderThickness" Value="0" />
@@ -197,7 +197,7 @@
     <Setter Property="MinWidth" Value="32" />
     <Setter Property="Padding" Value="4,0" />
     <Setter Property="FontSize" Value="11" />
-    <Setter Property="CornerRadius" Value="6" />
+    <Setter Property="CornerRadius" Value="{DynamicResource Radius6}" />
     <Setter Property="HorizontalContentAlignment" Value="Center" />
     <Setter Property="VerticalContentAlignment" Value="Center" />
     <Setter Property="VerticalAlignment" Value="Center" />
@@ -230,7 +230,7 @@
   <Style Selector="ToggleButton.nav">
     <Setter Property="MinHeight" Value="36" />
     <Setter Property="Padding" Value="14,0" />
-    <Setter Property="CornerRadius" Value="8" />
+    <Setter Property="CornerRadius" Value="{DynamicResource Radius8}" />
     <Setter Property="BorderThickness" Value="0,0,0,2" />
     <Setter Property="BorderBrush" Value="Transparent" />
     <Setter Property="FontSize" Value="14" />
