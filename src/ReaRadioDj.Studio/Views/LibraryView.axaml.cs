@@ -34,5 +34,17 @@ public partial class LibraryView : UserControl
         }, handledEventsToo: true);
         List.AddHandler(PointerReleasedEvent, (_, _) => { _pressed = null; _pressedItem = null; }, handledEventsToo: true);
         List.DoubleTapped += (_, _) => (DataContext as LibraryTool)?.PflCommand.Execute(null);
+        // Esc empties the search box; arrow down jumps from the search box into the list.
+        SearchBox.KeyDown += (_, e) =>
+        {
+            if (DataContext is not LibraryTool t) return;
+            if (e.Key == Key.Escape) { t.Query = ""; e.Handled = true; }
+            else if (e.Key == Key.Down && t.Items.Count > 0)
+            {
+                t.Selected ??= t.Items[0];
+                List.Focus();
+                e.Handled = true;
+            }
+        };
     }
 }

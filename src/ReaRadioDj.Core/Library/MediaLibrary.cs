@@ -12,7 +12,7 @@ public sealed record Category(long Id, string Name, MediaKind Kind, string Color
 
 /// <summary>A library entry with the fields that are only needed for editing and reporting.</summary>
 public sealed record MediaDetails(MediaItem Media, string Album, bool Enabled, bool CuesManual, DateTime? ValidFrom,
-    DateTime? ValidUntil, int PlayCount, DateTime? LastPlayed, bool Missing)
+    DateTime? ValidUntil, int PlayCount, DateTime? LastPlayed, bool Missing, int? Year = null, DateTime? Added = null)
 {
     public bool IsPlayable(DateTime now) => Enabled && !Missing
         && (ValidFrom is not DateTime f || f <= now) && (ValidUntil is not DateTime u || u >= now);
@@ -35,6 +35,13 @@ public sealed class MediaLibrary
     private volatile IReadOnlyList<MediaDetails> _all = [];
     private volatile IReadOnlyList<Category> _categories = [];
     private Dictionary<string, LegacyEntry>? _legacy;
+    private readonly object _watchGate = new();
+    private readonly List<FileSystemWatcher> _watchers = [];
+    private string _watching = "";
+    private Timer? _debounce;
+    private Timer? _nightly;
+    private DateTime _lastNightly = DateTime.Today;
+    private volatile bool _rescanWanted;
 
     public MediaLibrary(ReaRadioDjOptions options, StationDb db, ILogger<MediaLibrary>? log = null)
     {
@@ -69,7 +76,109 @@ public sealed class MediaLibrary
             _log.LogInformation("Library: {Songs} songs and {Jingles} jingles scanned", songs, jingles);
         }
         finally { _scanLock.Release(); }
+        Watch();
         Changed?.Invoke();
+        // Files that were still being copied are picked up once they are complete.
+        if (_rescanWanted) { _rescanWanted = false; Poke(); }
+    }
+
+    // ---------------------------------------------------------------- watching
+
+    /// <summary>
+    /// Watches the music and jingle folders. A change starts a scan a few seconds after the last file event, so a folder
+    /// copy is handled in one go; unchanged files cost only a size and date check. Each night a full check catches
+    /// anything a watcher missed (network shares, a sleeping PC).
+    /// </summary>
+    public void Watch()
+    {
+        lock (_watchGate)
+        {
+            _nightly ??= new Timer(_ => Nightly(), null, TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(5));
+            string want = _options.WatchLibrary ? $"{Full(_options.MusicFolder)}|{Full(_options.JingleFolder)}" : "";
+            if (want == _watching) return;
+            foreach (var w in _watchers) w.Dispose();
+            _watchers.Clear();
+            _watching = want;
+            if (want.Length == 0) return;
+            foreach (var folder in new[] { _options.MusicFolder, _options.JingleFolder }.Select(Full).Distinct(StringComparer.OrdinalIgnoreCase))
+            {
+                if (!Directory.Exists(folder)) continue;
+                try
+                {
+                    var w = new FileSystemWatcher(folder)
+                    {
+                        IncludeSubdirectories = true,
+                        NotifyFilter = NotifyFilters.FileName | NotifyFilters.DirectoryName | NotifyFilters.LastWrite | NotifyFilters.Size,
+                        InternalBufferSize = 64 * 1024,
+                    };
+                    w.Created += OnFileEvent;
+                    w.Changed += OnFileEvent;
+                    w.Deleted += OnFileEvent;
+                    w.Renamed += OnFileEvent;
+                    w.Error += (_, e) => { _log.LogWarning(e.GetException(), "Folder watch overflow, scanning again"); Poke(); };
+                    w.EnableRaisingEvents = true;
+                    _watchers.Add(w);
+                    _log.LogInformation("Watching {Folder} for new and changed files", folder);
+                }
+                catch (Exception ex) when (ex is ArgumentException or IOException or UnauthorizedAccessException)
+                {
+                    _log.LogWarning(ex, "Cannot watch {Folder}", folder);
+                }
+            }
+        }
+    }
+
+    private static string Full(string folder)
+    {
+        try { return Path.GetFullPath(folder); } catch (Exception) { return folder; }
+    }
+
+    private void OnFileEvent(object sender, FileSystemEventArgs e)
+    {
+        // Directories, audio files and cue sidecars matter; other files (covers, text) do not.
+        string ext = Path.GetExtension(e.FullPath).ToLowerInvariant();
+        if (ext.Length > 0 && !Extensions.Contains(ext) && !e.FullPath.EndsWith(".cue.json", StringComparison.OrdinalIgnoreCase)) return;
+        Poke();
+    }
+
+    /// <summary>Schedules a scan a few seconds from now; more events push it further, so one copy job gives one scan.</summary>
+    public void Poke()
+    {
+        lock (_watchGate)
+        {
+            _debounce ??= new Timer(_ => _ = ScanQuietly("map gewijzigd"));
+            _debounce.Change(TimeSpan.FromSeconds(4), Timeout.InfiniteTimeSpan);
+        }
+    }
+
+    private void Nightly()
+    {
+        if (_options.NightlyScanHour < 0 || DateTime.Now.Hour != _options.NightlyScanHour || _lastNightly == DateTime.Today) return;
+        _lastNightly = DateTime.Today;
+        _ = ScanQuietly("nachtelijke controle");
+    }
+
+    private async Task ScanQuietly(string why)
+    {
+        if (IsScanning) { _rescanWanted = true; return; }
+        try
+        {
+            _log.LogInformation("Library scan: {Why}", why);
+            await ScanAsync();
+        }
+        catch (Exception ex) { _log.LogWarning(ex, "Library scan ({Why}) failed", why); }
+    }
+
+    /// <summary>True while another program still writes the file (a copy in progress).</summary>
+    private static bool StillBeingWritten(FileInfo info)
+    {
+        try
+        {
+            using var _ = new FileStream(info.FullName, FileMode.Open, FileAccess.Read, FileShare.Read);
+            return false;
+        }
+        catch (IOException) { return true; }
+        catch (UnauthorizedAccessException) { return false; }
     }
 
     private int ScanFolder(string folder, MediaKind kind, string defaultCategory, CancellationToken ct)
@@ -109,6 +218,7 @@ public sealed class MediaLibrary
                     if (!k.HasRights) StoreRights(k.Id, info.FullName); // files from before rights metadata existed
                     continue;
                 }
+                if (StillBeingWritten(info)) { _rescanWanted = true; continue; }
                 Import(info, kind, categoryId, keepCues: k.Manual);
             }
             catch (Exception ex) { _log.LogWarning(ex, "Skipping {File}", file); }
@@ -295,19 +405,17 @@ public sealed class MediaLibrary
         return _all.Where(d => d.Media.CategoryId == categoryId && d.IsPlayable(now)).Select(d => d.Media).ToList();
     }
 
-    public IReadOnlyList<MediaDetails> Search(string? text, long? categoryId = null, MediaKind? kind = null, int limit = 300)
+    /// <summary>
+    /// Searches the library (see <see cref="LibrarySearch"/> for the query language). <paramref name="block"/> tells why an
+    /// item may not be scheduled now; it is used by the <c>is:mag</c> and <c>is:geblokkeerd</c> filters.
+    /// </summary>
+    public IReadOnlyList<MediaDetails> Search(string? text, long? categoryId = null, MediaKind? kind = null, int limit = 300,
+        Func<MediaDetails, string?>? block = null)
     {
         IEnumerable<MediaDetails> q = _all;
         if (categoryId is long c) q = q.Where(d => d.Media.CategoryId == c);
         if (kind is MediaKind k) q = q.Where(d => d.Media.Kind == k);
-        if (!string.IsNullOrWhiteSpace(text))
-        {
-            var words = text.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-            q = q.Where(d => words.All(w => d.Media.DisplayName.Contains(w, StringComparison.OrdinalIgnoreCase)
-                || d.Album.Contains(w, StringComparison.OrdinalIgnoreCase)
-                || d.Media.Category.Contains(w, StringComparison.OrdinalIgnoreCase)));
-        }
-        return q.Take(limit).ToList();
+        return LibrarySearch.Run(q, text, DateTime.Now, block, limit);
     }
 
     /// <summary>Analyses a file that is not part of the library (rendered voice breaks).</summary>
@@ -440,8 +548,9 @@ public sealed class MediaLibrary
     private const string SelectMedia = """
         SELECT m.id, m.path, m.kind, m.category_id, COALESCE(c.name, ''), m.artist, m.title, m.duration, m.lufs,
                m.cue_in, m.full_level, m.intro, m.intro2, m.outro, m.fade_out, m.mix, m.cue_out, m.hook_in, m.hook_out,
-               m.album, m.enabled, m.cues_manual, m.valid_from, m.valid_until, m.play_count, m.last_played, m.missing
-        FROM media m LEFT JOIN categories c ON c.id = m.category_id
+               m.album, m.enabled, m.cues_manual, m.valid_from, m.valid_until, m.play_count, m.last_played, m.missing,
+               r.year, m.added
+        FROM media m LEFT JOIN categories c ON c.id = m.category_id LEFT JOIN media_rights r ON r.media_id = m.id
         """;
 
     private static MediaDetails MapDetails(SqliteDataReader r)
@@ -466,7 +575,8 @@ public sealed class MediaLibrary
         };
         return new MediaDetails(media, r.GetString(19), r.GetInt64(20) != 0, r.GetInt64(21) != 0,
             StationDb.ParseIso(r.GetStringOrNull(22)), StationDb.ParseIso(r.GetStringOrNull(23)), (int)r.GetInt64(24),
-            StationDb.ParseIso(r.GetStringOrNull(25)), r.GetInt64(26) != 0);
+            StationDb.ParseIso(r.GetStringOrNull(25)), r.GetInt64(26) != 0,
+            r.GetInt64OrNull(27) is long y and > 0 ? (int)y : null, StationDb.ParseIso(r.GetStringOrNull(28)));
     }
 
     private static (string Artist, string Title, string Album) ReadTags(string path)

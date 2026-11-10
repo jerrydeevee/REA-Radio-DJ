@@ -91,10 +91,16 @@ public sealed record CueDto(double CueIn, double? FullLevel, double? Intro, doub
 
 public sealed record MediaDto(long Id, string Path, string Kind, long? CategoryId, string Category, string Artist, string Title,
     string Album, double Duration, double? Lufs, CueDto Cues, bool Enabled, bool CuesManual, DateTime? ValidFrom,
-    DateTime? ValidUntil, int PlayCount, DateTime? LastPlayed, bool Missing)
+    DateTime? ValidUntil, int PlayCount, DateTime? LastPlayed, bool Missing, int? Year = null, DateTime? Added = null,
+    string? Block = null)
 {
+    /// <summary>True when the item may be scheduled now (<see cref="Block"/> says why not).</summary>
+    public bool Allowed => Block is null;
     public string DisplayName => string.IsNullOrWhiteSpace(Artist) ? Title : $"{Artist} - {Title}";
 }
+
+/// <summary>One line of the search help: an example and what it does.</summary>
+public sealed record SearchHelpDto(string Example, string Meaning);
 
 public sealed record CategoryDto(long Id, string Name, string Kind, string Color);
 

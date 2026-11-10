@@ -6,11 +6,48 @@
              x:DataType="vm:LibraryTool">
   <DockPanel Margin="6">
     <DockPanel DockPanel.Dock="Top" Margin="0,0,0,4">
-      <Button DockPanel.Dock="Right" Classes="small" Content="⟳" Command="{Binding ScanCommand}" ToolTip.Tip="Mappen opnieuw inlezen" Margin="4,0,0,0" />
+      <Button DockPanel.Dock="Right" Classes="small" Content="⟳" Command="{Binding ScanCommand}" Margin="4,0,0,0"
+              ToolTip.Tip="Nu alles nakijken. Normaal niet nodig: nieuwe en gewijzigde bestanden worden vanzelf verwerkt." />
+      <ComboBox DockPanel.Dock="Right" ItemsSource="{Binding Decades}" SelectedItem="{Binding Decade}" Width="110" Margin="4,0,0,0"
+                ToolTip.Tip="Decennium (jaar uit de tags)" />
       <ComboBox DockPanel.Dock="Right" ItemsSource="{Binding CategoryChoices}" SelectedItem="{Binding Category}" Width="170" Margin="4,0,0,0" />
-      <TextBox Text="{Binding Query}" Watermark="Zoek artiest, titel, album of categorie…" />
+      <Button DockPanel.Dock="Right" Classes="small" Content="?" Command="{Binding ToggleHelpCommand}" Margin="4,0,0,0"
+              ToolTip.Tip="Zoekmogelijkheden" />
+      <TextBox x:Name="SearchBox" Text="{Binding Query}" Watermark="Zoek artiest, titel, album, jaar… (? = hulp)">
+        <TextBox.InnerRightContent>
+          <Button Classes="small" Content="✕" Command="{Binding ClearSearchCommand}" Padding="6,0" Background="Transparent" BorderThickness="0"
+                  IsVisible="{Binding Query, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" ToolTip.Tip="Zoekvak leegmaken (Esc)" />
+        </TextBox.InnerRightContent>
+      </TextBox>
     </DockPanel>
-    <TextBlock DockPanel.Dock="Top" Classes="muted" Text="{Binding Status}" Margin="0,0,0,4" />
+    <ItemsControl DockPanel.Dock="Top" ItemsSource="{Binding Chips}" Margin="0,0,0,4">
+      <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+      <ItemsControl.ItemTemplate>
+        <DataTemplate x:DataType="vm:FilterChip">
+          <ToggleButton Classes="chip" Content="{Binding Label}" IsChecked="{Binding IsOn}" ToolTip.Tip="{Binding Tip}" Margin="0,0,4,4" />
+        </DataTemplate>
+      </ItemsControl.ItemTemplate>
+    </ItemsControl>
+    <DockPanel DockPanel.Dock="Top" Margin="0,0,0,4">
+      <TextBlock DockPanel.Dock="Right" Classes="muted" Text="{Binding ResultText}" />
+      <TextBlock Classes="muted" Text="{Binding Status}" TextTrimming="CharacterEllipsis" />
+    </DockPanel>
+    <Border DockPanel.Dock="Top" IsVisible="{Binding ShowHelp}" Classes="card" Padding="8" Margin="0,0,0,4">
+      <StackPanel Spacing="2">
+        <TextBlock Classes="h" Text="Zoeken" />
+        <ItemsControl ItemsSource="{Binding HelpLines}">
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="c:SearchHelpDto">
+              <Grid ColumnDefinitions="260,*">
+                <TextBlock Classes="mono" Text="{Binding Example}" TextWrapping="Wrap" />
+                <TextBlock Grid.Column="1" Text="{Binding Meaning}" TextWrapping="Wrap" Margin="8,0,0,0" />
+              </Grid>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+        <TextBlock Classes="muted" TextWrapping="Wrap" Text="Filters en woorden mag je combineren, bijvoorbeeld: is:mag jaar:198 duur:&lt;4:00 queen" />
+      </StackPanel>
+    </Border>
     <WrapPanel DockPanel.Dock="Top" Margin="0,0,0,4">
       <Button Classes="small" Margin="0,0,4,4" Content="Volgende" Command="{Binding NextCommand}" />
       <Button Classes="small" Margin="0,0,4,4" Content="Achteraan" Command="{Binding EndCommand}" />
@@ -45,8 +82,10 @@
             <StackPanel Grid.Column="1" Margin="6,0">
               <TextBlock Text="{Binding Title}" TextTrimming="CharacterEllipsis" />
               <TextBlock Classes="muted" TextTrimming="CharacterEllipsis">
-                <Run Text="{Binding Artist}" /><Run Text=" · " /><Run Text="{Binding Category}" />
+                <Run Text="{Binding Artist}" /><Run Text=" · " /><Run Text="{Binding Category}" /><Run Text="{Binding Year, StringFormat=' · {0}'}" />
               </TextBlock>
+              <TextBlock Text="{Binding Block, StringFormat='⚠ {0}'}" Foreground="#F0B429" FontSize="11" TextTrimming="CharacterEllipsis"
+                         IsVisible="{Binding !Allowed}" ToolTip.Tip="Waarom dit nu niet ingepland wordt" />
             </StackPanel>
             <StackPanel Grid.Column="2" VerticalAlignment="Center">
               <TextBlock Classes="mono" HorizontalAlignment="Right" Text="{Binding Duration, Converter={x:Static vm:Brushes.Seconds}}" />

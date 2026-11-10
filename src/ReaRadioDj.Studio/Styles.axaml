@@ -49,6 +49,15 @@
     <Setter Property="Background" Value="#7A1F25" />
     <Setter Property="Foreground" Value="White" />
   </Style>
+  <Style Selector="ToggleButton.chip">
+    <Setter Property="FontSize" Value="12" />
+    <Setter Property="Padding" Value="10,3" />
+    <Setter Property="CornerRadius" Value="12" />
+  </Style>
+  <Style Selector="ToggleButton.chip:checked /template/ ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource AccentBrush}" />
+    <Setter Property="Foreground" Value="#0B0F14" />
+  </Style>
   <Style Selector="ToggleButton.view">
     <Setter Property="FontSize" Value="11" />
     <Setter Property="Padding" Value="8,2" />

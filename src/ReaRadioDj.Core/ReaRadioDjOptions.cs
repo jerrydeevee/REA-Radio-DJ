@@ -6,6 +6,10 @@ public sealed class ReaRadioDjOptions
     public string StationName { get; set; } = "REA-Radio-DJ";
     public string MusicFolder { get; set; } = "media/music";
     public string JingleFolder { get; set; } = "media/jingles";
+    /// <summary>Watch the music and jingle folders: new, changed and removed files are processed without a button.</summary>
+    public bool WatchLibrary { get; set; } = true;
+    /// <summary>Hour of the nightly full check of the folders (-1 = off).</summary>
+    public int NightlyScanHour { get; set; } = 4;
     /// <summary>Where rendered AI breaks and the analysis cache are written.</summary>
     public string DataFolder { get; set; } = "data";
 

@@ -52,8 +52,13 @@ public static class StudioApi
         api.MapPost("/log/replan", (AutomationService a) => { a.Replan(); return Results.Ok(); });
 
         // ------------------------------------------------------------ library
-        api.MapGet("/library", (MediaLibrary library, string? q, long? category, string? kind, int? limit) =>
-            library.Search(q, category, kind is null ? null : Parse(kind, MediaKind.Song), Math.Clamp(limit ?? 300, 1, 5000)).Select(Media));
+        api.MapGet("/library", (MediaLibrary library, PlayoutLog log, string? q, long? category, string? kind, int? limit) =>
+        {
+            var check = new RotationCheck(log.RecentAndPlannedSongs(), options.Rotation, DateTime.Now);
+            return library.Search(q, category, kind is null ? null : Parse(kind, MediaKind.Song), Math.Clamp(limit ?? 300, 1, 5000), check.Reason)
+                .Select(d => Media(d, check.Reason(d)));
+        });
+        api.MapGet("/library/help", () => LibrarySearch.Help.Select(h => new SearchHelpDto(h.Example, h.Meaning)));
         api.MapPost("/library/scan", (MediaLibrary library) => { _ = library.ScanAsync(); return Results.Accepted(); });
         api.MapGet("/media/{id:long}", (long id, MediaLibrary library) =>
             library.GetDetails(id) is { } d ? Results.Ok(Media(d)) : Results.NotFound());
