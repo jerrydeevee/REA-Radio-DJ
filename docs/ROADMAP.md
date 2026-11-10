@@ -154,3 +154,9 @@ alleen in een bestand in te stellen is. Eigen opzet en eigen benamingen.
 | ⬜ | Hardware erbij: GPIO-kaarten via USB (bijv. Velleman K8055, IO-Warrior), joystick-/gamepoort als knoppenbak, tweede Ember+- en Livewire-apparaat als reserve, en mengtafels van D&R (Airlite, Airence, Webstation), AxelTech Oxygen en Wheatstone (WheatNet-Blade), elk met het protocol dat de fabrikant openbaar maakt |
 | ⬜ | Bediening via een webadres per knop (REST) en een UDP-luisterpoort voor eenvoudige apparaten, naast TCP en OSC |
 | ⬜ | Sneltoetsen die ook werken als de studio niet op de voorgrond staat (naar keuze) |
+| ⬜ | Eigen knoppen: een rij vrij te vullen knoppen in de studio, elk met een naam en een of meer commando's van de commandobus |
+| ⬜ | Lijn-in doorzetten: een ingang (cd-speler, tweede studio, satelliet) met één knop op de zender, met in- en uitfade; ook als item in de planning |
+| ⬜ | Direct opnemen: een knop die de microfoon of een ingang opneemt naar een nieuw item in de bibliotheek |
+| ⬜ | Verkenner in de studio: door mappen bladeren en een bestand dat niet in de bibliotheek staat voorluisteren of in de log zetten |
+| ⬜ | Inrichthulp bij de eerste start: stap voor stap station, mappen, geluidskaarten en stream kiezen, met een testtoon |
+| ⬜ | Informatievensters: itemgegevens van wat speelt (tags, hoes, laatst gedraaid), stationsinformatie en een webpagina naar keuze in een venster |
