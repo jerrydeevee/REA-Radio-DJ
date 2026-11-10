@@ -67,11 +67,11 @@ Legenda: ✅ klaar · 🟡 deels · ⬜ open
 
 | Status | Onderdeel |
 |---|---|
-| ⬜ | ASIO-uitvoer |
+| 🟡 | ASIO-uitvoer: gebouwd met samplerate en buffer, getest met Realtek ASIO; nog niet beluisterd |
 | ⬜ | Meerdere streamservers en codecs (AAC, Opus), HLS |
-| ⬜ | Opnemen (programma, mic) en automatische opname |
-| ⬜ | Kanaalstrip per mengkanaal: gain, balans, equalizer, compressor, automatische niveauregeling (AGC) en vrije plekken voor VST-effecten; per kanaal aan/uit, dempen, naar de zender sturen en opnemen; een masterfader met begrenzer en een knop voor praten-over-muziek |
-| ⬜ | Watchdog en herstel na een crash |
+| 🟡 | Opnemen: per mengkanaal klaar (REC, WAV); automatische opname per uur en naar de bibliotheek open |
+| 🟡 | Kanaalstrip per mengkanaal (klaar behalve VST; ook effect per fader en masterbegrenzer): gain, balans, equalizer, compressor, automatische niveauregeling (AGC) en vrije plekken voor VST-effecten; per kanaal aan/uit, dempen, naar de zender sturen en opnemen; een masterfader met begrenzer en een knop voor praten-over-muziek |
+| ✅ | Watchdog en herstel na een crash |
 | ⬜ | Mixpunten per nummer met overgangstypes per categorie (knippen, faden, over de intro), bovenop de overgangseditor |
 | ⬜ | OSC uitsturen (status naar mengtafel of lichtsturing), naast het bestaande OSC-commandokanaal |
 
@@ -140,23 +140,23 @@ alleen in een bestand in te stellen is. Eigen opzet en eigen benamingen.
 | Status | Onderdeel |
 |---|---|
 | ✅ | Venster Instellingen: station (naam, mappen, automatisch starten), geluidskaarten en microfoon, mixen en loudness, drempels voor automatische cuepunten, rotatie, stream, bediening op afstand (adres, poorten, wachtwoord) en deze studiocomputer. Wachtwoorden blijven in de engine |
-| ⬜ | Geluid uitgebreid: uitgang per kanaal kiezen (spelers, cartwalls, overlays, DJ, VoIP elk naar een eigen kaart of kanaalpaar), meer ingangen dan één microfoon (lijn-in als mengkanaal), testtoon per uitgang, buffer en samplerate instelbaar |
+| 🟡 | Geluid uitgebreid (klaar; VoIP volgt met de verbindingen): uitgang per kanaal kiezen (spelers, cartwalls, overlays, DJ, VoIP elk naar een eigen kaart of kanaalpaar), meer ingangen dan één microfoon (lijn-in als mengkanaal), testtoon per uitgang, buffer en samplerate instelbaar |
 | 🟡 | Stiltedetectie: is de zender een instelbare tijd stiller dan een drempel, dan een alarm in Berichten en naar keuze de automatisering starten (Instellingen › Bewaking; standaard 20 s onder -45 dB). Nog open: een noodband spelen |
 | ⬜ | Gebeurtenissen koppelen aan commando's: bij start en einde van een item, microfoon open of dicht, stream weg, fout, engine gestart (bijv. een lampje, een bericht of een webadres aanroepen) |
 | ⬜ | Bibliotheek-instellingen: meer dan twee mappen, mappen automatisch opnieuw inlezen op een vast moment of bij wijziging, bestanden die elders staan (vervangende locatie), tags lezen en terugschrijven, hoezen |
 | ⬜ | Overgangen per soort item: eigen overlap en fade voor muziek, jingles, reclame, nieuws en stem; items korter dan een aantal seconden niet faden |
 | ⬜ | Titelupdates naar de stream: eigen opmaak, soorten items uitsluiten (jingles, reclame), vertraging gelijk aan de streambuffer; ook naar een tekstbestand of webadres (RDS, website) |
-| ⬜ | Logbestanden: programmalog als tekst met eigen opmaak, bewaartermijn, soorten uitsluiten; systeemlog van de engine in de studio in te zien met niveau (gewoon of uitgebreid) |
+| 🟡 | Logbestanden (systeemlog in de studio klaar; programmalog als tekst open): programmalog als tekst met eigen opmaak, bewaartermijn, soorten uitsluiten; systeemlog van de engine in de studio in te zien met niveau (gewoon of uitgebreid) |
 | ⬜ | Opname-instellingen (hoort bij Opnemen): map, bestandsnaam met datum en uur, formaat, bewaartermijn, automatisch per uur |
 | ⬜ | Uiterlijk: lettergrootte, aanraakmodus (grotere knoppen), licht thema, kleuren per soort item op één plek; tooltips aan of uit |
 | ⬜ | Studio vergrendelen na een instelbare tijd en bij Gebruikers en rechten: instellingen alleen voor beheerders |
-| ⬜ | Reservekopie: alle instellingen, klokken, planning en cartwalls in één bestand opslaan en terugzetten; ook om een tweede studio in te richten |
+| ✅ | Reservekopie: alle instellingen, klokken, planning en cartwalls in één bestand opslaan en terugzetten; ook om een tweede studio in te richten |
 | ⬜ | Controle op nieuwe versies en een pagina Over met versies van engine, studio en bibliotheken |
 | ⬜ | Hardware erbij: GPIO-kaarten via USB (bijv. Velleman K8055, IO-Warrior), joystick-/gamepoort als knoppenbak, tweede Ember+- en Livewire-apparaat als reserve, en mengtafels van D&R (Airlite, Airence, Webstation), AxelTech Oxygen en Wheatstone (WheatNet-Blade), elk met het protocol dat de fabrikant openbaar maakt |
 | ⬜ | Bediening via een webadres per knop (REST) en een UDP-luisterpoort voor eenvoudige apparaten, naast TCP en OSC |
 | ⬜ | Sneltoetsen die ook werken als de studio niet op de voorgrond staat (naar keuze) |
 | ⬜ | Eigen knoppen: een rij vrij te vullen knoppen in de studio, elk met een naam en een of meer commando's van de commandobus |
-| ⬜ | Lijn-in doorzetten: een ingang (cd-speler, tweede studio, satelliet) met één knop op de zender, met in- en uitfade; ook als item in de planning |
+| 🟡 | Lijn-in doorzetten (ingang als kanaal met ZENDER-knop klaar; fades en als planningsitem open): een ingang (cd-speler, tweede studio, satelliet) met één knop op de zender, met in- en uitfade; ook als item in de planning |
 | ⬜ | Direct opnemen: een knop die de microfoon of een ingang opneemt naar een nieuw item in de bibliotheek |
 | ⬜ | Verkenner in de studio: door mappen bladeren en een bestand dat niet in de bibliotheek staat voorluisteren of in de log zetten |
 | ⬜ | Inrichthulp bij de eerste start: stap voor stap station, mappen, geluidskaarten en stream kiezen, met een testtoon |
