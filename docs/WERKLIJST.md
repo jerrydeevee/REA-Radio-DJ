@@ -179,6 +179,60 @@ Vragen bij stap 6:
 | 🟡 | Rapportage auteursrechten in een eigen indeling (CSV en PDF); er is geen voorgeschreven sjabloon |
 | ⬜ | Reclame-afspeelrapport per adverteerder en campagne, als bewijs voor klanten en stichtingen; export als CSV en JSON om later te koppelen |
 
+### Bibliotheek: slimmer en gebruiksvriendelijker
+
+Gevraagd op 10 november 2026: de bibliotheek bekijken naast die van een professioneel playoutpakket, en hem slimmer en makkelijker maken, met het oog op de gebruiker.
+
+**Wat dat pakket kan (alleen als controlelijst van functies):**
+- bibliotheken uit mappen, afspeellijsten, een database of een aparte bibliotheekserver, meerdere tegelijk;
+- alles in het geheugen;
+- snel zoeken en een zoekopbouw met velden;
+- veel tagvelden, waardering, ReplayGain en hoezen;
+- per nummer veel cuepunten, hotstarts en gebeurtenissen;
+- mappen bewaken of op een vast moment opnieuw inlezen.
+
+**Zwakke punten volgens gebruikers op het openbare forum:**
+- nieuwe bestanden worden pas gevonden na een handmatige "rescan";
+- tags worden pas gelezen als een nummer een keer getoond is, dus zoeken mist nummers;
+- geforceerd tags lezen is te traag voor live gebruik;
+- "herladen" en "opnieuw inlezen" zijn verwarrend;
+- herladen gooit niet-opgeslagen wijzigingen weg.
+
+Daar willen we beter in zijn. We nemen geen namen, schermen, teksten of bestandsformaten over; dit is een eigen ontwerp.
+
+**Wat we al hebben:**
+- één bibliotheek met categorieën uit submappen;
+- bij het inlezen worden alle tags, de cues en LUFS meteen gemeten;
+- zoeken op artiest, titel, album en categorie;
+- aan/uit en geldig van/tot;
+- hoe vaak en wanneer een nummer gespeeld is;
+- slepen naar de log, de spelers en de cartwalls.
+
+| Status | Werk | Klaar als |
+|---|---|---|
+| ⬜ | **Altijd volledig zoeken:** alle tags worden bij het inlezen in de database gezet, dus zoeken vindt elk nummer meteen; nooit "eerst tonen, dan pas vindbaar" | een net toegevoegd nummer is binnen enkele seconden vindbaar op album |
+| ⬜ | **Slim zoeken:** zonder accenten en hoofdletters ("beyonce" vindt Beyoncé), kleine tikfouten mogen, woorden over alle velden ("adele 2015"), beste treffer bovenaan | een tikfout in de artiest vindt toch het nummer |
+| ⬜ | **Zoeken met korte filters in het zoekvak:** bijvoorbeeld `bpm:120-128`, `jaar:198`, `duur:<3:30`, `cat:nederlandstalig`, `niet:gespeeld`, met uitleg als je `?` typt | de filters werken en staan in de hulp |
+| ⬜ | **Filterknoppen boven de lijst:** categorie, decennium, duur, BPM, nieuw toegevoegd, lang niet gespeeld, zonder cues, ontbrekend bestand, verlopen; één klik zet een filter aan of uit | met twee klikken staat "nieuw en nog nooit gespeeld" in beeld |
+| ⬜ | **Slimme lijsten:** een zoekopdracht met filters bewaren onder een eigen naam ("Nieuw deze maand", "Lang niet gespeeld"); de lijst werkt zichzelf bij | een bewaarde lijst toont na een herstart de nieuwe stand |
+| ⬜ | **Mag dit nu?** Bij elk nummer een kleine markering of het nu ingepland mag worden, en zo niet, waarom: "artiest 40 min geleden gespeeld", "verlopen op 1-11", "bestand ontbreekt", "uitgezet" | de reden staat bij het nummer en klopt met de rotatieregels |
+| ⬜ | **Detailpaneel naast de lijst:** hoes, kleine golfvorm met de cues, alle tags, LUFS, BPM en toonsoort, en de laatste keren gespeeld; tags direct aanpassen | een tag aanpassen zonder een apart venster |
+| ⬜ | **Kolommen of kaarten:** een tabel met kolommen die je zelf kiest, sorteert en verplaatst, of grote kaarten voor het touchscreen; de keuze wordt per scherm onthouden | op het touchscreen zijn de regels groot genoeg voor een vinger |
+| ⬜ | **Meerdere nummers tegelijk:** selecteren met Shift en Ctrl en dan in één keer de categorie, aan/uit of de geldigheid aanpassen | 20 nummers in één keer naar een andere categorie |
+| ⬜ | **Snelle bediening:** rechtsklikmenu met alle acties; sneltoetsen (Enter = volgende in de log, spatie = voorluisteren, Ctrl+Enter = achteraan); wat dubbelklikken doet is instelbaar | alles kan zonder muis |
+| ⬜ | **Voorluisteren in de lijst:** een kleine afspeelknop per regel op de PFL, en klikken in de mini-golfvorm springt naar dat punt | een refrein beluisteren zonder het nummer te laden |
+| ⬜ | **Mappen bewaken:** nieuwe, gewijzigde en verwijderde bestanden worden vanzelf verwerkt, zonder knop; daarnaast elke nacht een controle; geen verschil meer tussen "herladen" en "opnieuw inlezen" | een nieuw bestand in de map staat zonder klikken in de bibliotheek |
+| ⬜ | **Verplaatste bestanden terugvinden:** een ontbrekend bestand wordt gezocht op naam, grootte en duur in de bewaakte mappen; cues, categorie en geschiedenis blijven behouden | een hernoemd of verplaatst nummer houdt zijn cues |
+| ⬜ | **Wijzigingen gaan nooit verloren:** alles wordt direct opgeslagen; met "ongedaan maken" zet je de laatste wijziging terug | een verkeerde categoriewijziging is met één klik terug |
+| ⬜ | **Kwaliteitscontrole bij het inlezen:** te zacht of te hard, clipping, lange stilte aan het begin of eind, lage bitrate, dubbele nummers; een lijst "aandacht nodig" | een dubbel nummer en een stil begin worden gemeld |
+| ⬜ | **Meer tagvelden:** jaar, genre, taal, energie, stemming, waardering, ISRC, componist en uitgever (ook voor de rapportage); zie ook "Tags lezen en terugschrijven, hoezen" | de velden staan in het detailpaneel en zijn doorzoekbaar |
+| ⬜ | **Snel bij grote bibliotheken:** zoeken blijft onder 100 ms bij 100.000 nummers; de lijst laadt alleen wat in beeld staat | gemeten met een testbibliotheek van 100.000 nummers |
+
+Volgorde:
+1. Eerst altijd volledig en slim zoeken, mappen bewaken, en "mag dit nu?". Daar verdient de gebruiker het meest mee.
+2. Daarna het detailpaneel, de kolommen of kaarten, meerdere nummers tegelijk, en de sneltoetsen.
+3. Daarna de slimme lijsten, de kwaliteitscontrole en de verplaatste bestanden.
+
 Vraag bij stap 7:
 
 15. ~~Sjabloon?~~ **Geen; eigen indeling, plus een los reclame-afspeelrapport.**
