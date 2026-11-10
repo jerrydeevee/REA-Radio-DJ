@@ -1,5 +1,6 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:ctl="using:ReaRadioDj.Studio.Controls"
              xmlns:vm="using:ReaRadioDj.Studio.ViewModels"
              xmlns:c="using:ReaRadioDj.Contracts"
              x:Class="ReaRadioDj.Studio.Views.ImportView"
@@ -52,8 +53,8 @@
 
     <!-- import profiles -->
     <TabItem Header="Profielen">
-      <Grid Margin="2,4,2,2" ColumnDefinitions="140,*">
-        <DockPanel Grid.Column="0" Margin="0,0,8,0">
+      <ctl:SplitList Margin="2,4,2,2" ListWidth="140">
+        <DockPanel Grid.Column="0">
           <Button DockPanel.Dock="Bottom" Classes="small" Content="Nieuw profiel" Command="{Binding NewProfileCommand}" Margin="0,4,0,0" HorizontalAlignment="Stretch" />
           <ListBox ItemsSource="{Binding Profiles}" SelectedItem="{Binding Selected}">
             <ListBox.ItemTemplate>
@@ -124,7 +125,7 @@
             <TextBlock Foreground="#F0B429" TextWrapping="Wrap" Text="{Binding ProfileProblem}" IsVisible="{Binding ProfileProblem, Converter={x:Static ObjectConverters.IsNotNull}}" />
           </StackPanel>
         </ScrollViewer>
-      </Grid>
+      </ctl:SplitList>
     </TabItem>
 
     <!-- imported hours and the library export -->

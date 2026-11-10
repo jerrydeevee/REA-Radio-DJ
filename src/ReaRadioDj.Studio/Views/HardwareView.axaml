@@ -1,5 +1,6 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:ctl="using:ReaRadioDj.Studio.Controls"
              xmlns:vm="using:ReaRadioDj.Studio.ViewModels"
              xmlns:c="using:ReaRadioDj.Contracts"
              x:Class="ReaRadioDj.Studio.Views.HardwareView"
@@ -10,8 +11,8 @@
 
       <!-- devices -->
       <TabItem Header="Apparaten">
-        <Grid Margin="2,4,2,2" ColumnDefinitions="140,*">
-          <DockPanel Grid.Column="0" Margin="0,0,8,0">
+        <ctl:SplitList Margin="2,4,2,2" ListWidth="140">
+          <DockPanel Grid.Column="0">
             <Button DockPanel.Dock="Bottom" Classes="small" Content="Nieuw apparaat" Command="{Binding NewDeviceCommand}" Margin="0,4,0,0" HorizontalAlignment="Stretch" />
             <ListBox ItemsSource="{Binding Devices}" SelectedItem="{Binding Selected}">
               <ListBox.ItemTemplate>
@@ -90,14 +91,14 @@
               </Border>
             </StackPanel>
           </ScrollViewer>
-        </Grid>
+        </ctl:SplitList>
       </TabItem>
 
       <!-- buttons -->
       <TabItem Header="Knoppen">
         <Grid Margin="2,4,2,2" RowDefinitions="*,Auto,120">
-          <Grid ColumnDefinitions="170,*">
-            <DockPanel Grid.Column="0" Margin="0,0,8,0">
+          <ctl:SplitList ListWidth="170">
+            <DockPanel Grid.Column="0">
               <Button DockPanel.Dock="Bottom" Classes="small" Content="Nieuwe knop" Command="{Binding NewInputCommand}" Margin="0,4,0,0" HorizontalAlignment="Stretch" />
               <ListBox ItemsSource="{Binding Inputs}" SelectedItem="{Binding SelectedInput}">
                 <ListBox.ItemTemplate>
@@ -126,7 +127,7 @@
                            Text="Aan/uit: een noot aan of uit, een controller vanaf 64, een Livewire-contact dicht of open (faderstart), een Ember+-parameter waar of niet nul (of met een grens: ember 1.3.5 &gt; -40 is aan boven -40 dB). Een seriële regel en een programmawissel zijn altijd 'aan'. Alle commando's: zie het venster Bediening." />
               </StackPanel>
             </ScrollViewer>
-          </Grid>
+          </ctl:SplitList>
           <TextBlock Grid.Row="1" Text="Laatste signalen — druk een knop op het apparaat en klik hier om hem over te nemen" FontSize="12" Margin="0,6,0,2" />
           <ListBox Grid.Row="2" ItemsSource="{Binding Events}">
             <ListBox.ItemTemplate>
@@ -147,8 +148,8 @@
 
       <!-- tallies -->
       <TabItem Header="Lampjes">
-        <Grid Margin="2,4,2,2" ColumnDefinitions="170,*">
-          <DockPanel Grid.Column="0" Margin="0,0,8,0">
+        <ctl:SplitList Margin="2,4,2,2" ListWidth="170">
+          <DockPanel Grid.Column="0">
             <Button DockPanel.Dock="Bottom" Classes="small" Content="Nieuwe uitgang" Command="{Binding NewOutputCommand}" Margin="0,4,0,0" HorizontalAlignment="Stretch" />
             <ListBox ItemsSource="{Binding Outputs}" SelectedItem="{Binding SelectedOutput}">
               <ListBox.ItemTemplate>
@@ -178,7 +179,7 @@
               <TextBlock Foreground="#F0B429" TextWrapping="Wrap" Text="{Binding OutputProblem}" IsVisible="{Binding OutputProblem, Converter={x:Static ObjectConverters.IsNotNull}}" />
             </StackPanel>
           </ScrollViewer>
-        </Grid>
+        </ctl:SplitList>
       </TabItem>
     </TabControl>
   </DockPanel>

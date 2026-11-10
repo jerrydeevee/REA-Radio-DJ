@@ -1,5 +1,6 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:ctl="using:ReaRadioDj.Studio.Controls"
              xmlns:vm="using:ReaRadioDj.Studio.ViewModels"
              xmlns:c="using:ReaRadioDj.Contracts"
              x:Class="ReaRadioDj.Studio.Views.AdsView"
@@ -7,8 +8,8 @@
   <TabControl Classes="compact" Margin="4">
     <!-- ============================================================ campaigns -->
     <TabItem Header="Campagnes">
-      <Grid ColumnDefinitions="170,*">
-        <DockPanel Grid.Column="0" Margin="0,0,8,0">
+      <ctl:SplitList ListWidth="170">
+        <DockPanel Grid.Column="0">
           <Button DockPanel.Dock="Bottom" Classes="small" Content="Nieuwe campagne" Command="{Binding NewCampaignCommand}" Margin="0,4,0,0" HorizontalAlignment="Stretch" />
           <ListBox ItemsSource="{Binding Campaigns}" SelectedItem="{Binding Campaign}">
             <ListBox.ItemTemplate>
@@ -94,13 +95,13 @@
                        Text="De reclameblokken worden 3 minuten vooraf gevuld: eerst de campagnes die het verst achterlopen op hun aantal per dag, nooit twee spots van dezelfde adverteerder in één blok, en nooit langer dan het blok mag duren. Een spot speelt altijd helemaal uit." />
           </StackPanel>
         </ScrollViewer>
-      </Grid>
+      </ctl:SplitList>
     </TabItem>
 
     <!-- ============================================================ breaks -->
     <TabItem Header="Blokken">
-      <Grid ColumnDefinitions="170,*">
-        <DockPanel Grid.Column="0" Margin="0,0,8,0">
+      <ctl:SplitList ListWidth="170">
+        <DockPanel Grid.Column="0">
           <Button DockPanel.Dock="Bottom" Classes="small" Content="Nieuw reclameblok" Command="{Binding NewBreakCommand}" Margin="0,4,0,0" HorizontalAlignment="Stretch" />
           <ListBox ItemsSource="{Binding Breaks}" SelectedItem="{Binding Break}">
             <ListBox.ItemTemplate>
@@ -165,7 +166,7 @@
                        Text="Zacht: het blok komt na het lopende nummer (aanbevolen voor reclame). Heeft geen enkele campagne een spot nodig, dan wordt het hele blok overgeslagen, dus ook geen opener of sluiter." />
           </StackPanel>
         </ScrollViewer>
-      </Grid>
+      </ctl:SplitList>
     </TabItem>
 
     <!-- ============================================================ proof of broadcast -->

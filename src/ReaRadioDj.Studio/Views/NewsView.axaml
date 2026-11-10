@@ -1,12 +1,13 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:ctl="using:ReaRadioDj.Studio.Controls"
              xmlns:vm="using:ReaRadioDj.Studio.ViewModels"
              xmlns:c="using:ReaRadioDj.Contracts"
              x:Class="ReaRadioDj.Studio.Views.NewsView"
              x:DataType="vm:NewsTool">
-  <Grid Margin="6" ColumnDefinitions="150,*">
+  <ctl:SplitList Margin="6" ListWidth="150">
     <!-- the blocks -->
-    <DockPanel Grid.Column="0" Margin="0,0,8,0">
+    <DockPanel Grid.Column="0">
       <Button DockPanel.Dock="Bottom" Classes="small" Content="Nieuw nieuwsblok" Command="{Binding NewCommand}" Margin="0,4,0,0" HorizontalAlignment="Stretch" />
       <ListBox ItemsSource="{Binding Blocks}" SelectedItem="{Binding Selected}">
         <ListBox.ItemTemplate>
@@ -112,5 +113,5 @@
                    Text="Een blok wordt 3 minuten vooraf klaargezet. Is er geen actueel nieuws (bestand te oud of weg, geen koppen), dan wordt het hele blok overgeslagen met een waarschuwing in Berichten, zodat er nooit een opener zonder nieuws klinkt." />
       </StackPanel>
     </ScrollViewer>
-  </Grid>
+  </ctl:SplitList>
 </UserControl>

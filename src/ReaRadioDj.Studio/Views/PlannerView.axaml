@@ -1,5 +1,6 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:ctl="using:ReaRadioDj.Studio.Controls"
              xmlns:vm="using:ReaRadioDj.Studio.ViewModels"
              xmlns:c="using:ReaRadioDj.Contracts"
              xmlns:v="using:ReaRadioDj.Studio.Views"
@@ -174,8 +175,8 @@
 
       <!-- ============================================================ clocks -->
       <TabItem Header="Klokken">
-        <Grid ColumnDefinitions="160,*">
-          <DockPanel Grid.Column="0" Margin="0,0,6,0">
+        <ctl:SplitList ListWidth="160">
+          <DockPanel Grid.Column="0">
             <StackPanel DockPanel.Dock="Bottom" Spacing="4" Margin="0,4,0,0">
               <Button Classes="small" Content="Nieuwe klok" Command="{Binding NewClockCommand}" HorizontalAlignment="Stretch" />
               <Button Classes="small" Content="Verwijderen" Command="{Binding DeleteClockCommand}" HorizontalAlignment="Stretch" />
@@ -229,7 +230,7 @@
               </ListBox.ItemTemplate>
             </ListBox>
           </DockPanel>
-        </Grid>
+        </ctl:SplitList>
       </TabItem>
 
       <!-- ============================================================ week grid -->
