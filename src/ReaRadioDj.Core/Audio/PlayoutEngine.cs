@@ -298,6 +298,11 @@ public sealed class PlayoutEngine : IDisposable
         set => _transitionRules = Audio.TransitionRules.Clean(value);
     }
 
+    /// <summary>A command at a place in a track was reached (raised on the engine thread; do not block it).</summary>
+    public event Action<LogItem, TrackEvent>? TrackEventReached;
+
+    private void TrackEventDue(LogItem item, TrackEvent e) => _events.Enqueue(() => TrackEventReached?.Invoke(item, e));
+
     internal float LoudnessGain(MediaItem media) => AudioRouter.LoudnessGain(media, _options.Mix.TargetLufs);
 
     public void Dispose()
@@ -390,6 +395,10 @@ public sealed class PlayoutEngine : IDisposable
             }
             if (From > 0) BASS_ChannelSetPosition(_handle, BASS_ChannelSeconds2Bytes(_handle, From), BASS_POS_BYTE);
 
+            // Events at places in the track: volume changes join the volume lines, commands go out as they pass.
+            _volume = media.Events.Where(e => e.IsVolume).ToList();
+            _commands = new TrackEventCursor(media.Events, From, To);
+
             // Talk-up: when a voice break is still running, start under it and come up when it ends.
             float startVolume = _gain;
             if (mixIn is null && previous is { Media.Kind: MediaKind.Voice } voice && !voice.IsDone())
@@ -405,6 +414,7 @@ public sealed class PlayoutEngine : IDisposable
             if (mixIn is not null) { _in = mixIn.In; startVolume = _gain * (float)Envelope(From); }
             else if (!hook && cues.FullLevel is double full && full > From) { fadeIn = full - From; startVolume = 0; }
             else if (hook) { fadeIn = 0.3; startVolume = 0; }
+            if (mixIn is null) startVolume *= (float)TrackEvent.GainAt(_volume, From);
             BASS_ChannelSetAttribute(_handle, BASS_ATTRIB_VOL, startVolume);
 
             if (item.Type == LogItemType.VoiceTrack && cues.Mix < To - 0.05)
@@ -518,21 +528,32 @@ public sealed class PlayoutEngine : IDisposable
             return m;
         }
 
-        private double Envelope(double seconds) => Model.Transition.GainAt(_in, seconds) * Model.Transition.GainAt(_out, seconds);
+        private double Envelope(double seconds) =>
+            Model.Transition.GainAt(_in, seconds) * Model.Transition.GainAt(_out, seconds) * TrackEvent.GainAt(_volume, seconds);
 
         private void Breakpoints()
         {
-            _breaks = _in.Concat(_out).Select(p => p.Seconds).Distinct().Order().ToList();
+            _breaks = _in.Concat(_out).Select(p => p.Seconds)
+                .Concat(_volume.SelectMany(e => e.Envelope()).Select(p => p.Seconds)).Distinct().Order().ToList();
             _segment = int.MinValue;
         }
+
+        // Volume events of the track and its commands (each once per play).
+        private readonly IReadOnlyList<TrackEvent> _volume;
+        private readonly TrackEventCursor _commands;
+        private bool _cut;
 
         /// <summary>Slides the volume towards the value at the next point of the volume lines.</summary>
         private void FollowEnvelope(double pos)
         {
             if (_breaks.Count == 0 || _fading) return;
+            // Without a hand-made line coming in, leave the fade-in and the ducking under a voice alone.
+            bool own = _in.Count == 0;
+            if (own && (_unduckAt is not null || _talkFadeAt is not null)) return;
             int seg = -1;
             while (seg + 1 < _breaks.Count && _breaks[seg + 1] <= pos) seg++;
             if (seg == _segment) return;
+            if (own && seg == -1) { _segment = seg; return; }
             _segment = seg;
             if (seg + 1 < _breaks.Count)
             {
@@ -546,6 +567,8 @@ public sealed class PlayoutEngine : IDisposable
         {
             double pos = Position;
             FollowEnvelope(pos);
+            if (!_cut && _commands.Any)
+                foreach (var e in _commands.Due(pos)) _engine.TrackEventDue(Item, e);
             if (_glideAt is double g && pos >= g)
             {
                 _glideAt = null;
@@ -570,6 +593,7 @@ public sealed class PlayoutEngine : IDisposable
 
         public void FadeOutNow(double seconds)
         {
+            _cut = true; // skipped or stopped: its later commands do not go out
             _unduckAt = null;
             FadeOutAt(seconds);
         }

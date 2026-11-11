@@ -44,6 +44,74 @@ public sealed partial class CueRow(CueEditorTool editor, string key, string labe
 }
 
 /// <summary>
+/// An event at a place in the track: a volume change (quieter for a while, e.g. under a spoken intro) or a command on
+/// the command bus (a lamp, an overlay, a cart). It goes off every time the track plays on air.
+/// </summary>
+public sealed partial class EventRow : ObservableObject
+{
+    private readonly CueEditorTool _editor;
+    private bool _updating;
+
+    public EventRow(CueEditorTool editor, TrackEventDto e)
+    {
+        _editor = editor;
+        Kind = e.Kind;
+        _at = e.At;
+        _atText = CueEditorTool.Format(e.At);
+        _text = e.Text ?? "";
+        _gain = (decimal)e.Gain;
+        _length = (decimal)e.Length;
+        _ramp = (decimal)e.Ramp;
+        _label = e.Label;
+    }
+
+    public string Kind { get; }
+    public bool IsVolume => Kind == "volume";
+    public bool IsCommand => !IsVolume;
+    public string Title => IsVolume ? "Volume" : "Opdracht";
+    public Color Color => Color.Parse(IsVolume ? "#38BDF8" : "#E879F9");
+    public IBrush Brush => new SolidColorBrush(Color);
+    /// <summary>Short text on the waveform.</summary>
+    public string MarkerText => IsVolume ? $"{Gain ?? 0:+0;-0;0} dB" : (Text.Length > 12 ? Text[..12] + "…" : Text.Length == 0 ? "opdracht" : Text);
+
+    [ObservableProperty] private double _at;
+    [ObservableProperty] private string _atText;
+    [ObservableProperty] private string _text;
+    // decimal: what NumericUpDown binds to
+    [ObservableProperty] private decimal? _gain;
+    [ObservableProperty] private decimal? _length;
+    [ObservableProperty] private decimal? _ramp;
+    [ObservableProperty] private string _label;
+
+    partial void OnAtChanged(double value)
+    {
+        _updating = true;
+        AtText = CueEditorTool.Format(value);
+        _updating = false;
+        _editor.EventsChanged();
+    }
+
+    partial void OnAtTextChanged(string value)
+    {
+        if (!_updating && CueEditorTool.Parse(value) is double v) At = v;
+    }
+
+    partial void OnTextChanged(string value) { OnPropertyChanged(nameof(MarkerText)); _editor.EventsChanged(); }
+    partial void OnGainChanged(decimal? value) { OnPropertyChanged(nameof(MarkerText)); _editor.EventsChanged(); }
+    partial void OnLengthChanged(decimal? value) => _editor.EventsChanged();
+    partial void OnRampChanged(decimal? value) => _editor.EventsChanged();
+    partial void OnLabelChanged(string value) => _editor.EventsChanged();
+
+    public TrackEventDto ToDto() => new(Kind, Math.Round(At, 3), IsCommand ? Text.Trim() : null,
+        (double)(Gain ?? -6), (double)(Length ?? 5), (double)(Ramp ?? 0.5m), Label.Trim());
+
+    [RelayCommand] private void SetHere() => At = Math.Round(_editor.Cursor, 3);
+    [RelayCommand] private void Go() => _editor.Cursor = At;
+    [RelayCommand] private Task Listen() => _editor.ListenFrom(Math.Max(0, At - 3));
+    [RelayCommand] private void Remove() => _editor.RemoveEvent(this);
+}
+
+/// <summary>
 /// The cue editor: waveform with all cue points (in, full level, intro, intro 2, outro, fade-out, mix, out, hook).
 /// Drag the markers or type the times; listen on the PFL; save, or go back to the automatic points.
 /// </summary>
@@ -79,6 +147,10 @@ public sealed partial class CueEditorTool : StudioTool
     [ObservableProperty] private string _cursorText = "0:00.000";
     [ObservableProperty] private bool _dirty;
 
+    /// <summary>Events at places in the track (volume changes, commands); saved together with the cue points.</summary>
+    public ObservableCollection<EventRow> Events { get; } = [];
+    [ObservableProperty] private bool _hasEvents;
+
     private bool _loading;
 
     partial void OnCursorChanged(double value) => CursorText = Format(value);
@@ -113,10 +185,13 @@ public sealed partial class CueEditorTool : StudioTool
             Peaks = data;
         }
         SetRows(media.Cues);
+        Events.Clear();
+        foreach (var e in media.Events ?? []) Events.Add(new EventRow(this, e));
+        HasEvents = Events.Count > 0;
         Cursor = media.Cues.CueIn;
+        MarkersChanged();
         _loading = false;
         Dirty = false;
-        MarkersChanged();
     }
 
     private void SetRows(CueDto c)
@@ -140,13 +215,52 @@ public sealed partial class CueEditorTool : StudioTool
 
     public void MarkersChanged()
     {
-        Markers = Rows.Where(r => r.Value is not null).Select(r => new WaveMarker(r.Key, r.Label, r.Value!.Value, r.Color)).ToList();
+        Markers = Rows.Where(r => r.Value is not null).Select(r => new WaveMarker(r.Key, r.Label, r.Value!.Value, r.Color))
+            .Concat(Events.Select((e, i) => new WaveMarker("ev:" + i, e.MarkerText, e.At, e.Color))).ToList();
         OnPropertyChanged(nameof(CueInValue));
         OnPropertyChanged(nameof(CueOutValue));
         if (!_loading && Media is not null) Dirty = true;
     }
 
-    public void MoveMarker(string key, double seconds) => Cue(key).Value = seconds;
+    public void MoveMarker(string key, double seconds)
+    {
+        if (key.StartsWith("ev:", StringComparison.Ordinal))
+        {
+            if (int.TryParse(key[3..], out int i) && i >= 0 && i < Events.Count) Events[i].At = seconds;
+            return;
+        }
+        Cue(key).Value = seconds;
+    }
+
+    public void EventsChanged()
+    {
+        HasEvents = Events.Count > 0;
+        MarkersChanged();
+    }
+
+    public void RemoveEvent(EventRow row)
+    {
+        Events.Remove(row);
+        EventsChanged();
+    }
+
+    /// <summary>A volume change at the cursor: 6 dB quieter for 5 seconds (e.g. under a spoken intro).</summary>
+    [RelayCommand]
+    private void AddVolume()
+    {
+        if (Media is null || Events.Count >= 32) return;
+        Events.Add(new EventRow(this, new TrackEventDto("volume", Math.Round(Cursor, 3))));
+        EventsChanged();
+    }
+
+    /// <summary>A command at the cursor (type the command line, as on the command bus).</summary>
+    [RelayCommand]
+    private void AddCommand()
+    {
+        if (Media is null || Events.Count >= 32) return;
+        Events.Add(new EventRow(this, new TrackEventDto("command", Math.Round(Cursor, 3), "")));
+        EventsChanged();
+    }
 
     public async Task ListenFrom(double seconds)
     {
@@ -168,6 +282,8 @@ public sealed partial class CueEditorTool : StudioTool
             Cue("fadeOut").Value, Cue("mix").Value ?? 0, Cue("cueOut").Value ?? Media.Duration, Cue("hookIn").Value, Cue("hookOut").Value);
         var saved = await Hub.Client.SendForAsync<MediaDto>(HttpMethod.Put, $"/api/media/{Media.Id}/cues", cues);
         if (saved is null) return;
+        var events = Events.Select(e => e.ToDto()).Where(e => e.Kind == "volume" || !string.IsNullOrWhiteSpace(e.Text)).ToList();
+        saved = await Hub.Client.SendForAsync<MediaDto>(HttpMethod.Put, $"/api/media/{Media.Id}/events", events) ?? saved;
         await LoadAsync(saved.Id);
         Hub.Status = $"cues opgeslagen: {saved.DisplayName}";
         Hub.NotifyLibraryChanged();

@@ -888,6 +888,18 @@ public sealed class MediaLibrary
         return Get(id);
     }
 
+    /// <summary>Stores the events at places in a track (volume changes, commands); an empty list removes them.</summary>
+    public MediaItem? SaveEvents(long id, IEnumerable<TrackEvent> events)
+    {
+        var d = GetDetails(id);
+        if (d is null) return null;
+        var clean = TrackEvent.Clean(events, d.Media.Duration);
+        _db.Execute("UPDATE media SET events=$e WHERE id=$id", ("$e", TrackEvent.Serialize(clean)), ("$id", id));
+        Reload();
+        Changed?.Invoke();
+        return Get(id);
+    }
+
     /// <summary>Throws away manual cue points and detects them again from the stored waveform.</summary>
     public MediaItem? ResetCues(long id)
     {
@@ -1277,7 +1289,7 @@ public sealed class MediaLibrary
                m.cue_in, m.full_level, m.intro, m.intro2, m.outro, m.fade_out, m.mix, m.cue_out, m.hook_in, m.hook_out,
                m.album, m.enabled, m.cues_manual, m.valid_from, m.valid_until, m.play_count, m.last_played, m.missing,
                r.year, m.added, m.genre, m.bpm, m.first_beat, m.est_intro, m.est_outro,
-               m.size, m.clip, m.language, m.mood, m.rating, m.energy_level, m.musical_key
+               m.size, m.clip, m.language, m.mood, m.rating, m.energy_level, m.musical_key, m.events
         FROM media m LEFT JOIN categories c ON c.id = m.category_id LEFT JOIN media_rights r ON r.media_id = m.id
         """;
 
@@ -1300,6 +1312,7 @@ public sealed class MediaLibrary
                 Intro2 = r.GetDoubleOrNull(12), Outro = r.GetDoubleOrNull(13), FadeOut = r.GetDoubleOrNull(14),
                 Mix = r.GetDouble(15), CueOut = r.GetDouble(16), HookIn = r.GetDoubleOrNull(17), HookOut = r.GetDoubleOrNull(18),
             },
+            Events = TrackEvent.Parse(r.GetString(41)),
         };
         return new MediaDetails(media, r.GetString(19), r.GetInt64(20) != 0, r.GetInt64(21) != 0,
             StationDb.ParseIso(r.GetStringOrNull(22)), StationDb.ParseIso(r.GetStringOrNull(23)), (int)r.GetInt64(24),

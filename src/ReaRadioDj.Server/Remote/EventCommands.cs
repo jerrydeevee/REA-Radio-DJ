@@ -37,6 +37,12 @@ public sealed class EventCommandService(CommandBus bus, PlayoutEngine engine, Au
     protected override async Task ExecuteAsync(CancellationToken ct)
     {
         Load();
+        // Commands at a place in a track: off the engine thread, so a slow command never holds up the audio.
+        engine.TrackEventReached += (item, e) => _ = Task.Run(() =>
+        {
+            try { bus.Run(e.Text, $"in nummer op {e.At:0.0} s ({item.Label})"); } // the bus logs a failure
+            catch (Exception ex) { logger.LogWarning(ex, "Track event at {At} s in {Label}", e.At, item.Label); }
+        });
         long lastId = -1;
         bool? mic = null, stream = null;
         using var timer = new PeriodicTimer(TimeSpan.FromMilliseconds(250));

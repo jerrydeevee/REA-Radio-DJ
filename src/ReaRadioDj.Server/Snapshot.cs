@@ -118,7 +118,14 @@ public static class Snapshot
         d.Media.Category, d.Media.Artist, d.Media.Title, d.Album, d.Media.Duration, d.Media.Lufs, Cues(d.Media.Cues), d.Enabled, d.CuesManual,
         d.ValidFrom, d.ValidUntil, d.PlayCount, d.LastPlayed, d.Missing, d.Year, d.Added, block, d.Genre, d.Bpm, d.FirstBeat, d.EstIntro, d.EstOutro,
         d.Problems, d.Language, d.Mood, d.Rating, d.EnergyLevel, LibraryQuality.Bitrate(d),
-        d.MusicalKey?.Name, d.MusicalKey?.Camelot, Core.Audio.ReplayGain.TrackGain(d.Media.Lufs));
+        d.MusicalKey?.Name, d.MusicalKey?.Camelot, Core.Audio.ReplayGain.TrackGain(d.Media.Lufs), d.Media.Events.Select(Event).ToList());
+
+    public static TrackEventDto Event(TrackEvent e) => new(e.Kind, e.At, e.Text, e.Gain, e.Length, e.Ramp, e.Label);
+
+    public static TrackEvent Event(TrackEventDto e) => new()
+    {
+        Kind = e.Kind, At = e.At, Text = e.Text, Gain = e.Gain, Length = e.Length, Ramp = e.Ramp, Label = e.Label ?? "",
+    };
 
     public static CategoryDto Category(Category c) => new(c.Id, c.Name, Name(c.Kind), c.Color);
 

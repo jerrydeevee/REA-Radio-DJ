@@ -75,6 +75,8 @@ public sealed record MediaItem
     public CueSet Cues { get; init; } = new();
     /// <summary>Integrated loudness in LUFS (EBU R128), or null when not measured.</summary>
     public double? Lufs { get; init; }
+    /// <summary>Volume changes and commands at places in the track, every time it plays on air.</summary>
+    public IReadOnlyList<TrackEvent> Events { get; init; } = [];
 
     public double CueIn => Cues.CueIn;
     public double MixPoint => Cues.Mix;

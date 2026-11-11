@@ -160,6 +160,9 @@ public static class StudioApi
             library.UpdateDetails(id, r.CategoryId, r.Enabled, r.ValidFrom, r.ValidUntil) ? Results.Ok(Media(library.GetDetails(id)!)) : Results.NotFound());
         api.MapPut("/media/{id:long}/cues", (long id, CueDto r, MediaLibrary library) =>
             library.SaveCues(id, Cues(r)) is not null ? Results.Ok(Media(library.GetDetails(id)!)) : Results.NotFound());
+        // Events at places in a track: volume changes and commands, every time it plays on air.
+        api.MapPut("/media/{id:long}/events", (long id, List<TrackEventDto>? r, MediaLibrary library) =>
+            library.SaveEvents(id, (r ?? []).Select(Event)) is not null ? Results.Ok(Media(library.GetDetails(id)!)) : Results.NotFound());
         api.MapPost("/media/{id:long}/cues/reset", (long id, MediaLibrary library) =>
             library.ResetCues(id) is not null ? Results.Ok(Media(library.GetDetails(id)!)) : Results.NotFound());
         api.MapGet("/media/{id:long}/peaks", (long id, MediaLibrary library) =>
