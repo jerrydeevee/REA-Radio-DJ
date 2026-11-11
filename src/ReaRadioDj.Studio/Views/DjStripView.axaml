@@ -1,42 +1,46 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:ReaRadioDj.Studio.ViewModels"
+             xmlns:ctl="using:ReaRadioDj.Studio.Controls"
              x:Class="ReaRadioDj.Studio.Views.DjStripView"
              x:DataType="vm:DjDeckVm">
-  <!-- The mixer channel of one deck: gain, equaliser with kills and filter on the left, fader with level on the right -->
+  <!-- The mixer channel of one deck: knobs for gain, filter and the equaliser with kills on the left, fader with level on the right -->
   <StackPanel Spacing="8">
     <TextBlock Classes="lbl" Foreground="{Binding Brush}" HorizontalAlignment="Center">
       <Run Text="DECK " /><Run Text="{Binding Id}" />
     </TextBlock>
     <Grid ColumnDefinitions="*,12,Auto">
-      <StackPanel Grid.Column="0" Spacing="2">
-        <Grid ColumnDefinitions="50,*,36">
-          <TextBlock Grid.Column="0" Text="Gain" FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center" />
-          <Slider Grid.Column="1" Minimum="-12" Maximum="12" Value="{Binding Gain}" ToolTip.Tip="Voorversterking, -12 tot +12 dB" />
-        </Grid>
-        <Grid ColumnDefinitions="50,*,36">
-          <TextBlock Grid.Column="0" Text="Hoog" FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center" />
-          <Slider Grid.Column="1" Minimum="-1" Maximum="1" Value="{Binding EqHigh}" SmallChange="0.05" LargeChange="0.25" />
-          <ToggleButton Grid.Column="2" Classes="kill" Content="Kill" IsChecked="{Binding KillHigh, Mode=OneWay}" Command="{Binding KillCommand}" CommandParameter="high" ToolTip.Tip="Hoog helemaal weg" />
-        </Grid>
-        <Grid ColumnDefinitions="50,*,36">
-          <TextBlock Grid.Column="0" Text="Midden" FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center" />
-          <Slider Grid.Column="1" Minimum="-1" Maximum="1" Value="{Binding EqMid}" SmallChange="0.05" LargeChange="0.25" />
-          <ToggleButton Grid.Column="2" Classes="kill" Content="Kill" IsChecked="{Binding KillMid, Mode=OneWay}" Command="{Binding KillCommand}" CommandParameter="mid" ToolTip.Tip="Midden helemaal weg" />
-        </Grid>
-        <Grid ColumnDefinitions="50,*,36">
-          <TextBlock Grid.Column="0" Text="Laag" FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center" />
-          <Slider Grid.Column="1" Minimum="-1" Maximum="1" Value="{Binding EqLow}" SmallChange="0.05" LargeChange="0.25" />
-          <ToggleButton Grid.Column="2" Classes="kill" Content="Kill" IsChecked="{Binding KillLow, Mode=OneWay}" Command="{Binding KillCommand}" CommandParameter="low" ToolTip.Tip="Laag helemaal weg" />
-        </Grid>
-        <Grid ColumnDefinitions="50,*,36">
-          <TextBlock Grid.Column="0" Text="Filter" FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center" />
-          <Slider Grid.Column="1" Minimum="-1" Maximum="1" Value="{Binding Filter}" SmallChange="0.05" LargeChange="0.25"
-                  ToolTip.Tip="Links: alleen het laag blijft over. Midden: uit. Rechts: alleen het hoog blijft over." />
-          <Button Grid.Column="2" Classes="kill" Content="0" Command="{Binding ResetEqCommand}" ToolTip.Tip="Equalizer en filter terug naar het midden" />
-        </Grid>
+      <StackPanel Grid.Column="0" Spacing="10">
+        <UniformGrid Columns="3">
+        <StackPanel Spacing="2" HorizontalAlignment="Center">
+          <ctl:Knob Width="46" Height="46" Minimum="-12" Maximum="12" Value="{Binding Gain}" ArcBrush="{Binding Brush}" HorizontalAlignment="Center" ToolTip.Tip="Voorversterking, -12 tot +12 dB. Slepen of muiswiel; dubbelklik = midden." />
+          <TextBlock Text="Gain" FontSize="12" FontWeight="SemiBold" HorizontalAlignment="Center" />
+        </StackPanel>
+        <StackPanel Spacing="2" HorizontalAlignment="Center">
+          <ctl:Knob Width="46" Height="46" Minimum="-1" Maximum="1" Value="{Binding Filter}" ArcBrush="{Binding Brush}" HorizontalAlignment="Center" ToolTip.Tip="Links: alleen het laag blijft over. Midden: uit. Rechts: alleen het hoog blijft over. Slepen of muiswiel; dubbelklik = midden." />
+          <TextBlock Text="Filter" FontSize="12" FontWeight="SemiBold" HorizontalAlignment="Center" />
+        </StackPanel>
+          <Button Classes="kill" Content="EQ 0" VerticalAlignment="Center" HorizontalAlignment="Center" Command="{Binding ResetEqCommand}" ToolTip.Tip="Equalizer en filter terug naar het midden" />
+        </UniformGrid>
+        <UniformGrid Columns="3">
+        <StackPanel Spacing="2" HorizontalAlignment="Center">
+          <ctl:Knob Width="46" Height="46" Minimum="-1" Maximum="1" Value="{Binding EqHigh}" ArcBrush="{Binding Brush}" Muted="{Binding KillHigh}" HorizontalAlignment="Center" ToolTip.Tip="Hoog. Slepen of muiswiel; dubbelklik = midden." />
+          <TextBlock Text="Hoog" FontSize="12" FontWeight="SemiBold" HorizontalAlignment="Center" />
+          <ToggleButton Classes="kill" Content="Kill" HorizontalAlignment="Center" IsChecked="{Binding KillHigh, Mode=OneWay}" Command="{Binding KillCommand}" CommandParameter="high" ToolTip.Tip="Hoog helemaal weg" />
+        </StackPanel>
+        <StackPanel Spacing="2" HorizontalAlignment="Center">
+          <ctl:Knob Width="46" Height="46" Minimum="-1" Maximum="1" Value="{Binding EqMid}" ArcBrush="{Binding Brush}" Muted="{Binding KillMid}" HorizontalAlignment="Center" ToolTip.Tip="Midden. Slepen of muiswiel; dubbelklik = midden." />
+          <TextBlock Text="Midden" FontSize="12" FontWeight="SemiBold" HorizontalAlignment="Center" />
+          <ToggleButton Classes="kill" Content="Kill" HorizontalAlignment="Center" IsChecked="{Binding KillMid, Mode=OneWay}" Command="{Binding KillCommand}" CommandParameter="mid" ToolTip.Tip="Midden helemaal weg" />
+        </StackPanel>
+        <StackPanel Spacing="2" HorizontalAlignment="Center">
+          <ctl:Knob Width="46" Height="46" Minimum="-1" Maximum="1" Value="{Binding EqLow}" ArcBrush="{Binding Brush}" Muted="{Binding KillLow}" HorizontalAlignment="Center" ToolTip.Tip="Laag. Slepen of muiswiel; dubbelklik = midden." />
+          <TextBlock Text="Laag" FontSize="12" FontWeight="SemiBold" HorizontalAlignment="Center" />
+          <ToggleButton Classes="kill" Content="Kill" HorizontalAlignment="Center" IsChecked="{Binding KillLow, Mode=OneWay}" Command="{Binding KillCommand}" CommandParameter="low" ToolTip.Tip="Laag helemaal weg" />
+        </StackPanel>
+        </UniformGrid>
       </StackPanel>
-      <Grid Grid.Column="2" ColumnDefinitions="Auto,Auto,Auto" Height="200">
+      <Grid Grid.Column="2" ColumnDefinitions="Auto,Auto,Auto" Height="168">
         <Slider Grid.Column="0" Orientation="Vertical" Minimum="0" Maximum="100" Value="{Binding Fader}" ToolTip.Tip="Kanaalfader" />
         <ProgressBar Grid.Column="1" Orientation="Vertical" Value="{Binding LevelLeft}" Maximum="100" MinWidth="8" Width="8" MinHeight="0" Foreground="{DynamicResource OkBrush}" Margin="4,8,3,8" />
         <ProgressBar Grid.Column="2" Orientation="Vertical" Value="{Binding LevelRight}" Maximum="100" MinWidth="8" Width="8" MinHeight="0" Foreground="{DynamicResource OkBrush}" Margin="0,8" />

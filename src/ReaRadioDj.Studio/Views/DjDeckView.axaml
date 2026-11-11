@@ -8,10 +8,10 @@
   <Border Classes="card" Padding="0" CornerRadius="{DynamicResource Radius10}" ClipToBounds="True">
     <DockPanel>
       <Border DockPanel.Dock="Top" Height="3" Background="{Binding Brush}" />
-      <Grid Margin="16,12,16,16" RowDefinitions="Auto,Auto,Auto,Auto,Auto" ColumnDefinitions="*,Auto">
+      <Grid Margin="14,10,14,12" RowDefinitions="Auto,Auto,Auto,Auto" ColumnDefinitions="*,Auto">
 
         <!-- Title, state and tempo -->
-        <Grid Grid.Row="0" Grid.ColumnSpan="2" ColumnDefinitions="Auto,*,Auto,Auto" Margin="0,0,0,10">
+        <Grid Grid.Row="0" Grid.ColumnSpan="2" ColumnDefinitions="Auto,*,Auto,Auto" Margin="0,0,0,8">
           <Border Grid.Column="0" Width="40" Height="40" CornerRadius="{DynamicResource Radius8}" Background="{Binding Brush}" Margin="0,0,12,0">
             <TextBlock Text="{Binding Id}" FontSize="20" FontWeight="Bold" Foreground="#0E1116" HorizontalAlignment="Center" VerticalAlignment="Center" />
           </Border>
@@ -29,13 +29,13 @@
         </Grid>
 
         <!-- Waveform of the whole track: click to jump -->
-        <Border Grid.Row="1" Grid.ColumnSpan="2" CornerRadius="{DynamicResource Radius6}" ClipToBounds="True" Height="72" Background="#0B0E12">
+        <Border Grid.Row="1" Grid.ColumnSpan="2" CornerRadius="{DynamicResource Radius6}" ClipToBounds="True" Height="52" Background="#0B0E12">
           <ctl:WaveformView x:Name="Wave" Peaks="{Binding Peaks}" BlockSeconds="{Binding BlockSeconds}" Markers="{Binding Markers}"
                             Playhead="{Binding Position}" CueOut="{Binding Duration}" ShowCursor="False" ReadOnlyMarkers="True"
                             EmptyText="sleep een nummer hierheen" Cursor="Hand" ToolTip.Tip="Klik om te springen · scrollen = in- en uitzoomen" />
         </Border>
 
-        <Grid Grid.Row="2" Grid.ColumnSpan="2" ColumnDefinitions="Auto,*,Auto" Margin="0,8,0,10">
+        <Grid Grid.Row="2" Grid.ColumnSpan="2" ColumnDefinitions="Auto,*,Auto" Margin="0,6,0,8">
           <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="6" VerticalAlignment="Bottom">
             <TextBlock Classes="lbl" Text="VERSTREKEN" VerticalAlignment="Bottom" Margin="0,0,0,3" />
             <TextBlock Classes="mono" FontSize="18" FontWeight="Bold" Text="{Binding Elapsed}" />
@@ -50,17 +50,33 @@
           </StackPanel>
         </Grid>
 
-        <!-- Hot cues, loop -->
-        <StackPanel Grid.Row="4" Grid.Column="0" Spacing="10" Margin="0,12,16,0">
-          <StackPanel Spacing="6">
-            <TextBlock Classes="lbl" Text="HOTCUES" />
+        <!-- Transport, hot cues, loop and roll, effect: all within one screen of 1920 x 1080 -->
+        <StackPanel Grid.Row="3" Grid.Column="0" Spacing="8" Margin="0,0,14,0">
+          <Grid ColumnDefinitions="*,1.4*,*,Auto,Auto">
+            <Button Grid.Column="0" Classes="bar big" Content="Cue" Command="{Binding CueCommand}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Margin="0,0,8,0"
+                    ToolTip.Tip="Spelend: terug naar het cuepunt en wachten. Stil: het cuepunt komt op deze plek." />
+            <ToggleButton Grid.Column="1" Classes="bar big play" IsChecked="{Binding Playing, Mode=OneWay}" Command="{Binding ToggleCommand}" HorizontalAlignment="Stretch"
+                          HorizontalContentAlignment="Center" Margin="0,0,8,0" ToolTip.Tip="Start of pauze">
+              <StackPanel Orientation="Horizontal" Spacing="8">
+                <Path Data="M2,2 L10,8 L2,14 Z M11,2 H13 V14 H11 Z M14,2 H16 V14 H14 Z" Fill="{Binding $parent[ToggleButton].Foreground}" Width="16" Height="16" Stretch="None" VerticalAlignment="Center" />
+                <TextBlock Text="Start" VerticalAlignment="Center" />
+              </StackPanel>
+            </ToggleButton>
+            <ToggleButton Grid.Column="2" Classes="bar big" Content="Sync" IsChecked="{Binding Synced, Mode=OneWay}" Command="{Binding SyncCommand}" HorizontalAlignment="Stretch"
+                          HorizontalContentAlignment="Center" Margin="0,0,8,0" ToolTip.Tip="Neemt het tempo over van het andere spelende deck en legt de beats gelijk" />
+            <Button Grid.Column="3" Classes="bar big" Content="−" Command="{Binding BendCommand}" CommandParameter="-" Margin="0,0,6,0" ToolTip.Tip="Even afremmen om de beats gelijk te leggen" />
+            <Button Grid.Column="4" Classes="bar big" Content="+" Command="{Binding BendCommand}" CommandParameter="+" ToolTip.Tip="Even aanduwen om de beats gelijk te leggen" />
+          </Grid>
+
+          <DockPanel>
+            <TextBlock DockPanel.Dock="Left" Classes="lbl" Text="HOTCUES" VerticalAlignment="Center" Width="58" />
             <ItemsControl ItemsSource="{Binding HotCues}">
               <ItemsControl.ItemsPanel>
                 <ItemsPanelTemplate><UniformGrid Rows="1" /></ItemsPanelTemplate>
               </ItemsControl.ItemsPanel>
               <ItemsControl.ItemTemplate>
                 <DataTemplate x:DataType="vm:DjHotCueVm">
-                  <Button Classes="pad" Classes.filled="{Binding Filled}" Margin="0,0,6,0" HorizontalAlignment="Stretch"
+                  <Button Classes="pad" Classes.filled="{Binding Filled}" Margin="0,0,5,0" MinHeight="44" HorizontalAlignment="Stretch"
                           BorderBrush="{Binding Deck.Brush}"
                           Command="{Binding Deck.HotCueCommand}" CommandParameter="{Binding}"
                           ToolTip.Tip="Leeg: onthoudt deze plek. Gevuld: springt erheen. Rechtsklik: wissen.">
@@ -77,85 +93,68 @@
                 </DataTemplate>
               </ItemsControl.ItemTemplate>
             </ItemsControl>
-          </StackPanel>
-          <StackPanel Spacing="6">
-            <TextBlock Classes="lbl" Text="LOOP" />
-            <StackPanel Orientation="Horizontal" Spacing="6">
-              <Button Classes="bar" Content="In" Command="{Binding LoopInCommand}" ToolTip.Tip="Begin van de loop op deze plek" />
-              <Button Classes="bar" Content="Uit" Command="{Binding LoopOutCommand}" ToolTip.Tip="Einde van de loop op deze plek; de loop begint meteen" />
-              <Button Classes="bar" Content="÷2" Command="{Binding LoopHalfCommand}" ToolTip.Tip="Loop halveren" />
-              <ToggleButton Classes="bar" IsChecked="{Binding LoopActive, Mode=OneWay}" Command="{Binding LoopCommand}" MinWidth="64"
-                            ToolTip.Tip="Loop van zoveel beats vanaf hier; nog een keer = loslaten">
-                <TextBlock Classes="mono" FontWeight="Bold" Text="{Binding LoopBeats}" />
-              </ToggleButton>
-              <Button Classes="bar" Content="×2" Command="{Binding LoopDoubleCommand}" ToolTip.Tip="Loop verdubbelen" />
-            </StackPanel>
+          </DockPanel>
+
+          <WrapPanel ItemSpacing="6" LineSpacing="6">
+            <TextBlock Classes="lbl" Text="LOOP" VerticalAlignment="Center" Width="52" />
+            <Button Classes="bar" Padding="10,0" Content="In" Command="{Binding LoopInCommand}" ToolTip.Tip="Begin van de loop op deze plek" />
+            <Button Classes="bar" Padding="10,0" Content="Uit" Command="{Binding LoopOutCommand}" ToolTip.Tip="Einde van de loop op deze plek; de loop begint meteen" />
+            <Button Classes="bar" Padding="10,0" Content="÷2" Command="{Binding LoopHalfCommand}" ToolTip.Tip="Loop halveren" />
+            <ToggleButton Classes="bar" IsChecked="{Binding LoopActive, Mode=OneWay}" Command="{Binding LoopCommand}" MinWidth="44" Padding="8,0"
+                          ToolTip.Tip="Loop van zoveel beats vanaf hier; nog een keer = loslaten">
+              <TextBlock Classes="mono" FontWeight="Bold" Text="{Binding LoopBeats}" />
+            </ToggleButton>
+            <Button Classes="bar" Padding="10,0" Content="×2" Command="{Binding LoopDoubleCommand}" Margin="0,0,8,0" ToolTip.Tip="Loop verdubbelen" />
             <!-- Loop roll: held down it loops; let go and the track is where it would have been -->
-            <StackPanel x:Name="RollBar" Orientation="Horizontal" Spacing="6"
+            <StackPanel x:Name="RollBar" Orientation="Horizontal" Spacing="4"
                         ToolTip.Tip="Loop-roll: ingedrukt houden. Bij loslaten loopt het nummer verder alsof het gewoon doorspeelde.">
-              <TextBlock Classes="lbl" Text="ROLL" VerticalAlignment="Center" Margin="0,0,4,0" Foreground="{Binding Rolling, Converter={x:Static vm:Brushes.Active}}" />
-              <Button Classes="bar" Content="1/8" Tag="0.125" MinWidth="48" />
-              <Button Classes="bar" Content="1/4" Tag="0.25" MinWidth="48" />
-              <Button Classes="bar" Content="1/2" Tag="0.5" MinWidth="48" />
-              <Button Classes="bar" Content="1" Tag="1" MinWidth="48" />
+              <TextBlock Classes="lbl" Text="ROLL" VerticalAlignment="Center" Margin="0,0,2,0" Foreground="{Binding Rolling, Converter={x:Static vm:Brushes.Active}}" />
+              <Button Classes="bar" Content="1/8" Tag="0.125" MinWidth="40" Padding="6,0" />
+              <Button Classes="bar" Content="1/4" Tag="0.25" MinWidth="40" Padding="6,0" />
+              <Button Classes="bar" Content="1/2" Tag="0.5" MinWidth="40" Padding="6,0" />
+              <Button Classes="bar" Content="1" Tag="1" MinWidth="40" Padding="6,0" />
             </StackPanel>
-            <!-- Beat effect: echo and flanger follow the tempo of the deck -->
-            <TextBlock Classes="lbl" Text="EFFECT" Margin="0,4,0,0" />
-            <DockPanel>
-              <ToggleButton DockPanel.Dock="Right" Classes="bar fx" Content="FX AAN" IsChecked="{Binding FxOn, Mode=OneWay}" Command="{Binding ToggleFxCommand}"
-                            ToolTip.Tip="Effect aan of uit (op de zender en in de koptelefoon)" />
-              <Border BorderBrush="{DynamicResource ControlBorderBrush}" BorderThickness="1" CornerRadius="{DynamicResource Radius8}" ClipToBounds="True"
-                      HorizontalAlignment="Left" Margin="0,0,6,0">
-                <StackPanel Orientation="Horizontal">
-                  <ToggleButton Classes="seg" Content="Echo" IsChecked="{Binding FxType, Converter={x:Static vm:Brushes.Is}, ConverterParameter=echo, Mode=OneWay}"
-                                Command="{Binding SetFxTypeCommand}" CommandParameter="echo" ToolTip.Tip="Echo: de herhaling valt op de tel" />
-                  <ToggleButton Classes="seg" Content="Flanger" IsChecked="{Binding FxType, Converter={x:Static vm:Brushes.Is}, ConverterParameter=flanger, Mode=OneWay}"
-                                Command="{Binding SetFxTypeCommand}" CommandParameter="flanger" ToolTip.Tip="Flanger: één zwaai per gekozen aantal tellen" />
-                  <ToggleButton Classes="seg" Content="Galm" IsChecked="{Binding FxType, Converter={x:Static vm:Brushes.Is}, ConverterParameter=reverb, Mode=OneWay}"
-                                Command="{Binding SetFxTypeCommand}" CommandParameter="reverb" ToolTip.Tip="Galm: meer tellen = grotere ruimte" />
-                </StackPanel>
-              </Border>
-            </DockPanel>
-            <DockPanel>
-              <Button DockPanel.Dock="Left" Classes="small" Content="◀" Command="{Binding FxBeatsStepCommand}" CommandParameter="-" ToolTip.Tip="Korter" />
-              <TextBlock DockPanel.Dock="Left" Classes="mono" FontWeight="Bold" Text="{Binding FxBeatsText}" VerticalAlignment="Center" MinWidth="92"
-                         TextAlignment="Center" />
-              <Button DockPanel.Dock="Left" Classes="small" Content="▶" Command="{Binding FxBeatsStepCommand}" CommandParameter="+" Margin="0,0,10,0" ToolTip.Tip="Langer" />
-              <TextBlock DockPanel.Dock="Left" Classes="lbl" Text="MIX" VerticalAlignment="Center" Margin="0,0,8,0" />
-              <Slider Minimum="0" Maximum="100" Value="{Binding FxMix}" ToolTip.Tip="Hoeveel van het effect je hoort" />
-            </DockPanel>
-          </StackPanel>
+          </WrapPanel>
+
+          <!-- Beat effect: echo and flanger follow the tempo of the deck -->
+          <WrapPanel ItemSpacing="6" LineSpacing="6">
+            <TextBlock Classes="lbl" Text="EFFECT" VerticalAlignment="Center" Width="52" />
+            <Border BorderBrush="{DynamicResource ControlBorderBrush}" BorderThickness="1" CornerRadius="{DynamicResource Radius8}" ClipToBounds="True">
+              <StackPanel Orientation="Horizontal">
+                <ToggleButton Classes="seg" Padding="10,0" Content="Echo" IsChecked="{Binding FxType, Converter={x:Static vm:Brushes.Is}, ConverterParameter=echo, Mode=OneWay}"
+                              Command="{Binding SetFxTypeCommand}" CommandParameter="echo" ToolTip.Tip="Echo: de herhaling valt op de tel" />
+                <ToggleButton Classes="seg" Padding="10,0" Content="Flanger" IsChecked="{Binding FxType, Converter={x:Static vm:Brushes.Is}, ConverterParameter=flanger, Mode=OneWay}"
+                              Command="{Binding SetFxTypeCommand}" CommandParameter="flanger" ToolTip.Tip="Flanger: één zwaai per gekozen aantal tellen" />
+                <ToggleButton Classes="seg" Padding="10,0" Content="Galm" IsChecked="{Binding FxType, Converter={x:Static vm:Brushes.Is}, ConverterParameter=reverb, Mode=OneWay}"
+                              Command="{Binding SetFxTypeCommand}" CommandParameter="reverb" ToolTip.Tip="Galm: meer tellen = grotere ruimte" />
+              </StackPanel>
+            </Border>
+            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+              <Button Classes="small" Content="◀" Command="{Binding FxBeatsStepCommand}" CommandParameter="-" ToolTip.Tip="Korter" />
+              <TextBlock Classes="mono" FontWeight="Bold" Text="{Binding FxBeatsText}" VerticalAlignment="Center" MinWidth="64" TextAlignment="Center" />
+              <Button Classes="small" Content="▶" Command="{Binding FxBeatsStepCommand}" CommandParameter="+" ToolTip.Tip="Langer" />
+            </StackPanel>
+            <ctl:Knob Width="40" Height="40" Minimum="0" Maximum="100" Default="0" Value="{Binding FxMix}" ArcBrush="{Binding Brush}" VerticalAlignment="Center"
+                      ToolTip.Tip="Mix: hoeveel van het effect je hoort. Slepen of muiswiel; dubbelklik = 0." />
+            <ToggleButton Classes="bar fx" Padding="10,0" Content="FX AAN" IsChecked="{Binding FxOn, Mode=OneWay}" Command="{Binding ToggleFxCommand}"
+                          ToolTip.Tip="Effect aan of uit (op de zender en in de koptelefoon)" />
+          </WrapPanel>
         </StackPanel>
 
         <!-- Tempo fader: down is faster, as on a turntable -->
-        <StackPanel Grid.Row="3" Grid.Column="1" Grid.RowSpan="2" Spacing="6" Width="84">
-          <TextBlock Classes="lbl" Text="TEMPO" HorizontalAlignment="Center" />
-          <Slider Orientation="Vertical" Height="130" HorizontalAlignment="Center" IsDirectionReversed="True"
+        <DockPanel Grid.Row="3" Grid.Column="1" Width="78">
+          <TextBlock DockPanel.Dock="Top" Classes="lbl" Text="TEMPO" HorizontalAlignment="Center" Margin="0,0,0,4" />
+          <StackPanel DockPanel.Dock="Bottom" Spacing="4" Margin="0,4,0,0">
+            <Button Classes="small" Content="{Binding TempoRangeText}" Command="{Binding NextRangeCommand}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
+                    ToolTip.Tip="Bereik van de tempofader: 8, 12 of 50 %" />
+            <Button Classes="small" Content="0 %" Command="{Binding ResetTempoCommand}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" ToolTip.Tip="Terug naar het eigen tempo" />
+            <ToggleButton Classes="small" Content="Toon vast" IsChecked="{Binding KeyLock, Mode=OneWay}" Command="{Binding ToggleKeyLockCommand}" HorizontalAlignment="Stretch"
+                          HorizontalContentAlignment="Center" FontSize="12" Padding="4,3" ToolTip.Tip="Aan: sneller of langzamer zonder dat de toonhoogte verandert" />
+          </StackPanel>
+          <Slider Orientation="Vertical" MinHeight="80" HorizontalAlignment="Center" IsDirectionReversed="True"
                   Minimum="{Binding TempoRange, Converter={x:Static vm:Brushes.Negate}}" Maximum="{Binding TempoRange}" Value="{Binding Tempo}"
                   SmallChange="0.1" LargeChange="1" ToolTip.Tip="Tempo: omlaag is sneller" />
-          <Button Classes="small" Content="{Binding TempoRangeText}" Command="{Binding NextRangeCommand}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
-                  ToolTip.Tip="Bereik van de tempofader: 8, 12 of 50 %" />
-          <Button Classes="small" Content="0 %" Command="{Binding ResetTempoCommand}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" ToolTip.Tip="Terug naar het eigen tempo" />
-          <ToggleButton Classes="small" Content="Toon vast" IsChecked="{Binding KeyLock, Mode=OneWay}" Command="{Binding ToggleKeyLockCommand}" HorizontalAlignment="Stretch"
-                        HorizontalContentAlignment="Center" FontSize="12" Padding="4,3" ToolTip.Tip="Aan: sneller of langzamer zonder dat de toonhoogte verandert" />
-        </StackPanel>
-
-        <!-- Transport -->
-        <Grid Grid.Row="3" Grid.Column="0" ColumnDefinitions="*,1.4*,*,Auto,Auto" Margin="0,0,16,0">
-          <Button Grid.Column="0" Classes="bar big" Content="Cue" Command="{Binding CueCommand}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Margin="0,0,8,0"
-                  ToolTip.Tip="Spelend: terug naar het cuepunt en wachten. Stil: het cuepunt komt op deze plek." />
-          <ToggleButton Grid.Column="1" Classes="bar big play" IsChecked="{Binding Playing, Mode=OneWay}" Command="{Binding ToggleCommand}" HorizontalAlignment="Stretch"
-                        HorizontalContentAlignment="Center" Margin="0,0,8,0" ToolTip.Tip="Start of pauze">
-            <StackPanel Orientation="Horizontal" Spacing="8">
-              <Path Data="M2,2 L10,8 L2,14 Z M11,2 H13 V14 H11 Z M14,2 H16 V14 H14 Z" Fill="{Binding $parent[ToggleButton].Foreground}" Width="16" Height="16" Stretch="None" VerticalAlignment="Center" />
-              <TextBlock Text="Start" VerticalAlignment="Center" />
-            </StackPanel>
-          </ToggleButton>
-          <ToggleButton Grid.Column="2" Classes="bar big" Content="Sync" IsChecked="{Binding Synced, Mode=OneWay}" Command="{Binding SyncCommand}" HorizontalAlignment="Stretch"
-                        HorizontalContentAlignment="Center" Margin="0,0,8,0" ToolTip.Tip="Neemt het tempo over van het andere spelende deck en legt de beats gelijk" />
-          <Button Grid.Column="3" Classes="bar big" Content="−" Command="{Binding BendCommand}" CommandParameter="-" Margin="0,0,6,0" ToolTip.Tip="Even afremmen om de beats gelijk te leggen" />
-          <Button Grid.Column="4" Classes="bar big" Content="+" Command="{Binding BendCommand}" CommandParameter="+" ToolTip.Tip="Even aanduwen om de beats gelijk te leggen" />
-        </Grid>
+        </DockPanel>
       </Grid>
     </DockPanel>
   </Border>

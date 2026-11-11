@@ -7,7 +7,7 @@
              x:DataType="vm:DjTool">
   <DockPanel Margin="8">
     <!-- What the listener hears: the automation or this desk -->
-    <Border DockPanel.Dock="Top" Classes="card" Padding="12,8" Margin="0,0,0,8">
+    <Border DockPanel.Dock="Top" Classes="card" Padding="12,6" Margin="0,0,0,6">
       <Grid ColumnDefinitions="Auto,*,Auto,Auto,Auto">
         <Border Grid.Column="0" BorderBrush="{DynamicResource ControlBorderBrush}" BorderThickness="1" CornerRadius="{DynamicResource Radius8}" ClipToBounds="True" VerticalAlignment="Center">
           <StackPanel Orientation="Horizontal">
@@ -73,49 +73,45 @@
         <Panel Grid.Row="1" Grid.Column="4" Margin="0,8,0,0" IsVisible="{Binding FourDecks}"><v:DjDeckView DataContext="{Binding D}" /></Panel>
 
         <!-- Mixer -->
-        <Border Grid.Row="0" Grid.RowSpan="2" Grid.Column="2" Classes="card" Padding="16" CornerRadius="{DynamicResource Radius10}" VerticalAlignment="Top">
+        <Border Grid.Row="0" Grid.RowSpan="2" Grid.Column="2" Classes="card" Padding="14,12" CornerRadius="{DynamicResource Radius10}" VerticalAlignment="Top">
           <StackPanel Spacing="12">
-            <Grid ColumnDefinitions="250,20,250">
+            <Grid ColumnDefinitions="220,16,220">
               <v:DjStripView Grid.Column="0" DataContext="{Binding A}" />
               <v:DjStripView Grid.Column="2" DataContext="{Binding B}" />
             </Grid>
-            <Grid ColumnDefinitions="250,20,250" IsVisible="{Binding FourDecks}">
+            <Grid ColumnDefinitions="220,16,220" IsVisible="{Binding FourDecks}">
               <v:DjStripView Grid.Column="0" DataContext="{Binding C}" />
               <v:DjStripView Grid.Column="2" DataContext="{Binding D}" />
             </Grid>
             <StackPanel Spacing="4">
-              <Grid ColumnDefinitions="Auto,*,Auto">
-                <TextBlock Grid.Column="0" Classes="lbl" Text="A" Foreground="#4C8DFF" />
-                <TextBlock Grid.Column="1" Classes="lbl" Text="CROSSFADER" HorizontalAlignment="Center" />
-                <TextBlock Grid.Column="2" Classes="lbl" Text="B" Foreground="#F5A524" />
+              <Grid ColumnDefinitions="Auto,Auto,*,Auto,Auto">
+                <TextBlock Grid.Column="0" Classes="lbl" Text="A" Foreground="#4C8DFF" VerticalAlignment="Center" Margin="0,0,10,0" />
+                <Button Grid.Column="1" Classes="small" Content="Midden" Command="{Binding CenterCrossfaderCommand}" ToolTip.Tip="Crossfader naar het midden" />
+                <TextBlock Grid.Column="2" Classes="lbl" Text="CROSSFADER" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                <ToggleButton Grid.Column="3" Classes="small" Content="Scherp" IsChecked="{Binding Sharp, Mode=OneWay}" Command="{Binding ToggleCurveCommand}"
+                              FontSize="12" Padding="10,3"
+                              ToolTip.Tip="Uit: vloeiende overgang. Aan: beide kanten blijven open tot vlak voor het einde (knippen, scratchen)." />
+                <TextBlock Grid.Column="4" Classes="lbl" Text="B" Foreground="#F5A524" VerticalAlignment="Center" Margin="10,0,0,0" />
               </Grid>
               <Slider Minimum="0" Maximum="100" Value="{Binding Crossfader}" ToolTip.Tip="Links: decks A en C. Rechts: decks B en D." />
-              <Grid ColumnDefinitions="*,8,*">
-                <Button Grid.Column="0" Classes="small" Content="Midden" Command="{Binding CenterCrossfaderCommand}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" />
-                <ToggleButton Grid.Column="2" Classes="small" Content="Scherp" IsChecked="{Binding Sharp, Mode=OneWay}" Command="{Binding ToggleCurveCommand}" HorizontalAlignment="Stretch"
-                              HorizontalContentAlignment="Center" FontSize="12" Padding="4,3"
-                              ToolTip.Tip="Uit: vloeiende overgang. Aan: beide kanten blijven open tot vlak voor het einde (knippen, scratchen)." />
-              </Grid>
             </StackPanel>
-            <!-- Headphones: cue or master, quantize and the limiter on the DJ output -->
-            <StackPanel Spacing="4">
-              <Grid ColumnDefinitions="Auto,*,Auto">
-                <TextBlock Grid.Column="0" Classes="lbl" Text="CUE" />
-                <TextBlock Grid.Column="1" Classes="lbl" Text="KOPTELEFOON" HorizontalAlignment="Center" />
-                <TextBlock Grid.Column="2" Classes="lbl" Text="MASTER" />
-              </Grid>
-              <Slider Minimum="0" Maximum="100" Value="{Binding CueMix}"
-                      ToolTip.Tip="Links: alleen de decks met PFL. Midden: allebei. Rechts: alleen de mix van de tafel." />
-              <Grid ColumnDefinitions="*,8,*,8,*">
-                <Button Grid.Column="0" Classes="small" Content="Alleen cue" Command="{Binding CueOnlyCommand}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" />
-                <ToggleButton Grid.Column="2" Classes="small" Content="Quantize" IsChecked="{Binding Quantize, Mode=OneWay}" Command="{Binding ToggleQuantizeCommand}"
-                              HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
-                              ToolTip.Tip="Hot cues, loops en rolls vallen op de tel; een sprong naar een hot cue blijft in de maat" />
-                <ToggleButton Grid.Column="4" Classes="small" Content="Begrenzer" IsChecked="{Binding Limiter, Mode=OneWay}" Command="{Binding ToggleLimiterCommand}"
-                              HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
-                              ToolTip.Tip="Begrenzer op de DJ-uitgang (-1 dBFS): de mix komt nooit boven het plafond, ook in de opname" />
-              </Grid>
-            </StackPanel>
+            <!-- Headphones: a knob from cue to master, quantize and the limiter on the DJ output -->
+            <Grid ColumnDefinitions="Auto,*">
+              <ctl:Knob Grid.Column="0" Width="44" Height="44" Minimum="0" Maximum="100" Default="50" Value="{Binding CueMix}" Margin="0,0,10,0" VerticalAlignment="Center"
+                        ToolTip.Tip="Koptelefoon. Links: alleen de decks met PFL. Midden: allebei. Rechts: alleen de mix van de tafel. Dubbelklik = midden." />
+              <StackPanel Grid.Column="1" Spacing="3">
+                <TextBlock Classes="lbl" Text="KOPTELEFOON · CUE ↔ MASTER" />
+                <Grid ColumnDefinitions="*,6,*,6,*">
+                  <Button Grid.Column="0" Classes="small" Content="Alleen cue" Command="{Binding CueOnlyCommand}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" />
+                  <ToggleButton Grid.Column="2" Classes="small" Content="Quantize" IsChecked="{Binding Quantize, Mode=OneWay}" Command="{Binding ToggleQuantizeCommand}"
+                                HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
+                                ToolTip.Tip="Hot cues, loops en rolls vallen op de tel; een sprong naar een hot cue blijft in de maat" />
+                  <ToggleButton Grid.Column="4" Classes="small" Content="Begrenzer" IsChecked="{Binding Limiter, Mode=OneWay}" Command="{Binding ToggleLimiterCommand}"
+                                HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
+                                ToolTip.Tip="Begrenzer op de DJ-uitgang (-1 dBFS): de mix komt nooit boven het plafond, ook in de opname" />
+                </Grid>
+              </StackPanel>
+            </Grid>
           </StackPanel>
         </Border>
       </Grid>
