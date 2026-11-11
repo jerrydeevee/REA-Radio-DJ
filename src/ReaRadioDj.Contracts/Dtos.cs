@@ -82,7 +82,8 @@ public sealed record NowPlayingDto(long Id, string Type, string Label, string Ar
 
 public sealed record LogItemDto(long Id, string Type, string Label, string? Artist, string? Title, string? Category, string Origin,
     double Length, DateTime StartsAt, string? BreakState, string? Script, string? ScriptSource, string? Voice, string? Error,
-    long? MediaId, bool UseHook, string? Extra = null, double? CheckScore = null, bool HandMadeMix = false);
+    long? MediaId, bool UseHook, string? Extra = null, double? CheckScore = null, bool HandMadeMix = false,
+    List<LogItemDto>? Children = null);
 
 public sealed record PlayerDto(string Id, string Name, string State, long? MediaId, string? Label, double Position, double CueIn,
     double CueOut, double? Intro, IReadOnlyList<string> Stack);
@@ -177,6 +178,9 @@ public sealed record CategoryRequest(string Name, string Kind, string? Color);
 
 /// <summary>Position: null = end of the log, 0 = next.</summary>
 public sealed record AddToLogRequest(long MediaId, int? Position);
+
+/// <summary>A container of library items as one line in the log; Position null = at the end, 0 = next.</summary>
+public sealed record AddContainerRequest(string Name, List<long> MediaIds, int? Position);
 /// <summary>A folder or audio file in the Verkenner; <c>MediaId</c> is set when the file is in the library.</summary>
 public sealed record FileEntryDto(string Name, string Path, bool IsFolder, long Size, DateTime Modified, long? MediaId);
 public sealed record FolderDto(string Path, string? Parent, IReadOnlyList<FileEntryDto> Entries, string? Error);

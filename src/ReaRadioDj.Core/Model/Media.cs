@@ -88,7 +88,8 @@ public sealed record MediaItem
 /// <summary>Pending → Rendering → (AwaitingApproval →) Ready, or Failed. Anything but Ready is skipped on air.</summary>
 public enum BreakState { Pending, Rendering, Ready, Failed, AwaitingApproval }
 
-public enum LogItemType { Song, Jingle, AiBreak, VoiceTrack }
+/// <summary>Container = one line holding a group of items (an ad block, a fixed jingle set) that opens up when it is next.</summary>
+public enum LogItemType { Song, Jingle, AiBreak, VoiceTrack, Container }
 
 /// <summary>One entry in the on-air log (the playlist that the engine plays from top to bottom).</summary>
 public sealed class LogItem
@@ -129,8 +130,40 @@ public sealed class LogItem
     public string? Voice { get; set; }
     public string? Error { get; set; }
 
+    // Container bookkeeping
+    /// <summary>Name of a container ("Reclameblok 14 uur", "Jingleset ochtend").</summary>
+    public string? Name { get; init; }
+    /// <summary>The items in a container, in playing order; empty for every other item.</summary>
+    public IReadOnlyList<LogItem> Children { get; init; } = [];
+
+    /// <summary>A fresh copy with a new id (containers copy their items too); AI breaks and ad spots are not copied.</summary>
+    public LogItem? Copy()
+    {
+        if (Type == LogItemType.AiBreak || AdPlayId is not null) return null;
+        var children = Children.Select(c => c.Copy()).OfType<LogItem>().ToList();
+        if (Type == LogItemType.Container && children.Count == 0) return null;
+        return new LogItem
+        {
+            Type = Type, Media = Media, Origin = Origin, UseHook = UseHook, StartEarly = StartEarly, MixIn = MixIn,
+            Name = Name, Children = children,
+        };
+    }
+
+    /// <summary>A container of library items (songs, jingles and other audio) under one name.</summary>
+    public static LogItem Container(string name, IEnumerable<MediaItem> media) => new()
+    {
+        Type = LogItemType.Container,
+        Name = string.IsNullOrWhiteSpace(name) ? "Container" : name.Trim(),
+        Origin = "container",
+        Children = media.Select(m => new LogItem
+        {
+            Type = m.Kind == MediaKind.Song ? LogItemType.Song : LogItemType.Jingle, Media = m, Origin = "container",
+        }).ToList(),
+    };
+
     public string Label => Type switch
     {
+        LogItemType.Container => $"{Name} ({Children.Count} {(Children.Count == 1 ? "item" : "items")})",
         LogItemType.AiBreak when Media is null => $"AI-break ({BreakState})",
         LogItemType.AiBreak => "AI-break",
         LogItemType.VoiceTrack => $"Voicetrack ({Media?.CueOut ?? 0:0.0} s)",
@@ -138,7 +171,8 @@ public sealed class LogItem
     };
 
     /// <summary>Playing length used for planning: from CueIn to the mix point (or the hook length).</summary>
-    public double PlannedLength => Media is not { } m ? 12
+    public double PlannedLength => Type == LogItemType.Container ? Children.Sum(c => c.PlannedLength)
+        : Media is not { } m ? 12
         : UseHook && m.Cues is { HookIn: double hi, HookOut: double ho } ? ho - hi
         : Math.Max(0.5, m.MixPoint - m.CueIn);
 }

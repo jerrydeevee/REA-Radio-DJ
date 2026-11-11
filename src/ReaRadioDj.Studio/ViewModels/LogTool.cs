@@ -15,7 +15,13 @@ public sealed partial class LogRow : ObservableObject
     public required string Origin { get; init; }
     public string? Error { get; init; }
     public long? MediaId { get; init; }
-    public string TypeText => Type switch { "song" => "Muziek", "jingle" => "Jingle", "aiBreak" => "AI", _ => Type };
+    /// <summary>A container: its items as "start  title" lines (at most eight, then "… en n meer").</summary>
+    public IReadOnlyList<string> Children { get; init; } = [];
+    public bool IsContainer => Type == "container";
+    public string TypeText => Type switch
+    {
+        "song" => "Muziek", "jingle" => "Jingle", "aiBreak" => "AI", "voiceTrack" => "Voicetrack", "container" => "Container", _ => Type,
+    };
     [ObservableProperty] private string _startsAt = "";
     [ObservableProperty] private string _length = "";
     /// <summary>Deck letter (B = next, C = after that) and its colour from the deck palette; empty for later items.</summary>
@@ -101,12 +107,24 @@ public sealed partial class LogTool : StudioTool
         Id = u.Id,
         Type = u.Type,
         Label = u.Type == "aiBreak" ? $"AI-presentator ({BreakText(u.BreakState)})" : (string.IsNullOrEmpty(u.Title) ? u.Label : u.Title),
-        Detail = u.Type == "aiBreak" ? u.Script : string.Join(" · ", new[] { u.Artist, u.Category }.Where(x => !string.IsNullOrWhiteSpace(x))),
+        Detail = u.Type == "aiBreak" ? u.Script
+            : u.Type == "container" ? "klapt open als hij aan de beurt is"
+            : string.Join(" · ", new[] { u.Artist, u.Category }.Where(x => !string.IsNullOrWhiteSpace(x))),
         Origin = (u.UseHook ? u.Origin + " · hook" : u.Origin) + (u.HandMadeMix ? " · eigen overgang" : ""),
         Error = u.Error,
         MediaId = u.MediaId,
+        Children = ChildLines(u.Children),
         Length = StudioHub.Time(u.Length),
     };
+
+    private static IReadOnlyList<string> ChildLines(List<LogItemDto>? children)
+    {
+        if (children is not { Count: > 0 }) return [];
+        var lines = children.Take(8).Select(c =>
+            $"{c.StartsAt:HH:mm:ss}  {(string.IsNullOrWhiteSpace(c.Artist) ? c.Title ?? c.Label : $"{c.Artist} – {c.Title}")}  ({StudioHub.Time(c.Length)})").ToList();
+        if (children.Count > 8) lines.Add($"… en {children.Count - 8} meer");
+        return lines;
+    }
 
     private static string BreakText(string? state) => state switch
     {
@@ -119,6 +137,10 @@ public sealed partial class LogTool : StudioTool
     [RelayCommand] private Task MakeNext(LogRow? row) => row is null ? Task.CompletedTask : Hub.Client.PostAsync($"/api/log/{row.Id}/move", new MoveRequest(null, 0));
     [RelayCommand] private Task AddBreak() => Hub.Client.PostAsync("/api/log/break", new AddBreakRequest(0));
     [RelayCommand] private void EditTransition(LogRow? row) { if (row is not null) Hub.RequestTransition(row.Id); }
+    /// <summary>A copy right after the item (a container with all its items).</summary>
+    [RelayCommand] private Task Copy(LogRow? row) => row is null ? Task.CompletedTask : Hub.Client.PostAsync($"/api/log/{row.Id}/copy");
+    /// <summary>Opens a container: its items become ordinary lines in its place.</summary>
+    [RelayCommand] private Task Open(LogRow? row) => row is not { IsContainer: true } ? Task.CompletedTask : Hub.Client.PostAsync($"/api/log/{row.Id}/open");
     [RelayCommand] private Task Replan() => Hub.Client.PostAsync("/api/log/replan");
 
     [RelayCommand]

@@ -72,7 +72,20 @@ public static class Snapshot
         i.Id, Name(i.Type), i.Label, i.Media?.Artist, i.Media?.Title, i.Media?.Category, i.Origin,
         Math.Round(i.PlannedLength, 1), startsAt,
         i.Type == LogItemType.AiBreak ? Name(i.BreakState) : null,
-        i.Script, i.ScriptSource, i.Voice, i.Error, i.Media is { Id: > 0 } m ? m.Id : null, i.UseHook, i.Extra, i.CheckScore, i.MixIn is not null);
+        i.Script, i.ScriptSource, i.Voice, i.Error, i.Media is { Id: > 0 } m ? m.Id : null, i.UseHook, i.Extra, i.CheckScore, i.MixIn is not null,
+        i.Type == LogItemType.Container ? Children(i, startsAt) : null);
+
+    // The items of a container with the time each would start.
+    private static List<LogItemDto> Children(LogItem c, DateTime startsAt)
+    {
+        var list = new List<LogItemDto>(c.Children.Count);
+        foreach (var child in c.Children)
+        {
+            list.Add(Item(child, startsAt));
+            startsAt = startsAt.AddSeconds(child.PlannedLength);
+        }
+        return list;
+    }
 
     public static PlayerDto Player(PlayerInfo p) => new(p.Id, p.Name, Name(p.State), p.Media is { Id: > 0 } m ? m.Id : null,
         p.Media?.DisplayName, p.Position, p.CueIn, p.CueOut, p.Media?.Intro, p.Stack.Select(x => x.DisplayName).ToList());

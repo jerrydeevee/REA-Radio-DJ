@@ -27,7 +27,7 @@ public sealed class LogStore(string path)
     public sealed record Entry(LogItemType Type, MediaItem? Media, string Origin, bool UseHook = false, double StartEarly = 0,
         BreakState BreakState = BreakState.Pending, string? Persona = null, string? Extra = null, bool OutroAdded = false,
         double? CheckScore = null, string? Script = null, string? ScriptSource = null, string? Voice = null, Transition? MixIn = null,
-        long? AdPlayId = null, DateTime? ImportHour = null, int ImportIndex = 0);
+        long? AdPlayId = null, DateTime? ImportHour = null, int ImportIndex = 0, string? Name = null, List<Entry>? Children = null);
 
     public sealed record Snapshot(DateTime SavedAt, List<Entry> Upcoming, List<Entry> History);
 
@@ -80,10 +80,17 @@ public sealed class LogStore(string path)
 
     private static Entry ToEntry(LogItem i) => new(i.Type, i.Media, i.Origin, i.UseHook, i.StartEarly,
         i.BreakState == BreakState.Rendering ? BreakState.Pending : i.BreakState, i.Persona, i.Extra, i.OutroAdded, i.CheckScore,
-        i.Script, i.ScriptSource, i.Voice, i.MixIn, i.AdPlayId, i.ImportHour, i.ImportIndex);
+        i.Script, i.ScriptSource, i.Voice, i.MixIn, i.AdPlayId, i.ImportHour, i.ImportIndex, i.Name,
+        i.Children.Count > 0 ? i.Children.Select(ToEntry).ToList() : null);
 
     private static LogItem? FromEntry(Entry e)
     {
+        // A container comes back with the items whose audio is still there; an empty one is dropped.
+        if (e.Type == LogItemType.Container)
+        {
+            var children = (e.Children ?? []).Select(FromEntry).OfType<LogItem>().ToList();
+            return children.Count == 0 ? null : new LogItem { Type = e.Type, Origin = e.Origin, Name = e.Name, Children = children };
+        }
         var media = e.Media is { } m && Library.MediaPaths.Exists(m.Path) ? m : null;
         if (e.Media is not null && media is null && e.Type != LogItemType.AiBreak) return null;
         // A news bulletin whose audio is gone is not rendered again as an ordinary break: it was for another hour.

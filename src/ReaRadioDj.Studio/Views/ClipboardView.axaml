@@ -20,6 +20,22 @@
       <TextBlock Classes="muted" Text="{Binding Summary}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
     </DockPanel>
 
+    <!-- the whole clipboard as one container in the log (an ad block, a jingle set) -->
+    <Border DockPanel.Dock="Bottom" Classes="card" Margin="0,6,0,0" IsVisible="{Binding !IsEmpty}">
+      <StackPanel Spacing="4">
+        <TextBlock FontWeight="SemiBold" Text="Als container in de log" />
+        <WrapPanel ItemSpacing="4" LineSpacing="4">
+          <TextBox Text="{Binding ContainerName}" MinWidth="160" Watermark="naam, bijv. Reclameblok 14 uur" />
+          <Button Classes="small" Content="Als volgende" Command="{Binding ToContainerCommand}" CommandParameter="next" VerticalAlignment="Center"
+                  ToolTip.Tip="Alles van het klembord, van boven naar beneden, als één regel direct na wat nu speelt" />
+          <Button Classes="small" Content="Achteraan" Command="{Binding ToContainerCommand}" CommandParameter="end" VerticalAlignment="Center"
+                  ToolTip.Tip="Alles van het klembord als één regel achteraan in de log" />
+        </WrapPanel>
+        <TextBlock Classes="muted" FontSize="11" TextWrapping="Wrap" Text="{Binding ContainerResult}"
+                   IsVisible="{Binding ContainerResult, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+      </StackPanel>
+    </Border>
+
     <Panel>
       <Border x:Name="DropHint" Classes="card" IsVisible="{Binding IsEmpty}" VerticalAlignment="Top"
               BorderBrush="{DynamicResource ControlBorderBrush}" BorderThickness="1">

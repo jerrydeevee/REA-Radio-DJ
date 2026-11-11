@@ -18,6 +18,55 @@ public sealed class PlayoutLog
 
     public void Append(LogItem item) { lock (_gate) _upcoming.Add(item); Changed?.Invoke(); }
 
+    /// <summary>Containers as their items, in playing order (for rules that look at songs).</summary>
+    public static IEnumerable<LogItem> Flat(IEnumerable<LogItem> items) =>
+        items.SelectMany(i => i.Type == LogItemType.Container ? i.Children : [i]);
+
+    /// <summary>
+    /// Opens a container into its items, in its place: each item gets the origin "container: name · 2/5", so the items
+    /// stay together as a block (nothing is put in between them once the block plays). Caller holds the lock.
+    /// </summary>
+    private bool OpenAt(int index)
+    {
+        if (index < 0 || index >= _upcoming.Count || _upcoming[index] is not { Type: LogItemType.Container } c) return false;
+        _upcoming.RemoveAt(index);
+        int n = c.Children.Count;
+        for (int k = 0; k < n; k++) c.Children[k].Origin = $"container: {c.Name} · {k + 1}/{n}";
+        _upcoming.InsertRange(index, c.Children);
+        return true;
+    }
+
+    /// <summary>Opens the containers at the top of the log, so the next item is always something that can play.</summary>
+    private bool OpenTop()
+    {
+        bool opened = false;
+        while (OpenAt(0)) opened = true;
+        return opened;
+    }
+
+    /// <summary>Opens a container in the log by hand (its items become ordinary lines in its place).</summary>
+    public bool Open(long id)
+    {
+        bool opened;
+        lock (_gate) opened = OpenAt(_upcoming.FindIndex(x => x.Id == id));
+        if (opened) Changed?.Invoke();
+        return opened;
+    }
+
+    /// <summary>Puts a copy of an upcoming item (a container with all its items) right after it. Null when it cannot be copied.</summary>
+    public LogItem? CopyAfter(long id)
+    {
+        LogItem? copy;
+        lock (_gate)
+        {
+            int i = _upcoming.FindIndex(x => x.Id == id);
+            copy = i < 0 ? null : _upcoming[i].Copy();
+            if (copy is not null) _upcoming.Insert(i + 1, copy);
+        }
+        if (copy is not null) Changed?.Invoke();
+        return copy;
+    }
+
     public void Insert(int index, LogItem item)
     {
         lock (_gate) _upcoming.Insert(Math.Clamp(index, 0, _upcoming.Count), item);
@@ -64,6 +113,7 @@ public sealed class PlayoutLog
         LogItem? item;
         lock (_gate)
         {
+            OpenTop();
             if (_upcoming.Count == 0) return null;
             item = _upcoming[0];
             _upcoming.RemoveAt(0);
@@ -90,7 +140,18 @@ public sealed class PlayoutLog
     /// <summary>Tells listeners that an item changed in place (for example its transition).</summary>
     public void Touch() => Changed?.Invoke();
 
-    public LogItem? PeekNext() { lock (_gate) return _upcoming.Count > 0 ? _upcoming[0] : null; }
+    public LogItem? PeekNext()
+    {
+        LogItem? next;
+        bool opened;
+        lock (_gate)
+        {
+            opened = OpenTop();
+            next = _upcoming.Count > 0 ? _upcoming[0] : null;
+        }
+        if (opened) Changed?.Invoke();
+        return next;
+    }
 
     public LogItem? Find(long id) { lock (_gate) return _upcoming.FirstOrDefault(i => i.Id == id); }
 
@@ -160,7 +221,7 @@ public sealed class PlayoutLog
         lock (_gate)
         {
             var list = _history.Where(h => h.Type == LogItemType.Song && h.Media is not null).Select(h => h.Media!).Reverse().ToList();
-            list.AddRange(_upcoming.Where(u => u.Type == LogItemType.Song && u.Media is not null).Select(u => u.Media!));
+            list.AddRange(Flat(_upcoming).Where(u => u.Type == LogItemType.Song && u.Media is not null).Select(u => u.Media!));
             return list;
         }
     }
@@ -171,7 +232,7 @@ public sealed class PlayoutLog
         lock (_gate)
         {
             var list = _history.Take(recent).Reverse().ToList();
-            list.AddRange(_upcoming);
+            list.AddRange(Flat(_upcoming));
             return list;
         }
     }
@@ -181,10 +242,11 @@ public sealed class PlayoutLog
         lock (_gate)
         {
             int count = 0;
-            for (int k = _upcoming.Count - 1; k >= 0; k--)
+            var flat = Flat(_upcoming).ToList();
+            for (int k = flat.Count - 1; k >= 0; k--)
             {
-                if (_upcoming[k].Type == type) return count;
-                if (_upcoming[k].Type == LogItemType.Song) count++;
+                if (flat[k].Type == type) return count;
+                if (flat[k].Type == LogItemType.Song) count++;
             }
             foreach (var h in _history)
             {

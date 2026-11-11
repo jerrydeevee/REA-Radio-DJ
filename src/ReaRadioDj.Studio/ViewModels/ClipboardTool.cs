@@ -15,6 +15,8 @@ public sealed partial class ClipboardTool : StudioTool
 
     [ObservableProperty] private string _summary = "";
     [ObservableProperty] private bool _isEmpty = true;
+    [ObservableProperty] private string _containerName = "Container";
+    [ObservableProperty] private string _containerResult = "";
 
     protected override void OnFirstShow()
     {
@@ -37,4 +39,15 @@ public sealed partial class ClipboardTool : StudioTool
     [RelayCommand] private Task End(MediaDto? m) => m is null ? Task.CompletedTask : Hub.AddToLog(m.Id, false);
     [RelayCommand] private void Remove(MediaDto? m) { if (m is not null) MediaClipboard.Remove(m); }
     [RelayCommand] private void Clear() => MediaClipboard.Clear();
+
+    /// <summary>Everything on the clipboard (top to bottom) as one container line in the log: next or at the end.</summary>
+    [RelayCommand]
+    private async Task ToContainer(string? where)
+    {
+        if (Items.Count == 0) return;
+        bool next = where == "next";
+        var name = string.IsNullOrWhiteSpace(ContainerName) ? "Container" : ContainerName.Trim();
+        bool ok = await Hub.Client.PostAsync("/api/log/container", new AddContainerRequest(name, Items.Select(m => m.Id).ToList(), next ? 0 : null));
+        ContainerResult = ok ? $"\"{name}\" staat {(next ? "als volgende" : "achteraan")} in de log ({Items.Count} items)." : "Niet gelukt: is de engine bereikbaar?";
+    }
 }

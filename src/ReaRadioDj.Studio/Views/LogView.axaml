@@ -84,6 +84,17 @@
               </TextBlock>
               <TextBlock FontSize="11" Foreground="#E5484D" Text="{Binding Error}"
                          IsVisible="{Binding Error, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+              <!-- a container shows what is in it; it opens into these lines when it is next -->
+              <Border Classes="hide-narrow" IsVisible="{Binding IsContainer}" Margin="0,4,0,2" Padding="8,2,0,2"
+                      BorderBrush="{Binding Type, Converter={x:Static vm:Brushes.TypeColor}}" BorderThickness="2,0,0,0">
+                <ItemsControl ItemsSource="{Binding Children}">
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="x:String">
+                      <TextBlock Classes="mono muted" FontSize="11" Text="{Binding}" TextTrimming="CharacterEllipsis" />
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+              </Border>
             </StackPanel>
             <StackPanel Grid.Column="3" Margin="4,0" VerticalAlignment="Center">
               <TextBlock Classes="mono" FontSize="13" Text="{Binding Length}" HorizontalAlignment="Right" />
@@ -96,7 +107,13 @@
                       Command="{Binding $parent[ListBox].DataContext.MakeNextCommand}" CommandParameter="{Binding}" />
               <Button Classes="small" Content="↑" Command="{Binding $parent[ListBox].DataContext.UpCommand}" CommandParameter="{Binding}" />
               <Button Classes="small" Content="↓" Command="{Binding $parent[ListBox].DataContext.DownCommand}" CommandParameter="{Binding}" />
-              <Button Classes="small" Content="✕" Command="{Binding $parent[ListBox].DataContext.RemoveCommand}" CommandParameter="{Binding}" />
+              <Button Classes="small" Content="⧉" ToolTip.Tip="Kopie direct hierna (een container met alles erin)"
+                      Command="{Binding $parent[ListBox].DataContext.CopyCommand}" CommandParameter="{Binding}" />
+              <Button Classes="small" Content="⊞" ToolTip.Tip="Container openklappen: de items komen als losse regels op deze plek"
+                      IsVisible="{Binding IsContainer}"
+                      Command="{Binding $parent[ListBox].DataContext.OpenCommand}" CommandParameter="{Binding}" />
+              <Button Classes="small" Content="✕" ToolTip.Tip="Uit de log (een container met alles erin: het hele blok overslaan)"
+                      Command="{Binding $parent[ListBox].DataContext.RemoveCommand}" CommandParameter="{Binding}" />
             </StackPanel>
           </Grid>
         </DataTemplate>

@@ -43,6 +43,18 @@ public static class StudioApi
             log.Insert(r.Position ?? log.Count, item);
             return Results.Ok(new { item.Id });
         });
+        // Containers: a group of library items as one line, that opens up when it is next.
+        api.MapPost("/log/container", (AddContainerRequest r, PlayoutLog log, MediaLibrary library) =>
+        {
+            var media = r.MediaIds.Select(library.Get).OfType<MediaItem>().ToList();
+            if (media.Count == 0) return Results.BadRequest(new { error = "geen nummers die in de bibliotheek staan" });
+            var item = LogItem.Container(r.Name, media);
+            log.Insert(r.Position ?? log.Count, item);
+            return Results.Ok(new { item.Id });
+        });
+        api.MapPost("/log/{id:long}/copy", (long id, PlayoutLog log) =>
+            log.CopyAfter(id) is { } copy ? Results.Ok(new { copy.Id }) : Results.BadRequest(new { error = "dit item is niet te kopiëren" }));
+        api.MapPost("/log/{id:long}/open", (long id, PlayoutLog log) => log.Open(id) ? Results.Ok() : Results.BadRequest());
         api.MapPost("/log/break", (AddBreakRequest? r, PlayoutLog log) =>
         {
             var item = new LogItem { Type = LogItemType.AiBreak, Origin = "handmatig" };
