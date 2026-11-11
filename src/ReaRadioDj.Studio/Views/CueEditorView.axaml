@@ -4,10 +4,16 @@
              xmlns:ctl="using:ReaRadioDj.Studio.Controls"
              x:Class="ReaRadioDj.Studio.Views.CueEditorView"
              x:DataType="vm:CueEditorTool">
-  <DockPanel Margin="6">
+  <UserControl.Styles>
+    <Style Selector="Border.cuerow"><Setter Property="Width" Value="250" /></Style>
+    <Style Selector=".narrow Border.cuerow"><Setter Property="Width" Value="200" /></Style>
+    <Style Selector="TextBlock.cuelabel"><Setter Property="Width" Value="56" /></Style>
+    <Style Selector=".narrow TextBlock.cuelabel"><Setter Property="Width" Value="44" /></Style>
+  </UserControl.Styles>
+  <DockPanel Margin="6" ctl:WidthClasses.Track="True">
     <StackPanel DockPanel.Dock="Top" Margin="0,0,0,4">
       <TextBlock Classes="h" Text="{Binding Heading}" TextTrimming="CharacterEllipsis" />
-      <TextBlock Classes="muted" Text="{Binding Info}" TextTrimming="CharacterEllipsis" />
+      <TextBlock x:Name="InfoText" Classes="muted" Text="{Binding Info}" TextTrimming="CharacterEllipsis" />
       <WrapPanel Margin="0,4,0,0">
         <Button Classes="small" Margin="0,0,4,4" Content="Laad selectie" Command="{Binding LoadSelectedCommand}" />
         <Button Classes="small" Margin="0,0,4,4" Content="▶ vanaf cursor" Command="{Binding PlayFromCursorCommand}" ToolTip.Tip="Op de PFL" />
@@ -29,19 +35,23 @@
                           CursorSeconds="{Binding Cursor, Mode=TwoWay}" Playhead="{Binding Playhead}"
                           CueIn="{Binding CueInValue}" CueOut="{Binding CueOutValue}" />
       </Border>
-      <TextBlock Grid.Row="1" Classes="muted" Margin="0,3"
-                 Text="{Binding CursorText, StringFormat='Cursor {0} · sleep de markers · scrollwiel = zoom, Shift+scroll = schuiven, dubbelklik = volledig'}" />
-      <ScrollViewer Grid.Row="2" MaxHeight="260">
+      <Panel Grid.Row="1" Margin="0,3">
+        <TextBlock Classes="muted hide-narrow" TextTrimming="CharacterEllipsis"
+                   Text="{Binding CursorText, StringFormat='Cursor {0} · sleep de markers · scrollwiel = zoom, Shift+scroll = schuiven, dubbelklik = volledig'}" />
+        <TextBlock Classes="muted narrow-only" Text="{Binding CursorText, StringFormat='Cursor {0}'}"
+                   ToolTip.Tip="Sleep de markers · scrollwiel = zoom, Shift+scroll = schuiven, dubbelklik = volledig" />
+      </Panel>
+      <ScrollViewer x:Name="RowsScroll" Grid.Row="2" MaxHeight="260">
         <ItemsControl ItemsSource="{Binding Rows}">
           <ItemsControl.ItemsPanel>
             <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
           </ItemsControl.ItemsPanel>
           <ItemsControl.ItemTemplate>
             <DataTemplate x:DataType="vm:CueRow">
-              <Border Classes="card" Margin="0,0,4,4" Padding="6,4" Width="250" ToolTip.Tip="{Binding Help}">
+              <Border Classes="card cuerow" Margin="0,0,4,4" Padding="6,4" ToolTip.Tip="{Binding Help}">
                 <DockPanel>
                   <Border DockPanel.Dock="Left" Width="4" Background="{Binding Brush}" CornerRadius="{DynamicResource Radius2}" Margin="0,0,6,0" />
-                  <TextBlock DockPanel.Dock="Left" Text="{Binding Label}" Width="56" VerticalAlignment="Center" />
+                  <TextBlock DockPanel.Dock="Left" Classes="cuelabel" Text="{Binding Label}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
                   <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="2">
                     <Button Classes="small" Content="⌖" ToolTip.Tip="Zet op de cursor" Command="{Binding SetHereCommand}" />
                     <Button Classes="small" Content="▶" ToolTip.Tip="Beluister (PFL)" Command="{Binding ListenCommand}" />

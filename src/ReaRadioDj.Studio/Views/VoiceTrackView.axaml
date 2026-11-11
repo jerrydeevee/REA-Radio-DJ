@@ -60,7 +60,7 @@
         <StackPanel Spacing="6">
           <TextBlock Classes="h" Text="Opname" />
           <TextBlock Text="{Binding TakeText}" TextWrapping="Wrap" />
-          <TextBlock Foreground="#F0B429" Text="{Binding TakeWarning}" TextWrapping="Wrap" FontSize="12" />
+          <TextBlock Foreground="{DynamicResource WarnBrush}" Text="{Binding TakeWarning}" TextWrapping="Wrap" FontSize="12" />
           <WrapPanel>
             <Button Classes="small" Content="▶ Beluisteren (PFL)" Command="{Binding PlayTakeCommand}" Margin="0,0,4,4" />
             <Button Classes="small" Content="Opnieuw opnemen" Command="{Binding StartCommand}" IsEnabled="{Binding CanStart}" Margin="0,0,4,4" />

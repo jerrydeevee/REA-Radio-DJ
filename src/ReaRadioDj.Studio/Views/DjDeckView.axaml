@@ -29,7 +29,7 @@
         </Grid>
 
         <!-- Waveform of the whole track: click to jump -->
-        <Border Grid.Row="1" Grid.ColumnSpan="2" CornerRadius="{DynamicResource Radius6}" ClipToBounds="True" Height="44" Background="#0B0E12">
+        <Border Grid.Row="1" Grid.ColumnSpan="2" CornerRadius="{DynamicResource Radius6}" ClipToBounds="True" Height="44" Background="{DynamicResource WaveBackBrush}">
           <ctl:WaveformView x:Name="Wave" Peaks="{Binding Peaks}" BlockSeconds="{Binding BlockSeconds}" Markers="{Binding Markers}"
                             Playhead="{Binding Position}" CueOut="{Binding Duration}" ShowCursor="False" ReadOnlyMarkers="True"
                             EmptyText="sleep een nummer hierheen" Cursor="Hand" ToolTip.Tip="Klik om te springen · scrollen = in- en uitzoomen" />

@@ -101,24 +101,24 @@
 
   <!-- Countdown of the item on air: runs empty, amber in the last 20 s, red and flashing in the last 10 s -->
   <Style Selector="ProgressBar.countdown">
-    <Setter Property="Foreground" Value="#3DBD7D" />
-    <Setter Property="Background" Value="#1A2029" />
+    <Setter Property="Foreground" Value="{DynamicResource OkBrush}" />
+    <Setter Property="Background" Value="{DynamicResource ControlBrush}" />
     <Setter Property="CornerRadius" Value="{DynamicResource Radius4}" />
   </Style>
   <Style Selector="ProgressBar.countdown.warn">
-    <Setter Property="Foreground" Value="#F0B429" />
+    <Setter Property="Foreground" Value="{DynamicResource WarnBrush}" />
   </Style>
   <Style Selector="ProgressBar.countdown.end">
-    <Setter Property="Foreground" Value="#E5484D" />
+    <Setter Property="Foreground" Value="{DynamicResource OnAirBrush}" />
   </Style>
   <Style Selector="ProgressBar.countdown.end.flash">
     <Setter Property="Background" Value="#5A1A1E" />
   </Style>
   <Style Selector="TextBlock.remaining.warn">
-    <Setter Property="Foreground" Value="#F0B429" />
+    <Setter Property="Foreground" Value="{DynamicResource WarnBrush}" />
   </Style>
   <Style Selector="TextBlock.remaining.end">
-    <Setter Property="Foreground" Value="#E5484D" />
+    <Setter Property="Foreground" Value="{DynamicResource OnAirBrush}" />
   </Style>
 
   <!-- App bar and on-air bar. Rules of the layout design: one filled button per area (Volgende), everything you
@@ -197,7 +197,7 @@
     <Setter Property="FontSize" Value="16" />
   </Style>
   <Style Selector="ToggleButton.bar.play:checked /template/ ContentPresenter">
-    <Setter Property="Background" Value="#1B3155" />
+    <Setter Property="Background" Value="{DynamicResource SelectedBrush}" />
     <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
     <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
   </Style>
@@ -206,9 +206,9 @@
     <Setter Property="Padding" Value="2" />
     <Setter Property="CornerRadius" Value="{DynamicResource Radius8}" />
     <Setter Property="HorizontalContentAlignment" Value="Center" />
-    <Setter Property="Background" Value="#141920" />
+    <Setter Property="Background" Value="{DynamicResource WaveBackBrush}" />
     <Setter Property="BorderThickness" Value="0" />
-    <Setter Property="Foreground" Value="#6B7684" />
+    <Setter Property="Foreground" Value="{DynamicResource MutedTextBrush}" />
   </Style>
   <Style Selector="Button.pad.filled">
     <Setter Property="Background" Value="{DynamicResource ControlBrush}" />
@@ -268,6 +268,9 @@
   </Style>
   <Style Selector="ToggleButton.nav:checked">
     <Setter Property="FontWeight" Value="SemiBold" />
+  </Style>
+  <Style Selector="ctl|OnAirProgress">
+    <Setter Property="Track" Value="{DynamicResource ControlBrush}" />
   </Style>
   <Style Selector="ctl|OnAirProgress.warn">
     <Setter Property="Fill" Value="{DynamicResource WarnBrush}" />

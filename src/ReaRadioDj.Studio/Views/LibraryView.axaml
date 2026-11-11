@@ -257,7 +257,7 @@
             <StackPanel Grid.Column="2" Margin="6,0">
               <TextBlock Text="{Binding Title}" TextTrimming="CharacterEllipsis" />
               <TextBlock Classes="muted" TextTrimming="CharacterEllipsis" Text="{Binding Converter={x:Static vm:LibraryColumns.Text}}" />
-              <TextBlock Text="{Binding Block, StringFormat='⚠ {0}'}" Foreground="#F0B429" FontSize="11" TextTrimming="CharacterEllipsis"
+              <TextBlock Text="{Binding Block, StringFormat='⚠ {0}'}" Foreground="{DynamicResource WarnBrush}" FontSize="11" TextTrimming="CharacterEllipsis"
                          IsVisible="{Binding !Allowed}" ToolTip.Tip="Waarom dit nu niet ingepland wordt" />
               <TextBlock Text="{Binding IssueText, StringFormat='⚑ {0}'}" Foreground="#E58A4D" FontSize="11" TextTrimming="CharacterEllipsis"
                          IsVisible="{Binding HasIssues}" ToolTip.Tip="{Binding IssueText}" />
@@ -311,7 +311,7 @@
                         </DockPanel>
                         <TextBlock Classes="muted" Text="{Binding StateText}" />
                         <TextBlock Text="Niet bereikbaar: de nummers van deze map blijven gewoon bewaard en komen terug zodra de map er weer is."
-                                   Foreground="#F0B429" FontSize="11" TextWrapping="Wrap" IsVisible="{Binding Offline}" />
+                                   Foreground="{DynamicResource WarnBrush}" FontSize="11" TextWrapping="Wrap" IsVisible="{Binding Offline}" />
                         <WrapPanel IsVisible="{Binding Editable}">
                           <TextBlock Text="{Binding KindText, StringFormat='Soort: {0}'}" VerticalAlignment="Center" Margin="0,0,12,0" />
                           <TextBox Text="{Binding Category}" Watermark="categorie (leeg = submappen)" Width="200" Margin="0,0,4,0" />
@@ -351,7 +351,7 @@
                               Command="{Binding $parent[ItemsControl].DataContext.RelocateCommand}" CommandParameter="{Binding}"
                               ToolTip.Tip="Zet de opgeslagen paden blijvend om naar de nieuwe map (alle gegevens blijven)" />
                       <CheckBox DockPanel.Dock="Left" IsChecked="{Binding Enabled}" ToolTip.Tip="Aan of uit" />
-                      <TextBlock DockPanel.Dock="Right" Text="niet bereikbaar" Foreground="#F0B429" FontSize="11" VerticalAlignment="Center"
+                      <TextBlock DockPanel.Dock="Right" Text="niet bereikbaar" Foreground="{DynamicResource WarnBrush}" FontSize="11" VerticalAlignment="Center"
                                  Margin="4,0,0,0" IsVisible="{Binding !Reachable}" />
                       <Grid ColumnDefinitions="*,Auto,*">
                         <TextBox Grid.Column="0" Text="{Binding From}" Watermark="oude map, bijv. Y:\Muziek" />

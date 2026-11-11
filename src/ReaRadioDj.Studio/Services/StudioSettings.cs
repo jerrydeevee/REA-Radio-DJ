@@ -18,6 +18,9 @@ public sealed class StudioSettings
     public int ScalePercent { get; set; } = 100;
     /// <summary>Touch mode: buttons, list rows, tabs and scroll bars big enough for a finger.</summary>
     public bool Touch { get; set; }
+
+    /// <summary>Calmer, less saturated colours for kinds of items and waveforms.</summary>
+    public bool CalmColors { get; set; }
     /// <summary>Accent colour (hex) instead of the style's own; empty = the style's.</summary>
     public string Accent { get; set; } = "";
     /// <summary>Button look: flat, raised or outline.</summary>

@@ -20,7 +20,7 @@
                   <TextBlock FontSize="11">
                     <Run Text="vandaag " /><Run Text="{Binding Today}" /><Run Text=" / " /><Run Text="{Binding PerDay}" />
                   </TextBlock>
-                  <TextBlock Foreground="#F0B429" FontSize="11" TextWrapping="Wrap" Text="{Binding Status}"
+                  <TextBlock Foreground="{DynamicResource WarnBrush}" FontSize="11" TextWrapping="Wrap" Text="{Binding Status}"
                              IsVisible="{Binding Status, Converter={x:Static ObjectConverters.IsNotNull}}" />
                 </StackPanel>
               </DataTemplate>

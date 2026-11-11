@@ -56,7 +56,7 @@
               <Button Classes="small" Content="Nu inlezen" Command="{Binding SyncCommand}" IsEnabled="{Binding !Busy}" Margin="0,0,4,4" />
               <Button Classes="small" Content="Verwijderen" Command="{Binding DeleteCommand}" Margin="0,0,4,4" />
             </WrapPanel>
-            <TextBlock Foreground="#F0B429" TextWrapping="Wrap" Text="{Binding Problem}" IsVisible="{Binding Problem, Converter={x:Static ObjectConverters.IsNotNull}}" />
+            <TextBlock Foreground="{DynamicResource WarnBrush}" TextWrapping="Wrap" Text="{Binding Problem}" IsVisible="{Binding Problem, Converter={x:Static ObjectConverters.IsNotNull}}" />
             <TextBlock Text="{Binding LastResult}" TextWrapping="Wrap" />
             <ItemsControl ItemsSource="{Binding TestLines}">
               <ItemsControl.ItemTemplate>

@@ -4,17 +4,22 @@
              xmlns:ctl="using:ReaRadioDj.Studio.Controls"
              x:Class="ReaRadioDj.Studio.Views.PlayerCardView"
              x:DataType="vm:PlayerCard">
+  <UserControl.Styles>
+    <Style Selector="TextBlock.bigtime"><Setter Property="FontSize" Value="34" /></Style>
+    <Style Selector=".narrow TextBlock.bigtime"><Setter Property="FontSize" Value="24" /></Style>
+  </UserControl.Styles>
   <!-- One player anatomy for every player (design "Spelers"): name and state as word and sign, the biggest text is the
        time left, title and details, waveform with cue points, one filled main button, then the stack. -->
-  <Border Classes="card" Margin="0,0,0,8" Padding="12" BorderBrush="{Binding StateBrush}" BorderThickness="{Binding StateBorder}"
+  <Border Classes="card" Margin="0,0,0,8" Padding="12" ctl:WidthClasses.Track="True" BorderBrush="{Binding StateBrush}" BorderThickness="{Binding StateBorder}"
           Classes.flash="{Binding Flash}">
     <StackPanel Spacing="8">
       <DockPanel>
-        <TextBlock DockPanel.Dock="Right" Classes="mono remaining" FontSize="34" FontWeight="Bold" VerticalAlignment="Center"
+        <TextBlock DockPanel.Dock="Right" Classes="mono remaining bigtime" FontWeight="Bold" VerticalAlignment="Center"
                    Text="{Binding RemainingTime}" Margin="8,0,0,0"
                    Classes.warn="{Binding EndState, Converter={x:Static vm:Brushes.Is}, ConverterParameter=warn}"
                    Classes.end="{Binding EndState, Converter={x:Static vm:Brushes.Is}, ConverterParameter=end}" />
-        <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+        <!-- wraps instead of running under the time when the player is narrow -->
+        <WrapPanel ItemSpacing="8" LineSpacing="4" VerticalAlignment="Center">
           <TextBlock Text="{Binding Name}" FontSize="16" FontWeight="Bold" VerticalAlignment="Center" />
           <Border CornerRadius="{DynamicResource Radius10}" Padding="8,2" BorderThickness="1" BorderBrush="{Binding StateBrush}" VerticalAlignment="Center">
             <StackPanel Orientation="Horizontal" Spacing="5">
@@ -24,7 +29,7 @@
           </Border>
           <Button Classes="small" Content="{Binding StyleButtonText}" Command="{Binding ToggleStyleCommand}" VerticalAlignment="Center"
                   ToolTip.Tip="Wissel tussen golfvorm (met cuepunten) en compact, voor alle spelers" />
-        </StackPanel>
+        </WrapPanel>
       </DockPanel>
 
       <StackPanel Spacing="2">

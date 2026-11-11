@@ -57,16 +57,16 @@ public sealed class TransitionCanvas : Control
     private bool _dragIn, _dragInsert, _pan;
     private double _grabSeconds, _grabValue;
 
-    private static readonly IBrush Back = new SolidColorBrush(Color.Parse("#0E1218"));
-    private static readonly IBrush LaneBack = new SolidColorBrush(Color.Parse("#141A22"));
+    private static IBrush Back => new SolidColorBrush(Services.Appearance.Surface.Back);
+    private static IBrush LaneBack => new SolidColorBrush(Services.Appearance.Surface.Lane);
     private static readonly IBrush OutWave = new SolidColorBrush(Color.Parse("#4FA3E0"));
     private static readonly IBrush InWave = new SolidColorBrush(Color.Parse("#6CC56C"));
-    private static readonly IBrush Dim = new SolidColorBrush(Color.Parse("#3A4250"));
-    private static readonly IBrush Text = new SolidColorBrush(Color.Parse("#AAB4C3"));
+    private static IBrush Dim => new SolidColorBrush(Services.Appearance.Surface.Faint);
+    private static IBrush Text => new SolidColorBrush(Services.Appearance.Surface.Muted);
     private static readonly IBrush InsertFill = new SolidColorBrush(Color.Parse("#80F0B429"));
     private static readonly IPen Line = new Pen(new SolidColorBrush(Color.Parse("#F0B429")), 1.6);
     private static readonly IPen StartPen = new Pen(new SolidColorBrush(Color.Parse("#F25F5C")), 1.5);
-    private static readonly IPen GridPen = new Pen(new SolidColorBrush(Color.Parse("#232B36")), 1);
+    private static IPen GridPen => new Pen(new SolidColorBrush(Services.Appearance.Surface.Grid), 1);
     private static readonly IPen PlayPen = new Pen(Brushes.White, 1.5);
 
     /// <summary>Shows 15 seconds before and after the moment the incoming item starts.</summary>

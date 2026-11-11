@@ -39,7 +39,7 @@ public sealed class DjTwinWave : Control
         Tick(TimeSpan.Zero);
     }
 
-    private static readonly Color Background = Color.Parse("#0B0F14");
+    private static Color Background => Services.Appearance.Surface.Back;
 
     protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
     {
@@ -77,8 +77,8 @@ public sealed class DjTwinWave : Control
         {
             var deck = decks[i];
             double top = i * laneH, centre = top + laneH / 2, half = laneH / 2 - 6;
-            if (i > 0) ctx.DrawLine(new Pen(new SolidColorBrush(Color.Parse("#2A313C")), 1), new Point(0, top), new Point(w, top));
-            if (!deck.Loaded) { Text(ctx, $"{deck.Id}  leeg", label, 12, new Point(8, top + 4), Color.Parse("#5C6675")); continue; }
+            if (i > 0) ctx.DrawLine(new Pen(new SolidColorBrush(Services.Appearance.Surface.Grid), 1), new Point(0, top), new Point(w, top));
+            if (!deck.Loaded) { Text(ctx, $"{deck.Id}  leeg", label, 12, new Point(8, top + 4), Services.Appearance.Surface.Faint); continue; }
 
             double pos = deck.PositionNow(now), rate = deck.Rate <= 0 ? 1 : deck.Rate;
             double X(double fileSec) => mid + (fileSec - pos) / rate * pxPerSec;
@@ -109,8 +109,8 @@ public sealed class DjTwinWave : Control
                 double beat = 60 / deck.Bpm;
                 if (beat / rate * pxPerSec >= 3)
                 {
-                    var thin = new Pen(new SolidColorBrush(Colors.White, 0.5), 1);
-                    var bar = new Pen(new SolidColorBrush(Colors.White, 0.75), 2);
+                    var thin = new Pen(new SolidColorBrush(Services.Appearance.Surface.Playhead, 0.5), 1);
+                    var bar = new Pen(new SolidColorBrush(Services.Appearance.Surface.Playhead, 0.75), 2);
                     long k0 = (long)Math.Floor((Math.Max(0, fromSec) - deck.FirstBeat) / beat), k1 = (long)Math.Ceiling((toSec - deck.FirstBeat) / beat);
                     for (long k = Math.Max(0, k0); k <= k1; k++)
                     {
@@ -131,11 +131,11 @@ public sealed class DjTwinWave : Control
             }
 
             Text(ctx, deck.Id, label, 13, new Point(8, top + 4), deck.Color);
-            Text(ctx, deck.BpmText + " BPM", label, 11, new Point(26, top + 6), Color.Parse("#C9D1DC"));
+            Text(ctx, deck.BpmText + " BPM", label, 11, new Point(26, top + 6), Services.Appearance.Surface.Text);
         }
 
         // playhead
-        ctx.DrawLine(new Pen(Avalonia.Media.Brushes.White, 2), new Point(mid, 0), new Point(mid, h));
+        ctx.DrawLine(new Pen(new SolidColorBrush(Services.Appearance.Surface.Playhead), 2), new Point(mid, 0), new Point(mid, h));
     }
 
     private static void Text(DrawingContext ctx, string text, Typeface face, double size, Point at, Color color) =>

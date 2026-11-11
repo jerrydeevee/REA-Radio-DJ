@@ -31,7 +31,7 @@
             <TextBlock Classes="muted" Text="{Binding FileName}" VerticalAlignment="Center" Margin="0,0,0,4" />
           </WrapPanel>
           <TextBlock Text="{Binding Summary}" TextWrapping="Wrap" />
-          <TextBlock Foreground="#F0B429" TextWrapping="Wrap" Text="{Binding Problem}" IsVisible="{Binding Problem, Converter={x:Static ObjectConverters.IsNotNull}}" />
+          <TextBlock Foreground="{DynamicResource WarnBrush}" TextWrapping="Wrap" Text="{Binding Problem}" IsVisible="{Binding Problem, Converter={x:Static ObjectConverters.IsNotNull}}" />
         </StackPanel>
         <ListBox ItemsSource="{Binding Lines}" Margin="0,6,0,0">
           <ListBox.ItemTemplate>
@@ -41,7 +41,7 @@
                 <TextBlock Grid.Column="1" FontSize="12" Text="{Binding Hour}" VerticalAlignment="Center" />
                 <StackPanel Grid.Column="2">
                   <TextBlock FontSize="12" Text="{Binding Match}" IsVisible="{Binding Match, Converter={x:Static ObjectConverters.IsNotNull}}" />
-                  <TextBlock FontSize="11" Foreground="#F0B429" Text="{Binding Problem}" IsVisible="{Binding Problem, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                  <TextBlock FontSize="11" Foreground="{DynamicResource WarnBrush}" Text="{Binding Problem}" IsVisible="{Binding Problem, Converter={x:Static ObjectConverters.IsNotNull}}" />
                   <TextBlock Classes="muted" FontSize="10" FontFamily="Consolas" Text="{Binding Text}" TextTrimming="CharacterEllipsis" />
                 </StackPanel>
               </Grid>
@@ -122,7 +122,7 @@
               <Button Classes="small go" Content="Opslaan" Command="{Binding SaveProfileCommand}" Margin="0,0,4,4" />
               <Button Classes="small" Content="Verwijderen" Command="{Binding DeleteProfileCommand}" Margin="0,0,4,4" />
             </WrapPanel>
-            <TextBlock Foreground="#F0B429" TextWrapping="Wrap" Text="{Binding ProfileProblem}" IsVisible="{Binding ProfileProblem, Converter={x:Static ObjectConverters.IsNotNull}}" />
+            <TextBlock Foreground="{DynamicResource WarnBrush}" TextWrapping="Wrap" Text="{Binding ProfileProblem}" IsVisible="{Binding ProfileProblem, Converter={x:Static ObjectConverters.IsNotNull}}" />
           </StackPanel>
         </ScrollViewer>
       </ctl:SplitList>

@@ -30,7 +30,11 @@ public static class DeckPalette
     private static StudioSettings S => StudioHub.Current.Settings;
     public static string Hex(int deck) => S.DeckColors is { Length: 3 } c ? c[Math.Clamp(deck, 0, 2)] : Presets[0].A;
     public static IBrush Brush(int deck) => Brushes.FromHex(Hex(deck));
-    public static IBrush Counter => Brushes.FromHex(S.CounterColor);
+    // The standard (near-white) counter colour would vanish on a light style: then the text colour of the style is used.
+    public static IBrush Counter =>
+        string.IsNullOrWhiteSpace(S.CounterColor) || string.Equals(S.CounterColor, "#F5F7FA", StringComparison.OrdinalIgnoreCase)
+            ? Brushes.Themed("TextBrush", "#F5F7FA")
+            : Brushes.FromHex(S.CounterColor);
     public static string Letter(int deck) => deck switch { 0 => "A", 1 => "B", _ => "C" };
 
     public static void Apply(Preset p)

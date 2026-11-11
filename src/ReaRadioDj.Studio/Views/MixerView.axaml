@@ -44,7 +44,7 @@
                 </UniformGrid>
                 <ToggleButton Content="ZENDER" IsChecked="{Binding OnAir}" Classes="mic" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" FontSize="11"
                               ToolTip.Tip="Aan: dit kanaal gaat naar de zender. Uit: het kanaal is dicht (bij een ingang de doorzetknop)." />
-                <TextBlock FontSize="10" Foreground="#F0B429" HorizontalAlignment="Center" Text="{Binding Duck}" />
+                <TextBlock FontSize="10" Foreground="{DynamicResource WarnBrush}" HorizontalAlignment="Center" Text="{Binding Duck}" />
                 <TextBlock FontSize="10" Foreground="#E5484D" HorizontalAlignment="Center" Text="{Binding RecordText, StringFormat='● {0}'}" IsVisible="{Binding Recording}" />
               </StackPanel>
             </Border>

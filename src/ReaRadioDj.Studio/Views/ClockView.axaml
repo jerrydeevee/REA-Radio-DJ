@@ -44,10 +44,10 @@
         </DockPanel>
       </Border>
       <Grid ColumnDefinitions="*,6,*,6,*">
-        <Border Grid.Column="0" Classes="card" IsVisible="{Binding HasIntro}" Background="#3A2E10" BorderBrush="#F0B429">
+        <Border Grid.Column="0" Classes="card" IsVisible="{Binding HasIntro}" Background="#26F59E0B" BorderBrush="{DynamicResource WarnBrush}">
           <StackPanel HorizontalAlignment="Center">
-            <TextBlock Text="INTRO" FontSize="11" FontWeight="Bold" Foreground="#F0B429" HorizontalAlignment="Center" />
-            <TextBlock Classes="mono" FontWeight="Bold" FontSize="{Binding SmallCounterFont}" Foreground="#F0B429" Text="{Binding IntroText}" HorizontalAlignment="Center" />
+            <TextBlock Text="INTRO" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource WarnBrush}" HorizontalAlignment="Center" />
+            <TextBlock Classes="mono" FontWeight="Bold" FontSize="{Binding SmallCounterFont}" Foreground="{DynamicResource WarnBrush}" Text="{Binding IntroText}" HorizontalAlignment="Center" />
           </StackPanel>
         </Border>
         <Border Grid.Column="0" Classes="card" IsVisible="{Binding !HasIntro}">
@@ -71,8 +71,8 @@
         </Border>
         <Border Grid.Column="4" Classes="card" ToolTip.Tip="{Binding NextEvent}">
           <StackPanel HorizontalAlignment="Center">
-            <TextBlock Text="VASTE TIJD" FontSize="11" FontWeight="Bold" Foreground="#F0B429" HorizontalAlignment="Center" />
-            <TextBlock Classes="mono" FontWeight="Bold" FontSize="{Binding SmallCounterFont}" Foreground="#F0B429" Text="{Binding ToEvent}" HorizontalAlignment="Center" />
+            <TextBlock Text="VASTE TIJD" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource WarnBrush}" HorizontalAlignment="Center" />
+            <TextBlock Classes="mono" FontWeight="Bold" FontSize="{Binding SmallCounterFont}" Foreground="{DynamicResource WarnBrush}" Text="{Binding ToEvent}" HorizontalAlignment="Center" />
           </StackPanel>
         </Border>
       </Grid>

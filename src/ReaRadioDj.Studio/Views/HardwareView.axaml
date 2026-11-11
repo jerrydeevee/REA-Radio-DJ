@@ -84,7 +84,7 @@
                       </DataTemplate>
                     </ListBox.ItemTemplate>
                   </ListBox>
-                  <TextBlock Foreground="#F0B429" TextWrapping="Wrap" Text="{Binding EmberProblem}" IsVisible="{Binding EmberProblem, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                  <TextBlock Foreground="{DynamicResource WarnBrush}" TextWrapping="Wrap" Text="{Binding EmberProblem}" IsVisible="{Binding EmberProblem, Converter={x:Static ObjectConverters.IsNotNull}}" />
                   <TextBlock Classes="muted" FontSize="11" TextWrapping="Wrap"
                              Text="Klik Bovenaan om de boom van het apparaat op te halen. Open knooppunten tot je de parameter vindt (bijv. de faderstand of de microfoonknop van een kanaal) en maak er een knop of lampje van. Een parameter mag ook bij naam: ember Studio/Connection/Connect, met de namen zoals de boom ze toont (handig als de nummers per apparaat verschillen)." />
                 </StackPanel>
@@ -122,7 +122,7 @@
                   <Button Classes="small go" Content="Opslaan" Command="{Binding SaveInputCommand}" Margin="0,0,4,4" />
                   <Button Classes="small" Content="Verwijderen" Command="{Binding DeleteInputCommand}" Margin="0,0,4,4" />
                 </WrapPanel>
-                <TextBlock Foreground="#F0B429" TextWrapping="Wrap" Text="{Binding InputProblem}" IsVisible="{Binding InputProblem, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                <TextBlock Foreground="{DynamicResource WarnBrush}" TextWrapping="Wrap" Text="{Binding InputProblem}" IsVisible="{Binding InputProblem, Converter={x:Static ObjectConverters.IsNotNull}}" />
                 <TextBlock Classes="muted" FontSize="11" TextWrapping="Wrap"
                            Text="Aan/uit: een noot aan of uit, een controller vanaf 64, een Livewire-contact dicht of open (faderstart), een Ember+-parameter waar of niet nul (of met een grens: ember 1.3.5 &gt; -40 is aan boven -40 dB). Een seriële regel en een programmawissel zijn altijd 'aan'. Alle commando's: zie het venster Bediening." />
               </StackPanel>
@@ -176,7 +176,7 @@
                 <Button Classes="small" Content="Test uit" Command="{Binding TestOffCommand}" Margin="0,0,4,4" />
                 <Button Classes="small" Content="Verwijderen" Command="{Binding DeleteOutputCommand}" Margin="0,0,4,4" />
               </WrapPanel>
-              <TextBlock Foreground="#F0B429" TextWrapping="Wrap" Text="{Binding OutputProblem}" IsVisible="{Binding OutputProblem, Converter={x:Static ObjectConverters.IsNotNull}}" />
+              <TextBlock Foreground="{DynamicResource WarnBrush}" TextWrapping="Wrap" Text="{Binding OutputProblem}" IsVisible="{Binding OutputProblem, Converter={x:Static ObjectConverters.IsNotNull}}" />
             </StackPanel>
           </ScrollViewer>
         </ctl:SplitList>

@@ -24,7 +24,7 @@
         <DockPanel Classes="hide-narrow">
           <TextBlock DockPanel.Dock="Left" Classes="mono muted" Text="{Binding NowPosition}" />
           <TextBlock DockPanel.Dock="Right" Classes="muted" Text="{Binding NowMix}" />
-          <TextBlock HorizontalAlignment="Center" FontSize="12" Foreground="#F0B429" Text="{Binding NowIntro}" />
+          <TextBlock HorizontalAlignment="Center" FontSize="12" Foreground="{DynamicResource WarnBrush}" Text="{Binding NowIntro}" />
         </DockPanel>
       </StackPanel>
     </Border>

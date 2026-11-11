@@ -73,7 +73,7 @@ public sealed class WaveformView : Control
         InvalidateVisual();
     }
 
-    private static readonly Color Background = Color.Parse("#0E1218");
+    private static Color Background => Services.Appearance.Surface.Back;
 
     protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
     {
@@ -99,7 +99,7 @@ public sealed class WaveformView : Control
         if (peaks is null || peaks.Length == 0 || w < 2)
         {
             var t = new FormattedText(EmptyText, System.Globalization.CultureInfo.CurrentCulture,
-                FlowDirection.LeftToRight, Typeface.Default, 13, new SolidColorBrush(Color.Parse("#8B95A5")));
+                FlowDirection.LeftToRight, Typeface.Default, 13, new SolidColorBrush(Services.Appearance.Surface.Muted));
             ctx.DrawText(t, new Point(10, h / 2 - 8));
             return;
         }
@@ -119,14 +119,14 @@ public sealed class WaveformView : Control
         WavePaint.Draw(ctx, amps, x => Seconds(x) >= CueIn && Seconds(x) <= CueOut, mid, mid - 4, Services.Appearance.WaveColor, Background, 0.4);
 
         // Time ruler
-        var tick = new Pen(new SolidColorBrush(Color.Parse("#2A3240")), 1);
+        var tick = new Pen(new SolidColorBrush(Services.Appearance.Surface.Grid), 1);
         double step = NiceStep(_viewLength / Math.Max(1, w / 90));
         for (double t = Math.Ceiling(_viewStart / step) * step; t < _viewStart + _viewLength; t += step)
         {
             double x = X(t);
             ctx.DrawLine(tick, new Point(x, h - 14), new Point(x, h));
             var label = new FormattedText($"{(int)(t / 60)}:{t % 60:00.#}", System.Globalization.CultureInfo.InvariantCulture,
-                FlowDirection.LeftToRight, Typeface.Default, 10, new SolidColorBrush(Color.Parse("#6B7585")));
+                FlowDirection.LeftToRight, Typeface.Default, 10, new SolidColorBrush(Services.Appearance.Surface.Faint));
             ctx.DrawText(label, new Point(x + 2, h - 14));
         }
 
@@ -151,7 +151,7 @@ public sealed class WaveformView : Control
         if (Playhead >= 0)
         {
             double px = X(Playhead);
-            ctx.DrawLine(new Pen(Brushes.White, 1.5), new Point(px, 0), new Point(px, h));
+            ctx.DrawLine(new Pen(new SolidColorBrush(Services.Appearance.Surface.Playhead), 1.5), new Point(px, 0), new Point(px, h));
         }
     }
 

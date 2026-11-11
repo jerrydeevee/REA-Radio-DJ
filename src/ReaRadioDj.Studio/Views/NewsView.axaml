@@ -105,7 +105,7 @@
           <Button Classes="small" Content="Verwijderen" Command="{Binding DeleteCommand}" Margin="0,0,4,4" />
         </WrapPanel>
         <TextBlock Text="{Binding CheckText}" TextWrapping="Wrap" />
-        <TextBlock Foreground="#F0B429" TextWrapping="Wrap" Text="{Binding CheckProblem}" IsVisible="{Binding CheckProblem, Converter={x:Static ObjectConverters.IsNotNull}}" />
+        <TextBlock Foreground="{DynamicResource WarnBrush}" TextWrapping="Wrap" Text="{Binding CheckProblem}" IsVisible="{Binding CheckProblem, Converter={x:Static ObjectConverters.IsNotNull}}" />
         <Border Classes="card" IsVisible="{Binding Script, Converter={x:Static ObjectConverters.IsNotNull}}">
           <TextBlock Text="{Binding Script}" TextWrapping="Wrap" FontStyle="Italic" />
         </Border>

@@ -26,10 +26,11 @@ public sealed class StudioClock : Control
     public static readonly StyledProperty<double> ItemLeftProperty = AvaloniaProperty.Register<StudioClock, double>(nameof(ItemLeft), -1);
     public static readonly StyledProperty<double> ItemSecondsLeftProperty = AvaloniaProperty.Register<StudioClock, double>(nameof(ItemSecondsLeft), 999);
 
-    private static readonly IBrush Dim = new SolidColorBrush(Color.Parse("#2A3240"));
-    private static readonly IBrush Face = new SolidColorBrush(Color.Parse("#0E1218"));
-    private static readonly IBrush Text = new SolidColorBrush(Color.Parse("#E6EAF0"));
-    private static readonly IBrush Muted = new SolidColorBrush(Color.Parse("#8B95A5"));
+    // Face, ring and digits follow the style (dark or light).
+    private static IBrush Dim => new SolidColorBrush(Services.Appearance.Surface.Grid);
+    private static IBrush Face => new SolidColorBrush(Services.Appearance.Surface.Back);
+    private static IBrush Text => new SolidColorBrush(Services.Appearance.Surface.Text);
+    private static IBrush Muted => new SolidColorBrush(Services.Appearance.Surface.Muted);
     private static readonly IBrush Green = new SolidColorBrush(Color.Parse("#3DBD7D"));
     private static readonly IBrush Amber = new SolidColorBrush(Color.Parse("#F0B429"));
     private static readonly IBrush Red = new SolidColorBrush(Color.Parse("#E5484D"));

@@ -492,6 +492,8 @@
           <ComboBox ItemsSource="{Binding ScaleNames}" SelectedIndex="{Binding ScaleIndex}" MinWidth="320" />
           <TextBlock Classes="help" Text="Groter voor een aanraakscherm of een scherm op afstand, kleiner om meer kwijt te kunnen op een laptop. Knoppen, tekst en vensters groeien mee." />
           <CheckBox Content="Aanraakmodus" IsChecked="{Binding TouchMode}" Margin="0,12,0,0" />
+          <CheckBox Content="Rustige kleuren" IsChecked="{Binding CalmColors}" Margin="0,8,0,0" />
+          <TextBlock Classes="help" Text="Minder felle kleuren voor de soorten (muziek, jingles, stem) en de golfvorm, prettig bij lange diensten. ON AIR en waarschuwingen blijven fel." />
           <TextBlock Classes="help" Text="Voor een aanraakscherm: knoppen, lijstregels, tabbladen en schuifbalken worden groot genoeg voor een vinger. Combineer met een grotere maat als het scherm ver weg staat." />
           <TextBlock Classes="field" Text="Kleuren per soort item" />
           <TextBlock Classes="help" Text="De kleur van de streep en het label in het programmalog, de as-run en de bibliotheek." />

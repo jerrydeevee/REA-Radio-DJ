@@ -177,6 +177,8 @@ public sealed partial class SettingsTool : StudioTool
 
     [ObservableProperty] private bool _touchMode = StudioHub.Current.Settings.Touch;
     partial void OnTouchModeChanged(bool value) { Hub.Settings.Touch = value; ApplyLook(); }
+    [ObservableProperty] private bool _calmColors = StudioHub.Current.Settings.CalmColors;
+    partial void OnCalmColorsChanged(bool value) { Hub.Settings.CalmColors = value; ApplyLook(); }
 
     /// <summary>One row per kind of item, each with a colour to pick.</summary>
     public IReadOnlyList<KindColorRow> KindColorRows { get; } =

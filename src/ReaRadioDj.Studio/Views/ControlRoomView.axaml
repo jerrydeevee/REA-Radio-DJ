@@ -73,8 +73,8 @@
             <ItemsControl.ItemTemplate>
               <DataTemplate x:DataType="c:MessageDto">
                 <TextBlock TextWrapping="Wrap" FontSize="13" Margin="0,0,0,4">
-                  <Run Text="{Binding Time, StringFormat='{}{0:HH:mm}'}" FontFamily="Consolas, monospace" Foreground="#8B95A5" />
-                  <Run Text="  " /><Run Text="{Binding Level}" Foreground="#F0B429" />
+                  <Run Text="{Binding Time, StringFormat='{}{0:HH:mm}'}" FontFamily="Consolas, monospace" Foreground="{DynamicResource MutedTextBrush}" />
+                  <Run Text="  " /><Run Text="{Binding Level}" Foreground="{DynamicResource WarnBrush}" />
                   <Run Text="  " /><Run Text="{Binding Text}" />
                 </TextBlock>
               </DataTemplate>

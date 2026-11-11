@@ -13,7 +13,7 @@
           <TextBox Text="{Binding Link}" Watermark="link naar een openbare Spotify-playlist (open.spotify.com/playlist/…)" />
         </DockPanel>
         <TextBlock Classes="muted" Text="{Binding Status}" TextWrapping="Wrap" />
-        <TextBlock Foreground="#F0B429" TextWrapping="Wrap" FontSize="12" IsVisible="{Binding !Configured}"
+        <TextBlock Foreground="{DynamicResource WarnBrush}" TextWrapping="Wrap" FontSize="12" IsVisible="{Binding !Configured}"
                    Text="Spotify is nog niet ingesteld: maak een app op developer.spotify.com en vul ReaRadioDj:Spotify:ClientId en ClientSecret in appsettings.json in." />
         <TextBlock Classes="muted" TextWrapping="Wrap" FontSize="11"
                    Text="Alleen de gegevens komen uit Spotify (titel, artiest, ISRC, uitgavedatum). Uitgezonden wordt altijd het eigen bestand uit de bibliotheek." />

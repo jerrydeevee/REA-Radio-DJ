@@ -101,6 +101,26 @@ public static class Appearance
         ["song"] = "#1D4ED8", ["jingle"] = "#A16207", ["voice"] = "#6D28D9", ["other"] = "#475569",
     };
 
+    /// <summary>Colours of the drawn surfaces (waveforms, clock face, transition picture); they follow the style.</summary>
+    public sealed record SurfaceColors(Color Back, Color Lane, Color Grid, Color Text, Color Muted, Color Faint, Color Playhead);
+
+    private static readonly SurfaceColors DarkSurface = new(Color.Parse("#0E1218"), Color.Parse("#141A22"), Color.Parse("#2A3240"),
+        Color.Parse("#E6EAF0"), Color.Parse("#8B95A5"), Color.Parse("#5C6675"), Colors.White);
+
+    private static readonly SurfaceColors LightSurface = new(Color.Parse("#E9EDF2"), Color.Parse("#F3F5F8"), Color.Parse("#C3CCD8"),
+        Color.Parse("#0F172A"), Color.Parse("#475569"), Color.Parse("#7C8797"), Color.Parse("#0F172A"));
+
+    /// <summary>The surface colours of the current style.</summary>
+    public static SurfaceColors Surface { get; private set; } = DarkSurface;
+
+    /// <summary>Calm colours: kind and waveform colours 40 % towards grey, for long shifts.</summary>
+    public static Color Calm(Color c)
+    {
+        double grey = 0.299 * c.R + 0.587 * c.G + 0.114 * c.B;
+        byte M(byte v) => (byte)Math.Round(v + (grey - v) * 0.4);
+        return Color.FromArgb(c.A, M(c.R), M(c.G), M(c.B));
+    }
+
     /// <summary>Whether a style has a light background.</summary>
     public static bool IsLight(string theme) => theme is "light" or "daglicht";
 
@@ -134,7 +154,7 @@ public static class Appearance
         {
             string hex = s.TypeColors.TryGetValue(key, out var h) && Color.TryParse(h, out _) ? h : DefaultTypeColors[key];
             if (light && string.Equals(hex, DefaultTypeColors[key], StringComparison.OrdinalIgnoreCase)) hex = LightTypeColors[key];
-            brush.Color = Color.Parse(hex);
+            brush.Color = s.CalmColors ? Calm(Color.Parse(hex)) : Color.Parse(hex);
         }
 
         // Touch mode: an extra style sheet after all others, so its sizes win.
@@ -144,6 +164,8 @@ public static class Appearance
         var colors = Palettes[theme];
         for (int i = 0; i < Keys.Length; i++) app.Resources[Keys[i]] = new SolidColorBrush(Color.Parse(colors[i]));
         app.RequestedThemeVariant = light ? ThemeVariant.Light : ThemeVariant.Dark;
+        Surface = light ? LightSurface : DarkSurface;
+        app.Resources["WaveBackBrush"] = new SolidColorBrush(Surface.Back);
 
         // Own accent colour: the accent itself, and a deeper shade of it for the filled main buttons.
         Color primary = Color.Parse(colors[2]);
@@ -157,7 +179,8 @@ public static class Appearance
         ApplyButtons(app, s.ButtonStyle, Color.Parse(colors[8]), Color.Parse(colors[9]), primary);
 
         WaveStyle = WaveStyles.Any(w => w.Key == s.WaveStyle) ? s.WaveStyle : "classic";
-        WaveColor = !string.IsNullOrWhiteSpace(s.WaveColor) && Color.TryParse(s.WaveColor, out var wc) ? wc : Color.Parse("#3FA7FF");
+        WaveColor = !string.IsNullOrWhiteSpace(s.WaveColor) && Color.TryParse(s.WaveColor, out var wc) ? wc : Color.Parse(light ? "#2563EB" : "#3FA7FF");
+        if (s.CalmColors) WaveColor = Calm(WaveColor);
 
         double factor = s.Corners switch { "square" => 0, "round" => 1.75, "pill" => 3, _ => 1 };
         foreach (var r in Radii) app.Resources[$"Radius{r}"] = new CornerRadius(Math.Round(r * factor));

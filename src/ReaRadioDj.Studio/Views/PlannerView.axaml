@@ -68,7 +68,7 @@
                                     Command="{Binding $parent[UserControl].DataContext.PickHourCommand}" CommandParameter="{Binding}">
                               <StackPanel Orientation="Horizontal" Spacing="2">
                                 <TextBlock Text="{Binding Text}" />
-                                <TextBlock Text="{Binding Badge}" Foreground="#F0B429" FontWeight="Bold" />
+                                <TextBlock Text="{Binding Badge}" Foreground="{DynamicResource WarnBrush}" FontWeight="Bold" />
                               </StackPanel>
                             </Button>
                           </DataTemplate>
@@ -144,7 +144,7 @@
                 <ItemsControl.ItemTemplate>
                   <DataTemplate x:DataType="vm:WeekDayVm">
                     <StackPanel Margin="1,0">
-                      <Border Height="22" Margin="0,0,0,2" CornerRadius="{DynamicResource Radius3}" Background="#1A2029"
+                      <Border Height="22" Margin="0,0,0,2" CornerRadius="{DynamicResource Radius3}" Background="{DynamicResource ControlBrush}"
                               BorderThickness="0,0,0,2" BorderBrush="{Binding IsToday, Converter={x:Static vm:Brushes.Active}}">
                         <TextBlock Text="{Binding Title}" HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="12" FontWeight="SemiBold" />
                       </Border>
@@ -296,7 +296,7 @@
                 <DataTemplate x:DataType="c:TimedEventDto">
                   <StackPanel Opacity="{Binding Enabled, Converter={x:Static vm:Brushes.EnabledOpacity}}">
                     <TextBlock>
-                      <Run Text="{Binding Name}" FontWeight="SemiBold" /><Run Text="  " /><Run Text="{Binding Timing}" Foreground="#F0B429" />
+                      <Run Text="{Binding Name}" FontWeight="SemiBold" /><Run Text="  " /><Run Text="{Binding Timing}" Foreground="{DynamicResource WarnBrush}" />
                     </TextBlock>
                     <TextBlock Classes="muted" Text="{Binding Description}" />
                     <TextBlock Classes="muted" Text="{Binding Next, StringFormat='volgende: {0:ddd HH:mm:ss}'}" />
@@ -415,7 +415,7 @@
                 <DataTemplate x:DataType="c:StreamWatchDto">
                   <StackPanel Opacity="{Binding Enabled, Converter={x:Static vm:Brushes.EnabledOpacity}}">
                     <TextBlock>
-                      <Run Text="{Binding Name}" FontWeight="SemiBold" /><Run Text="  " /><Run Text="{Binding State}" Foreground="#F0B429" />
+                      <Run Text="{Binding Name}" FontWeight="SemiBold" /><Run Text="  " /><Run Text="{Binding State}" Foreground="{DynamicResource WarnBrush}" />
                     </TextBlock>
                     <TextBlock Classes="muted mono" Text="{Binding Url}" TextTrimming="CharacterEllipsis" />
                     <TextBlock Classes="muted" Text="{Binding Description}" />

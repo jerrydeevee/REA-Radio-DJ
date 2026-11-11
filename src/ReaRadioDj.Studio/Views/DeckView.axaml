@@ -4,6 +4,15 @@
              xmlns:ctl="using:ReaRadioDj.Studio.Controls"
              x:Class="ReaRadioDj.Studio.Views.DeckView"
              x:DataType="vm:DeckTool">
+  <!-- Little room per deck (see the code-behind): tight = narrow cards, low = no waveform, tiny = only status, title and counter. -->
+  <UserControl.Styles>
+    <Style Selector="TextBlock.counter"><Setter Property="FontSize" Value="32" /></Style>
+    <Style Selector=":is(UserControl).tight TextBlock.counter, :is(UserControl).tiny TextBlock.counter"><Setter Property="FontSize" Value="24" /></Style>
+    <Style Selector=":is(UserControl).tight TextBlock.decktype"><Setter Property="IsVisible" Value="False" /></Style>
+    <Style Selector=":is(UserControl).low Border.deckwave"><Setter Property="IsVisible" Value="False" /></Style>
+    <Style Selector=":is(UserControl).tiny Panel.deckbuttons, :is(UserControl).tiny TextBlock.decksub"><Setter Property="IsVisible" Value="False" /></Style>
+    <Style Selector=":is(UserControl).micro DockPanel.deckhead"><Setter Property="IsVisible" Value="False" /></Style>
+  </UserControl.Styles>
   <DockPanel Margin="6">
     <!-- options: palette and orientation -->
     <DockPanel DockPanel.Dock="Top" Margin="0,0,0,4">
@@ -33,24 +42,24 @@
                            HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,6,0,0" />
               </Border>
               <StackPanel Grid.Column="1" Margin="8,6" Spacing="4">
-                <DockPanel>
+                <DockPanel Classes="deckhead">
                   <Border DockPanel.Dock="Right" Background="#F0B429" CornerRadius="{DynamicResource Radius3}" Padding="6,1"
                           IsVisible="{Binding Intro, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
                     <TextBlock Text="{Binding Intro}" Classes="mono" FontWeight="Bold" Foreground="#11161D" />
                   </Border>
                   <TextBlock Text="{Binding Status}" Foreground="{Binding Brush}" FontWeight="Bold" FontSize="12" VerticalAlignment="Center" />
-                  <TextBlock Classes="muted" Text="{Binding Type}" FontSize="12" Margin="8,0,0,0" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                  <TextBlock Classes="muted decktype" Text="{Binding Type}" FontSize="12" Margin="8,0,0,0" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
                 </DockPanel>
                 <TextBlock Text="{Binding Title}" FontSize="16" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
                 <Grid ColumnDefinitions="*,Auto">
                   <StackPanel Grid.Column="0" VerticalAlignment="Bottom">
                     <TextBlock Classes="muted" Text="{Binding Artist}" TextTrimming="CharacterEllipsis" />
-                    <TextBlock Classes="mono muted" FontSize="11" Text="{Binding Sub}" TextTrimming="CharacterEllipsis" />
+                    <TextBlock Classes="mono muted decksub" FontSize="11" Text="{Binding Sub}" TextTrimming="CharacterEllipsis" />
                   </StackPanel>
-                  <TextBlock Grid.Column="1" Classes="mono" FontSize="32" FontWeight="Bold" Margin="8,0,0,0"
+                  <TextBlock Grid.Column="1" Classes="mono counter" FontWeight="Bold" Margin="8,0,0,0" VerticalAlignment="Bottom"
                              Text="{Binding Counter}" Foreground="{Binding CounterBrush}" />
                 </Grid>
-                <Border CornerRadius="{DynamicResource Radius4}" ClipToBounds="True" Height="70">
+                <Border Classes="deckwave" CornerRadius="{DynamicResource Radius4}" ClipToBounds="True" Height="70">
                   <ctl:WaveformView Peaks="{Binding Peaks}" BlockSeconds="{Binding BlockSeconds}" Markers="{Binding Markers}"
                                     Playhead="{Binding Position}" CueIn="{Binding CueIn}" CueOut="{Binding CueOut}"
                                     ShowCursor="False" ReadOnlyMarkers="True" EmptyText="—" />
@@ -59,6 +68,7 @@
                              Classes.warn="{Binding EndState, Converter={x:Static vm:Brushes.Is}, ConverterParameter=warn}"
                              Classes.end="{Binding EndState, Converter={x:Static vm:Brushes.Is}, ConverterParameter=end}"
                              Classes.flash="{Binding Flash}" />
+                <Panel Classes="deckbuttons">
                 <WrapPanel IsVisible="{Binding IsOnAir}">
                   <Button Classes="small go" Content="⏭ Volgende" Margin="0,0,4,0" Command="{Binding $parent[UserControl].DataContext.NextCommand}"
                           ToolTip.Tip="Start B nu (mixt over)" />
@@ -73,6 +83,7 @@
                   <Button Classes="small" Content="Uit de log" Command="{Binding $parent[UserControl].DataContext.RemoveCommand}" CommandParameter="{Binding}"
                           ToolTip.Tip="Haal dit item uit de log" />
                 </WrapPanel>
+                </Panel>
               </StackPanel>
             </Grid>
           </Border>
