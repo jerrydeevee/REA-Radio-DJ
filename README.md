@@ -1,33 +1,90 @@
 # REA-Radio-DJ
 
-Vrije radio-playout met een ingebouwde AI-presentator. Een losse playout-engine (service) en een desktop-studio
-met vrij verplaatsbare, dokbare en zwevende vensters. Muziek 24/7 automatisch of live-assist, met klokken,
-vaste tijden (nieuws op :00), cartwalls, standby- en PFL-spelers, microfoon-talkover en een as-run-log.
+Vrije radio-playout met een ingebouwde AI-presentator, gemaakt voor Radio Aa en Hunze. Een losse playout-engine
+(service) en een desktop-studio met vrij verplaatsbare, dokbare en zwevende vensters. Muziek 24/7 automatisch of
+live-assist, met klokken, vaste tijden, cartwalls, standby- en PFL-spelers, een DJ-modus met vier decks, twee
+VoIP-kanalen voor bellers en verslaggevers, en bediening via MIDI, Livewire, Ember+, OSC en TCP.
 
-> Status: in ontwikkeling (ronde 1). Nog niet bedoeld voor een echte zender.
+> Status: in ontwikkeling (proof of concept). Nog niet bedoeld voor een echte zender. Wat klaar is en wat nog
+> open staat, staat in [docs/WERKLIJST.md](docs/WERKLIJST.md).
 
 ## Wat het kan
 
-- **Engine als service** – `REA-Radio-DJ.exe` speelt de uitzending, ook als de studio dicht is. Alles is te bedienen
+### Uitzending en bedrijfszekerheid
+- **Engine als service**: `REA-Radio-DJ.exe` speelt de uitzending, ook als de studio dicht is. Alles is te bedienen
   via REST (`/api/...`), met live status via WebSocket (`/api/ws`) of server-sent events (`/api/events`).
-- **Playout** – BASS-mixer (32-bit float), crossfades op het mixpunt, loudness-normalisatie naar −16 LUFS
-  (EBU R128). Automatisch of live-assist (het huidige item speelt uit, jij start het volgende).
-- **Bibliotheek** – SQLite (`data/station.db`). Mappen worden categorieën. Per bestand het volledige cuemodel:
-  cue-in, fade-in klaar, intro 1 en 2, outro, fade-out, mix, cue-out en een hook. Handmatig gezette cues blijven
-  bij een nieuwe scan staan.
-- **Cue-editor** – golfvorm met sleepbare markers, zoomen, beluisteren vanaf elk punt.
-- **Planning** – uurklokken (categorie, vast item of AI-break; willekeurig, op volgorde of alleen de hook), een
-  weekgrid met per uur een klok, en vaste tijden: *hard* (onderbreekt op de seconde), *zacht* (na het huidige
-  nummer) of *overlay* (eroverheen, de muziek duikt). Materiaal wordt drie minuten vooruit klaargezet; een gemist
-  hard event speelt nooit te laat.
-- **Studio-spelers** – twee standby-spelers met stapel, een PFL-speler op een eigen uitgang, twee cartwalls van
-  4 × 16 knoppen (loop, overlay, kleur) en overlays.
-- **Mixer en routing** – kanalen voor automatisering, standby, cartwall, overlay, microfoon en PFL; uitzending en
-  voorbeluistering op aparte geluidskaarten. Microfoon open = muziek duikt (talkover).
-- **AI-presentator** – tekst via elk OpenAI-compatibel endpoint of ingebouwde sjablonen, stem via Higgs TTS 3 of
+- **Watchdog**: een klein bewakingsproces start de engine opnieuw na een crash of vastloper, en hij gaat verder waar
+  de log was. De engine kan met Windows mee starten, los van de studio.
+- **Stiltedetectie** op de zender: drempel, duur en actie (melden, automatisering starten of iets uit een
+  noodcategorie spelen).
+- **Reservekopie** van instellingen, klokken, planning, cartwalls en hardware in één bestand, en een systeemlog in
+  de studio.
+
+### Playout en planning
+- **BASS-mixer** (32-bit float), crossfades op het mixpunt, loudness-normalisatie naar −16 LUFS (EBU R128),
+  overgangen en mixpunten per soort item en per nummer.
+- **Uurklokken en weekgrid**, met vaste tijden: *hard* (op de seconde), *zacht* (na het huidige nummer) of
+  *overlay* (eroverheen, de muziek duikt). Regels voor de rotatie, **containers** (een blok als één regel in de log)
+  en **externe streams** die in een tijdvenster het programma overnemen.
+- **Gebeurtenissen op een plek in een nummer**: een volume-omhullende of een commando op een tijdstip, te zetten in
+  de cue-editor.
+- **Studio-spelers**: standby-spelers met stapel, een PFL-speler, cartwalls van 4 × 16 knoppen, overlays en een
+  klembord om nummers te parkeren.
+
+### Bibliotheek
+- **SQLite-bibliotheek** met het volledige cuemodel (cue-in, intro's, outro, mix, cue-out, hook) en een
+  cue-editor met golfvorm.
+- **Mappen en shares bewaken**: nieuwe, gewijzigde en verwijderde bestanden worden vanzelf verwerkt; verplaatste
+  bestanden worden teruggevonden met behoud van cues en geschiedenis.
+- **Meten bij het inlezen**: BPM en beatgrid, toonsoort, ReplayGain, luidheidsverloop en geschatte intro- en
+  outromarkers, plus een kwaliteitscontrole (te zacht, clipping, stilte, lage bitrate, dubbele nummers).
+- **Zoeken** zonder accenten en met kleine tikfouten, korte filters (`bpm:120-128`, `jaar:198`, `duur:<3:30`),
+  filterknoppen, slimme lijsten, "mag dit nu?" per nummer en een detailpaneel. Snel bij 100.000 nummers.
+- **Tags lezen en terugschrijven**, hoezen, meer tagvelden (ISRC, componist, uitgever) en ongedaan maken.
+
+### Mengpaneel en geluid
+- **Mengkanalen** voor automatisering, standby, cartwalls, overlays, DJ, microfoons, lijn-in, VoIP en
+  voorluisteren, elk naar een eigen Windows-kaart, kanaalpaar of ASIO-uitgang.
+- **Kanaalstrip** per kanaal: gain, balans, equalizer, compressor, automatische niveauregeling, dempen, naar de
+  zender, opnemen (REC), een ingebouwd effect en plekken voor VST-effecten.
+- **Master** met begrenzer en loudness-meter. Werkwijze *software* (de engine mengt) of *mengtafel* (elk kanaal
+  naar zijn eigen uitgang).
+
+### DJ-modus
+- Vier decks met doorlopende golfvormen en beatstrepen, sync, hot cues, loops en loop-roll, Quantize, effecten op
+  de beat, censuur, rem en backspin, een sampler, cue-mix op de koptelefoon en een begrenzer.
+- **Automix** met overgangstypes, en de automatisering loopt onhoorbaar door terwijl de DJ op de lucht is.
+- Mix opnemen; bediening van decks via de commandobus en MIDI leren. *Nog niet beluisterd.*
+
+### Verbindingen (VoIP)
+- Twee VoIP-mengkanalen met eigen fader, voorluisteren en een terugkanaal zonder zichzelf (mix-minus).
+- **RTP** in twee richtingen met G.711 (A-law, µ-law) en lineair PCM, met jitterbuffer en meting.
+- **SIP**: bellen, gebeld worden en registreren bij een centrale, met NAT-ondersteuning. *Nog niet getest bij de
+  aanbieder; Opus en G.722 volgen.*
+- **Adresboek** met stations (SIP-nummer of vaste RTP-lijn), signalen bij overgaan en verbinden, lampjes en tallies,
+  en **gesprekken opnemen** (met de hand of automatisch, met bewaartermijn).
+
+### Opnemen, streamen en rapportage
+- De uitzending als MP3 per klokuur en de microfoon apart, optioneel direct in de bibliotheek, met bewaartermijn.
+- **Streams** naar meerdere Icecast- en SHOUTcast-servers tegelijk, met titelupdates in een eigen opmaak.
+- **As-run** en een programmalog als tekstbestand per dag; rapportage auteursrechten (CSV en PDF),
+  reclame-afspeelrapporten per adverteerder en uitzendstatistiek.
+
+### AI-presentator
+- Tekst via elk OpenAI-compatibel endpoint (bijv. Ollama) of ingebouwde sjablonen, stem via Higgs TTS 3 of
   Windows-spraak. Breaks worden vooraf gemaakt; de uitzending wacht nooit op de AI.
-- **As-run** – alles wat echt is uitgezonden (log, carts, overlays, standby), per dag te bekijken en als CSV.
-- **Icecast-stream** – MP3 naar Icecast of SHOUTcast v2, inclusief titel-updates.
+- Een creatieve presentator die de plaatjes aan elkaar praat, ook met denkende taalmodellen.
+
+### Bediening en hardware
+- Alles als tekstcommando: via HTTP, TCP, UDP, OSC, sneltoetsen (ook buiten de studio), eigen knoppen, de planner
+  en gebeurtenissen (start van een item, microfoon open, stream weg).
+- **Hardware**: MIDI, seriële poorten, Livewire-GPIO en Ember+, voor knoppen, lampjes en tallies.
+  *Ember+ is nog niet tegen een echt apparaat getest.*
+
+### De studio
+- Werkruimtes Live, DJ, Automatisering, Productie, Planning en Rapportage, met werkbladen per scherm.
+- Meerdere thema's (donker, licht en meer), instelbare lettergrootte en schaal, een aanraakmodus en kleuren per
+  soort item.
 
 ## Snel starten (Windows 10/11, x64)
 
@@ -104,7 +161,8 @@ REA-Radio-DJ terug op Windows-spraak.
 
 ```
 src/ReaRadioDj.Core       audio-engine en mixer (BASS), analyse, bibliotheek (SQLite), klokken, vaste tijden,
-                          studio-spelers, cartwall, as-run, AI-presentator, Icecast
+                          studio-spelers, cartwall, DJ-decks, VoIP (RTP, SIP), hardware, as-run,
+                          AI-presentator, streams
 src/ReaRadioDj.Contracts  de berichten (DTO's) tussen engine en studio
 src/ReaRadioDj.Server     de engine-service: REST, WebSocket, server-sent events, automatisering, web-UI
 src/ReaRadioDj.Studio     de desktop-studio (Avalonia + Dock): dokbare en zwevende vensters
@@ -122,9 +180,10 @@ reden, zodat meerdere oorzaken elkaar niet in de weg zitten. De engine speelt al
 dotnet test
 ```
 
-De unit tests dekken cuepunten, klokplanning, vaste tijden, de database (categorieën, klokken, weekgrid, events,
-as-run) en het log. De audiotests draaien alleen als BASS aanwezig is: ze spelen echte audio af op het stille
-apparaat (engine, cartwall, standby, ducken, bibliotheekscan) en starten een nep-Icecast-server voor de stream.
+Bijna 400 tests dekken onder meer cuepunten, klokplanning, vaste tijden, de database, de bibliotheek en het zoeken,
+de commandobus, hardwaresignalen, RTP en SIP. De audiotests draaien alleen als BASS aanwezig is: ze spelen echte
+audio af op het stille apparaat (engine, cartwall, standby, ducken, opnemen, bibliotheekscan) en starten een
+nep-Icecast-server voor de stream.
 
 ## Licentie
 
@@ -140,9 +199,11 @@ Alles wat je in de studio kunt, kan ook met tekstcommando's (`NEXT`, `AUTO OFF`,
 `VOLUME log 80`, `STREAM START` …). De lijst staat in de studio onder **Studio › Bediening en sneltoetsen** en op
 `GET /api/commands`. Dezelfde commando's werken via:
 
-- **HTTP**: `POST /api/command` met `{"text":"NEXT"}`
+- **HTTP**: `POST /api/command` met `{"text":"NEXT"}`, of een webadres per knop: `/api/do/next`, `/api/do/cart/1/5`
 - **TCP** (poort 8601): één commando per regel, antwoord `OK …` of `ERR …`; met wachtwoord eerst `AUTH <wachtwoord>`
 - **OSC** (UDP 8602): `/rea/next`, `/rea/cart/1/5`, `/rea/mic/toggle`, `/rea/cmd "AUTO OFF"` (waarde 0 = loslaten, genegeerd)
+- **UDP** (poort 8603): één commando per pakket, met antwoord terug
+- **MIDI, serieel, Livewire en Ember+**: knoppen en faders op een commando, lampjes en tallies op een toestand
 - **Sneltoetsen** in de studio (vrij in te stellen) en **vaste tijden** in de planner (actie *Commando uitvoeren*)
 
 Standaard luistert dit alleen op deze computer. Voor het netwerk in `appsettings.json`:
