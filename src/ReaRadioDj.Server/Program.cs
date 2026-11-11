@@ -85,6 +85,7 @@ builder.Services.AddSingleton<AdService>();
 builder.Services.AddSingleton<ControlRoomService>();
 builder.Services.AddSingleton<AudioRouter>();
 builder.Services.AddSingleton<ReaRadioDj.Server.Voip.VoipService>();
+builder.Services.AddHostedService(sp => sp.GetRequiredService<ReaRadioDj.Server.Voip.VoipService>());
 builder.Services.AddSingleton<StudioPlayers>();
 builder.Services.AddSingleton(new DjStore(Path.Combine(options.DataFolder, "dj.json")));
 builder.Services.AddSingleton<DjMixer>();

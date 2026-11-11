@@ -28,6 +28,15 @@ public static class StudioApi
             v.Connect(id, r) is { } error ? Results.BadRequest(new { error }) : Results.Ok());
         api.MapPost("/voip/{id}/hangup", (string id, Voip.VoipService v) => v.Hangup(id) ? Results.Ok() : Results.NotFound());
         api.MapPost("/voip/{id}/pfl", (string id, SwitchRequest r, Voip.VoipService v) => v.SetPfl(id, r.On) ? Results.Ok() : Results.NotFound());
+        // SIP: the account (the password is write-only), status, and calling / answering on a channel
+        api.MapGet("/sip/account", (Voip.VoipService v) => v.Account());
+        api.MapPut("/sip/account", (SipAccountRequest r, Voip.VoipService v) =>
+            v.SaveAccount(r) is { } error ? Results.BadRequest(new { error }) : Results.Ok(v.Account()));
+        api.MapGet("/sip", (Voip.VoipService v) => v.SipStatus());
+        api.MapPost("/sip/{id}/dial", (string id, SipDialRequest r, Voip.VoipService v) =>
+            v.Dial(id, r.Target ?? "") is { } error ? Results.BadRequest(new { error }) : Results.Ok());
+        api.MapPost("/sip/{id}/answer", (string id, Voip.VoipService v) =>
+            v.Answer(id) is { } error ? Results.BadRequest(new { error }) : Results.Ok());
         api.MapPost("/transport/stop", (PlayoutEngine e) => { e.Stop(); return Results.Ok(); });
         api.MapPost("/transport/next", (PlayoutEngine e) => { e.Next(); return Results.Ok(); });
         api.MapPost("/transport/skip", (PlayoutEngine e) => { e.Skip(); return Results.Ok(); });

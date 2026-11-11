@@ -6,11 +6,78 @@
              x:DataType="vm:ConnectionsTool">
   <DockPanel Margin="6" ctl:WidthClasses.Track="True">
     <TextBlock DockPanel.Dock="Top" Classes="muted" FontSize="11" TextWrapping="Wrap" Margin="0,0,0,6"
-               Text="Live audio over RTP op de twee VoIP-kanalen. De overkant hoort de uitzending zonder zichzelf. Laat het adres leeg om te wachten tot de overkant naar jouw poort stuurt." />
+               Text="Live audio op de twee VoIP-kanalen: bellen via SIP, of een vaste RTP-lijn. De overkant hoort de uitzending zonder zichzelf. Laat bij een vaste lijn het adres leeg om te wachten tot de overkant naar jouw poort stuurt." />
+    <DockPanel DockPanel.Dock="Top" Margin="0,0,0,6">
+      <ToggleButton DockPanel.Dock="Right" Classes="small" Content="SIP-account" IsChecked="{Binding ShowAccount}" ToolTip.Tip="Account bij de VoIP-provider instellen" />
+      <TextBlock FontSize="11" Text="⚠" Foreground="{DynamicResource WarnBrush}" IsVisible="{Binding SipWarning}" VerticalAlignment="Center" Margin="0,0,4,0" />
+      <TextBlock Classes="muted" FontSize="11" Text="{Binding SipState}" TextWrapping="Wrap" VerticalAlignment="Center" />
+    </DockPanel>
     <TextBlock DockPanel.Dock="Top" Classes="muted" IsVisible="{Binding Empty}" TextWrapping="Wrap"
                Text="Geen VoIP-kanalen: de audio van de engine is niet gestart." />
     <ScrollViewer>
       <StackPanel Spacing="6">
+        <Border Classes="card" Padding="8,6" IsVisible="{Binding ShowAccount}">
+          <StackPanel Spacing="4" DataContext="{Binding Sip}" x:DataType="vm:SipAccountVm">
+            <DockPanel>
+              <CheckBox DockPanel.Dock="Right" Content="SIP aan" IsChecked="{Binding Enabled}" />
+              <TextBlock FontWeight="SemiBold" Text="SIP-account" VerticalAlignment="Center" />
+            </DockPanel>
+            <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto" ColumnSpacing="6" RowSpacing="4">
+              <TextBlock Grid.Row="0" Classes="muted" Text="Gebruiker / nummer" VerticalAlignment="Center" />
+              <TextBox Grid.Row="0" Grid.Column="1" Text="{Binding User}" MinHeight="26" Padding="4,2" Watermark="het nummer of de gebruikersnaam van het account" />
+              <TextBlock Grid.Row="1" Classes="muted" Text="Inlognaam" VerticalAlignment="Center" />
+              <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding AuthUser}" MinHeight="26" Padding="4,2" Watermark="leeg = gelijk aan de gebruiker" />
+              <TextBlock Grid.Row="2" Classes="muted" Text="Wachtwoord" VerticalAlignment="Center" />
+              <DockPanel Grid.Row="2" Grid.Column="1">
+                <Button DockPanel.Dock="Right" Classes="small" Content="Wissen" Command="{Binding ClearPasswordCommand}" IsVisible="{Binding HasPassword}" Margin="4,0,0,0"
+                        ToolTip.Tip="Het opgeslagen wachtwoord verwijderen" />
+                <TextBox Text="{Binding Password}" PasswordChar="●" MinHeight="26" Padding="4,2" Watermark="{Binding PasswordHint}"
+                         ToolTip.Tip="Wordt versleuteld opgeslagen voor het Windows-account van de engine en nooit teruggestuurd" />
+              </DockPanel>
+              <TextBlock Grid.Row="3" Classes="muted" Text="Weergavenaam" VerticalAlignment="Center" />
+              <TextBox Grid.Row="3" Grid.Column="1" Text="{Binding DisplayName}" MinHeight="26" Padding="4,2" Watermark="wat de overkant ziet (mag leeg)" />
+              <TextBlock Grid.Row="4" Classes="muted" Text="Registrar" VerticalAlignment="Center" />
+              <TextBox Grid.Row="4" Grid.Column="1" Text="{Binding Registrar}" MinHeight="26" Padding="4,2" Watermark="server of server:poort" />
+              <TextBlock Grid.Row="5" Classes="muted" Text="Domein" VerticalAlignment="Center" />
+              <TextBox Grid.Row="5" Grid.Column="1" Text="{Binding Domain}" MinHeight="26" Padding="4,2" Watermark="leeg = de server van de registrar" />
+              <TextBlock Grid.Row="6" Classes="muted" Text="Proxy" VerticalAlignment="Center" />
+              <TextBox Grid.Row="6" Grid.Column="1" Text="{Binding Proxy}" MinHeight="26" Padding="4,2" Watermark="waar gesprekken heen gaan; leeg = de registrar" />
+              <TextBlock Grid.Row="7" Classes="muted" Text="Outbound proxy" VerticalAlignment="Center" />
+              <TextBox Grid.Row="7" Grid.Column="1" Text="{Binding OutboundProxy}" MinHeight="26" Padding="4,2" Watermark="alles eerst hierheen (ook tijdens een gesprek); meestal leeg" />
+              <TextBlock Grid.Row="8" Classes="muted" Text="STUN-server" VerticalAlignment="Center" />
+              <TextBox Grid.Row="8" Grid.Column="1" Text="{Binding Stun}" MinHeight="26" Padding="4,2" Watermark="leeg = publiek adres leren van de registrar (rport)" />
+              <TextBlock Grid.Row="9" Classes="muted" Text="Codecs" VerticalAlignment="Center" />
+              <TextBox Grid.Row="9" Grid.Column="1" Text="{Binding Codecs}" MinHeight="26" Padding="4,2" Watermark="op volgorde van voorkeur, bv. pcma, pcmu"
+                       ToolTip.Tip="pcma / pcmu = G.711 (telefoon), l16 = studiokwaliteit (alleen als de overkant het kan)" />
+              <TextBlock Grid.Row="10" Classes="muted" Text="Inkomend op" VerticalAlignment="Center" />
+              <ComboBox Grid.Row="10" Grid.Column="1" ItemsSource="{Binding IncomingChoices}" SelectedItem="{Binding IncomingChannel}" MinWidth="100"
+                        ToolTip.Tip="auto = het eerste vrije VoIP-kanaal · geen = inkomende gesprekken weigeren" />
+            </Grid>
+            <WrapPanel ItemSpacing="6" LineSpacing="4">
+              <CheckBox Content="Aanmelden" IsChecked="{Binding Register}" ToolTip.Tip="Aanmelden bij de registrar, zodat je gebeld kunt worden" />
+              <StackPanel Orientation="Horizontal" Spacing="4">
+                <TextBlock Classes="muted" Text="elke" VerticalAlignment="Center" />
+                <NumericUpDown Value="{Binding RegisterSeconds}" Minimum="60" Maximum="3600" FormatString="0" Width="64" ShowButtonSpinner="False" MinHeight="26" />
+                <TextBlock Classes="muted" Text="s" VerticalAlignment="Center" />
+              </StackPanel>
+              <StackPanel Orientation="Horizontal" Spacing="4">
+                <TextBlock Classes="muted" Text="Keep-alive" VerticalAlignment="Center" />
+                <NumericUpDown Value="{Binding KeepAliveSeconds}" Minimum="0" Maximum="300" FormatString="0" Width="56" ShowButtonSpinner="False" MinHeight="26"
+                               ToolTip.Tip="Houdt de NAT-router open; 0 = uit" />
+                <TextBlock Classes="muted" Text="s" VerticalAlignment="Center" />
+              </StackPanel>
+              <StackPanel Orientation="Horizontal" Spacing="4">
+                <TextBlock Classes="muted" Text="SIP-poort" VerticalAlignment="Center" />
+                <NumericUpDown Value="{Binding LocalPort}" Minimum="1024" Maximum="65535" FormatString="0" Width="70" ShowButtonSpinner="False" MinHeight="26" />
+              </StackPanel>
+              <TextBlock Classes="muted" Text="UDP" VerticalAlignment="Center" ToolTip.Tip="TCP en TLS komen later" />
+            </WrapPanel>
+            <StackPanel Orientation="Horizontal" Spacing="6">
+              <Button Classes="small" Content="Opslaan" Command="{Binding SaveCommand}" Background="#2F9E6A" />
+              <TextBlock Classes="muted" FontSize="11" Text="{Binding Result}" VerticalAlignment="Center" TextWrapping="Wrap" />
+            </StackPanel>
+          </StackPanel>
+        </Border>
         <ItemsControl ItemsSource="{Binding Lines}">
           <ItemsControl.ItemTemplate>
             <DataTemplate x:DataType="vm:VoipLineVm">
@@ -25,7 +92,22 @@
                     <TextBlock Classes="muted" Margin="8,0,0,0" Text="{Binding State}" VerticalAlignment="Center" />
                   </DockPanel>
                   <ProgressBar Minimum="0" Maximum="1" Value="{Binding Level}" Height="6" MinHeight="6" ToolTip.Tip="Wat er binnenkomt" />
-                  <WrapPanel ItemSpacing="6" LineSpacing="4" IsEnabled="{Binding NotConnected}">
+                  <Border Classes="card" Padding="6,4" IsVisible="{Binding Ringing}" Background="#2F9E6A33">
+                    <DockPanel>
+                      <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="4">
+                        <Button Classes="small" Content="Opnemen" Command="{Binding AnswerCommand}" Background="#2F9E6A" />
+                        <Button Classes="small" Content="Weigeren" Command="{Binding HangupCommand}" />
+                      </StackPanel>
+                      <TextBlock FontWeight="SemiBold" Text="{Binding CallText}" VerticalAlignment="Center" TextWrapping="Wrap" />
+                    </DockPanel>
+                  </Border>
+                  <TextBlock Text="{Binding CallText}" TextWrapping="Wrap" IsVisible="{Binding !Ringing}" FontSize="12" />
+                  <StackPanel Orientation="Horizontal" Spacing="4" IsVisible="{Binding CanDial}">
+                    <TextBlock Classes="muted" Text="Bellen" VerticalAlignment="Center" />
+                    <TextBox Text="{Binding Target}" Width="190" MinHeight="26" Padding="4,2" Watermark="nummer of sip:naam@server" />
+                    <Button Classes="small" Content="Bel" Command="{Binding DialCommand}" Background="#2F9E6A" />
+                  </StackPanel>
+                  <WrapPanel ItemSpacing="6" LineSpacing="4" IsEnabled="{Binding NotConnected}" IsVisible="{Binding ShowRtp}">
                     <StackPanel Orientation="Horizontal" Spacing="4">
                       <TextBlock Classes="muted" Text="Eigen poort" VerticalAlignment="Center" />
                       <NumericUpDown Value="{Binding LocalPort}" Minimum="1024" Maximum="65535" FormatString="0" Width="80" ShowButtonSpinner="False" MinHeight="26" />
@@ -48,8 +130,9 @@
                     </StackPanel>
                   </WrapPanel>
                   <StackPanel Orientation="Horizontal" Spacing="4">
-                    <Button Classes="small" Content="Verbinden" Command="{Binding ConnectCommand}" IsVisible="{Binding NotConnected}" Background="#2F9E6A" />
-                    <Button Classes="small" Content="Ophangen" Command="{Binding HangupCommand}" IsVisible="{Binding Connected}" />
+                    <Button Classes="small" Content="Vaste lijn openen" Command="{Binding ConnectCommand}" IsVisible="{Binding CanDial}" />
+                    <Button Classes="small" Content="Verbinden" Command="{Binding ConnectCommand}" IsVisible="{Binding CanConnectPlain}" Background="#2F9E6A" />
+                    <Button Classes="small" Content="Ophangen" Command="{Binding HangupCommand}" IsVisible="{Binding CanHangup}" />
                   </StackPanel>
                   <TextBlock Classes="mono muted" FontSize="11" Text="{Binding Detail}" TextWrapping="Wrap" IsVisible="{Binding Connected}" />
                   <StackPanel Orientation="Horizontal" Spacing="4" IsVisible="{Binding Connected}">

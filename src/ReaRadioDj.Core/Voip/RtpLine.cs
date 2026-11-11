@@ -13,6 +13,8 @@ public sealed record RtpLineOptions
     public string Codec { get; init; } = "pcma";
     /// <summary>How much the jitter buffer holds before it plays, in milliseconds.</summary>
     public double JitterMs { get; init; } = 60;
+    /// <summary>The RTP payload type agreed in SIP/SDP; null = the codec's own (static) type.</summary>
+    public int? PayloadType { get; init; }
 }
 
 /// <summary>The state of a line and what it measured.</summary>
@@ -28,6 +30,7 @@ public sealed record RtpLineStatus(string State, string Codec, int LocalPort, st
 public sealed class RtpLine : IDisposable
 {
     private readonly IRtpCodec _codec;
+    private readonly int _pt;
     private readonly UdpClient _udp;
     private readonly JitterBuffer _jitter;
     private readonly Resampler _toCodec;
@@ -53,6 +56,7 @@ public sealed class RtpLine : IDisposable
         Options = options;
         InputRate = inputRate;
         _codec = RtpCodecs.Create(options.Codec);
+        _pt = options.PayloadType is >= 0 and <= 127 ? options.PayloadType.Value : _codec.PayloadType;
         _jitter = new JitterBuffer(_codec, options.JitterMs);
         _toCodec = new Resampler(inputRate, _codec.SampleRate);
         _return = new float[inputRate]; // one second
@@ -133,7 +137,7 @@ public sealed class RtpLine : IDisposable
             catch (Exception) when (!_running) { return; }
             catch (Exception ex) { _error = ex.Message; continue; }
 
-            if (RtpPacket.Read(data) is not { } p || p.PayloadType != _codec.PayloadType) continue;
+            if (RtpPacket.Read(data) is not { } p || p.PayloadType != _pt) continue;
             if (_latch && (_remote is null || !_remote.Equals(any))) _remote = new IPEndPoint(any.Address, any.Port);
             _jitter.Push(p.Sequence, p.Timestamp, p.Payload.Span, _clock.Elapsed.TotalMilliseconds);
             Interlocked.Exchange(ref _lastAudioTicks, _clock.ElapsedTicks);
@@ -172,7 +176,7 @@ public sealed class RtpLine : IDisposable
                 int len = _codec.Encode(frame, payload);
                 if (_remote is { } to)
                 {
-                    int size = new RtpPacket(_codec.PayloadType, first, _seq, _timestamp, _ssrc, payload.AsMemory(0, len)).Write(packet);
+                    int size = new RtpPacket((byte)_pt, first, _seq, _timestamp, _ssrc, payload.AsMemory(0, len)).Write(packet);
                     try { _udp.Send(packet, size, to); Interlocked.Increment(ref _sent); first = false; }
                     catch (SocketException ex) { _error = ex.Message; }
                     catch (ObjectDisposedException) { return; }

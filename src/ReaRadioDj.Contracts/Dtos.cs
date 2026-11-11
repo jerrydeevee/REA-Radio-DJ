@@ -37,7 +37,8 @@ public sealed record StateDto(
     StreamDto Stream,
     long LastMessageId,
     DjDto? Dj = null,
-    IReadOnlyList<VoipLineDto>? Voip = null);
+    IReadOnlyList<VoipLineDto>? Voip = null,
+    SipStatusDto? Sip = null);
 
 // ---------------------------------------------------------------- VoIP / codec lines
 
@@ -57,6 +58,29 @@ public sealed record VoipLineDto(string Id, string Name, bool Connected, string 
     VoipConnectRequest Settings);
 
 public sealed record CodecDto(string Name, string Description);
+
+/// <summary>
+/// The SIP account of the VoIP channels. The password never comes back: HasPassword says whether one is stored.
+/// Registrar/Proxy/OutboundProxy/Stun are host or host:port; Codecs in order of preference; IncomingChannel
+/// "auto", "voip1", "voip2" or "geen".
+/// </summary>
+public sealed record SipAccountDto(bool Enabled, string DisplayName, string User, string AuthUser, bool HasPassword, string Domain,
+    string Registrar, string Proxy, string OutboundProxy, string Transport, int LocalPort, string Stun, IReadOnlyList<string> Codecs,
+    bool Register, int RegisterSeconds, int KeepAliveSeconds, string IncomingChannel);
+
+/// <summary>Saves the SIP account. Password null = keep the stored one, "" = remove it.</summary>
+public sealed record SipAccountRequest(bool Enabled, string DisplayName, string User, string AuthUser, string? Password, string Domain,
+    string Registrar, string Proxy, string OutboundProxy, string Transport, int LocalPort, string Stun, IReadOnlyList<string> Codecs,
+    bool Register, int RegisterSeconds, int KeepAliveSeconds, string IncomingChannel);
+
+public sealed record SipCallDto(string Channel, string State, bool Incoming, string Remote, string RemoteName, DateTime StartedUtc,
+    DateTime? AnsweredUtc, string? Reason, string? Codec, bool Ringing, bool Active);
+
+/// <summary>Registration "uit", "niet aangemeld", "aanmelden…", "aangemeld" or "fout" (Error says why).</summary>
+public sealed record SipStatusDto(bool Enabled, string Registration, DateTime? RegisteredUntilUtc, string? Error, string? PublicAddress,
+    string Account, IReadOnlyList<SipCallDto> Calls);
+
+public sealed record SipDialRequest(string Target);
 
 // ---------------------------------------------------------------- DJ desk
 

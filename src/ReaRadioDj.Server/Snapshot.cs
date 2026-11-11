@@ -49,7 +49,8 @@ public static class Snapshot
             new StreamDto(s.Enabled, s.Connected, s.Server, s.BytesSent, s.Error),
             messages.LastId,
             DjApi.Dto(sp.GetRequiredService<DjMixer>().Info, sp.GetRequiredService<DjHandover>().Following, sp.GetRequiredService<DjMixer>().Automix.Info),
-            sp.GetRequiredService<Voip.VoipService>().Status());
+            sp.GetRequiredService<Voip.VoipService>().Status(),
+            sp.GetRequiredService<Voip.VoipService>().SipStatus());
     }
 
     public static string Name<T>(T value) where T : struct, Enum
