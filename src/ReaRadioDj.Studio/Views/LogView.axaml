@@ -1,11 +1,15 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:ReaRadioDj.Studio.ViewModels"
+             xmlns:ctl="using:ReaRadioDj.Studio.Controls"
              x:Class="ReaRadioDj.Studio.Views.LogView"
-             x:DataType="vm:LogTool">
+             x:DataType="vm:LogTool"
+             ctl:WidthClasses.Track="True">
+  <!-- Narrower than 560 px: the detail line, the position row and the command row fold away (commands go in the ⋯ menu);
+       the remaining time, the title and every row's start time and length always stay. -->
   <DockPanel Margin="6">
     <!-- Now playing -->
-    <Border DockPanel.Dock="Top" Classes="card" Margin="0,0,0,6">
+    <Border x:Name="NowCard" DockPanel.Dock="Top" Classes="card" Margin="0,0,0,6">
       <StackPanel Spacing="4">
         <DockPanel>
           <Border DockPanel.Dock="Left" CornerRadius="{DynamicResource Radius3}" Padding="6,1" Margin="0,0,8,0" Background="#E5484D"
@@ -15,9 +19,9 @@
           <TextBlock DockPanel.Dock="Right" Classes="mono" FontSize="22" Text="{Binding NowRemaining}" />
           <TextBlock Text="{Binding NowLabel}" FontSize="18" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
         </DockPanel>
-        <TextBlock Classes="muted" Text="{Binding NowDetail}" TextTrimming="CharacterEllipsis" />
+        <TextBlock Classes="muted hide-narrow" Text="{Binding NowDetail}" TextTrimming="CharacterEllipsis" />
         <ProgressBar Value="{Binding Progress}" Maximum="100" Height="14" MinHeight="14" CornerRadius="{DynamicResource Radius3}" />
-        <DockPanel>
+        <DockPanel Classes="hide-narrow">
           <TextBlock DockPanel.Dock="Left" Classes="mono muted" Text="{Binding NowPosition}" />
           <TextBlock DockPanel.Dock="Right" Classes="muted" Text="{Binding NowMix}" />
           <TextBlock HorizontalAlignment="Center" FontSize="12" Foreground="#F0B429" Text="{Binding NowIntro}" />
@@ -27,8 +31,18 @@
 
     <!-- Commands -->
     <DockPanel DockPanel.Dock="Top" Margin="0,0,0,4">
-      <TextBlock DockPanel.Dock="Right" Classes="muted" FontSize="12" Text="{Binding Summary}" VerticalAlignment="Center" />
-      <WrapPanel>
+      <Button DockPanel.Dock="Right" Classes="small narrow-only" Content="⋯" Margin="4,0,0,0" ToolTip.Tip="Opdrachten">
+        <Button.Flyout>
+          <MenuFlyout>
+            <MenuItem Header="Selectie als volgende" Command="{Binding AddSelectedNextCommand}" />
+            <MenuItem Header="Selectie achteraan" Command="{Binding AddSelectedEndCommand}" />
+            <MenuItem Header="AI-break" Command="{Binding AddBreakCommand}" />
+            <MenuItem Header="Opnieuw plannen" Command="{Binding ReplanCommand}" />
+          </MenuFlyout>
+        </Button.Flyout>
+      </Button>
+      <TextBlock DockPanel.Dock="Right" Classes="muted" FontSize="12" Text="{Binding Summary}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+      <WrapPanel Classes="hide-narrow">
         <Button Classes="small" Margin="0,0,4,4" Content="Selectie als volgende" Command="{Binding AddSelectedNextCommand}" ToolTip.Tip="Het geselecteerde bibliotheekitem als volgende" />
         <Button Classes="small" Margin="0,0,4,4" Content="Selectie achteraan" Command="{Binding AddSelectedEndCommand}" />
         <Button Classes="small" Margin="0,0,4,4" Content="AI-break" Command="{Binding AddBreakCommand}" />
@@ -36,7 +50,7 @@
       </WrapPanel>
     </DockPanel>
 
-    <Expander DockPanel.Dock="Bottom" Header="Gespeeld" Margin="0,4,0,0" HorizontalAlignment="Stretch">
+    <Expander x:Name="Played" DockPanel.Dock="Bottom" Header="Gespeeld" Margin="0,4,0,0" HorizontalAlignment="Stretch">
       <ListBox ItemsSource="{Binding History}" MaxHeight="190">
         <ListBox.ItemTemplate>
           <DataTemplate x:DataType="vm:LogRow">
@@ -73,9 +87,9 @@
             </StackPanel>
             <StackPanel Grid.Column="3" Margin="4,0" VerticalAlignment="Center">
               <TextBlock Classes="mono" FontSize="13" Text="{Binding Length}" HorizontalAlignment="Right" />
-              <TextBlock Classes="muted" FontSize="10" Text="{Binding Origin}" HorizontalAlignment="Right" />
+              <TextBlock Classes="muted wide-only" FontSize="10" Text="{Binding Origin}" HorizontalAlignment="Right" />
             </StackPanel>
-            <StackPanel Grid.Column="4" Classes="rowactions" Orientation="Horizontal" Spacing="2" VerticalAlignment="Center">
+            <StackPanel Grid.Column="4" Classes="rowactions hide-narrow" Orientation="Horizontal" Spacing="2" VerticalAlignment="Center">
               <Button Classes="small" Content="⇄" ToolTip.Tip="Overgang naar dit item bewerken"
                       Command="{Binding $parent[ListBox].DataContext.EditTransitionCommand}" CommandParameter="{Binding}" />
               <Button Classes="small" Content="⤒" ToolTip.Tip="Als volgende"

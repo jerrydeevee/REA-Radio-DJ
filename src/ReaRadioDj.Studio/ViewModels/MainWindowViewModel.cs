@@ -64,6 +64,43 @@ public sealed partial class MainWindowViewModel : ObservableObject
 
     public StudioHub Hub { get; }
     public IReadOnlyList<WindowEntry> WindowMenu { get; } = DockFactory.Windows.Select(w => new WindowEntry(w.Id, w.Name)).ToList();
+
+    // ---- Ctrl+K: go to a window by typing part of its name
+    [ObservableProperty] private bool _goToOpen;
+    [ObservableProperty] private string _goToQuery = "";
+    [ObservableProperty] private WindowEntry? _goToSelected;
+    public ObservableCollection<WindowEntry> GoToResults { get; } = [];
+
+    partial void OnGoToQueryChanged(string value)
+    {
+        GoToResults.Clear();
+        foreach (var w in Match(WindowMenu, value)) GoToResults.Add(w);
+        GoToSelected = GoToResults.FirstOrDefault();
+    }
+
+    /// <summary>Windows whose name contains every typed word (any order, case does not matter); names that start with it first.</summary>
+    public static IEnumerable<WindowEntry> Match(IEnumerable<WindowEntry> all, string query)
+    {
+        var words = query.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        return all.Where(w => words.All(q => w.Name.Contains(q, StringComparison.OrdinalIgnoreCase) || w.Id.Contains(q, StringComparison.OrdinalIgnoreCase)))
+                  .OrderBy(w => words.Length > 0 && w.Name.StartsWith(words[0], StringComparison.OrdinalIgnoreCase) ? 0 : 1);
+    }
+
+    [RelayCommand]
+    private void OpenGoTo()
+    {
+        GoToQuery = "";
+        OnGoToQueryChanged("");
+        GoToOpen = true;
+    }
+
+    [RelayCommand]
+    private void GoTo(WindowEntry? entry)
+    {
+        entry ??= GoToSelected ?? GoToResults.FirstOrDefault();
+        GoToOpen = false;
+        if (entry is not null) ShowWindow(entry.Id);
+    }
     public ObservableCollection<string> LayoutNames { get; } = [];
 
     [ObservableProperty] private IRootDock? _layout;

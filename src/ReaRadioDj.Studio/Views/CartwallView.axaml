@@ -1,8 +1,11 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:ReaRadioDj.Studio.ViewModels"
+             xmlns:ctl="using:ReaRadioDj.Studio.Controls"
              x:Class="ReaRadioDj.Studio.Views.CartwallView"
-             x:DataType="vm:CartwallTool">
+             x:DataType="vm:CartwallTool"
+             ctl:WidthClasses.Track="True">
+  <!-- Tiles never shrink below a usable size: a narrower wall gets fewer columns and scrolls (see the code-behind). -->
   <DockPanel Margin="6">
     <DockPanel DockPanel.Dock="Top" Margin="0,0,0,6">
       <Button DockPanel.Dock="Right" Classes="small" Content="{Binding StopText}" Command="{Binding StopAllCommand}" />
@@ -11,7 +14,7 @@
         <RadioButton Content="2" IsChecked="{Binding Page2}" GroupName="{Binding Id}" />
         <RadioButton Content="3" IsChecked="{Binding Page3}" GroupName="{Binding Id}" />
         <RadioButton Content="4" IsChecked="{Binding Page4}" GroupName="{Binding Id}" />
-        <TextBlock Classes="muted" Text="{Binding PlayingText}" VerticalAlignment="Center" Margin="8,0,0,0" />
+        <TextBlock Classes="muted hide-narrow" Text="{Binding PlayingText}" VerticalAlignment="Center" Margin="8,0,0,0" TextTrimming="CharacterEllipsis" />
       </StackPanel>
     </DockPanel>
     <TextBlock DockPanel.Dock="Top" Classes="muted" FontSize="12" TextWrapping="Wrap" Margin="0,0,0,6" IsVisible="{Binding IsSampler}"
@@ -25,7 +28,7 @@
       </ItemsControl.ItemsPanel>
       <ItemsControl.ItemTemplate>
         <DataTemplate x:DataType="vm:CartButton">
-          <Button Margin="4" Padding="8" MinHeight="96" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
+          <Button Classes="cart" Margin="4" Padding="8" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
                   HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch"
                   Background="{Binding Background}" BorderThickness="2"
                   BorderBrush="{Binding Playing, Converter={x:Static vm:Brushes.Active}}"

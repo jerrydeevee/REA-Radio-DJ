@@ -37,9 +37,49 @@ public partial class MainWindow : Window
             Grid.SetColumn(Transport, wide ? 3 : 0);
             Grid.SetColumnSpan(Transport, wide ? 1 : 6);
             Transport.Margin = wide ? default : new Thickness(0, 10, 0, 0);
+            // App bar: what drops off first is also elsewhere, so nothing falls off the right edge.
+            double w = Bounds.Width / Services.Appearance.Scale;
+            ConnectionText.IsVisible = w >= 1500;
+            LayoutPick.IsVisible = w >= 1350;
+            Brand.IsVisible = w >= 1200;
+            bool twoRows = w < 1100;
+            Grid.SetRow(Workspaces, twoRows ? 1 : 0);
+            Grid.SetColumn(Workspaces, twoRows ? 0 : 2);
+            Grid.SetColumnSpan(Workspaces, twoRows ? 6 : 1);
+            Workspaces.Margin = twoRows ? new Thickness(0, 6, 0, 0) : new Thickness(12, 0, 0, 0);
         }
         SizeChanged += (_, _) => Arrange();
         Arrange();
+        // Ctrl+K: go to a window by name (works wherever the focus is).
+        AddHandler(KeyDownEvent, (_, e) =>
+        {
+            if (DataContext is not ViewModels.MainWindowViewModel vm) return;
+            if (e.Key == Avalonia.Input.Key.K && e.KeyModifiers == Avalonia.Input.KeyModifiers.Control)
+            {
+                vm.OpenGoToCommand.Execute(null);
+                Dispatcher.UIThread.Post(() => GoToBox.Focus());
+                e.Handled = true;
+            }
+            else if (vm.GoToOpen && e.Key == Avalonia.Input.Key.Escape) { vm.GoToOpen = false; e.Handled = true; }
+        }, RoutingStrategies.Tunnel);
+        GoToBox.KeyDown += (_, e) =>
+        {
+            if (DataContext is not ViewModels.MainWindowViewModel vm) return;
+            switch (e.Key)
+            {
+                case Avalonia.Input.Key.Enter: vm.GoToCommand.Execute(null); e.Handled = true; break;
+                case Avalonia.Input.Key.Down when vm.GoToResults.Count > 1:
+                    vm.GoToSelected = vm.GoToResults[1];
+                    GoToList.Focus();
+                    e.Handled = true;
+                    break;
+            }
+        };
+        GoToList.KeyDown += (_, e) =>
+        {
+            if (e.Key == Avalonia.Input.Key.Enter && DataContext is ViewModels.MainWindowViewModel vm) { vm.GoToCommand.Execute(null); e.Handled = true; }
+        };
+        GoToList.Tapped += (_, _) => (DataContext as ViewModels.MainWindowViewModel)?.GoToCommand.Execute(null);
         // Stop interrupts the broadcast: the button only works when held for a second (the hotkey stops at once).
         var hold = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
         hold.Tick += (_, _) =>

@@ -17,12 +17,17 @@ public partial class LibraryView : UserControl
         InitializeComponent();
         MediaDrag.Bind(this);
         // Small dock panel: the list always keeps room; the top scrolls, the detail pane only shows when it fits.
+        // Narrow or low, the filters fold away under a button next to the search box (they never cover the list).
         SizeChanged += (_, e) =>
         {
             double h = e.NewSize.Height, w = e.NewSize.Width;
-            TopArea.MaxHeight = Math.Max(60, h * 0.45);
+            Body.MinHeight = Math.Min(120, Math.Max(48, h * 0.4));
+            // 60 px for the tab strip and the margins: the top area may never push the list over itself.
+            TopArea.MaxHeight = Math.Max(40, Math.Min(h * 0.45, h - Body.MinHeight - 60));
             if (DataContext is LibraryTool t) t.Wide = w >= 720;
+            ArrangeFilters(e.NewSize);
         };
+        FiltersToggle.IsCheckedChanged += (_, _) => ArrangeFilters(Bounds.Size);
         DataContextChanged += (_, _) => { if (DataContext is LibraryTool t) t.Wide = Bounds.Width <= 0 || Bounds.Width >= 720; };
         // Drag an item out of the list (to the log, a player or a cartwall): starts after a few pixels of movement.
         List.AddHandler(PointerPressedEvent, (_, e) =>
@@ -93,6 +98,22 @@ public partial class LibraryView : UserControl
                 e.Handled = true;
             }
         };
+    }
+
+    /// <summary>Whether the filters fold away under a button: the panel is narrower than 560 px or lower than 360 px.</summary>
+    public static bool Compact(Size size) => size.Width > 0 && (size.Width < 560 || size.Height < 360);
+
+    private void ArrangeFilters(Size size)
+    {
+        bool compact = Compact(size);
+        FiltersToggle.IsVisible = compact;
+        bool show = !compact || FiltersToggle.IsChecked == true;
+        FilterRow.IsVisible = show;
+        ChipRow.IsVisible = show;
+        SavedRow.IsVisible = show;
+        StatusRow.IsVisible = show;
+        // Very low: only the search box stays above the list (Enter, Ctrl+Enter, space and the right-click menu still work).
+        ActionRow.IsVisible = show || size.Height >= 260;
     }
 
     // Picks a picture and puts it into the file of the item in the detail pane as its cover.

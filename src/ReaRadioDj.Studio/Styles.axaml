@@ -18,6 +18,22 @@
   <Style Selector="TextBlock.mono">
     <Setter Property="FontFamily" Value="Consolas, Cascadia Mono, monospace" />
   </Style>
+  <!-- A window's own width (see WidthClasses): parts drop in a fixed order instead of overlapping -->
+  <Style Selector=":is(Control).narrow-only">
+    <Setter Property="IsVisible" Value="False" />
+  </Style>
+  <Style Selector=".narrow :is(Control).narrow-only">
+    <Setter Property="IsVisible" Value="True" />
+  </Style>
+  <Style Selector=".medium :is(Control).wide-only, .narrow :is(Control).wide-only, .narrow :is(Control).hide-narrow">
+    <Setter Property="IsVisible" Value="False" />
+  </Style>
+  <Style Selector="Button.cart">
+    <Setter Property="MinHeight" Value="96" />
+  </Style>
+  <Style Selector=".narrow Button.cart">
+    <Setter Property="MinHeight" Value="72" />
+  </Style>
   <Style Selector="Button.small">
     <Setter Property="Padding" Value="10,4" />
     <Setter Property="MinWidth" Value="28" />

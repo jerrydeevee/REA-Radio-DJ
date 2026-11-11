@@ -9,7 +9,8 @@ public static class Brushes
     private static readonly IBrush Red = new SolidColorBrush(Color.Parse("#C42B30"));
     private static readonly IBrush Ok = new SolidColorBrush(Color.Parse("#3FB950"));
     private static readonly IBrush Amber = new SolidColorBrush(Color.Parse("#F5A524"));
-    private static readonly IBrush Off = new SolidColorBrush(Color.Parse("#2A3240"));
+    // "Off" (an empty pad, a dark lamp, a quiet border) follows the style, so it is light grey in a light style.
+    private static IBrush Off => Themed("CardBorderBrush");
     private static readonly IBrush Green = new SolidColorBrush(Color.Parse("#3DBD7D"));
     private static readonly IBrush Transparent = new SolidColorBrush(Colors.Transparent);
 

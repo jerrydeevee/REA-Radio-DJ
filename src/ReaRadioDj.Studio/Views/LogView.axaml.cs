@@ -12,5 +12,11 @@ public partial class LogView : UserControl
         MediaDrag.AcceptDropsAndFiles(List,
             (id, e) => DataContext is LogTool t ? t.Drop(id, MediaDrag.ItemAt<LogRow>(List, e)) : Task.CompletedTask,
             (path, e) => DataContext is LogTool t ? t.DropFile(path, MediaDrag.ItemAt<LogRow>(List, e)) : Task.CompletedTask);
+        // A low panel keeps its list: the now-playing card goes first (the on-air bar shows it too), then "Gespeeld".
+        SizeChanged += (_, e) =>
+        {
+            NowCard.IsVisible = e.NewSize.Height >= 300;
+            Played.IsVisible = e.NewSize.Height >= 200;
+        };
     }
 }

@@ -13,8 +13,9 @@ public static class Appearance
 {
     public static readonly (string Key, string Name)[] Themes =
     [
+        ("regiekamer", "Regiekamer (rustig donker, standaard)"), ("daglicht", "Daglicht (licht, voor overdag)"),
         ("dark", "Studio donker"), ("night", "Nacht (gedimd, voor een donkere studio)"),
-        ("light", "Licht (overdag, veel daglicht)"), ("contrast", "Hoog contrast"),
+        ("light", "Licht (klassiek)"), ("contrast", "Hoog contrast"),
         ("ocean", "Oceaan (diep blauw met turkoois)"), ("forest", "Bos (donkergroen)"), ("sunset", "Zonsondergang (warm rood en oranje)"),
         ("graphite", "Grafiet (neutraal grijs, zonder kleur)"), ("neon", "Neon (paars en roze, voor de avond)"),
     ];
@@ -55,6 +56,12 @@ public static class Appearance
 
     private static readonly Dictionary<string, string[]> Palettes = new()
     {
+        // Regiekamer and Daglicht share one layout: red only for live and faults, green plays, blue is next and
+        // anything you can press, amber is "watch out".
+        ["regiekamer"] = ["#EF4444", "#3B82F6", "#2563EB", "#F59E0B", "#22C55E", "#E5E7EB", "#0F1117", "#161A22",
+                          "#252B37", "#2E3542", "#1E3A5F", "#9CA3AF", "#1C212B", "#2E3542", "#252B37"],
+        ["daglicht"] = ["#DC2626", "#2563EB", "#1D4ED8", "#B45309", "#15803D", "#0F172A", "#F6F7F9", "#FFFFFF",
+                        "#EEF1F4", "#CBD5E1", "#DBEAFE", "#475569", "#FFFFFF", "#DDE2E8", "#64748B"],
         ["dark"] = ["#E5484D", "#4C8DFF", "#2563EB", "#F5A524", "#3FB950", "#E6EAF0", "#0E1116", "#11161D",
                     "#1E2530", "#3A4454", "#2D3748", "#9AA4B2", "#161B22", "#2A3240", "#2A3240"],
         ["night"] = ["#B83A3E", "#3A6FCC", "#1E4FB8", "#C98A1E", "#2F8F43", "#C9CFD8", "#07090C", "#0A0D11",
@@ -87,6 +94,16 @@ public static class Appearance
         ["song"] = "#3FA7FF", ["jingle"] = "#F0B429", ["voice"] = "#A78BFA", ["other"] = "#8B95A5",
     };
 
+    // On a light background the standard kind colours are too pale to read; while a kind still has its standard
+    // colour, a light style uses these darker ones (an own choice is kept).
+    private static readonly Dictionary<string, string> LightTypeColors = new()
+    {
+        ["song"] = "#1D4ED8", ["jingle"] = "#A16207", ["voice"] = "#6D28D9", ["other"] = "#475569",
+    };
+
+    /// <summary>Whether a style has a light background.</summary>
+    public static bool IsLight(string theme) => theme is "light" or "daglicht";
+
     /// <summary>The colours to choose from (name, colour).</summary>
     public static readonly (string Name, string Hex)[] KindColors =
     [
@@ -111,17 +128,22 @@ public static class Appearance
     public static void Apply(StudioSettings s)
     {
         if (Application.Current is not { } app) return;
+        var theme = Palettes.ContainsKey(s.Theme) ? s.Theme : "regiekamer";
+        bool light = IsLight(theme);
         foreach (var (key, brush) in KindBrushes)
-            brush.Color = s.TypeColors.TryGetValue(key, out var hex) && Color.TryParse(hex, out var c) ? c : Color.Parse(DefaultTypeColors[key]);
+        {
+            string hex = s.TypeColors.TryGetValue(key, out var h) && Color.TryParse(h, out _) ? h : DefaultTypeColors[key];
+            if (light && string.Equals(hex, DefaultTypeColors[key], StringComparison.OrdinalIgnoreCase)) hex = LightTypeColors[key];
+            brush.Color = Color.Parse(hex);
+        }
 
         // Touch mode: an extra style sheet after all others, so its sizes win.
         _touch ??= new StyleInclude(new Uri("avares://REA-Radio-DJ-Studio/")) { Source = new Uri("avares://REA-Radio-DJ-Studio/TouchStyles.axaml") };
         if (s.Touch && !app.Styles.Contains(_touch)) app.Styles.Add(_touch);
         else if (!s.Touch) app.Styles.Remove(_touch);
-        var theme = Palettes.ContainsKey(s.Theme) ? s.Theme : "dark";
         var colors = Palettes[theme];
         for (int i = 0; i < Keys.Length; i++) app.Resources[Keys[i]] = new SolidColorBrush(Color.Parse(colors[i]));
-        app.RequestedThemeVariant = theme == "light" ? ThemeVariant.Light : ThemeVariant.Dark;
+        app.RequestedThemeVariant = light ? ThemeVariant.Light : ThemeVariant.Dark;
 
         // Own accent colour: the accent itself, and a deeper shade of it for the filled main buttons.
         Color primary = Color.Parse(colors[2]);
