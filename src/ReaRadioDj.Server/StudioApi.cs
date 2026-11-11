@@ -20,6 +20,14 @@ public static class StudioApi
     {
         // ------------------------------------------------------------ transport
         api.MapPost("/transport/play", (PlayoutEngine e) => { e.Play(); return Results.Ok(); });
+
+        // VoIP / codec lines: RTP on the two VoIP channels, with a return feed without the channel itself.
+        api.MapGet("/voip", (Voip.VoipService v) => v.Status());
+        api.MapGet("/voip/codecs", () => Core.Voip.RtpCodecs.Names.Select(n => new CodecDto(n, Core.Voip.RtpCodecs.Describe(n))).ToList());
+        api.MapPost("/voip/{id}/connect", (string id, VoipConnectRequest r, Voip.VoipService v) =>
+            v.Connect(id, r) is { } error ? Results.BadRequest(new { error }) : Results.Ok());
+        api.MapPost("/voip/{id}/hangup", (string id, Voip.VoipService v) => v.Hangup(id) ? Results.Ok() : Results.NotFound());
+        api.MapPost("/voip/{id}/pfl", (string id, SwitchRequest r, Voip.VoipService v) => v.SetPfl(id, r.On) ? Results.Ok() : Results.NotFound());
         api.MapPost("/transport/stop", (PlayoutEngine e) => { e.Stop(); return Results.Ok(); });
         api.MapPost("/transport/next", (PlayoutEngine e) => { e.Next(); return Results.Ok(); });
         api.MapPost("/transport/skip", (PlayoutEngine e) => { e.Skip(); return Results.Ok(); });

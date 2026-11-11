@@ -24,7 +24,7 @@ Legenda: ✅ klaar · 🟡 deels · ⬜ open
 | Nieuwe bovenbalken (app-balk en aan-de-luchtbalk) | ✅ |
 | DJ-modus: vier decks, mengpaneel, werkruimte, overnemen van de automatisering | 🟡 werkt, nog niet beluisterd |
 | Venster Instellingen | ✅ zeven tabbladen |
-| Verbindingen (codec, VoIP) | ⬜ alleen ontwerp |
+| Verbindingen (codec, VoIP) | 🟡 RTP met G.711 en PCM op twee VoIP-kanalen met mix-minus; SIP, Opus en G.722 nog niet |
 
 ## Beantwoorde vragen (10 november 2026)
 
@@ -143,11 +143,11 @@ Vragen bij stap 4:
 
 | Status | Werk | Af als |
 |---|---|---|
-| ⬜ | Mengkanaal VoIP met eigen fader, voorluisteren en terugkanaal zonder zichzelf | — |
-| ⬜ | RTP in twee richtingen met Opus, G.722, G.711 en PCM; jitterbuffer met meting | twee engines praten met elkaar over het netwerk |
+| ✅ | Mengkanaal VoIP met eigen fader, voorluisteren en terugkanaal zonder zichzelf — gebouwd: kanalen "VoIP 1" en "VoIP 2" in de mixer (fader, kanaalbewerking, opnemen zoals elk kanaal; starten uit de zender). PFL stuurt het kanaal naar de voorluisteruitgang. Het terugkanaal is de uitzending vóór de begrenzer min het eigen kanaal (mix-minus); in de test komt de stem van de beller met −137 dB terug, dus niet hoorbaar | de overkant hoort de uitzending maar niet zichzelf |
+| 🟡 | RTP in twee richtingen met Opus, G.722, G.711 en PCM; jitterbuffer met meting — gebouwd: RTP (RFC 3550) in twee richtingen met G.711 A-law en µ-law (8 kHz) en lineair PCM L16 (48 kHz mono), 20 ms-pakketten, omrekenen van samplerate met een anti-aliasfilter. Jitterbuffer met instelbare buffer, volgorde herstellen (ook over 65535 heen), opvullen bij verlies, te late en dubbele pakketten weggooien, opnieuw vullen na leeglopen en een frame weglaten als de klokken uit elkaar lopen; meting van ontvangen, verloren, te laat, leeggelopen, jitter (RFC 3550) en bufferstand. Zonder adres van de overkant antwoordt de lijn wie er stuurt (symmetrisch RTP). Twee engines op één pc praatten met elkaar: 0 % verlies, jitter 1,5 ms. API: `GET /api/voip`, `POST /api/voip/{id}/connect`, `/hangup`, `/pfl`. Nog open: Opus (vraagt de opus-bibliotheek, eerst toestemming voor de download) en G.722 | twee engines praten met elkaar over het netwerk |
 | ⬜ | SIP volgens EBU N/ACIP: bellen, gebeld worden, registreren bij een PortaOne-centrale (nu voip.sipnl.net), alle accountvelden instelbaar, met NAT-ondersteuning (vraag 10 en 12) | registreren bij de aanbieder en een telefoongesprek op de zender |
-| ⬜ | Twee VoIP-mengkanalen, elk met een eigen uitgang naar de tafel (vraag 3) | — |
-| ⬜ | Venster Verbindingen volgens het ontwerp, met stations en presets | — |
+| 🟡 | Twee VoIP-mengkanalen, elk met een eigen uitgang naar de tafel (vraag 3) — de twee kanalen staan er; elk kan in Instellingen › Geluid een eigen uitgang krijgen zoals de andere kanalen. Nog open: met de tafel proberen | — |
+| 🟡 | Venster Verbindingen volgens het ontwerp, met stations en presets — eerste versie: venster Verbindingen (Live en Rapportage) met per kanaal eigen poort, adres en poort van de overkant, codec en buffer, Verbinden/Ophangen, PFL, Op de zender, een niveaumeter en de meting met een waarschuwing bij geen audio, verlies of leeglopen; de laatste instellingen blijven bewaard. Nog open: stationslijst en presets | — |
 | ⬜ | Bediening en status op de commandobus (knoppen, lampjes, Ember+) | — |
 | ⬜ | Later: SRT, twee netwerken tegelijk, Icecast als bron, NDI- of ASIO-ingang, tekstberichten, opname | — |
 

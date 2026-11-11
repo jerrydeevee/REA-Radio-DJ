@@ -1,0 +1,71 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:ReaRadioDj.Studio.ViewModels"
+             xmlns:ctl="using:ReaRadioDj.Studio.Controls"
+             x:Class="ReaRadioDj.Studio.Views.ConnectionsView"
+             x:DataType="vm:ConnectionsTool">
+  <DockPanel Margin="6" ctl:WidthClasses.Track="True">
+    <TextBlock DockPanel.Dock="Top" Classes="muted" FontSize="11" TextWrapping="Wrap" Margin="0,0,0,6"
+               Text="Live audio over RTP op de twee VoIP-kanalen. De overkant hoort de uitzending zonder zichzelf. Laat het adres leeg om te wachten tot de overkant naar jouw poort stuurt." />
+    <TextBlock DockPanel.Dock="Top" Classes="muted" IsVisible="{Binding Empty}" TextWrapping="Wrap"
+               Text="Geen VoIP-kanalen: de audio van de engine is niet gestart." />
+    <ScrollViewer>
+      <StackPanel Spacing="6">
+        <ItemsControl ItemsSource="{Binding Lines}">
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="vm:VoipLineVm">
+              <Border Classes="card" Margin="0,0,0,6" Padding="8,6">
+                <StackPanel Spacing="4">
+                  <DockPanel>
+                    <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="4">
+                      <ToggleButton Classes="small" Content="PFL" IsChecked="{Binding Pfl}" ToolTip.Tip="Voorluisteren op de PFL-uitgang" />
+                      <ToggleButton Classes="small" Content="Op de zender" IsChecked="{Binding OnAir}" ToolTip.Tip="Het kanaal in de uitzending (fader in de mixer)" />
+                    </StackPanel>
+                    <TextBlock FontWeight="SemiBold" Text="{Binding Name}" VerticalAlignment="Center" />
+                    <TextBlock Classes="muted" Margin="8,0,0,0" Text="{Binding State}" VerticalAlignment="Center" />
+                  </DockPanel>
+                  <ProgressBar Minimum="0" Maximum="1" Value="{Binding Level}" Height="6" MinHeight="6" ToolTip.Tip="Wat er binnenkomt" />
+                  <WrapPanel ItemSpacing="6" LineSpacing="4" IsEnabled="{Binding NotConnected}">
+                    <StackPanel Orientation="Horizontal" Spacing="4">
+                      <TextBlock Classes="muted" Text="Eigen poort" VerticalAlignment="Center" />
+                      <NumericUpDown Value="{Binding LocalPort}" Minimum="1024" Maximum="65535" FormatString="0" Width="80" ShowButtonSpinner="False" MinHeight="26" />
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal" Spacing="4">
+                      <TextBlock Classes="muted" Text="Overkant" VerticalAlignment="Center" />
+                      <TextBox Text="{Binding RemoteHost}" Width="150" MinHeight="26" Padding="4,2" Watermark="adres (leeg = wachten)" />
+                      <TextBlock Classes="muted" Text=":" VerticalAlignment="Center" />
+                      <NumericUpDown Value="{Binding RemotePort}" Minimum="1" Maximum="65535" FormatString="0" Width="80" ShowButtonSpinner="False" MinHeight="26" />
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal" Spacing="4">
+                      <TextBlock Classes="muted" Text="Codec" VerticalAlignment="Center" />
+                      <ComboBox ItemsSource="{Binding Codecs}" SelectedItem="{Binding Codec}" MinWidth="90" />
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal" Spacing="4">
+                      <TextBlock Classes="muted" Text="Buffer" VerticalAlignment="Center" />
+                      <NumericUpDown Value="{Binding JitterMs}" Minimum="20" Maximum="1000" Increment="20" FormatString="0" Width="64" ShowButtonSpinner="False" MinHeight="26"
+                                     ToolTip.Tip="Zoveel milliseconden houdt de jitterbuffer vast voordat hij speelt; meer = stabieler, maar later" />
+                      <TextBlock Classes="muted" Text="ms" VerticalAlignment="Center" />
+                    </StackPanel>
+                  </WrapPanel>
+                  <StackPanel Orientation="Horizontal" Spacing="4">
+                    <Button Classes="small" Content="Verbinden" Command="{Binding ConnectCommand}" IsVisible="{Binding NotConnected}" Background="#2F9E6A" />
+                    <Button Classes="small" Content="Ophangen" Command="{Binding HangupCommand}" IsVisible="{Binding Connected}" />
+                  </StackPanel>
+                  <TextBlock Classes="mono muted" FontSize="11" Text="{Binding Detail}" TextWrapping="Wrap" IsVisible="{Binding Connected}" />
+                  <StackPanel Orientation="Horizontal" Spacing="4" IsVisible="{Binding Connected}">
+                    <TextBlock FontSize="11" Text="⚠" Foreground="{DynamicResource WarnBrush}" IsVisible="{Binding Warning}" VerticalAlignment="Top"
+                               ToolTip.Tip="Geen audio, meer dan 2% verlies of de buffer liep vaak leeg" />
+                    <TextBlock Classes="mono" FontSize="11" Text="{Binding Quality}" TextWrapping="Wrap" />
+                  </StackPanel>
+                  <TextBlock FontSize="11" Foreground="{DynamicResource WarnBrush}" Text="{Binding Result}" TextWrapping="Wrap"
+                             IsVisible="{Binding Result, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+                </StackPanel>
+              </Border>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+        <TextBlock Classes="muted" FontSize="11" TextWrapping="Wrap" Text="{Binding CodecHelp}" />
+      </StackPanel>
+    </ScrollViewer>
+  </DockPanel>
+</UserControl>

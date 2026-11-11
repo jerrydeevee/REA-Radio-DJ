@@ -198,7 +198,7 @@ public sealed class MixerStrip
 public sealed class AudioRouter : IDisposable
 {
     public const string LogStrip = "log", StandbyStrip = "standby", CartStrip = "cart", OverlayStrip = "overlay",
-        MicStrip = "mic", PflStrip = "pfl", DjStrip = "dj";
+        MicStrip = "mic", PflStrip = "pfl", DjStrip = "dj", Voip1Strip = "voip1", Voip2Strip = "voip2";
 
     private readonly ReaRadioDjOptions _options;
     private readonly ILogger _logger;
@@ -211,6 +211,8 @@ public sealed class AudioRouter : IDisposable
     private Thread? _thread;
     private volatile bool _running;
     private int _push, _record;
+    private List<VoipChannel> _voip = [];
+    private VoipChannel.VoipReturn? _voipReturn;
 
     public AudioRouter(ReaRadioDjOptions options, ILogger<AudioRouter>? logger = null)
     {
@@ -262,6 +264,9 @@ public sealed class AudioRouter : IDisposable
         Add(MixerStrip.CreateSubMixer(OverlayStrip, "Overlay", Program));
         Add(MixerStrip.CreateSubMixer(DjStrip, "DJ", Program));
         Add(MixerStrip.CreateSubMixer(PflStrip, "PFL", Preview));
+        // Two VoIP channels (callers, reporters, other studios), each with its own return without itself.
+        Add(MixerStrip.CreateSubMixer(Voip1Strip, "VoIP 1", Program));
+        Add(MixerStrip.CreateSubMixer(Voip2Strip, "VoIP 2", Program));
 
         // Microphone: a push stream fed by the recording callback, muted until the mic is opened.
         _push = BassRuntime.Check(BASS_StreamCreate((uint)BassRuntime.SampleRate, 2, BASS_SAMPLE_FLOAT | BASS_STREAM_DECODE, STREAMPROC_PUSH, IntPtr.Zero),
@@ -272,6 +277,16 @@ public sealed class AudioRouter : IDisposable
         if (_options.Routing.MicEnabled) StartRecording(_options.Routing.MicDevice);
         else MicStatus = "uitgeschakeld in de instellingen";
         foreach (var s in _strips.Values) s.HomeBus = s.Bus;
+        try
+        {
+            _voip = [new VoipChannel(Strip(Voip1Strip), Program, Preview), new VoipChannel(Strip(Voip2Strip), Program, Preview)];
+            _voipReturn = VoipChannel.AttachReturn(Program, _voip);
+        }
+        catch (BassException ex)
+        {
+            _logger.LogWarning("VoIP channels not available: {Message}", ex.Message);
+            StartNotes.Add($"VoIP-kanalen niet beschikbaar: {ex.Message}");
+        }
 
         // Inputs as mixer channels. An input whose device is gone is reported and left out.
         foreach (var input in _options.Routing.Inputs.ToList())
@@ -313,7 +328,15 @@ public sealed class AudioRouter : IDisposable
     private void Add(MixerStrip s) => _strips[s.Id] = s;
 
     /// <summary>An input starts closed (not on air); the players' channels start on air.</summary>
-    public static ChannelSettings DefaultChannel(MixerStrip s) => new() { OnAir = s.Source is null };
+    public static ChannelSettings DefaultChannel(MixerStrip s) => new() { OnAir = s.Source is null && !IsVoip(s.Id) };
+
+    public static bool IsVoip(string stripId) => stripId is Voip1Strip or Voip2Strip;
+
+    /// <summary>The VoIP channels (none when they could not be made).</summary>
+    public IReadOnlyList<VoipChannel> VoipChannels => _voip;
+
+    public VoipChannel Voip(string stripId) => _voip.FirstOrDefault(v => v.Id == stripId)
+        ?? throw new ArgumentException($"Geen VoIP-kanaal: {stripId}");
 
     /// <summary>Applies gain, balance, equaliser, compressor, automatic level and on air to a channel.</summary>
     public void ApplyChannel(string stripId, ChannelSettings settings)
@@ -552,6 +575,8 @@ public sealed class AudioRouter : IDisposable
         _thread?.Join(500);
         if (!IsStarted) return;
         if (_record != 0) BASS_ChannelStop(_record);
+        _voipReturn?.Dispose();
+        foreach (var v in _voip) v.Dispose();
         foreach (var x in _inputs.Values) if (x.Record != 0) BASS_ChannelStop(x.Record);
         foreach (var s in _strips.Values) s.Free();
         foreach (var b in _outputs.Values) b.Free();

@@ -36,7 +36,27 @@ public sealed record StateDto(
     LibrarySummaryDto Library,
     StreamDto Stream,
     long LastMessageId,
-    DjDto? Dj = null);
+    DjDto? Dj = null,
+    IReadOnlyList<VoipLineDto>? Voip = null);
+
+// ---------------------------------------------------------------- VoIP / codec lines
+
+/// <summary>
+/// Open an RTP line on a VoIP channel. RemoteHost empty = answer whoever sends to LocalPort (symmetric RTP);
+/// Codec "pcma", "pcmu" or "l16"; JitterMs = what the jitter buffer holds before it plays.
+/// </summary>
+public sealed record VoipConnectRequest(int LocalPort, string RemoteHost, int RemotePort, string Codec, double JitterMs);
+
+/// <summary>What the jitter buffer measured: packets in, played, lost, late, twice, times it ran dry, frames left out.</summary>
+public sealed record JitterDto(long Received, long Played, long Lost, long Late, long Duplicates, long Underruns, long Skipped,
+    double JitterMs, double BufferMs, double TargetMs, double LossPercent);
+
+/// <summary>One VoIP channel and its line. Level = the channel's own level (what comes in), 0..1.</summary>
+public sealed record VoipLineDto(string Id, string Name, bool Connected, string State, string Codec, int? LocalPort, string? Remote,
+    long Sent, JitterDto Jitter, double SecondsSinceAudio, DateTime? OpenedUtc, string? Error, bool Pfl, bool OnAir, float Level,
+    VoipConnectRequest Settings);
+
+public sealed record CodecDto(string Name, string Description);
 
 // ---------------------------------------------------------------- DJ desk
 

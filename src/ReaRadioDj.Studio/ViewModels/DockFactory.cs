@@ -34,6 +34,7 @@ public sealed class DockFactory : Factory
         ("planner", "Planner", () => new PlannerTool()),
         ("asrun", "As-run", () => new AsRunTool()),
         ("airstats", "Uitzendstatistiek", () => new AirStatsTool()),
+        ("connections", "Verbindingen", () => new ConnectionsTool()),
         ("wishlist", "Wensenlijst (Spotify)", () => new WishlistTool()),
         ("clock", "Tijd", () => new ClockTool()),
         ("presenter", "AI-presentator", () => new PresenterTool()),
@@ -108,7 +109,7 @@ public sealed class DockFactory : Factory
             // Reports and technique: what went out, the music report, the stream, hardware and control.
             return Root(Row("main",
                 Column("r-left", 0.58, Tools("dock-asrun", "asrun", "airstats", "log")),
-                Column("r-right", 0.42, Sized(0.6, "dock-tech", "stream", "hardware", "control"), Sized(0.4, "dock-status", "regie", "messages", "clock"))));
+                Column("r-right", 0.42, Sized(0.6, "dock-tech", "stream", "connections", "hardware", "control"), Sized(0.4, "dock-status", "regie", "messages", "clock"))));
 
         if (Workspace == "dj")
         {
@@ -178,7 +179,7 @@ public sealed class DockFactory : Factory
             VisibleDockables = CreateList<IDockable>(
                 Tools("dock-carts", "cart1", "cart2"),
                 new ProportionalDockSplitter(),
-                Tools("dock-mixer", "mixer", "buttons", "clock", "overlays")),
+                Tools("dock-mixer", "mixer", "connections", "buttons", "clock", "overlays")),
         };
         var main = new ProportionalDock
         {
