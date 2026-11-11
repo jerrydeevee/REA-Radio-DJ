@@ -82,6 +82,16 @@ public sealed record SipStatusDto(bool Enabled, string Registration, DateTime? R
 
 public sealed record SipDialRequest(string Target);
 
+/// <summary>
+/// A saved station in the Verbindingen address book: a SIP call (Kind "sip", Target = number or sip address) or a
+/// fixed RTP line (Kind "rtp", with ports, address and codec). Id is made by the engine when empty.
+/// </summary>
+public sealed record VoipStationDto(string Id, string Name, string Kind, string Target, int LocalPort, string RemoteHost, int RemotePort,
+    string Codec, double JitterMs, string Note);
+
+/// <summary>Commands (command bus) to run when a VoIP channel starts ringing, gets a call or line, and goes quiet again; empty = nothing.</summary>
+public sealed record VoipSignalsDto(string Ringing, string Connected, string Ended);
+
 // ---------------------------------------------------------------- DJ desk
 
 /// <summary>One DJ deck. Tempo in percent, equaliser and filter -1..1, fader 0..1, positions in seconds.</summary>

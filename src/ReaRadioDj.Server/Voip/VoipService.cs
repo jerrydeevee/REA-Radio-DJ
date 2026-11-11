@@ -13,10 +13,15 @@ namespace ReaRadioDj.Server.Voip;
 /// each channel are kept, so the window opens with them. With a SIP account the channels can also call and be called
 /// (a SIP phone per engine); a SIP call opens the RTP line of its channel by itself.
 /// </summary>
-public sealed class VoipService(AudioRouter router, StationDb db, MessageCenter messages, ILogger<VoipService> logger) : IHostedService, IDisposable
+public sealed class VoipService(AudioRouter router, StationDb db, MessageCenter messages, IServiceProvider services, ILogger<VoipService> logger)
+    : IHostedService, IDisposable
 {
     public const string Key = "voip-lines";
     public const string SipKey = "sip-account";
+    public const string StationsKey = "voip-stations";
+    public const string SignalsKey = "voip-signals";
+    private readonly Dictionary<string, string> _phase = []; // channel → "stil", "gaat over", "verbonden"
+    private Timer? _watch;
     private readonly object _gate = new();
     private SipAgent? _agent;
     private string? _agentError;
@@ -282,6 +287,108 @@ public sealed class VoipService(AudioRouter router, StationDb db, MessageCenter 
 
     public string? Answer(string id) => _agent is { } agent ? agent.Answer(id) : "SIP staat uit";
 
+    // ------------------------------------------------------------------ stations (address book)
+
+    public IReadOnlyList<VoipStationDto> Stations()
+    {
+        if (db.GetSetting(StationsKey) is not { } json) return [];
+        try { return JsonSerializer.Deserialize<List<VoipStationDto>>(json, JsonSerializerOptions.Web) ?? []; }
+        catch (JsonException) { return []; }
+    }
+
+    /// <summary>Replaces the address book after checking each station (see VoipStations.Clean). Returns an error text or null.</summary>
+    public string? SaveStations(IReadOnlyList<VoipStationDto> list)
+    {
+        var clean = VoipStations.Clean(list.Select(ToStation), out var error);
+        if (clean is null) return error;
+        db.SetSetting(StationsKey, JsonSerializer.Serialize(clean.Select(ToDto).ToList(), JsonSerializerOptions.Web));
+        logger.LogInformation("VoIP address book saved: {Count} stations", clean.Count);
+        return null;
+    }
+
+    /// <summary>The station with this id or (case-insensitive) name.</summary>
+    public VoipStationDto? FindStation(string idOrName) =>
+        VoipStations.Find(Stations().Select(ToStation), idOrName) is { } s ? ToDto(s) : null;
+
+    private static VoipStation ToStation(VoipStationDto d) =>
+        new(d.Id, d.Name, d.Kind, d.Target, d.LocalPort, d.RemoteHost, d.RemotePort, d.Codec, d.JitterMs, d.Note);
+
+    private static VoipStationDto ToDto(VoipStation s) =>
+        new(s.Id, s.Name, s.Kind, s.Target, s.LocalPort, s.RemoteHost, s.RemotePort, s.Codec, s.JitterMs, s.Note);
+
+    /// <summary>Calls a SIP station or opens the line of an RTP station on a channel. Returns an error text or null.</summary>
+    public string? UseStation(string channel, string idOrName)
+    {
+        if (FindStation(idOrName) is not { } s) return $"station niet gevonden: {idOrName}";
+        if (s.Kind == "sip") return Dial(channel, s.Target);
+        return Connect(channel, new VoipConnectRequest(s.LocalPort, s.RemoteHost, s.RemotePort, s.Codec, s.JitterMs));
+    }
+
+    // ------------------------------------------------------------------ signals (lamps, lights, a GPIO)
+
+    public VoipSignalsDto Signals()
+    {
+        if (db.GetSetting(SignalsKey) is { } json)
+            try { if (JsonSerializer.Deserialize<VoipSignalsDto>(json, JsonSerializerOptions.Web) is { } s) return s; }
+            catch (JsonException) { }
+        return new VoipSignalsDto("", "", "");
+    }
+
+    public void SaveSignals(VoipSignalsDto s) =>
+        db.SetSetting(SignalsKey, JsonSerializer.Serialize(new VoipSignalsDto((s.Ringing ?? "").Trim(), (s.Connected ?? "").Trim(), (s.Ended ?? "").Trim()),
+            JsonSerializerOptions.Web));
+
+    /// <summary>The phase of a channel as the outside world sees it: quiet, ringing (incoming) or connected (a call or a line with audio).</summary>
+    public string Phase(string channel)
+    {
+        var call = _agent?.Status().Calls.FirstOrDefault(c => c.Channel == channel && c.Active);
+        if (call is { Ringing: true }) return "gaat over";
+        if (call is { State: "in gesprek" }) return "verbonden";
+        if (router.IsStarted && router.Voip(channel).Line is { } line && line.Status().State == "verbonden") return "verbonden";
+        return "stil";
+    }
+
+    private int _watching;
+
+    /// <summary>Runs the signal commands when a channel changes phase. {kanaal} in a command becomes voip1/voip2, {nr} 1/2.</summary>
+    private void Watch()
+    {
+        if (!router.IsStarted || Interlocked.Exchange(ref _watching, 1) == 1) return;
+        try
+        {
+            var signals = Signals();
+            foreach (var c in router.VoipChannels)
+            {
+                string now = Phase(c.Id);
+                string before = _phase.GetValueOrDefault(c.Id, "stil");
+                if (now == before) continue;
+                _phase[c.Id] = now;
+                string command = now switch { "gaat over" => signals.Ringing, "verbonden" => signals.Connected, _ => signals.Ended };
+                if (command.Length == 0) continue;
+                var bus = services.GetRequiredService<Remote.CommandBus>();
+                foreach (var one in VoipStations.Commands(command, c.Id))
+                    bus.Run(one, $"VoIP {c.Id} {now}");
+            }
+        }
+        catch (Exception ex) { logger.LogWarning(ex, "VoIP signals"); }
+        finally { Interlocked.Exchange(ref _watching, 0); }
+    }
+
+    /// <summary>One line for STATUS: what each channel does and whether SIP is signed in.</summary>
+    public string Summary()
+    {
+        if (!router.IsStarted) return "audio niet gestart";
+        var sip = SipStatus();
+        var parts = router.VoipChannels.Select(c =>
+        {
+            var call = sip.Calls.FirstOrDefault(x => x.Channel == c.Id && x.Active);
+            string what = call is not null ? $"{call.State} {call.Remote}" : c.Line is { } l ? $"lijn {l.Status().State}" : "vrij";
+            return $"{c.Id}: {what}{(c.Strip.OnAir ? " (op de zender)" : "")}";
+        }).ToList();
+        parts.Add($"SIP {sip.Registration}");
+        return string.Join("; ", parts);
+    }
+
     // ------------------------------------------------------------------ lifetime
 
     public Task StartAsync(CancellationToken cancellationToken)
@@ -289,6 +396,7 @@ public sealed class VoipService(AudioRouter router, StationDb db, MessageCenter 
         // the audio starts with the engine; the SIP phone follows as soon as the VoIP channels exist
         _starting = new CancellationTokenSource();
         var token = _starting.Token;
+        _watch = new Timer(_ => Watch(), null, 1000, 500);
         _ = Task.Run(async () =>
         {
             for (int i = 0; i < 600 && !router.IsStarted && !token.IsCancellationRequested; i++) await Task.Delay(500, token).ConfigureAwait(false);
@@ -301,6 +409,7 @@ public sealed class VoipService(AudioRouter router, StationDb db, MessageCenter 
     public Task StopAsync(CancellationToken cancellationToken)
     {
         _starting?.Cancel();
+        _watch?.Dispose();
         StopSip();
         return Task.CompletedTask;
     }

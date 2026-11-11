@@ -63,6 +63,13 @@ public sealed class CommandBus(
         new("DJ CUEMIX <0-1>", "Koptelefoon van cue (0) naar master (1)", "DJ"),
         new("DJ ONAIR ON|OFF|TOGGLE", "DJ-tafel op de lucht, of teruggeven aan de automatisering", "DJ"),
         new("DJ AUTOMIX ON|OFF|TOGGLE|MIX", "Automix aan of uit, of nu naar het volgende nummer mixen", "DJ"),
+        new("VOIP <1|2> DIAL <nummer|sip-adres>", "Bellen via SIP op VoIP-kanaal 1 of 2", "Verbindingen"),
+        new("VOIP <1|2> STATION <naam>", "Een station uit het adresboek bellen of zijn vaste lijn openen", "Verbindingen"),
+        new("VOIP <1|2> ANSWER", "Het gesprek opnemen dat overgaat", "Verbindingen"),
+        new("VOIP <1|2> HANGUP", "Ophangen, weigeren of de lijn sluiten", "Verbindingen"),
+        new("VOIP <1|2> ONAIR ON|OFF|TOGGLE", "Het VoIP-kanaal op de zender", "Verbindingen"),
+        new("VOIP <1|2> PFL ON|OFF|TOGGLE", "Het VoIP-kanaal voorbeluisteren", "Verbindingen"),
+        new("VOIP STATUS", "Wat de VoIP-kanalen doen en of SIP is aangemeld", "Verbindingen"),
         new("STREAM START|STOP", "Icecast-uitzending starten of stoppen", "Stream"),
         new("SCAN", "Bibliotheek opnieuw inlezen", "Bibliotheek"),
         new("OSC <host:poort> </adres> [argumenten]", "OSC-bericht uitsturen, bijv. OSC 192.168.1.20:8000 /licht/onair 1 (tekst met spaties tussen \"aanhalingstekens\")", "Uitsturen"),
@@ -144,6 +151,8 @@ public sealed class CommandBus(
 
             case "DJ":
                 return Dj(w);
+            case "VOIP":
+                return Voip(w);
 
             case "STREAM" when Arg(1) == "START": streamer.Start(engine.MixerHandle); return CommandResult.Done();
             case "STREAM" when Arg(1) == "STOP": streamer.Stop(); return CommandResult.Done();
@@ -226,6 +235,34 @@ public sealed class CommandBus(
         }
         if (sb.Length > 0 || any) list.Add(sb.ToString());
         return list;
+    }
+
+    /// <summary>The two VoIP channels: call, answer, hang up, a station from the address book, on air, pre-listen, status.</summary>
+    private CommandResult Voip(List<string> w)
+    {
+        var voip = services.GetRequiredService<Voip.VoipService>();
+        string first = w.Count > 1 ? w[1].ToUpperInvariant() : "";
+        if (first == "STATUS") return CommandResult.Done(voip.Summary());
+        string? id = first switch { "1" or "VOIP1" => AudioRouter.Voip1Strip, "2" or "VOIP2" => AudioRouter.Voip2Strip, _ => null };
+        if (id is null) return CommandResult.Fail("VOIP <1|2> DIAL|STATION|ANSWER|HANGUP|ONAIR|PFL, of VOIP STATUS");
+        if (!router.IsStarted) return CommandResult.Fail("de audio van de engine is niet gestart");
+        string action = w.Count > 2 ? w[2].ToUpperInvariant() : "";
+        string rest = string.Join(' ', w.Skip(3));
+        string arg = w.Count > 3 ? w[3].ToUpperInvariant() : "";
+        CommandResult Result(string? error, string done) => error is null ? CommandResult.Done(done) : CommandResult.Fail(error);
+        switch (action)
+        {
+            case "DIAL" when rest.Length > 0: return Result(voip.Dial(id, rest), $"{id}: bellen naar {rest}");
+            case "STATION" when rest.Length > 0: return Result(voip.UseStation(id, rest), $"{id}: {rest}");
+            case "ANSWER": return Result(voip.Answer(id), $"{id}: opgenomen");
+            case "HANGUP": return voip.Hangup(id) ? CommandResult.Done($"{id}: opgehangen") : CommandResult.Fail($"{id}: er was niets om op te hangen");
+            case "ONAIR":
+                return Switch(arg, router.Strip(id).OnAir,
+                    on => ChannelsApi.SetOnAir(router, services.GetRequiredService<Core.Data.StationDb>(), options, id, on), $"{id} op de zender");
+            case "PFL":
+                return Switch(arg, router.Voip(id).Pfl, on => voip.SetPfl(id, on), $"{id} voorbeluisteren");
+        }
+        return CommandResult.Fail("VOIP <1|2> DIAL <nummer>, STATION <naam>, ANSWER, HANGUP, ONAIR ON|OFF|TOGGLE, PFL ON|OFF|TOGGLE");
     }
 
     /// <summary>The DJ desk: a deck action, the crossfader, the cue mix, on air and automix.</summary>

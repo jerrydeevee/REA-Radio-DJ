@@ -9,6 +9,8 @@
                Text="Live audio op de twee VoIP-kanalen: bellen via SIP, of een vaste RTP-lijn. De overkant hoort de uitzending zonder zichzelf. Laat bij een vaste lijn het adres leeg om te wachten tot de overkant naar jouw poort stuurt." />
     <DockPanel DockPanel.Dock="Top" Margin="0,0,0,6">
       <ToggleButton DockPanel.Dock="Right" Classes="small" Content="SIP-account" IsChecked="{Binding ShowAccount}" ToolTip.Tip="Account bij de VoIP-provider instellen" />
+      <ToggleButton DockPanel.Dock="Right" Classes="small" Content="Adresboek" IsChecked="{Binding ShowBook}" Margin="0,0,4,0"
+                    ToolTip.Tip="Vaste stations (verslaggevers, andere studio's) en de signalen bij overgaan en verbinden" />
       <TextBlock FontSize="11" Text="⚠" Foreground="{DynamicResource WarnBrush}" IsVisible="{Binding SipWarning}" VerticalAlignment="Center" Margin="0,0,4,0" />
       <TextBlock Classes="muted" FontSize="11" Text="{Binding SipState}" TextWrapping="Wrap" VerticalAlignment="Center" />
     </DockPanel>
@@ -78,6 +80,68 @@
             </StackPanel>
           </StackPanel>
         </Border>
+        <Border Classes="card" Padding="8,6" IsVisible="{Binding ShowBook}">
+          <StackPanel Spacing="4" DataContext="{Binding Book}" x:DataType="vm:StationBookVm">
+            <DockPanel>
+              <Button DockPanel.Dock="Right" Classes="small" Content="Station toevoegen" Command="{Binding AddCommand}" />
+              <TextBlock FontWeight="SemiBold" Text="Adresboek" VerticalAlignment="Center" />
+            </DockPanel>
+            <TextBlock Classes="muted" FontSize="11" TextWrapping="Wrap"
+                       Text="Een SIP-station wordt gebeld; bij een vaste lijn opent het kanaal de RTP-lijn met deze instellingen. Kies een station bij een kanaal, of gebruik VOIP 1 STATION naam in de commandobus." />
+            <ItemsControl ItemsSource="{Binding Stations}">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="vm:StationVm">
+                  <Border BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="0,0,0,1" Padding="0,4">
+                    <StackPanel Spacing="4">
+                      <DockPanel>
+                        <Button DockPanel.Dock="Right" Classes="small" Content="✕" ToolTip.Tip="Uit het adresboek halen (na Opslaan)"
+                                Command="{Binding RemoveCommand}" />
+                        <ComboBox DockPanel.Dock="Right" ItemsSource="{Binding Kinds}" SelectedItem="{Binding Kind}" MinWidth="70" Margin="4,0"
+                                  ToolTip.Tip="sip = bellen · rtp = vaste lijn" />
+                        <TextBox Text="{Binding Name}" MinHeight="26" Padding="4,2" Watermark="naam, bv. Verslaggever Gieten" />
+                      </DockPanel>
+                      <TextBox Text="{Binding Target}" MinHeight="26" Padding="4,2" Watermark="nummer of sip:naam@server" IsVisible="{Binding IsSip}" />
+                      <WrapPanel ItemSpacing="6" LineSpacing="4" IsVisible="{Binding IsRtp}">
+                        <StackPanel Orientation="Horizontal" Spacing="4">
+                          <TextBlock Classes="muted" Text="Eigen poort" VerticalAlignment="Center" />
+                          <NumericUpDown Value="{Binding LocalPort}" Minimum="1024" Maximum="65535" FormatString="0" Width="80" ShowButtonSpinner="False" MinHeight="26" />
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal" Spacing="4">
+                          <TextBlock Classes="muted" Text="Overkant" VerticalAlignment="Center" />
+                          <TextBox Text="{Binding RemoteHost}" Width="150" MinHeight="26" Padding="4,2" Watermark="adres (leeg = wachten)" />
+                          <TextBlock Classes="muted" Text=":" VerticalAlignment="Center" />
+                          <NumericUpDown Value="{Binding RemotePort}" Minimum="1" Maximum="65535" FormatString="0" Width="80" ShowButtonSpinner="False" MinHeight="26" />
+                        </StackPanel>
+                        <ComboBox ItemsSource="{Binding Codecs}" SelectedItem="{Binding Codec}" MinWidth="90" />
+                        <StackPanel Orientation="Horizontal" Spacing="4">
+                          <TextBlock Classes="muted" Text="Buffer" VerticalAlignment="Center" />
+                          <NumericUpDown Value="{Binding JitterMs}" Minimum="20" Maximum="1000" Increment="20" FormatString="0" Width="64" ShowButtonSpinner="False" MinHeight="26" />
+                          <TextBlock Classes="muted" Text="ms" VerticalAlignment="Center" />
+                        </StackPanel>
+                      </WrapPanel>
+                      <TextBox Text="{Binding Note}" MinHeight="26" Padding="4,2" FontSize="12" Watermark="notitie (mag leeg)" />
+                    </StackPanel>
+                  </Border>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+            <TextBlock FontWeight="SemiBold" Text="Signalen" Margin="0,6,0,0" />
+            <TextBlock Classes="muted" FontSize="11" TextWrapping="Wrap"
+                       Text="Commando's voor de commandobus als een kanaal overgaat, verbonden is of weer stil wordt, bv. een lamp of GPIO. {kanaal} wordt voip1/voip2, {nr} wordt 1/2; meer commando's scheiden met ;" />
+            <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto,Auto" ColumnSpacing="6" RowSpacing="4">
+              <TextBlock Grid.Row="0" Classes="muted" Text="Gaat over" VerticalAlignment="Center" />
+              <TextBox Grid.Row="0" Grid.Column="1" Text="{Binding Ringing}" MinHeight="26" Padding="4,2" Watermark="bv. OSC 192.168.1.20:8000 /lamp/{nr} 1" />
+              <TextBlock Grid.Row="1" Classes="muted" Text="Verbonden" VerticalAlignment="Center" />
+              <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding Connected}" MinHeight="26" Padding="4,2" Watermark="leeg = niets" />
+              <TextBlock Grid.Row="2" Classes="muted" Text="Weer stil" VerticalAlignment="Center" />
+              <TextBox Grid.Row="2" Grid.Column="1" Text="{Binding Ended}" MinHeight="26" Padding="4,2" Watermark="bv. OSC 192.168.1.20:8000 /lamp/{nr} 0" />
+            </Grid>
+            <StackPanel Orientation="Horizontal" Spacing="6">
+              <Button Classes="small" Content="Opslaan" Command="{Binding SaveCommand}" Background="#2F9E6A" />
+              <TextBlock Classes="muted" FontSize="11" Text="{Binding Result}" VerticalAlignment="Center" TextWrapping="Wrap" />
+            </StackPanel>
+          </StackPanel>
+        </Border>
         <ItemsControl ItemsSource="{Binding Lines}">
           <ItemsControl.ItemTemplate>
             <DataTemplate x:DataType="vm:VoipLineVm">
@@ -102,6 +166,12 @@
                     </DockPanel>
                   </Border>
                   <TextBlock Text="{Binding CallText}" TextWrapping="Wrap" IsVisible="{Binding !Ringing}" FontSize="12" />
+                  <StackPanel Orientation="Horizontal" Spacing="4" IsVisible="{Binding CanUseStation}">
+                    <TextBlock Classes="muted" Text="Station" VerticalAlignment="Center" />
+                    <ComboBox ItemsSource="{Binding Stations}" SelectedItem="{Binding Station}" MinWidth="190" PlaceholderText="uit het adresboek" />
+                    <Button Classes="small" Content="Gebruik" Command="{Binding UseStationCommand}" Background="#2F9E6A"
+                            ToolTip.Tip="Een SIP-station bellen, of de vaste lijn van het station openen" />
+                  </StackPanel>
                   <StackPanel Orientation="Horizontal" Spacing="4" IsVisible="{Binding CanDial}">
                     <TextBlock Classes="muted" Text="Bellen" VerticalAlignment="Center" />
                     <TextBox Text="{Binding Target}" Width="190" MinHeight="26" Padding="4,2" Watermark="nummer of sip:naam@server" />

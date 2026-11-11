@@ -1,4 +1,4 @@
-using System.Collections.ObjectModel;
+﻿using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using ReaRadioDj.Contracts;
@@ -35,17 +35,32 @@ public sealed partial class VoipLineVm(string id, string name) : ObservableObjec
     [ObservableProperty] private bool _callActive;
     [ObservableProperty] private bool _ringing;
     [ObservableProperty] private string _callText = "";
+    /// <summary>The address book (shared by both channels) and the station picked here.</summary>
+    public ObservableCollection<StationVm> Stations { get; set; } = [];
+    [ObservableProperty] private StationVm? _station;
+    public bool CanUseStation => !Connected && !CallActive;
+
+    [RelayCommand]
+    private async Task UseStation()
+    {
+        if (Station is not { } st) { Result = "Kies een station uit het adresboek."; return; }
+        if (st.Id.Length == 0) { Result = "Sla het adresboek eerst op."; return; }
+        var (_, error) = await StudioHub.Current.Client.SendWithErrorAsync<object>(HttpMethod.Post,
+            $"/api/voip/{Id}/station/{Uri.EscapeDataString(st.Id)}", null);
+        Result = error is null ? "" : "Niet gelukt: " + ErrorText(error);
+    }
+
     public bool CanDial => SipOn && !Connected && !CallActive;
     public bool CanHangup => Connected || CallActive;
     public bool CanConnectPlain => !SipOn && !Connected;
     public bool ShowRtp => !CallActive;
     partial void OnSipOnChanged(bool value) { OnPropertyChanged(nameof(CanDial)); OnPropertyChanged(nameof(CanConnectPlain)); }
-    partial void OnCallActiveChanged(bool value) { OnPropertyChanged(nameof(CanDial)); OnPropertyChanged(nameof(CanHangup)); OnPropertyChanged(nameof(ShowRtp)); }
+    partial void OnCallActiveChanged(bool value) { OnPropertyChanged(nameof(CanUseStation)); OnPropertyChanged(nameof(CanDial)); OnPropertyChanged(nameof(CanHangup)); OnPropertyChanged(nameof(ShowRtp)); }
     private bool _filled, _updating;
     private DateTime _touched;
 
     public bool NotConnected => !Connected;
-    partial void OnConnectedChanged(bool value) { OnPropertyChanged(nameof(NotConnected)); OnPropertyChanged(nameof(CanDial)); OnPropertyChanged(nameof(CanHangup)); OnPropertyChanged(nameof(CanConnectPlain)); }
+    partial void OnConnectedChanged(bool value) { OnPropertyChanged(nameof(CanUseStation)); OnPropertyChanged(nameof(NotConnected)); OnPropertyChanged(nameof(CanDial)); OnPropertyChanged(nameof(CanHangup)); OnPropertyChanged(nameof(CanConnectPlain)); }
 
     public void UpdateCall(SipStatusDto? sip)
     {
@@ -58,10 +73,10 @@ public sealed partial class VoipLineVm(string id, string name) : ObservableObjec
         CallText = call.State switch
         {
             "gaat over" when call.Incoming => $"Inkomend gesprek van {who}",
-            "gaat over" => $"Gaat over bij {who}…",
-            "belt" => $"Bellen naar {who}…",
-            "in gesprek" => $"In gesprek met {who}" + (call.AnsweredUtc is DateTime a ? $" · {StudioHub.Time((DateTime.UtcNow - a).TotalSeconds)}" : "") +
-                            (call.Codec is { } c ? $" · {c.ToUpperInvariant()}" : ""),
+            "gaat over" => $"Gaat over bij {who}Ã¢â‚¬Â¦",
+            "belt" => $"Bellen naar {who}Ã¢â‚¬Â¦",
+            "in gesprek" => $"In gesprek met {who}" + (call.AnsweredUtc is DateTime a ? $" Ã‚Â· {StudioHub.Time((DateTime.UtcNow - a).TotalSeconds)}" : "") +
+                            (call.Codec is { } c ? $" Ã‚Â· {c.ToUpperInvariant()}" : ""),
             _ => $"Gesprek met {who} afgelopen" + (call.Reason is { } r ? $": {r}" : ""),
         };
     }
@@ -106,9 +121,9 @@ public sealed partial class VoipLineVm(string id, string name) : ObservableObjec
         if (!d.Connected) { Detail = ""; Quality = ""; Warning = false; return; }
         var j = d.Jitter;
         string since = d.OpenedUtc is DateTime o ? StudioHub.Time((DateTime.UtcNow - o).TotalSeconds) : "";
-        Detail = $"{d.Codec.ToUpperInvariant()} · poort {d.LocalPort} · {(d.Remote ?? "wacht tot de overkant belt")} · {since}";
-        Quality = $"in {j.Received} · uit {d.Sent} · verlies {j.LossPercent:0.##}% · jitter {j.JitterMs:0.#} ms · buffer {j.BufferMs:0} / {j.TargetMs:0} ms" +
-                  (j.Underruns > 0 ? $" · {j.Underruns}× leeg" : "") + (d.Error is { Length: > 0 } e ? $" · {e}" : "");
+        Detail = $"{d.Codec.ToUpperInvariant()} Ã‚Â· poort {d.LocalPort} Ã‚Â· {(d.Remote ?? "wacht tot de overkant belt")} Ã‚Â· {since}";
+        Quality = $"in {j.Received} Ã‚Â· uit {d.Sent} Ã‚Â· verlies {j.LossPercent:0.##}% Ã‚Â· jitter {j.JitterMs:0.#} ms Ã‚Â· buffer {j.BufferMs:0} / {j.TargetMs:0} ms" +
+                  (j.Underruns > 0 ? $" Ã‚Â· {j.Underruns}Ãƒâ€” leeg" : "") + (d.Error is { Length: > 0 } e ? $" Ã‚Â· {e}" : "");
         Warning = d.State != "verbonden" || j.LossPercent > 2 || j.Underruns > 5;
     }
 
@@ -213,6 +228,87 @@ public sealed partial class SipAccountVm : ObservableObject
     }
 }
 
+/// <summary>One station in the address book: a SIP number to call, or a fixed RTP line.</summary>
+public sealed partial class StationVm : ObservableObject
+{
+    public IReadOnlyList<string> Kinds { get; } = ["sip", "rtp"];
+    public IReadOnlyList<string> Codecs { get; } = ["pcma", "pcmu", "l16"];
+    public string Id { get; set; } = "";
+    /// <summary>Takes this station out of the address book it is in.</summary>
+    public Action<StationVm>? RemoveFromBook { get; set; }
+    [RelayCommand] private void Remove() => RemoveFromBook?.Invoke(this);
+    [ObservableProperty] private string _name = "";
+    [ObservableProperty] private string _kind = "sip";
+    [ObservableProperty] private string _target = "";
+    [ObservableProperty] private decimal? _localPort = 5004;
+    [ObservableProperty] private string _remoteHost = "";
+    [ObservableProperty] private decimal? _remotePort = 5004;
+    [ObservableProperty] private string _codec = "pcma";
+    [ObservableProperty] private decimal? _jitterMs = 60;
+    [ObservableProperty] private string _note = "";
+    public bool IsSip => Kind == "sip";
+    public bool IsRtp => Kind == "rtp";
+    partial void OnKindChanged(string value) { OnPropertyChanged(nameof(IsSip)); OnPropertyChanged(nameof(IsRtp)); }
+
+    /// <summary>What a channel's station list shows.</summary>
+    public override string ToString() => Name.Length == 0 ? "(zonder naam)" : Kind == "sip" ? $"{Name} Ã‚Â· {Target}" : $"{Name} Ã‚Â· vaste lijn";
+
+    public static StationVm From(VoipStationDto d) => new()
+    {
+        Id = d.Id, Name = d.Name, Kind = d.Kind, Target = d.Target, LocalPort = d.LocalPort == 0 ? 5004 : d.LocalPort, RemoteHost = d.RemoteHost,
+        RemotePort = d.RemotePort == 0 ? 5004 : d.RemotePort, Codec = d.Codec, JitterMs = (decimal)d.JitterMs, Note = d.Note,
+    };
+
+    public VoipStationDto ToDto() => new(Id, Name.Trim(), Kind, Target.Trim(), (int)(LocalPort ?? 5004), RemoteHost.Trim(), (int)(RemotePort ?? 5004),
+        Codec, (double)(JitterMs ?? 60), Note.Trim());
+}
+
+/// <summary>
+/// The address book of stations and the signal commands (a lamp, a light or a GPIO via the command bus when a channel
+/// rings, gets a connection and goes quiet again).
+/// </summary>
+public sealed partial class StationBookVm : ObservableObject
+{
+    public ObservableCollection<StationVm> Stations { get; } = [];
+    [ObservableProperty] private string _ringing = "";
+    [ObservableProperty] private string _connected = "";
+    [ObservableProperty] private string _ended = "";
+    [ObservableProperty] private string _result = "";
+    [ObservableProperty] private bool _loaded;
+
+    public async Task LoadAsync()
+    {
+        var list = await StudioHub.Current.Client.GetAsync<List<VoipStationDto>>("/api/voip/stations");
+        var signals = await StudioHub.Current.Client.GetAsync<VoipSignalsDto>("/api/voip/signals");
+        if (list is null || signals is null) return;
+        Fill(list);
+        Ringing = signals.Ringing; Connected = signals.Connected; Ended = signals.Ended;
+        Loaded = true;
+    }
+
+    private void Fill(IEnumerable<VoipStationDto> list)
+    {
+        Stations.Clear();
+        foreach (var d in list) Stations.Add(Own(StationVm.From(d)));
+    }
+
+    private StationVm Own(StationVm s) { s.RemoveFromBook = x => Stations.Remove(x); return s; }
+
+    [RelayCommand] private void Add() => Stations.Add(Own(new StationVm { Name = $"Station {Stations.Count + 1}" }));
+
+    [RelayCommand]
+    private async Task Save()
+    {
+        var (saved, error) = await StudioHub.Current.Client.SendWithErrorAsync<List<VoipStationDto>>(HttpMethod.Put, "/api/voip/stations",
+            Stations.Select(s => s.ToDto()).ToList());
+        if (error is not null) { Result = "Niet opgeslagen: " + VoipLineVm.ErrorText(error); return; }
+        if (saved is not null) Fill(saved);
+        var (_, signalError) = await StudioHub.Current.Client.SendWithErrorAsync<VoipSignalsDto>(HttpMethod.Put, "/api/voip/signals",
+            new VoipSignalsDto(Ringing, Connected, Ended));
+        Result = signalError is null ? $"Opgeslagen: {Stations.Count} stations." : "Signalen niet opgeslagen: " + VoipLineVm.ErrorText(signalError);
+    }
+}
+
 /// <summary>
 /// Verbindingen: live audio lines on the two VoIP channels (a reporter, another studio, a codec), each with a return
 /// feed without itself: a fixed RTP line, or a SIP call (calling out, or answering a call that comes in).
@@ -224,25 +320,28 @@ public sealed partial class ConnectionsTool : StudioTool
     public ObservableCollection<VoipLineVm> Lines { get; } = [];
     public IReadOnlyList<string> Codecs { get; } = ["pcma", "pcmu", "l16"];
     [ObservableProperty] private string _codecHelp =
-        "pcma / pcmu = G.711 (8 kHz, telefoon) · l16 = lineair 16 bit 48 kHz mono (studiokwaliteit, ruim 0,8 Mbit/s)";
+        "pcma / pcmu = G.711 (8 kHz, telefoon) Ã‚Â· l16 = lineair 16 bit 48 kHz mono (studiokwaliteit, ruim 0,8 Mbit/s)";
     [ObservableProperty] private bool _empty = true;
     public SipAccountVm Sip { get; } = new();
     [ObservableProperty] private string _sipState = "SIP staat uit";
     [ObservableProperty] private bool _sipWarning;
     [ObservableProperty] private bool _showAccount;
-    private bool _loading;
+    public StationBookVm Book { get; } = new();
+    [ObservableProperty] private bool _showBook;
+    private bool _loading, _bookLoading;
 
     protected override void OnState(StateDto s)
     {
         if (!Sip.Loaded && !_loading) { _loading = true; _ = Sip.LoadAsync().ContinueWith(_ => _loading = false); }
+        if (!Book.Loaded && !_bookLoading) { _bookLoading = true; _ = LoadBook(); }
         var sip = s.Sip;
         SipState = sip switch
         {
             null or { Enabled: false } => "SIP staat uit",
-            { Registration: "aangemeld" } => $"Aangemeld als {sip.Account}" + (sip.RegisteredUntilUtc is DateTime u ? $" · tot {u.ToLocalTime():HH:mm}" : "") +
-                                             (sip.PublicAddress is { } p ? $" · publiek {p}" : ""),
+            { Registration: "aangemeld" } => $"Aangemeld als {sip.Account}" + (sip.RegisteredUntilUtc is DateTime u ? $" Ã‚Â· tot {u.ToLocalTime():HH:mm}" : "") +
+                                             (sip.PublicAddress is { } p ? $" Ã‚Â· publiek {p}" : ""),
             { Registration: "niet aanmelden" } => $"SIP aan zonder aanmelden ({sip.Account})",
-            _ => $"SIP: {sip.Registration}" + (sip.Error is { } e ? $" · {e}" : ""),
+            _ => $"SIP: {sip.Registration}" + (sip.Error is { } e ? $" Ã‚Â· {e}" : ""),
         };
         SipWarning = sip is { Enabled: true } && sip.Registration is not ("aangemeld" or "niet aanmelden");
         var list = s.Voip ?? [];
@@ -250,9 +349,15 @@ public sealed partial class ConnectionsTool : StudioTool
         foreach (var d in list)
         {
             var vm = Lines.FirstOrDefault(l => l.Id == d.Id);
-            if (vm is null) Lines.Add(vm = new VoipLineVm(d.Id, d.Name));
+            if (vm is null) Lines.Add(vm = new VoipLineVm(d.Id, d.Name) { Stations = Book.Stations });
             vm.Update(d);
             vm.UpdateCall(sip);
         }
+    }
+
+    private async Task LoadBook()
+    {
+        try { await Book.LoadAsync(); }
+        finally { _bookLoading = false; }
     }
 }

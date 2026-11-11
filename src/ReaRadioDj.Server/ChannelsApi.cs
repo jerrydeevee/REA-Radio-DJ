@@ -205,6 +205,17 @@ public static class ChannelsApi
         });
     }
 
+    /// <summary>Puts a channel on or off air and keeps that (also used by the command bus).</summary>
+    public static bool SetOnAir(AudioRouter router, StationDb db, ReaRadioDjOptions options, string id, bool on)
+    {
+        if (!router.IsStarted || !router.HasStrip(id)) return false;
+        var s = router.Strip(id).Processor.Settings with { OnAir = on };
+        router.ApplyChannel(id, s);
+        options.Routing.Channels[id] = s;
+        Save(db, options);
+        return true;
+    }
+
     private static void Save(StationDb db, ReaRadioDjOptions options)
     {
         db.SetSetting(InputsKey, JsonSerializer.Serialize(options.Routing.Inputs));

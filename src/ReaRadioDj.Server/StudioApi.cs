@@ -37,6 +37,14 @@ public static class StudioApi
             v.Dial(id, r.Target ?? "") is { } error ? Results.BadRequest(new { error }) : Results.Ok());
         api.MapPost("/sip/{id}/answer", (string id, Voip.VoipService v) =>
             v.Answer(id) is { } error ? Results.BadRequest(new { error }) : Results.Ok());
+        // the address book of stations, using one on a channel, and the signal commands
+        api.MapGet("/voip/stations", (Voip.VoipService v) => v.Stations());
+        api.MapPut("/voip/stations", (List<VoipStationDto> list, Voip.VoipService v) =>
+            v.SaveStations(list) is { } error ? Results.BadRequest(new { error }) : Results.Ok(v.Stations()));
+        api.MapPost("/voip/{id}/station/{station}", (string id, string station, Voip.VoipService v) =>
+            v.UseStation(id, station) is { } error ? Results.BadRequest(new { error }) : Results.Ok());
+        api.MapGet("/voip/signals", (Voip.VoipService v) => v.Signals());
+        api.MapPut("/voip/signals", (VoipSignalsDto s, Voip.VoipService v) => { v.SaveSignals(s); return Results.Ok(v.Signals()); });
         api.MapPost("/transport/stop", (PlayoutEngine e) => { e.Stop(); return Results.Ok(); });
         api.MapPost("/transport/next", (PlayoutEngine e) => { e.Next(); return Results.Ok(); });
         api.MapPost("/transport/skip", (PlayoutEngine e) => { e.Skip(); return Results.Ok(); });
