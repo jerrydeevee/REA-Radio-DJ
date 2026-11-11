@@ -111,6 +111,16 @@ public sealed class HardwareStoreTests : IDisposable
     }
 
     [Fact]
+    public void VoIP_tallies_are_kept_with_their_state()
+    {
+        var store = new HardwareStore(_db);
+        long desk = store.Save(new HwDevice(0, "Tafel", true, HwKind.Ember, "10.0.0.7"));
+        HwState[] states = [HwState.Voip1Ringing, HwState.Voip1Connected, HwState.Voip2Ringing, HwState.Voip2Connected];
+        foreach (var s in states) store.Save(new HwOutput(0, desk, s, "ember 1.2." + (int)s, "1", "0"));
+        Assert.Equal(states, store.Outputs().Select(o => o.State).Order());
+    }
+
+    [Fact]
     public void Devices_keep_their_buttons_and_tallies_until_they_are_removed()
     {
         var store = new HardwareStore(_db);

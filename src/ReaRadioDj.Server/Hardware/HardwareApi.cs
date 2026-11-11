@@ -6,7 +6,7 @@ namespace ReaRadioDj.Server.Hardware;
 /// <summary>Hardware devices, their buttons and tallies, what they reported lately, and the ports on this computer.</summary>
 public static class HardwareApi
 {
-    private static readonly string[] StateNames = ["mic", "onair", "auto"];
+    private static readonly string[] StateNames = ["mic", "onair", "auto", "voip1-ringing", "voip1-connected", "voip2-ringing", "voip2-connected"];
 
     public static void Map(RouteGroupBuilder api)
     {

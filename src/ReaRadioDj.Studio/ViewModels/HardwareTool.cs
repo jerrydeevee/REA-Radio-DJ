@@ -54,8 +54,9 @@ public sealed partial class HardwareTool : StudioTool
 
     public static readonly string[] KindNames = ["MIDI", "Serieel (COM-poort)", "Livewire (GPIO via LWRP)", "Ember+ (Lawo-mengtafel e.a.)"];
     private static readonly string[] KindValues = ["midi", "serial", "livewire", "ember"];
-    public static readonly string[] StateNames = ["Microfoon open", "ON AIR (er speelt iets)", "Automatisch"];
-    private static readonly string[] StateValues = ["mic", "onair", "auto"];
+    public static readonly string[] StateNames = ["Microfoon open", "ON AIR (er speelt iets)", "Automatisch",
+        "VoIP 1 gaat over", "VoIP 1 verbonden", "VoIP 2 gaat over", "VoIP 2 verbonden"];
+    private static readonly string[] StateValues = ["mic", "onair", "auto", "voip1-ringing", "voip1-connected", "voip2-ringing", "voip2-connected"];
     public static string StateLabel(string state) => StateNames[Math.Max(0, Array.IndexOf(StateValues, state))];
 
     public IReadOnlyList<string> Kinds => KindNames;
@@ -122,7 +123,11 @@ public sealed partial class HardwareTool : StudioTool
     }
 
     private void ShowStates(Dictionary<string, bool> s) => StateLine =
-        $"Nu: microfoon {(s.GetValueOrDefault("mic") ? "OPEN" : "dicht")} · on air {(s.GetValueOrDefault("onair") ? "ja" : "nee")} · automatisch {(s.GetValueOrDefault("auto") ? "aan" : "uit")}";
+        $"Nu: microfoon {(s.GetValueOrDefault("mic") ? "OPEN" : "dicht")} · on air {(s.GetValueOrDefault("onair") ? "ja" : "nee")} · automatisch {(s.GetValueOrDefault("auto") ? "aan" : "uit")}" +
+        $" · VoIP 1 {Voip(s, "voip1")} · VoIP 2 {Voip(s, "voip2")}";
+
+    private static string Voip(Dictionary<string, bool> s, string id) =>
+        s.GetValueOrDefault(id + "-ringing") ? "GAAT OVER" : s.GetValueOrDefault(id + "-connected") ? "verbonden" : "stil";
 
     private static string StatusText(HwDeviceDto d) => (d.Connected ? "● " : "○ ") + d.Status;
 

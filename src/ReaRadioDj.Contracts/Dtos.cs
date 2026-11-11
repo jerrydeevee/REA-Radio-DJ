@@ -359,7 +359,7 @@ public sealed record HwDeviceDto(long Id, string Name, bool Enabled, string Kind
 /// <summary>A trigger ("note 60", "cc 7", "gpi 3.1", "ember 1.2.3 > -40" or a serial line) and the commands for on and off.</summary>
 public sealed record HwInputDto(long Id, long DeviceId, string Trigger, string OnCommand, string OffCommand);
 
-/// <summary>A tally: State "mic", "onair" or "auto"; Target "note 60", "cc 20", "gpo 4.2" or "ember 1.2.3"; texts (serial) or values (Ember+) for on and off.</summary>
+/// <summary>A tally: State "mic", "onair", "auto", "voip1-ringing", "voip1-connected", "voip2-ringing" or "voip2-connected"; Target "note 60", "cc 20", "gpo 4.2" or "ember 1.2.3"; texts (serial) or values (Ember+) for on and off.</summary>
 public sealed record HwOutputDto(long Id, long DeviceId, string State, string Target, string OnText, string OffText);
 
 /// <summary>Something a device reported, and what it started.</summary>

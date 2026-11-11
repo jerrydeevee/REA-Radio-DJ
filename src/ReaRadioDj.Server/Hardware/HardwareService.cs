@@ -13,7 +13,7 @@ namespace ReaRadioDj.Server.Hardware;
 /// lamps, relays and tallies.
 /// </summary>
 public sealed class HardwareService(HardwareStore store, CommandBus bus, PlayoutEngine engine, AudioRouter router, DjMidiService djMidi,
-    ILogger<HardwareService> logger)
+    Voip.VoipService voip, ILogger<HardwareService> logger)
     : BackgroundService
 {
     private readonly ConcurrentDictionary<long, IHwConnection> _open = new();
@@ -43,6 +43,10 @@ public sealed class HardwareService(HardwareStore store, CommandBus bus, Playout
         [HwState.Mic] = router.MicOpen,
         [HwState.OnAir] = engine.GetState().Playing.Count > 0,
         [HwState.Auto] = engine.AutoPlay,
+        [HwState.Voip1Ringing] = voip.Phase(AudioRouter.Voip1Strip) == "gaat over",
+        [HwState.Voip1Connected] = voip.Phase(AudioRouter.Voip1Strip) == "verbonden",
+        [HwState.Voip2Ringing] = voip.Phase(AudioRouter.Voip2Strip) == "gaat over",
+        [HwState.Voip2Connected] = voip.Phase(AudioRouter.Voip2Strip) == "verbonden",
     };
 
     /// <summary>The children of a node of a connected Ember+ device; null when it is not connected.</summary>

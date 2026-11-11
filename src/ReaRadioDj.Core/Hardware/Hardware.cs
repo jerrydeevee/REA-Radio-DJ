@@ -27,8 +27,8 @@ public sealed record HwDevice(long Id, string Name, bool Enabled, HwKind Kind, s
 /// <summary>A button, fader start or contact: the trigger of a device and the commands for "on" and "off" (either may be empty).</summary>
 public sealed record HwInput(long Id, long DeviceId, string Trigger, string OnCommand, string OffCommand = "");
 
-/// <summary>A studio state that a lamp, relay or tally shows.</summary>
-public enum HwState { Mic = 0, OnAir = 1, Auto = 2 }
+/// <summary>A studio state that a lamp, relay or tally shows. The VoIP states: a call rings in, or the channel has a call or a line with audio.</summary>
+public enum HwState { Mic = 0, OnAir = 1, Auto = 2, Voip1Ringing = 3, Voip1Connected = 4, Voip2Ringing = 5, Voip2Connected = 6 }
 
 /// <summary>
 /// A tally: when <see cref="State"/> changes, the device gets the target (MIDI "note 60", Livewire "gpo 4.2") or,
