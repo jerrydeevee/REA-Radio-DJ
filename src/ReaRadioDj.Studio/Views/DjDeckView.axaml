@@ -29,7 +29,7 @@
         </Grid>
 
         <!-- Waveform of the whole track: click to jump -->
-        <Border Grid.Row="1" Grid.ColumnSpan="2" CornerRadius="{DynamicResource Radius6}" ClipToBounds="True" Height="52" Background="#0B0E12">
+        <Border Grid.Row="1" Grid.ColumnSpan="2" CornerRadius="{DynamicResource Radius6}" ClipToBounds="True" Height="44" Background="#0B0E12">
           <ctl:WaveformView x:Name="Wave" Peaks="{Binding Peaks}" BlockSeconds="{Binding BlockSeconds}" Markers="{Binding Markers}"
                             Playhead="{Binding Position}" CueOut="{Binding Duration}" ShowCursor="False" ReadOnlyMarkers="True"
                             EmptyText="sleep een nummer hierheen" Cursor="Hand" ToolTip.Tip="Klik om te springen · scrollen = in- en uitzoomen" />
@@ -51,8 +51,8 @@
         </Grid>
 
         <!-- Transport, hot cues, loop and roll, effect: all within one screen of 1920 x 1080 -->
-        <StackPanel Grid.Row="3" Grid.Column="0" Spacing="8" Margin="0,0,14,0">
-          <Grid ColumnDefinitions="*,1.4*,*,Auto,Auto">
+        <StackPanel Grid.Row="3" Grid.Column="0" Spacing="7" Margin="0,0,14,0">
+          <Grid ColumnDefinitions="*,1.4*,*,Auto,Auto" Height="50">
             <Button Grid.Column="0" Classes="bar big" Content="Cue" Command="{Binding CueCommand}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Margin="0,0,8,0"
                     ToolTip.Tip="Spelend: terug naar het cuepunt en wachten. Stil: het cuepunt komt op deze plek." />
             <ToggleButton Grid.Column="1" Classes="bar big play" IsChecked="{Binding Playing, Mode=OneWay}" Command="{Binding ToggleCommand}" HorizontalAlignment="Stretch"
@@ -76,7 +76,7 @@
               </ItemsControl.ItemsPanel>
               <ItemsControl.ItemTemplate>
                 <DataTemplate x:DataType="vm:DjHotCueVm">
-                  <Button Classes="pad" Classes.filled="{Binding Filled}" Margin="0,0,5,0" MinHeight="44" HorizontalAlignment="Stretch"
+                  <Button Classes="pad" Classes.filled="{Binding Filled}" Margin="0,0,5,0" MinHeight="40" HorizontalAlignment="Stretch"
                           BorderBrush="{Binding Deck.Brush}"
                           Command="{Binding Deck.HotCueCommand}" CommandParameter="{Binding}"
                           ToolTip.Tip="Leeg: onthoudt deze plek. Gevuld: springt erheen. Rechtsklik: wissen.">
@@ -138,6 +138,31 @@
                       ToolTip.Tip="Mix: hoeveel van het effect je hoort. Slepen of muiswiel; dubbelklik = 0." />
             <ToggleButton Classes="bar fx" Padding="10,0" Content="FX AAN" IsChecked="{Binding FxOn, Mode=OneWay}" Command="{Binding ToggleFxCommand}"
                           ToolTip.Tip="Effect aan of uit (op de zender en in de koptelefoon)" />
+          </WrapPanel>
+          <!-- Stopping and masking: brake and backspin end the track like a turntable; censor plays backwards while held -->
+          <WrapPanel ItemSpacing="6" LineSpacing="6">
+            <TextBlock Classes="lbl" Text="STOP" VerticalAlignment="Center" Width="52" />
+            <Button Classes="bar" Padding="12,0" Command="{Binding BrakeCommand}"
+                    ToolTip.Tip="Rem: het deck loopt in anderhalve seconde uit tot stilstand, zoals een draaitafel die je uitzet, en pauzeert">
+              <StackPanel Orientation="Horizontal" Spacing="6">
+                <Path Data="M1,3 H13 M3,7 H11 M5,11 H9" Stroke="{Binding $parent[Button].Foreground}" StrokeThickness="2" Width="14" Height="14" Stretch="None" VerticalAlignment="Center" />
+                <TextBlock Text="Rem" VerticalAlignment="Center" />
+              </StackPanel>
+            </Button>
+            <Button Classes="bar" Padding="12,0" Command="{Binding BackspinCommand}"
+                    ToolTip.Tip="Backspin: de plaat wordt achteruit gegooid en loopt uit; daarna pauzeert het deck">
+              <StackPanel Orientation="Horizontal" Spacing="6">
+                <Path Data="M12,7 A5,5 0 1 1 7,2 M7,2 L4,0 M7,2 L4,5" Stroke="{Binding $parent[Button].Foreground}" StrokeThickness="1.8" Width="14" Height="14" Stretch="None" VerticalAlignment="Center" />
+                <TextBlock Text="Backspin" VerticalAlignment="Center" />
+              </StackPanel>
+            </Button>
+            <Button x:Name="CensorButton" Classes="bar censor" Classes.active="{Binding Censoring}" Padding="14,0" MinWidth="150"
+                    ToolTip.Tip="Censuur: vasthouden om een woord te maskeren. Het nummer klinkt zolang achteruit; bij loslaten loopt het verder waar het gebleven zou zijn. Ook via MIDI en DJ &lt;deck&gt; CENSOR ON/OFF.">
+              <StackPanel Orientation="Horizontal" Spacing="6">
+                <Path Data="M7,1 L1,7 L7,13 Z M14,1 L8,7 L14,13 Z" Fill="{Binding $parent[Button].Foreground}" Width="14" Height="14" Stretch="None" VerticalAlignment="Center" />
+                <TextBlock Text="Censuur (vasthouden)" VerticalAlignment="Center" />
+              </StackPanel>
+            </Button>
           </WrapPanel>
         </StackPanel>
 

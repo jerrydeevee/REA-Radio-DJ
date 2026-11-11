@@ -35,6 +35,17 @@ public sealed class DjQuantizeTests
     }
 
     [Fact]
+    public void A_brake_slows_evenly_and_a_backspin_starts_fast_and_dies_out()
+    {
+        Assert.Equal(1, DjDeck.SpinSpeed(backwards: false, 0), 6);
+        Assert.Equal(0.5, DjDeck.SpinSpeed(false, 0.5), 6);
+        Assert.Equal(0.05, DjDeck.SpinSpeed(false, 1), 6);      // never fully zero: BASS needs a rate
+        Assert.Equal(3, DjDeck.SpinSpeed(true, 0), 6);
+        Assert.Equal(0.75, DjDeck.SpinSpeed(true, 0.5), 6);
+        Assert.Equal(0.05, DjDeck.SpinSpeed(true, 2), 6);
+    }
+
+    [Fact]
     public void A_quantized_pad_waits_for_the_next_beat_of_the_leading_deck()
     {
         Assert.Equal(0.375, DjMixer.UntilNextBeat(10.225, firstBeat: 0.1, Beat, rate: 1), 6); // a quarter into the beat

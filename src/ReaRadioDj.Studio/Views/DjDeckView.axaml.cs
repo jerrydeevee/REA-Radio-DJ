@@ -26,5 +26,15 @@ public partial class DjDeckView : UserControl
             b.AddHandler(PointerReleasedEvent, (_, _) => { if (DataContext is DjDeckVm deck) _ = deck.Roll(beats, false); }, handledEventsToo: true);
             b.AddHandler(PointerCaptureLostEvent, (_, _) => { if (DataContext is DjDeckVm deck) _ = deck.Roll(beats, false); }, handledEventsToo: true);
         }
+
+        // Censor also works while held: pressed = backwards, released = on where the track would have been.
+        CensorButton.AddHandler(PointerPressedEvent, (_, e) =>
+        {
+            if (!e.GetCurrentPoint(CensorButton).Properties.IsLeftButtonPressed || DataContext is not DjDeckVm deck) return;
+            e.Pointer.Capture(CensorButton);
+            _ = deck.Censor(true);
+        }, handledEventsToo: true);
+        CensorButton.AddHandler(PointerReleasedEvent, (_, _) => { if (DataContext is DjDeckVm deck) _ = deck.Censor(false); }, handledEventsToo: true);
+        CensorButton.AddHandler(PointerCaptureLostEvent, (_, _) => { if (DataContext is DjDeckVm deck) _ = deck.Censor(false); }, handledEventsToo: true);
     }
 }

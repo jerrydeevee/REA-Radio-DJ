@@ -57,7 +57,8 @@ public sealed class CommandBus(
         new("OVERLAY PLAY <media-id>", "Item als overlay over het programma", "Spelers"),
         new("OVERLAY STOP", "Overlays stoppen", "Spelers"),
         new("DJ <A-D> <actie> [waarde]", "DJ-deck: TOGGLE, PLAY, PAUSE, CUE, SYNC, PFL, HOTCUE <1-8>, LOOPTOGGLE [tellen], FX, LOAD <media-id>, EJECT, "
-            + "TEMPO <%>, BEND <%>, GAIN <dB>, FADER <0-1>, EQHIGH|EQMID|EQLOW <-1..1>, FILTER <-1..1>, SEEK <s>", "DJ"),
+            + "TEMPO <%>, BEND <%>, GAIN <dB>, FADER <0-1>, EQHIGH|EQMID|EQLOW <-1..1>, FILTER <-1..1>, SEEK <s>, "
+            + "CENSOR ON|OFF (achteruit zolang aan), BRAKE [s], BACKSPIN [s]", "DJ"),
         new("DJ XFADER <0-1>", "Crossfader (0 = deck A en C, 1 = B en D)", "DJ"),
         new("DJ CUEMIX <0-1>", "Koptelefoon van cue (0) naar master (1)", "DJ"),
         new("DJ ONAIR ON|OFF|TOGGLE", "DJ-tafel op de lucht, of teruggeven aan de automatisering", "DJ"),
@@ -254,7 +255,7 @@ public sealed class CommandBus(
             "hotcue" or "hotcueclear" => new Contracts.DjCommand(Index: v is double n ? (int)n - 1 : null),
             "load" => new Contracts.DjCommand(MediaId: v is double id ? (long)id : null),
             "fxtype" => new Contracts.DjCommand(Name: w.Count > 3 ? w[3].ToLowerInvariant() : null),
-            "fx" or "pfl" or "keylock" or "killlow" or "killmid" or "killhigh" =>
+            "fx" or "pfl" or "keylock" or "killlow" or "killmid" or "killhigh" or "censor" =>
                 new Contracts.DjCommand(On: w.Count > 3 ? w[3].ToUpperInvariant() is "ON" or "1" or "AAN" : null),
             _ => new Contracts.DjCommand(Value: v),
         };

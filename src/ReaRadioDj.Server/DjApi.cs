@@ -144,6 +144,11 @@ public static class DjApi
             case "looptoggle": if (deck.LoopActive) deck.ExitLoop(); else deck.Loop(v ?? deck.LoopBeats); break;
             // Loop roll: On = true while the button is held (Value = beats), false on release.
             case "roll": deck.Roll(v ?? 1, c.On ?? false); break;
+            case "censor" when !deck.CanReverse: return "achteruit spelen kan niet: bass_fx is te oud of ontbreekt";
+            case "censor": deck.Censor(c.On ?? false); break;
+            case "brake": deck.Brake(v ?? 1.5); break;
+            case "backspin" when !deck.CanReverse: return "achteruit spelen kan niet: bass_fx is te oud of ontbreekt";
+            case "backspin": deck.Backspin(v ?? 1.2); break;
             // Beat effect: type by Name (echo, flanger, reverb), on/off, mix 0..1, length in beats.
             case "fx": deck.SetFx(c.Name, c.On ?? !deck.FxOn); break;
             case "fxtype" when c.Name is { } fx: deck.SetFx(type: fx); break;
@@ -164,5 +169,5 @@ public static class DjApi
     public static DjDeckDto Deck(DjDeckInfo d) => new(d.Id, d.Media is { Id: > 0 } m ? m.Id : null, d.Media?.Title ?? "", d.Media?.Artist ?? "",
         d.Media is not null, d.Playing, d.Position, Math.Round(d.Duration, 3), d.Bpm, d.FirstBeat, d.Analysing, Math.Round(d.Tempo, 3), d.TempoRange,
         d.KeyLock, d.Synced, d.CuePoint, d.HotCues, d.LoopIn, d.LoopOut, d.LoopActive, d.LoopBeats, d.Gain, d.EqLow, d.EqMid, d.EqHigh,
-        d.KillLow, d.KillMid, d.KillHigh, d.Filter, d.Fader, d.Pfl, d.LevelLeft, d.LevelRight, d.Rolling, d.FxType, d.FxOn, d.FxMix, d.FxBeats);
+        d.KillLow, d.KillMid, d.KillHigh, d.Filter, d.Fader, d.Pfl, d.LevelLeft, d.LevelRight, d.Rolling, d.FxType, d.FxOn, d.FxMix, d.FxBeats, d.Censoring, d.Spinning);
 }

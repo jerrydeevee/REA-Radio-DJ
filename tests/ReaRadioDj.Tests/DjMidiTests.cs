@@ -53,6 +53,11 @@ public sealed class DjMidiTests
         Assert.Equal("DJ A BEND 8", DjMidi.Command(C("A.jog"), 20));  // clamped
         Assert.Null(DjMidi.Command(C("A.jog"), 0));
         Assert.Equal("DJ AUTOMIX TOGGLE", DjMidi.Command(C("automix"), 127));
+        Assert.Equal("DJ A CENSOR ON", DjMidi.Command(C("A.censor"), 127));   // held: backwards
+        Assert.Equal("DJ A CENSOR OFF", DjMidi.Command(C("A.censor"), 0));    // released: on where it would have been
+        Assert.Equal("DJ B BRAKE", DjMidi.Command(C("B.brake"), 127));
+        Assert.Null(DjMidi.Command(C("B.brake"), 0));
+        Assert.Equal("DJ B BACKSPIN", DjMidi.Command(C("B.backspin"), 127));
     }
 
     [Fact]

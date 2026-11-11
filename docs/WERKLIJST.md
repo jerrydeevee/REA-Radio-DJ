@@ -130,6 +130,7 @@ Vragen bij stap 3:
 | 🟡 | Bediening van decks en mengpaneel via de commandobus: MIDI leren en voorinstellingen voor Hercules en Pioneer, ook oudere typen (vraag 8). Commando's DJ <A-D> <actie>, DJ XFADER, DJ CUEMIX, DJ ONAIR en DJ AUTOMIX op de commandobus (dus ook via TCP/OSC). Venster DJ-controller: MIDI-poort toevoegen, per functie "Leren" en de knop, fader of het jogwiel bewegen; 77 functies (mengpaneel en per deck start, cue, sync, PFL, tempo, jogwiel, kanaalfader, gain, EQ, filter, loop, effect, hot cue 1–4); faders omkeren; bewaren als voorinstelling en die op een andere controller zetten. Het tempo volgt het bereik van het deck, een EQ-knop in zijn klik staat precies vlak. Getest op de test-engine met nagebootste MIDI-signalen (leren, start/pauze, cue, tempo, EQ, crossfader, jogwiel, voorinstelling, bewaard na herstart). Nog niet met een echte controller; ingebouwde voorinstellingen voor Hercules en Pioneer wachten op de officiële MIDI-overzichten van de typen die de omroep gebruikt | een controller bedient start, cue, tempo, EQ en crossfader |
 | ✅ | Mix opnemen | opname staat als bestand in de bibliotheek (knop "● Mix opnemen" in de DJ-tafel; op en van de lucht; na stoppen in Opnamen) |
 | 🟡 | Draaiknoppen in plaats van schuiven, en het geheel passend op 1920 × 1080 zonder scrollen | met 2 decks klaar: gain, filter, EQ, effectmix en koptelefoon zijn draaiknoppen; past op 1920 × 1080. 4 decks nog nalopen |
+| 🟡 | Censuur, rem en backspin per deck (uit de functievergelijking, 11 november 2026): **Censuur** ingedrukt houden laat het nummer achteruit klinken om een woord te maskeren; bij loslaten loopt het verder waar het gebleven zou zijn, alsof het nooit stil stond. **Rem** laat het deck in 1,5 s uitlopen tot stilstand zoals een draaitafel die je uitzet, **Backspin** gooit de plaat achteruit en laat hem uitlopen; daarna staan beide op pauze. In elk deck in de rij STOP, ook via MIDI (leren: Censuur, Rem, Backspin) en de commandobus (DJ A CENSOR ON/OFF, DJ A BRAKE [s], DJ A BACKSPIN [s]). Getest op de test-engine: 2 s censuur kwam terug op 5,13 s (verwacht 5,12), rem en backspin eindigen op pauze, daarna speelt het deck weer op precies 1,0×. Nog niet beluisterd | een gevloekt woord is live weg te drukken zonder dat het nummer verspringt |
 | ⬜ | Stems (zang, instrumenten, bas, drums) | later; grootste onderdeel, niet nodig voor de proof of concept |
 
 Vragen bij stap 4:
@@ -242,6 +243,17 @@ Volgorde:
 Vraag bij stap 7:
 
 15. ~~Sjabloon?~~ **Geen; eigen indeling, plus een los reclame-afspeelrapport.**
+
+### Nog niet gebouwd, uit de functievergelijking (11 november 2026)
+
+Wat het onderzoek naar volwaardige playout-pakketten noemde en wij nog niet hebben. Alleen als functielijst gebruikt: eigen ontwerp en eigen namen.
+
+| | Wat | Klaar als |
+|---|---|---|
+| ⬜ | **Containers:** één regel in de log die een groep nummers bevat (bijv. een reclameblok of een vaste jingle-set), die als één geheel te verslepen, te kopiëren en over te slaan is en bij afspelen openklapt | een reclameblok staat als één regel in de log en speelt zijn nummers achter elkaar |
+| ⬜ | **Gebeurtenissen op een plek in een nummer:** op een tijdstip in een nummer een volume-omhullende (bijv. zachter onder een intro-tekst) of een opdracht (bijv. lampje aan, overlay start); te zetten in de cue-editor | een opdracht op 0:12 in een nummer gaat elke keer op 0:12 af |
+| ⬜ | **Klembord voor nummers:** een vast vak waar je nummers uit bibliotheek, log of decks in parkeert en later weer uitsleept, ook tussen werkbladen | een nummer gaat via het klembord van de bibliotheek naar deck B |
+| ⬜ | **Uitzendstatistiek:** uit de as-run per dag, week en maand: meest gedraaide nummers en artiesten, rotatie per categorie, uren muziek tegen spraak, wat lang niet gedraaid is | een maandoverzicht laat de top 20 en de rotatie per categorie zien |
 
 ### AI-presentator: creatief
 

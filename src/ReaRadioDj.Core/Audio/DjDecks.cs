@@ -61,7 +61,8 @@ public sealed record DjDeckInfo(string Id, MediaItem? Media, bool Playing, doubl
     bool Analysing, double Tempo, double TempoRange, bool KeyLock, bool Synced, double CuePoint, IReadOnlyList<double?> HotCues,
     double? LoopIn, double? LoopOut, bool LoopActive, double LoopBeats, double Gain, double EqLow, double EqMid, double EqHigh,
     bool KillLow, bool KillMid, bool KillHigh, double Filter, double Fader, bool Pfl, float LevelLeft, float LevelRight, bool Rolling = false,
-    string FxType = DjEffects.Echo, bool FxOn = false, double FxMix = 0.5, double FxBeats = 1)
+    string FxType = DjEffects.Echo, bool FxOn = false, double FxMix = 0.5, double FxBeats = 1,
+    bool Censoring = false, string? Spinning = null)
 {
     /// <summary>The tempo you hear: the measured tempo with the tempo fader applied.</summary>
     public double PlayingBpm => Bpm * (1 + Tempo / 100);
@@ -82,7 +83,11 @@ public sealed class DjDeck
     private readonly DjStore _store;
     private readonly double _targetLufs;
     private readonly object _gate = new();
-    private int _tempo, _main, _pfl, _fxLow, _fxMid, _fxHigh, _fxFilter, _fxBeat;
+    private int _tempo, _main, _pfl, _fxLow, _fxMid, _fxHigh, _fxFilter, _fxBeat, _reverse;
+    /// <summary>Censor in progress: like a roll, the track runs on underneath while you hear it backwards.</summary>
+    private RollState? _censor;
+    /// <summary>Raised by every brake or backspin; a running one stops when it changes.</summary>
+    private int _spin;
     private string _fxBeatType = DjEffects.None;
     private float _sourceRate = BassRuntime.SampleRate, _loudness = 1f;
     private DjTrackMemory _memory = new();
@@ -181,7 +186,8 @@ public sealed class DjDeck
                 if (_main == 0 || !Playing || !BASS_Mixer_ChannelGetLevelEx(_main, levels, 0.05f, BASS_LEVEL_STEREO)) levels[0] = levels[1] = 0;
             return new DjDeckInfo(Id, Media, Playing, Math.Round(Position, 3), _duration, _memory.Bpm, _memory.FirstBeat, Analysing, Tempo, TempoRange,
                 KeyLock, Synced, CuePoint, [.. _memory.HotCues], LoopIn, LoopOut, LoopActive, LoopBeats, Gain, EqLow, EqMid, EqHigh,
-                KillLow, KillMid, KillHigh, Filter, Fader, Pfl, levels[0], levels[1], _roll is not null, FxType, FxOn, FxMix, FxBeats);
+                KillLow, KillMid, KillHigh, Filter, Fader, Pfl, levels[0], levels[1], _roll is not null, FxType, FxOn, FxMix, FxBeats,
+                _censor is not null, Spinning);
         }
     }
 
@@ -197,10 +203,23 @@ public sealed class DjDeck
                 $"BASS_StreamCreateFile({Path.GetFileName(media.Path)})");
             BASS_ChannelGetAttribute(decode, BASS_ATTRIB_FREQ, out _sourceRate);
             _duration = BASS_ChannelBytes2Seconds(decode, BASS_ChannelGetLength(decode, BASS_POS_BYTE));
-            _tempo = BASS_FX_TempoCreate(decode, BASS_STREAM_DECODE | BASS_FX_FREESOURCE);
+            // file → reverse (for censor and backspin; plays forward normally) → tempo
+            int source = decode;
+            try
+            {
+                int reverse = BASS_FX_ReverseCreate(decode, 2f, BASS_STREAM_DECODE | BASS_FX_FREESOURCE);
+                if (reverse != 0)
+                {
+                    BASS_ChannelSetAttribute(reverse, BASS_ATTRIB_REVERSE_DIR, BASS_FX_RVS_FORWARD);
+                    source = reverse;
+                }
+            }
+            catch (EntryPointNotFoundException) { /* an old bass_fx: no backwards play */ }
+            _reverse = source == decode ? 0 : source;
+            _tempo = BASS_FX_TempoCreate(source, BASS_STREAM_DECODE | BASS_FX_FREESOURCE);
             if (_tempo == 0)
             {
-                BASS_StreamFree(decode);
+                BASS_StreamFree(source); // frees the file decoder too when it is the reverse stream
                 throw new BassException("BASS_FX_TempoCreate");
             }
             _fxLow = BASS_ChannelSetFX(_tempo, BASS_FX_BFX_BQF, 4);
@@ -262,7 +281,10 @@ public sealed class DjDeck
         BASS_StreamFree(_main);
         BASS_StreamFree(_pfl);
         BASS_StreamFree(_tempo); // frees the file decoder too
-        _tempo = _main = _pfl = _fxLow = _fxMid = _fxHigh = _fxFilter = _fxBeat = 0;
+        _tempo = _main = _pfl = _fxLow = _fxMid = _fxHigh = _fxFilter = _fxBeat = _reverse = 0;
+        _censor = null;
+        _spin++;
+        Spinning = null;
         _fxBeatType = DjEffects.None;
         Media = null;
         Playing = false;
@@ -279,6 +301,7 @@ public sealed class DjDeck
         lock (_gate)
         {
             if (_tempo == 0 || Playing) return;
+            StopSpinLocked();
             if (_ended) SeekLocked(CuePoint);
             BASS_Mixer_ChannelFlags(_main, 0, BASS_MIXER_CHAN_PAUSE);
             BASS_Mixer_ChannelFlags(_pfl, 0, BASS_MIXER_CHAN_PAUSE);
@@ -498,6 +521,101 @@ public sealed class DjDeck
 
     /// <summary>Where a rolled deck goes on: the decoder position at the start plus the time that passed, at its rate.</summary>
     public static double RollReturn(double from, double elapsedSeconds, double rate) => from + Math.Max(0, elapsedSeconds) * rate;
+
+    // ---------------------------------------------------------------- censor, brake and backspin
+
+    /// <summary>"brake" or "backspin" while one runs, otherwise null.</summary>
+    public string? Spinning { get; private set; }
+
+    /// <summary>Whether this deck can play backwards (bass_fx with the reverse stream).</summary>
+    public bool CanReverse => _reverse != 0;
+
+    /// <summary>
+    /// Censor, for a word that may not go on air: while held the deck plays backwards from what you hear now; on release
+    /// it goes on where it would have been, as if the track had played on underneath (the same as a roll).
+    /// </summary>
+    public void Censor(bool on)
+    {
+        lock (_gate)
+        {
+            if (_tempo == 0 || _reverse == 0) return;
+            if (on)
+            {
+                if (_censor is not null || !Playing) return;
+                StopSpinLocked();
+                double heard = Position;
+                _censor = new RollState(heard, DateTime.UtcNow, 1 + (Tempo + _bend) / 100, null, null, false, 0);
+                SeekLocked(heard); // drop what was decoded ahead, so the reversal is heard at once
+                BASS_ChannelSetAttribute(_reverse, BASS_ATTRIB_REVERSE_DIR, BASS_FX_RVS_REVERSE);
+                return;
+            }
+            if (_censor is not { } c) return;
+            _censor = null;
+            BASS_ChannelSetAttribute(_reverse, BASS_ATTRIB_REVERSE_DIR, BASS_FX_RVS_FORWARD);
+            SeekLocked(RollReturn(c.From, (DateTime.UtcNow - c.At).TotalSeconds, c.Rate));
+        }
+    }
+
+    /// <summary>Brake: the deck slows down to a stop over a number of seconds, like a turntable switched off, and pauses.</summary>
+    public void Brake(double seconds) => Spin("brake", seconds, backwards: false);
+
+    /// <summary>Backspin: the record is thrown backwards and dies out, then the deck pauses.</summary>
+    public void Backspin(double seconds) => Spin("backspin", seconds, backwards: true);
+
+    /// <summary>How fast the deck runs during a brake or backspin, as a part of its normal speed, at 0..1 of the way.</summary>
+    public static double SpinSpeed(bool backwards, double progress)
+    {
+        double t = Math.Clamp(progress, 0, 1);
+        // A brake loses speed evenly; a backspin starts fast (a hand throwing the record) and dies out quickly.
+        return Math.Max(0.05, backwards ? 3 * (1 - t) * (1 - t) : 1 - t);
+    }
+
+    private void Spin(string kind, double seconds, bool backwards)
+    {
+        int run;
+        double rate;
+        seconds = Math.Clamp(seconds, 0.2, 10);
+        lock (_gate)
+        {
+            if (_tempo == 0 || !Playing || _censor is not null || (backwards && _reverse == 0)) return;
+            run = ++_spin;
+            Spinning = kind;
+            rate = _sourceRate * (1 + (Tempo + _bend) / 100);
+            SeekLocked(Position); // start from what you hear, not from what was decoded ahead
+            if (backwards) BASS_ChannelSetAttribute(_reverse, BASS_ATTRIB_REVERSE_DIR, BASS_FX_RVS_REVERSE);
+            BASS_ChannelSetAttribute(_tempo, BASS_ATTRIB_TEMPO, 0f); // the pitch drops with the speed, as on a real deck
+        }
+        _ = Task.Run(async () =>
+        {
+            var start = DateTime.UtcNow;
+            while (true)
+            {
+                double t = (DateTime.UtcNow - start).TotalSeconds / seconds;
+                lock (_gate)
+                {
+                    if (_spin != run || _tempo == 0) return;
+                    if (t >= 1)
+                    {
+                        Pause();
+                        StopSpinLocked();
+                        return;
+                    }
+                    BASS_ChannelSetAttribute(_tempo, BASS_ATTRIB_TEMPO_FREQ, (float)(rate * SpinSpeed(backwards, t)));
+                }
+                await Task.Delay(15);
+            }
+        });
+    }
+
+    /// <summary>Ends a brake or backspin: forward again at the normal tempo.</summary>
+    private void StopSpinLocked()
+    {
+        if (Spinning is null) return;
+        _spin++;
+        Spinning = null;
+        if (_reverse != 0) BASS_ChannelSetAttribute(_reverse, BASS_ATTRIB_REVERSE_DIR, BASS_FX_RVS_FORWARD);
+        ApplyTempo();
+    }
 
     /// <summary>The nearest beat (or the beat at or before, with <paramref name="down"/>) of a position.</summary>
     public static double Snap(double position, double firstBeat, double beatSeconds, bool down = false)

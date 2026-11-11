@@ -66,6 +66,9 @@ public static class DjMidi
                 new($"{d}.hotcue2", "Hot cue 2", g, DjControlKind.Button),
                 new($"{d}.hotcue3", "Hot cue 3", g, DjControlKind.Button),
                 new($"{d}.hotcue4", "Hot cue 4", g, DjControlKind.Button),
+                new($"{d}.censor", "Censuur (vasthouden: achteruit)", g, DjControlKind.Button),
+                new($"{d}.brake", "Rem (uitlopen tot stilstand)", g, DjControlKind.Button),
+                new($"{d}.backspin", "Backspin", g, DjControlKind.Button),
             ]);
         }
         return list;
@@ -102,6 +105,9 @@ public static class DjMidi
     public static string? Command(DjControl control, int value, bool invert = false, double tempoRange = 8)
     {
         static string N(double v) => v.ToString("0.###", CultureInfo.InvariantCulture);
+        // Censor works while held: the release (note off or controller low) lets it go again.
+        if (control.Id.EndsWith(".censor", StringComparison.OrdinalIgnoreCase))
+            return $"DJ {control.Id[..control.Id.IndexOf('.')]} CENSOR {(value >= 64 ? "ON" : "OFF")}";
         if (control.Kind == DjControlKind.Button && value < 64) return null; // released (note off or controller low)
         int dot = control.Id.IndexOf('.');
         if (dot < 0)
@@ -123,6 +129,8 @@ public static class DjMidi
             "pfl" => $"DJ {deck} PFL",
             "loop" => $"DJ {deck} LOOPTOGGLE 4",
             "fx" => $"DJ {deck} FX",
+            "brake" => $"DJ {deck} BRAKE",
+            "backspin" => $"DJ {deck} BACKSPIN",
             _ when fn.StartsWith("hotcue", StringComparison.Ordinal) => $"DJ {deck} HOTCUE {fn[6..]}",
             "tempo" => $"DJ {deck} TEMPO {N(Math.Round(Centered(value, invert) * tempoRange, 2))}",
             "fader" => $"DJ {deck} FADER {N(Unit(value, invert))}",

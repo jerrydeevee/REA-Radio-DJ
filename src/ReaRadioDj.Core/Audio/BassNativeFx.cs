@@ -50,6 +50,11 @@ internal static partial class BassNative
     [LibraryImport(BassFx)] public static partial uint BASS_FX_GetVersion();
     [LibraryImport(BassFx)] public static partial int BASS_FX_TempoCreate(int channel, uint flags);
 
+    /// <summary>A stream that can play its source backwards; the direction is the attribute below (-1 or 1).</summary>
+    [LibraryImport(BassFx)] public static partial int BASS_FX_ReverseCreate(int channel, float decodeBlockSeconds, uint flags);
+    public const int BASS_ATTRIB_REVERSE_DIR = 0x11000;
+    public const float BASS_FX_RVS_REVERSE = -1, BASS_FX_RVS_FORWARD = 1;
+
     [LibraryImport(BassFx)]
     public static partial float BASS_FX_BPM_DecodeGet(int channel, double startSeconds, double endSeconds, uint minMaxBpm, uint flags, IntPtr proc, IntPtr user);
 

@@ -153,6 +153,12 @@ public sealed partial class DjDeckVm : ObservableObject
     [RelayCommand] private Task LoopDouble() => Post("loopdouble");
     /// <summary>Loop roll: on while the button is held, off on release (the deck then goes on as if it kept playing).</summary>
     public Task Roll(double beats, bool on) => Post("roll", new DjCommand(Value: beats, On: on));
+    /// <summary>Censor while held: backwards, and on release on where the track would have been.</summary>
+    public Task Censor(bool on) => Post("censor", new DjCommand(On: on));
+    [RelayCommand] private Task Brake() => Post("brake", new DjCommand(Value: 1.5));
+    [RelayCommand] private Task Backspin() => Post("backspin", new DjCommand(Value: 1.2));
+    [ObservableProperty] private bool _censoring;
+    [ObservableProperty] private bool _spinning;
     [RelayCommand] private Task ResetEq() => Task.WhenAll(Post("eqlow", new(Value: 0)), Post("eqmid", new(Value: 0)), Post("eqhigh", new(Value: 0)), Post("filter", new(Value: 0)));
 
     [RelayCommand]
@@ -189,6 +195,8 @@ public sealed partial class DjDeckVm : ObservableObject
             Pfl = d.Pfl;
             LoopActive = d.LoopActive;
             Rolling = d.Rolling;
+            Censoring = d.Censoring;
+            Spinning = d.Spinning is not null;
             FxType = d.FxType;
             FxOn = d.FxOn;
             _fxBeats = d.FxBeats;

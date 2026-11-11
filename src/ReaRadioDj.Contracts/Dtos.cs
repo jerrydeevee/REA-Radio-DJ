@@ -45,7 +45,8 @@ public sealed record DjDeckDto(string Id, long? MediaId, string Title, string Ar
     double Duration, double Bpm, double FirstBeat, bool Analysing, double Tempo, double TempoRange, bool KeyLock, bool Synced,
     double CuePoint, IReadOnlyList<double?> HotCues, double? LoopIn, double? LoopOut, bool LoopActive, double LoopBeats, double Gain,
     double EqLow, double EqMid, double EqHigh, bool KillLow, bool KillMid, bool KillHigh, double Filter, double Fader, bool Pfl,
-    float LevelLeft, float LevelRight, bool Rolling = false, string FxType = "echo", bool FxOn = false, double FxMix = 0.5, double FxBeats = 1);
+    float LevelLeft, float LevelRight, bool Rolling = false, string FxType = "echo", bool FxOn = false, double FxMix = 0.5, double FxBeats = 1,
+    bool Censoring = false, string? Spinning = null);
 
 /// <summary>Crossfader 0 (decks A and C) .. 1 (B and D); curve "smooth" or "sharp"; OnAir = the desk is heard on the radio.</summary>
 /// Following = deck A copies what the automation plays, ready to take over.

@@ -295,6 +295,14 @@
   <Style Selector="ListBoxItem:pointerover StackPanel.rowactions, ListBoxItem:selected StackPanel.rowactions">
     <Setter Property="Opacity" Value="1" />
   </Style>
+  <!-- DJ censor button: amber edge, filled while it masks -->
+  <Style Selector="Button.bar.censor">
+    <Setter Property="BorderBrush" Value="{DynamicResource WarnBrush}" />
+  </Style>
+  <Style Selector="Button.bar.censor.active /template/ ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource WarnBrush}" />
+    <Setter Property="Foreground" Value="#1A1206" />
+  </Style>
   <!-- Overlay playing: a purple pill in the on-air bar, whatever the layout; click = stop all overlays -->
   <Style Selector="Button.overlaypill">
     <Setter Property="Background" Value="#7C3AED" />
