@@ -3,29 +3,95 @@ namespace ReaRadioDj.Core.Model;
 public enum MediaKind { Song, Jingle, Voice }
 
 /// <summary>
-/// An audio file plus its playout metadata. Cue points are in seconds from the start of the file,
-/// following the classic broadcast model: CueIn (first audio), Ramp (end of the instrumental intro, optional),
-/// MixPoint (where the next item starts and this one fades out) and CueOut (last audio).
+/// The cue points of one audio file, in seconds from the start of the file. The classic broadcast model:
+/// <list type="bullet">
+/// <item>CueIn: first audio. FullLevel: end of the fade-in (optional).</item>
+/// <item>Intro / Intro2: end of the instrumental intro, the talk-up time (optional).</item>
+/// <item>Outro: start of the instrumental end (optional). FadeOut: where the fade-out starts (optional).</item>
+/// <item>Mix: where the next item starts. CueOut: last audio.</item>
+/// <item>HookIn / HookOut: a short recognisable fragment for teasers and promos (optional).</item>
+/// </list>
 /// </summary>
+public sealed record CueSet
+{
+    public double CueIn { get; init; }
+    public double? FullLevel { get; init; }
+    public double? Intro { get; init; }
+    public double? Intro2 { get; init; }
+    public double? Outro { get; init; }
+    public double? FadeOut { get; init; }
+    public double Mix { get; init; }
+    public double CueOut { get; init; }
+    public double? HookIn { get; init; }
+    public double? HookOut { get; init; }
+
+    /// <summary>
+    /// Returns a consistent copy: everything inside [0, duration], CueIn before CueOut, Mix between them and the
+    /// optional points inside the playable range (dropped when they fall outside it).
+    /// </summary>
+    public CueSet Normalize(double duration)
+    {
+        duration = Math.Max(0, duration);
+        double Clamp(double v) => Math.Clamp(double.IsFinite(v) ? v : 0, 0, duration);
+        double cueOut = CueOut > 0 ? Clamp(CueOut) : duration;
+        double cueIn = Math.Min(Clamp(CueIn), Math.Max(0, cueOut - 0.1));
+        double mix = Mix > 0 ? Math.Clamp(Clamp(Mix), cueIn, cueOut) : cueOut;
+        double? Inside(double? v) => v is double x && double.IsFinite(x) && x > cueIn && x < cueOut ? Math.Round(x, 3) : null;
+
+        double? intro = Inside(Intro), intro2 = Inside(Intro2);
+        if (intro is double a && intro2 is double b && b <= a) intro2 = null;
+        double? hookIn = Inside(HookIn) ?? (HookIn is double hi && Math.Abs(hi - cueIn) < 0.0005 ? cueIn : null);
+        double? hookOut = Inside(HookOut);
+        if (hookIn is null || hookOut is null || hookOut <= hookIn) { hookIn = null; hookOut = null; }
+
+        return new CueSet
+        {
+            CueIn = Math.Round(cueIn, 3),
+            FullLevel = Inside(FullLevel),
+            Intro = intro,
+            Intro2 = intro2,
+            Outro = Inside(Outro),
+            FadeOut = Inside(FadeOut),
+            Mix = Math.Round(mix, 3),
+            CueOut = Math.Round(cueOut, 3),
+            HookIn = hookIn,
+            HookOut = hookOut,
+        };
+    }
+}
+
+/// <summary>An audio file plus its playout metadata.</summary>
 public sealed record MediaItem
 {
+    /// <summary>Database id; 0 for audio that is not in the library (rendered voice breaks).</summary>
+    public long Id { get; init; }
     public required string Path { get; init; }
     public required MediaKind Kind { get; init; }
+    public long? CategoryId { get; init; }
+    public string Category { get; init; } = "";
     public string Artist { get; init; } = "";
     public string Title { get; init; } = "";
     public double Duration { get; init; }
-    public double CueIn { get; init; }
-    public double MixPoint { get; init; }
-    public double CueOut { get; init; }
-    /// <summary>End of the intro (talk-up time), if known. Read from a "&lt;file&gt;.cue.json" sidecar.</summary>
-    public double? Ramp { get; init; }
+    public CueSet Cues { get; init; } = new();
     /// <summary>Integrated loudness in LUFS (EBU R128), or null when not measured.</summary>
     public double? Lufs { get; init; }
+    /// <summary>Volume changes and commands at places in the track, every time it plays on air.</summary>
+    public IReadOnlyList<TrackEvent> Events { get; init; } = [];
+
+    public double CueIn => Cues.CueIn;
+    public double MixPoint => Cues.Mix;
+    public double CueOut => Cues.CueOut;
+    /// <summary>End of the intro (talk-up time), if known.</summary>
+    public double? Intro => Cues.Intro;
 
     public string DisplayName => string.IsNullOrWhiteSpace(Artist) ? Title : $"{Artist} - {Title}";
 }
 
-public enum BreakState { Pending, Rendering, Ready, Failed }
+/// <summary>Pending → Rendering → (AwaitingApproval →) Ready, or Failed. Anything but Ready is skipped on air.</summary>
+public enum BreakState { Pending, Rendering, Ready, Failed, AwaitingApproval }
+
+/// <summary>Container = one line holding a group of items (an ad block, a fixed jingle set) that opens up when it is next.</summary>
+public enum LogItemType { Song, Jingle, AiBreak, VoiceTrack, Container }
 
 /// <summary>One entry in the on-air log (the playlist that the engine plays from top to bottom).</summary>
 public sealed class LogItem
@@ -38,19 +104,77 @@ public sealed class LogItem
     /// <summary>The audio to play. For an AI break this is filled in once the break has been rendered.</summary>
     public MediaItem? Media { get; set; }
 
+    /// <summary>Where the item came from: "klok: Standaard", "vast: Nieuws", "handmatig" ...</summary>
+    public string Origin { get; set; } = "";
+    /// <summary>Play only the hook (HookIn to HookOut) instead of the whole track.</summary>
+    public bool UseHook { get; init; }
+    /// <summary>Voicetrack: start this many seconds before the previous item reaches its mix point (talk over the outro).</summary>
+    public double StartEarly { get; init; }
+    /// <summary>Hand-made transition from the item before this one (transition editor), or null for the automatic mix.</summary>
+    public Transition? MixIn { get; set; }
+    /// <summary>Ad spot: the proof-of-broadcast record it belongs to.</summary>
+    public long? AdPlayId { get; init; }
+    /// <summary>Imported log: the hour and the position within that hour this item comes from.</summary>
+    public DateTime? ImportHour { get; init; }
+    public int ImportIndex { get; init; }
+
     // AI-break bookkeeping
     public BreakState BreakState { get; set; } = BreakState.Pending;
+    /// <summary>Name of the persona chosen for the break's air time (null = general settings).</summary>
+    public string? Persona { get; set; }
+    /// <summary>What the break mentions besides the music: "weather", "news", "note" or null.</summary>
+    public string? Extra { get; set; }
+    public bool OutroAdded { get; set; }
+    /// <summary>Speech check: how well the rendered voice matches the script (0..1), or null when not checked.</summary>
+    public double? CheckScore { get; set; }
     public string? Script { get; set; }
     public string? ScriptSource { get; set; }
     public string? Voice { get; set; }
     public string? Error { get; set; }
 
+    // Container bookkeeping
+    /// <summary>Name of a container ("Reclameblok 14 uur", "Jingleset ochtend").</summary>
+    public string? Name { get; init; }
+    /// <summary>The items in a container, in playing order; empty for every other item.</summary>
+    public IReadOnlyList<LogItem> Children { get; init; } = [];
+
+    /// <summary>A fresh copy with a new id (containers copy their items too); AI breaks and ad spots are not copied.</summary>
+    public LogItem? Copy()
+    {
+        if (Type == LogItemType.AiBreak || AdPlayId is not null) return null;
+        var children = Children.Select(c => c.Copy()).OfType<LogItem>().ToList();
+        if (Type == LogItemType.Container && children.Count == 0) return null;
+        return new LogItem
+        {
+            Type = Type, Media = Media, Origin = Origin, UseHook = UseHook, StartEarly = StartEarly, MixIn = MixIn,
+            Name = Name, Children = children,
+        };
+    }
+
+    /// <summary>A container of library items (songs, jingles and other audio) under one name.</summary>
+    public static LogItem Container(string name, IEnumerable<MediaItem> media) => new()
+    {
+        Type = LogItemType.Container,
+        Name = string.IsNullOrWhiteSpace(name) ? "Container" : name.Trim(),
+        Origin = "container",
+        Children = media.Select(m => new LogItem
+        {
+            Type = m.Kind == MediaKind.Song ? LogItemType.Song : LogItemType.Jingle, Media = m, Origin = "container",
+        }).ToList(),
+    };
+
     public string Label => Type switch
     {
+        LogItemType.Container => $"{Name} ({Children.Count} {(Children.Count == 1 ? "item" : "items")})",
         LogItemType.AiBreak when Media is null => $"AI-break ({BreakState})",
         LogItemType.AiBreak => "AI-break",
+        LogItemType.VoiceTrack => $"Voicetrack ({Media?.CueOut ?? 0:0.0} s)",
         _ => Media?.DisplayName ?? Type.ToString(),
     };
-}
 
-public enum LogItemType { Song, Jingle, AiBreak }
+    /// <summary>Playing length used for planning: from CueIn to the mix point (or the hook length).</summary>
+    public double PlannedLength => Type == LogItemType.Container ? Children.Sum(c => c.PlannedLength)
+        : Media is not { } m ? 12
+        : UseHook && m.Cues is { HookIn: double hi, HookOut: double ho } ? ho - hi
+        : Math.Max(0.5, m.MixPoint - m.CueIn);
+}

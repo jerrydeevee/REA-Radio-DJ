@@ -1,0 +1,44 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:ReaRadioDj.Studio.ViewModels"
+             xmlns:ctl="using:ReaRadioDj.Studio.Controls"
+             x:Class="ReaRadioDj.Studio.Views.TransitionView"
+             x:DataType="vm:TransitionTool">
+  <ScrollViewer HorizontalScrollBarVisibility="Disabled">
+  <Grid Margin="6" RowDefinitions="Auto,*,Auto" MinHeight="330">
+    <!-- which transition -->
+    <DockPanel Grid.Row="0" Margin="0,0,0,6">
+      <TextBlock DockPanel.Dock="Left" Text="Overgang" VerticalAlignment="Center" Width="70" />
+      <Button DockPanel.Dock="Right" Classes="small" Content="?" Margin="4,0,0,0"
+              ToolTip.Tip="Boven het uitgaande item, onder het volgende. Sleep het onderste item opzij om te kiezen waar het start. Sleep de punten van de gele volumelijnen; dubbelklik om een punt toe te voegen, rechtsklik om het weg te halen. Sleep de insert in de middelste baan. Scrollwiel zoomt, shift + scrollwiel schuift. Een eigen overgang geldt alleen zolang deze twee items na elkaar staan." />
+      <ComboBox ItemsSource="{Binding Choices}" SelectedItem="{Binding Choice}" HorizontalAlignment="Stretch"
+                PlaceholderText="geen komende items in de log" />
+    </DockPanel>
+
+    <ctl:TransitionCanvas Grid.Row="1" x:Name="Canvas" State="{Binding State}" Version="{Binding Version}" MinHeight="160" />
+
+    <!-- what it does and the buttons -->
+    <StackPanel Grid.Row="2" Spacing="4" Margin="0,6,0,0">
+      <TextBlock Text="{Binding Info}" TextWrapping="Wrap" FontSize="12" />
+      <TextBlock Classes="muted" FontSize="11" Text="{Binding StatusText}" />
+      <TextBlock Foreground="#F25F5C" TextWrapping="Wrap" Text="{Binding Error}" IsVisible="{Binding Error, Converter={x:Static ObjectConverters.IsNotNull}}" />
+      <WrapPanel IsEnabled="{Binding HasState}">
+        <Button Classes="small" Content="&#9654; Beluisteren" Command="{Binding ListenCommand}" Margin="0,0,4,4" ToolTip.Tip="Speelt de overgang af op PFL" />
+        <Button Classes="small" Content="&#9632;" Command="{Binding StopListenCommand}" Margin="0,0,4,4" ToolTip.Tip="Stop beluisteren" />
+        <Button Classes="small go" Content="Opslaan" Command="{Binding SaveCommand}" Margin="0,0,4,4" ToolTip.Tip="Zet deze overgang op het item in de log" />
+        <Button Classes="small" Content="Automatisch" Command="{Binding AutomaticCommand}" Margin="0,0,4,4"
+                ToolTip.Tip="Zet de automatische overgang (mixpunt en standaard fades) in de editor om vanaf te werken" />
+        <Button Classes="small" Content="Eigen weg" Command="{Binding RemoveCommand}" IsEnabled="{Binding HandMade}" Margin="0,0,12,4"
+                ToolTip.Tip="Haalt de eigen overgang weg; dan mixt de engine weer automatisch" />
+        <TextBlock Text="Uitfaden" VerticalAlignment="Center" Margin="0,0,4,4" />
+        <Button Classes="small" Content="0" Command="{Binding FadeOutCommand}" CommandParameter="0" Margin="0,0,2,4" ToolTip.Tip="Niet uitfaden: het uitgaande item speelt door tot het einde" />
+        <Button Classes="small" Content="1 s" Command="{Binding FadeOutCommand}" CommandParameter="1" Margin="0,0,2,4" />
+        <Button Classes="small" Content="3 s" Command="{Binding FadeOutCommand}" CommandParameter="3" Margin="0,0,2,4" />
+        <Button Classes="small" Content="6 s" Command="{Binding FadeOutCommand}" CommandParameter="6" Margin="0,0,12,4" />
+        <Button Classes="small" Content="Inkomend vol" Command="{Binding FlatInCommand}" Margin="0,0,12,4" ToolTip.Tip="Haalt de volumelijn van het volgende item weg" />
+        <ComboBox ItemsSource="{Binding Inserts}" SelectedItem="{Binding Insert}" MinWidth="180" Margin="0,0,0,4" ToolTip.Tip="Jingle of sweeper over de overgang" />
+      </WrapPanel>
+    </StackPanel>
+  </Grid>
+  </ScrollViewer>
+</UserControl>

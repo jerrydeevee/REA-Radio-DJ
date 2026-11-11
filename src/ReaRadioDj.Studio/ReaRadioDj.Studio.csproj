@@ -1,0 +1,31 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- The desktop studio: every player, cartwall, log and editor is a window that can be docked, tabbed or floated. -->
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <RootNamespace>ReaRadioDj.Studio</RootNamespace>
+    <AssemblyName>REA-Radio-DJ-Studio</AssemblyName>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <ApplicationIcon>Assets/rea.ico</ApplicationIcon>
+    <AvaloniaUseCompiledBindingsByDefault>false</AvaloniaUseCompiledBindingsByDefault>
+    <BuiltInComInteropSupport>true</BuiltInComInteropSupport>
+    <!-- Avalonia 11.3 marks the classic drag-and-drop API obsolete; it still works and stays until 12. -->
+    <NoWarn>$(NoWarn);CS0618</NoWarn>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Avalonia" Version="11.3.12" />
+    <PackageReference Include="Avalonia.Desktop" Version="11.3.12" />
+    <PackageReference Include="Avalonia.Themes.Fluent" Version="11.3.12" />
+    <PackageReference Include="Avalonia.Fonts.Inter" Version="11.3.12" />
+    <PackageReference Include="Dock.Avalonia" Version="11.3.12.1" />
+    <PackageReference Include="Dock.Avalonia.Themes.Fluent" Version="11.3.12.1" />
+    <PackageReference Include="Dock.Model.Mvvm" Version="11.3.12.1" />
+    <PackageReference Include="Dock.Serializer.Newtonsoft" Version="11.3.12.1" />
+    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.0" />
+  </ItemGroup>
+  <ItemGroup>
+    <AvaloniaResource Include="Assets/rea.ico" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\ReaRadioDj.Contracts\ReaRadioDj.Contracts.csproj" />
+  </ItemGroup>
+</Project>

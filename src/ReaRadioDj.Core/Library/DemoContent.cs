@@ -15,14 +15,28 @@ public static class DemoContent
         // C, F, G, A minor, D minor, E minor ... (root frequencies in Hz)
         double[] roots = [261.63, 349.23, 392.00, 220.00, 293.66, 329.63, 246.94, 196.00];
         string[] artists = ["De Testband", "Sinus & Co", "Het Oscillator Orkest", "DJ Zaagtand"];
+        // Sub folders become categories in the library.
         for (int i = 0; i < songs; i++)
         {
-            var path = Path.Combine(musicFolder, $"{artists[i % artists.Length]} - Demonummer {i + 1}.wav");
+            var folder = Path.Combine(musicFolder, i % 3 == 2 ? "Rustig" : "Pop");
+            Directory.CreateDirectory(folder);
+            var path = Path.Combine(folder, $"{artists[i % artists.Length]} - Demonummer {i + 1}.wav");
             if (!File.Exists(path)) WriteSong(path, roots[i % roots.Length], songSeconds, intro: 6);
-            if (i == 0) File.WriteAllText(path + ".cue.json", "{ \"ramp\": 6.5 }");
+            if (i == 0 && !File.Exists(path + ".cue.json")) File.WriteAllText(path + ".cue.json", "{ \"intro\": 6.5 }");
         }
-        var jingle = Path.Combine(jingleFolder, "Station ID.wav");
-        if (!File.Exists(jingle)) WriteJingle(jingle);
+        (string Folder, string Name, double[] Notes)[] jingles =
+        [
+            ("Station ID", "Station ID", [523.25, 659.25, 783.99, 1046.5]),
+            ("Sweepers", "Sweeper", [783.99, 659.25, 523.25]),
+            ("Nieuws", "Nieuws-intro", [440.0, 440.0, 554.37, 659.25, 880.0]),
+        ];
+        foreach (var (sub, name, notes) in jingles)
+        {
+            var dir = Path.Combine(jingleFolder, sub);
+            Directory.CreateDirectory(dir);
+            var path = Path.Combine(dir, name + ".wav");
+            if (!File.Exists(path)) WriteJingle(path, notes);
+        }
     }
 
     /// <summary>A "song": 0.8 s silence, an intro of soft single notes, a louder chord part and a 3 s fade + 1 s silence.</summary>
@@ -50,9 +64,8 @@ public static class DemoContent
         WriteWav(path, samples);
     }
 
-    private static void WriteJingle(string path)
+    public static void WriteJingle(string path, double[] notes)
     {
-        double[] notes = [523.25, 659.25, 783.99, 1046.5];
         int per = Rate / 4;
         var samples = new short[(notes.Length * per + Rate / 2) * 2];
         for (int k = 0; k < notes.Length; k++)

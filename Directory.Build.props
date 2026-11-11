@@ -8,6 +8,10 @@
     <LangVersion>latest</LangVersion>
     <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
     <Authors>REA-Radio-DJ contributors</Authors>
+    <Version>1.0.1</Version>
+    <Company>ICT Holland (DVC-it)</Company>
+    <Product>REA-Radio-DJ</Product>
+    <Copyright>© 2026 ICT Holland (DVC-it) · GPL-3.0-or-later</Copyright>
     <PackageLicenseExpression>GPL-3.0-or-later</PackageLicenseExpression>
   </PropertyGroup>
 
@@ -15,6 +19,11 @@
        when they are there, copy them next to every executable and test assembly. -->
   <ItemGroup Condition="Exists('$(MSBuildThisFileDirectory)native')">
     <None Include="$(MSBuildThisFileDirectory)native\*.dll" Link="%(Filename)%(Extension)"
+          CopyToOutputDirectory="PreserveNewest" Visible="false" />
+  </ItemGroup>
+  <!-- fpcalc (Chromaprint, LGPL) for AcoustID: scripts/fetch-fpcalc.ps1 puts it in /native. -->
+  <ItemGroup Condition="Exists('$(MSBuildThisFileDirectory)native\fpcalc.exe')">
+    <None Include="$(MSBuildThisFileDirectory)native\fpcalc.exe" Link="fpcalc.exe"
           CopyToOutputDirectory="PreserveNewest" Visible="false" />
   </ItemGroup>
 </Project>

@@ -1,0 +1,94 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:ReaRadioDj.Studio.ViewModels"
+             xmlns:ctl="using:ReaRadioDj.Studio.Controls"
+             x:Class="ReaRadioDj.Studio.Views.DeckView"
+             x:DataType="vm:DeckTool">
+  <!-- Little room per deck (see the code-behind): tight = narrow cards, low = no waveform, tiny = only status, title and counter. -->
+  <UserControl.Styles>
+    <Style Selector="TextBlock.counter"><Setter Property="FontSize" Value="32" /></Style>
+    <Style Selector=":is(UserControl).tight TextBlock.counter, :is(UserControl).tiny TextBlock.counter"><Setter Property="FontSize" Value="24" /></Style>
+    <Style Selector=":is(UserControl).tight TextBlock.decktype"><Setter Property="IsVisible" Value="False" /></Style>
+    <Style Selector=":is(UserControl).low Border.deckwave"><Setter Property="IsVisible" Value="False" /></Style>
+    <Style Selector=":is(UserControl).tiny Panel.deckbuttons, :is(UserControl).tiny TextBlock.decksub"><Setter Property="IsVisible" Value="False" /></Style>
+    <Style Selector=":is(UserControl).micro DockPanel.deckhead"><Setter Property="IsVisible" Value="False" /></Style>
+  </UserControl.Styles>
+  <DockPanel Margin="6">
+    <!-- options: palette and orientation -->
+    <DockPanel DockPanel.Dock="Top" Margin="0,0,0,4">
+      <Button DockPanel.Dock="Right" Classes="small" Content="⚙" Command="{Binding ToggleOptionsCommand}" ToolTip.Tip="Kleuren en opbouw" />
+      <WrapPanel IsVisible="{Binding ShowOptions}">
+        <TextBlock Text="Kleuren:" VerticalAlignment="Center" Margin="0,0,6,4" />
+        <ComboBox ItemsSource="{Binding PaletteNames}" SelectedIndex="{Binding Palette}" MinWidth="220" Margin="0,0,10,4"
+                  PlaceholderText="kies een kleurenset" />
+        <CheckBox IsChecked="{Binding Horizontal}" Content="Naast elkaar" Margin="0,0,0,4" />
+      </WrapPanel>
+    </DockPanel>
+
+    <ItemsControl ItemsSource="{Binding Decks}">
+      <ItemsControl.ItemsPanel>
+        <ItemsPanelTemplate>
+          <UniformGrid Columns="{Binding $parent[UserControl].DataContext.Columns}"
+                       Rows="{Binding $parent[UserControl].DataContext.Rows}" />
+        </ItemsPanelTemplate>
+      </ItemsControl.ItemsPanel>
+      <ItemsControl.ItemTemplate>
+        <DataTemplate x:DataType="vm:DeckVm">
+          <Border Classes="card" Margin="0,0,6,6" BorderBrush="{Binding Brush}" BorderThickness="1,4,1,1" Padding="0">
+            <Grid ColumnDefinitions="44,*">
+              <!-- deck badge -->
+              <Border Grid.Column="0" Background="{Binding Brush}" CornerRadius="3,0,0,3">
+                <TextBlock Text="{Binding Letter}" FontSize="30" FontWeight="Black" Foreground="#11161D"
+                           HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,6,0,0" />
+              </Border>
+              <StackPanel Grid.Column="1" Margin="8,6" Spacing="4">
+                <DockPanel Classes="deckhead">
+                  <Border DockPanel.Dock="Right" Background="#F0B429" CornerRadius="{DynamicResource Radius3}" Padding="6,1"
+                          IsVisible="{Binding Intro, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+                    <TextBlock Text="{Binding Intro}" Classes="mono" FontWeight="Bold" Foreground="#11161D" />
+                  </Border>
+                  <TextBlock Text="{Binding Status}" Foreground="{Binding Brush}" FontWeight="Bold" FontSize="12" VerticalAlignment="Center" />
+                  <TextBlock Classes="muted decktype" Text="{Binding Type}" FontSize="12" Margin="8,0,0,0" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                </DockPanel>
+                <TextBlock Text="{Binding Title}" FontSize="16" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                <Grid ColumnDefinitions="*,Auto">
+                  <StackPanel Grid.Column="0" VerticalAlignment="Bottom">
+                    <TextBlock Classes="muted" Text="{Binding Artist}" TextTrimming="CharacterEllipsis" />
+                    <TextBlock Classes="mono muted decksub" FontSize="11" Text="{Binding Sub}" TextTrimming="CharacterEllipsis" />
+                  </StackPanel>
+                  <TextBlock Grid.Column="1" Classes="mono counter" FontWeight="Bold" Margin="8,0,0,0" VerticalAlignment="Bottom"
+                             Text="{Binding Counter}" Foreground="{Binding CounterBrush}" />
+                </Grid>
+                <Border Classes="deckwave" CornerRadius="{DynamicResource Radius4}" ClipToBounds="True" Height="70">
+                  <ctl:WaveformView Peaks="{Binding Peaks}" BlockSeconds="{Binding BlockSeconds}" Markers="{Binding Markers}"
+                                    Playhead="{Binding Position}" CueIn="{Binding CueIn}" CueOut="{Binding CueOut}"
+                                    ShowCursor="False" ReadOnlyMarkers="True" EmptyText="—" />
+                </Border>
+                <ProgressBar Classes="countdown" Value="{Binding Left}" Maximum="100" MinHeight="6" MinWidth="0" IsVisible="{Binding IsOnAir}"
+                             Classes.warn="{Binding EndState, Converter={x:Static vm:Brushes.Is}, ConverterParameter=warn}"
+                             Classes.end="{Binding EndState, Converter={x:Static vm:Brushes.Is}, ConverterParameter=end}"
+                             Classes.flash="{Binding Flash}" />
+                <Panel Classes="deckbuttons">
+                <WrapPanel IsVisible="{Binding IsOnAir}">
+                  <Button Classes="small go" Content="⏭ Volgende" Margin="0,0,4,0" Command="{Binding $parent[UserControl].DataContext.NextCommand}"
+                          ToolTip.Tip="Start B nu (mixt over)" />
+                  <Button Classes="small" Content="Snel uit" Margin="0,0,4,0" Command="{Binding $parent[UserControl].DataContext.SkipCommand}"
+                          ToolTip.Tip="A snel uitfaden en door naar B" />
+                  <Button Classes="small stop" Content="■" Command="{Binding $parent[UserControl].DataContext.StopCommand}"
+                          ToolTip.Tip="Automatisering stoppen (uitfaden)" />
+                </WrapPanel>
+                <WrapPanel IsVisible="{Binding !IsOnAir}">
+                  <Button Classes="small" Content="▶ Nu starten" Margin="0,0,4,0" Command="{Binding $parent[UserControl].DataContext.NextCommand}"
+                          IsVisible="{Binding IsNext}" ToolTip.Tip="Mix nu over naar B" />
+                  <Button Classes="small" Content="Uit de log" Command="{Binding $parent[UserControl].DataContext.RemoveCommand}" CommandParameter="{Binding}"
+                          ToolTip.Tip="Haal dit item uit de log" />
+                </WrapPanel>
+                </Panel>
+              </StackPanel>
+            </Grid>
+          </Border>
+        </DataTemplate>
+      </ItemsControl.ItemTemplate>
+    </ItemsControl>
+  </DockPanel>
+</UserControl>

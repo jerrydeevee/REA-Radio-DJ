@@ -1,0 +1,113 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:ReaRadioDj.Studio.ViewModels"
+             xmlns:ctl="using:ReaRadioDj.Studio.Controls"
+             x:Class="ReaRadioDj.Studio.Views.CueEditorView"
+             x:DataType="vm:CueEditorTool">
+  <UserControl.Styles>
+    <Style Selector="Border.cuerow"><Setter Property="Width" Value="250" /></Style>
+    <Style Selector=".narrow Border.cuerow"><Setter Property="Width" Value="200" /></Style>
+    <Style Selector="TextBlock.cuelabel"><Setter Property="Width" Value="56" /></Style>
+    <Style Selector=".narrow TextBlock.cuelabel"><Setter Property="Width" Value="44" /></Style>
+  </UserControl.Styles>
+  <DockPanel Margin="6" ctl:WidthClasses.Track="True">
+    <StackPanel DockPanel.Dock="Top" Margin="0,0,0,4">
+      <TextBlock Classes="h" Text="{Binding Heading}" TextTrimming="CharacterEllipsis" />
+      <TextBlock x:Name="InfoText" Classes="muted" Text="{Binding Info}" TextTrimming="CharacterEllipsis" />
+      <WrapPanel Margin="0,4,0,0">
+        <Button Classes="small" Margin="0,0,4,4" Content="Laad selectie" Command="{Binding LoadSelectedCommand}" />
+        <Button Classes="small" Margin="0,0,4,4" Content="▶ vanaf cursor" Command="{Binding PlayFromCursorCommand}" ToolTip.Tip="Op de PFL" />
+        <Button Classes="small" Margin="0,0,4,4" Content="❚❚" Command="{Binding StopPflCommand}" />
+        <Button Classes="small" Margin="0,0,4,4" Content="Automatisch" Command="{Binding ResetCommand}" ToolTip.Tip="Handmatige punten weggooien en opnieuw bepalen" />
+        <Button Classes="small" Margin="0,0,4,4" Content="Ongedaan" Command="{Binding RevertCommand}" IsEnabled="{Binding Dirty}" />
+        <Button Classes="small" Margin="0,0,4,4" Content="Opslaan" Command="{Binding SaveCommand}" IsEnabled="{Binding Dirty}" Background="#2F9E6A" />
+      </WrapPanel>
+    </StackPanel>
+    <!-- In a low panel the waveform shrinks (never below 60 px) instead of running over the text under it. -->
+    <Grid>
+      <Grid.RowDefinitions>
+        <RowDefinition Height="*" MinHeight="60" />
+        <RowDefinition Height="Auto" />
+        <RowDefinition Height="Auto" />
+      </Grid.RowDefinitions>
+      <Border Grid.Row="0" Classes="card" Padding="0" ClipToBounds="True">
+        <ctl:WaveformView x:Name="Wave" Peaks="{Binding Peaks}" BlockSeconds="{Binding BlockSeconds}" Markers="{Binding Markers}"
+                          CursorSeconds="{Binding Cursor, Mode=TwoWay}" Playhead="{Binding Playhead}"
+                          CueIn="{Binding CueInValue}" CueOut="{Binding CueOutValue}" />
+      </Border>
+      <Panel Grid.Row="1" Margin="0,3">
+        <TextBlock Classes="muted hide-narrow" TextTrimming="CharacterEllipsis"
+                   Text="{Binding CursorText, StringFormat='Cursor {0} · sleep de markers · scrollwiel = zoom, Shift+scroll = schuiven, dubbelklik = volledig'}" />
+        <TextBlock Classes="muted narrow-only" Text="{Binding CursorText, StringFormat='Cursor {0}'}"
+                   ToolTip.Tip="Sleep de markers · scrollwiel = zoom, Shift+scroll = schuiven, dubbelklik = volledig" />
+      </Panel>
+      <ScrollViewer x:Name="RowsScroll" Grid.Row="2" MaxHeight="420">
+        <StackPanel>
+        <ItemsControl ItemsSource="{Binding Rows}">
+          <ItemsControl.ItemsPanel>
+            <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
+          </ItemsControl.ItemsPanel>
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="vm:CueRow">
+              <Border Classes="card cuerow" Margin="0,0,4,4" Padding="6,4" ToolTip.Tip="{Binding Help}">
+                <DockPanel>
+                  <Border DockPanel.Dock="Left" Width="4" Background="{Binding Brush}" CornerRadius="{DynamicResource Radius2}" Margin="0,0,6,0" />
+                  <TextBlock DockPanel.Dock="Left" Classes="cuelabel" Text="{Binding Label}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                  <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="2">
+                    <Button Classes="small" Content="⌖" ToolTip.Tip="Zet op de cursor" Command="{Binding SetHereCommand}" />
+                    <Button Classes="small" Content="▶" ToolTip.Tip="Beluister (PFL)" Command="{Binding ListenCommand}" />
+                    <Button Classes="small" Content="✕" ToolTip.Tip="Wissen" Command="{Binding ClearCommand}" IsVisible="{Binding Optional}" />
+                  </StackPanel>
+                  <TextBox Text="{Binding Text}" FontFamily="Consolas, monospace" MinHeight="26" Padding="4,2" Margin="0,0,4,0" />
+                </DockPanel>
+              </Border>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+
+        <!-- events at a place in the track: they go off every time it plays on air -->
+        <WrapPanel Margin="0,4,0,2" ItemSpacing="4" LineSpacing="4">
+          <TextBlock FontWeight="SemiBold" Text="Gebeurtenissen in het nummer" VerticalAlignment="Center" Margin="0,0,6,0" />
+          <Button Classes="small" Content="+ Volume op cursor" Command="{Binding AddVolumeCommand}"
+                  ToolTip.Tip="Een tijd zachter (of harder), bijv. onder een intro-tekst" />
+          <Button Classes="small" Content="+ Opdracht op cursor" Command="{Binding AddCommandCommand}"
+                  ToolTip.Tip="Een opdracht van de commandobus, bijv. CART 1 3, OVERLAY PLAY 12 of MIC ON" />
+        </WrapPanel>
+        <TextBlock Classes="muted" FontSize="11" TextWrapping="Wrap" IsVisible="{Binding !HasEvents}"
+                   Text="Nog geen gebeurtenissen. Zet de cursor waar iets moet gebeuren en kies Volume of Opdracht; het gaat elke keer af als het nummer op de zender speelt." />
+        <ItemsControl ItemsSource="{Binding Events}">
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="vm:EventRow">
+              <Border Classes="card" Margin="0,0,0,4" Padding="6,4">
+                <DockPanel>
+                  <Border DockPanel.Dock="Left" Width="4" Background="{Binding Brush}" CornerRadius="{DynamicResource Radius2}" Margin="0,0,6,0" />
+                  <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="2" VerticalAlignment="Top">
+                    <Button Classes="small" Content="⌖" ToolTip.Tip="Zet op de cursor" Command="{Binding SetHereCommand}" />
+                    <Button Classes="small" Content="▶" ToolTip.Tip="Beluister vanaf 3 s ervoor (PFL; de gebeurtenis zelf gaat alleen op de zender af)" Command="{Binding ListenCommand}" />
+                    <Button Classes="small" Content="✕" ToolTip.Tip="Weg" Command="{Binding RemoveCommand}" />
+                  </StackPanel>
+                  <WrapPanel ItemSpacing="4" LineSpacing="4">
+                    <TextBlock Classes="cuelabel" Text="{Binding Title}" VerticalAlignment="Center" />
+                    <TextBox Text="{Binding AtText}" Width="92" FontFamily="Consolas, monospace" MinHeight="26" Padding="4,2" ToolTip.Tip="Waar in het nummer (m:ss.mmm)" />
+                    <TextBox Text="{Binding Text}" MinWidth="200" IsVisible="{Binding IsCommand}" FontFamily="Consolas, monospace" MinHeight="26" Padding="4,2"
+                             Watermark="bijv. CART 1 3 of OVERLAY PLAY 12" />
+                    <StackPanel Orientation="Horizontal" Spacing="4" IsVisible="{Binding IsVolume}">
+                      <NumericUpDown Value="{Binding Gain}" Minimum="-40" Maximum="6" Increment="1" FormatString="0" Width="64" ShowButtonSpinner="False" MinHeight="26" ToolTip.Tip="Hoeveel dB (negatief = zachter)" />
+                      <TextBlock Classes="muted" Text="dB," VerticalAlignment="Center" />
+                      <NumericUpDown Value="{Binding Length}" Minimum="0" Maximum="600" Increment="0.5" FormatString="0.0" Width="70" ShowButtonSpinner="False" MinHeight="26" ToolTip.Tip="Zo lang blijft het zo" />
+                      <TextBlock Classes="muted" Text="s lang, overgang" VerticalAlignment="Center" />
+                      <NumericUpDown Value="{Binding Ramp}" Minimum="0.05" Maximum="10" Increment="0.1" FormatString="0.0" Width="64" ShowButtonSpinner="False" MinHeight="26" ToolTip.Tip="Seconden om erheen en weer terug te gaan" />
+                      <TextBlock Classes="muted" Text="s" VerticalAlignment="Center" />
+                    </StackPanel>
+                    <TextBox Text="{Binding Label}" MinWidth="140" MinHeight="26" Padding="4,2" Watermark="notitie (optioneel)" />
+                  </WrapPanel>
+                </DockPanel>
+              </Border>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+        </StackPanel>
+      </ScrollViewer>
+    </Grid>
+  </DockPanel>
+</UserControl>

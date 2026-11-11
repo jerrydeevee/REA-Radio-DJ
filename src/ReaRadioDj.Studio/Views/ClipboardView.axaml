@@ -1,0 +1,73 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:ReaRadioDj.Studio.ViewModels"
+             xmlns:c="using:ReaRadioDj.Contracts"
+             xmlns:ctl="using:ReaRadioDj.Studio.Controls"
+             x:Class="ReaRadioDj.Studio.Views.ClipboardView"
+             x:DataType="vm:ClipboardTool">
+  <UserControl.Styles>
+    <!-- the row buttons go only when the panel is really narrow; the track can always be dragged -->
+    <Style Selector=":is(UserControl).tight StackPanel.rowbuttons"><Setter Property="IsVisible" Value="False" /></Style>
+  </UserControl.Styles>
+  <!-- A parking place for tracks: drop them here from the library, the log, a deck or a player; drag them out again
+       to the log, a player, a deck or a cartwall. Kept over a restart and the same on every work sheet. -->
+  <DockPanel Margin="6" ctl:WidthClasses.Track="True">
+    <DockPanel DockPanel.Dock="Top" Margin="0,0,0,6">
+      <WrapPanel DockPanel.Dock="Right" ItemSpacing="4" LineSpacing="4">
+        <Button Classes="small" Content="+ selectie" Command="{Binding AddSelectedCommand}" ToolTip.Tip="Het gekozen nummer uit de bibliotheek erbij" />
+        <Button Classes="small" Content="Leegmaken" Command="{Binding ClearCommand}" IsEnabled="{Binding !IsEmpty}" />
+      </WrapPanel>
+      <TextBlock Classes="muted" Text="{Binding Summary}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+    </DockPanel>
+
+    <!-- the whole clipboard as one container in the log (an ad block, a jingle set) -->
+    <Border DockPanel.Dock="Bottom" Classes="card" Margin="0,6,0,0" IsVisible="{Binding !IsEmpty}">
+      <StackPanel Spacing="4">
+        <TextBlock FontWeight="SemiBold" Text="Als container in de log" />
+        <WrapPanel ItemSpacing="4" LineSpacing="4">
+          <TextBox Text="{Binding ContainerName}" MinWidth="160" Watermark="naam, bijv. Reclameblok 14 uur" />
+          <Button Classes="small" Content="Als volgende" Command="{Binding ToContainerCommand}" CommandParameter="next" VerticalAlignment="Center"
+                  ToolTip.Tip="Alles van het klembord, van boven naar beneden, als één regel direct na wat nu speelt" />
+          <Button Classes="small" Content="Achteraan" Command="{Binding ToContainerCommand}" CommandParameter="end" VerticalAlignment="Center"
+                  ToolTip.Tip="Alles van het klembord als één regel achteraan in de log" />
+        </WrapPanel>
+        <TextBlock Classes="muted" FontSize="11" TextWrapping="Wrap" Text="{Binding ContainerResult}"
+                   IsVisible="{Binding ContainerResult, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+      </StackPanel>
+    </Border>
+
+    <Panel>
+      <Border x:Name="DropHint" Classes="card" IsVisible="{Binding IsEmpty}" VerticalAlignment="Top"
+              BorderBrush="{DynamicResource ControlBorderBrush}" BorderThickness="1">
+        <StackPanel Spacing="4">
+          <TextBlock FontWeight="SemiBold" Text="Sleep nummers hierheen" />
+          <TextBlock Classes="muted" TextWrapping="Wrap"
+                     Text="Uit de bibliotheek, de programmalog, een DJ-deck of een speler (sleep de titel). Later sleep je ze hier weer uit naar de log, een speler, een deck of de cartwall. In de bibliotheek zet Ctrl+Shift+C de selectie hier." />
+        </StackPanel>
+      </Border>
+      <ListBox x:Name="List" ItemsSource="{Binding Items}" IsVisible="{Binding !IsEmpty}" Background="Transparent">
+        <ListBox.ItemTemplate>
+          <DataTemplate x:DataType="c:MediaDto">
+            <Grid ColumnDefinitions="4,*,Auto,Auto" ToolTip.Tip="Sleep naar de log, een speler, een deck of de cartwall">
+              <Border Grid.Column="0" Background="{Binding Kind, Converter={x:Static vm:Brushes.TypeColor}}" CornerRadius="{DynamicResource Radius2}" Margin="0,2" />
+              <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="8,0,0,0">
+                <TextBlock Text="{Binding Title}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                <TextBlock Classes="muted" FontSize="11" Text="{Binding Artist}" TextTrimming="CharacterEllipsis" />
+              </StackPanel>
+              <TextBlock Grid.Column="2" Classes="mono" FontSize="12" Margin="8,0" VerticalAlignment="Center"
+                         Text="{Binding Duration, Converter={x:Static vm:Brushes.Seconds}}" />
+              <StackPanel Grid.Column="3" Classes="rowbuttons" Orientation="Horizontal" Spacing="2" VerticalAlignment="Center">
+                <Button Classes="small" Content="⤒" ToolTip.Tip="Als volgende in de log"
+                        Command="{Binding $parent[ListBox].DataContext.NextCommand}" CommandParameter="{Binding}" />
+                <Button Classes="small" Content="⤓" ToolTip.Tip="Achteraan in de log"
+                        Command="{Binding $parent[ListBox].DataContext.EndCommand}" CommandParameter="{Binding}" />
+                <Button Classes="small" Content="✕" ToolTip.Tip="Van het klembord halen"
+                        Command="{Binding $parent[ListBox].DataContext.RemoveCommand}" CommandParameter="{Binding}" />
+              </StackPanel>
+            </Grid>
+          </DataTemplate>
+        </ListBox.ItemTemplate>
+      </ListBox>
+    </Panel>
+  </DockPanel>
+</UserControl>

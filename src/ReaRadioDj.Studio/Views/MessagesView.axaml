@@ -1,0 +1,21 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:ReaRadioDj.Studio.ViewModels"
+             xmlns:c="using:ReaRadioDj.Contracts"
+             x:Class="ReaRadioDj.Studio.Views.MessagesView"
+             x:DataType="vm:MessagesTool">
+  <DockPanel Margin="6">
+    <Button DockPanel.Dock="Top" Classes="small" Content="Leegmaken" Command="{Binding ClearCommand}" HorizontalAlignment="Right" Margin="0,0,0,4" />
+    <ListBox ItemsSource="{Binding Messages}">
+      <ListBox.ItemTemplate>
+        <DataTemplate x:DataType="c:MessageDto">
+          <TextBlock TextWrapping="Wrap" FontSize="12">
+            <Run Text="{Binding Time, StringFormat='{}{0:HH:mm:ss}'}" FontFamily="Consolas, monospace" Foreground="{DynamicResource MutedTextBrush}" />
+            <Run Text="  " /><Run Text="{Binding Level}" Foreground="{DynamicResource WarnBrush}" />
+            <Run Text="  " /><Run Text="{Binding Text}" />
+          </TextBlock>
+        </DataTemplate>
+      </ListBox.ItemTemplate>
+    </ListBox>
+  </DockPanel>
+</UserControl>

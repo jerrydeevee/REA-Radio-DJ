@@ -1,0 +1,460 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:ctl="using:ReaRadioDj.Studio.Controls"
+             xmlns:vm="using:ReaRadioDj.Studio.ViewModels"
+             xmlns:c="using:ReaRadioDj.Contracts"
+             xmlns:v="using:ReaRadioDj.Studio.Views"
+             x:Class="ReaRadioDj.Studio.Views.PlannerView"
+             x:DataType="vm:PlannerTool">
+  <UserControl.Resources>
+    <DataTemplate x:Key="CategoryItem" x:DataType="c:CategoryDto">
+      <TextBlock Text="{Binding Name}" />
+    </DataTemplate>
+  </UserControl.Resources>
+  <DockPanel Margin="6">
+    <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="4" Margin="0,0,0,4">
+      <Button Classes="small" Content="Vernieuwen" Command="{Binding ReloadCommand}" />
+      <Button Classes="small" Content="Log opnieuw plannen" Command="{Binding ReplanCommand}" ToolTip.Tip="Na het wijzigen van klokken of het grid" />
+    </StackPanel>
+    <TabControl Classes="compact" SelectedIndex="{Binding PlannerTab}">
+      <!-- ============================================================ day overview -->
+      <TabItem Header="Dag">
+        <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled">
+        <Grid ColumnDefinitions="210,8,*,8,260" MinWidth="760">
+          <!-- left: date, calendar, now -->
+          <ScrollViewer Grid.Column="0">
+            <StackPanel Spacing="6">
+              <Border Classes="card">
+                <StackPanel Spacing="2">
+                  <TextBlock Text="{Binding DayTitle}" FontWeight="SemiBold" TextWrapping="Wrap" />
+                  <TextBlock Text="{Binding NowClock}" Foreground="#3DBD7D" TextWrapping="Wrap"
+                             IsVisible="{Binding NowClock, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+                </StackPanel>
+              </Border>
+              <Grid ColumnDefinitions="Auto,*,Auto">
+                <Button Grid.Column="0" Classes="small" Content="◀" Command="{Binding PrevDayCommand}" ToolTip.Tip="Vorige dag" />
+                <Button Grid.Column="1" Classes="small go" Content="Vandaag" Command="{Binding TodayCommand}" HorizontalAlignment="Stretch" Margin="4,0" />
+                <Button Grid.Column="2" Classes="small" Content="▶" Command="{Binding NextDayCommand}" ToolTip.Tip="Volgende dag" />
+              </Grid>
+              <Viewbox Stretch="Uniform" StretchDirection="DownOnly">
+                <Calendar SelectedDate="{Binding DayDate}" FirstDayOfWeek="Monday" />
+              </Viewbox>
+              <TextBlock Classes="muted" TextWrapping="Wrap" FontSize="11"
+                         Text="De dag volgt het weekgrid: een blok is een reeks uren met dezelfde klok. Klik een uur voor de inhoud." />
+            </StackPanel>
+          </ScrollViewer>
+
+          <!-- middle: programme blocks with hour buttons -->
+          <ScrollViewer Grid.Column="2">
+            <ItemsControl ItemsSource="{Binding DayBlocks}">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="vm:DayBlockVm">
+                  <Border Classes="card" Margin="0,0,0,6" BorderThickness="4,1,1,1" BorderBrush="{Binding Brush}">
+                    <StackPanel Spacing="4">
+                      <DockPanel>
+                        <Border DockPanel.Dock="Right" Background="#3DBD7D" CornerRadius="{DynamicResource Radius3}" Padding="6,1" IsVisible="{Binding IsNow}">
+                          <TextBlock Text="NU" FontWeight="Bold" FontSize="11" Foreground="#11161D" />
+                        </Border>
+                        <TextBlock Text="{Binding Name}" FontWeight="SemiBold" FontSize="15" />
+                        <TextBlock Classes="muted mono" Text="{Binding Span}" Margin="10,0,0,0" VerticalAlignment="Center" />
+                      </DockPanel>
+                      <ItemsControl ItemsSource="{Binding Hours}">
+                        <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                          <DataTemplate x:DataType="vm:DayHourVm">
+                            <Button Classes="small mono" Margin="0,0,4,4" MinWidth="64" HorizontalContentAlignment="Center"
+                                    Classes.go="{Binding IsNow}" BorderThickness="2"
+                                    BorderBrush="{Binding Selected, Converter={x:Static vm:Brushes.Active}}"
+                                    Command="{Binding $parent[UserControl].DataContext.PickHourCommand}" CommandParameter="{Binding}">
+                              <StackPanel Orientation="Horizontal" Spacing="2">
+                                <TextBlock Text="{Binding Text}" />
+                                <TextBlock Text="{Binding Badge}" Foreground="{DynamicResource WarnBrush}" FontWeight="Bold" />
+                              </StackPanel>
+                            </Button>
+                          </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                      </ItemsControl>
+                    </StackPanel>
+                  </Border>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </ScrollViewer>
+
+          <!-- right: the chosen hour and the agenda of the day -->
+          <Grid Grid.Column="4" RowDefinitions="Auto,*,8,Auto,*">
+            <TextBlock Grid.Row="0" Text="{Binding HourTitle}" FontWeight="SemiBold" Margin="0,0,0,4" TextWrapping="Wrap" />
+            <ListBox Grid.Row="1" ItemsSource="{Binding HourLines}">
+              <ListBox.ItemTemplate>
+                <DataTemplate x:DataType="vm:DayLine">
+                  <DockPanel>
+                    <Border DockPanel.Dock="Left" Width="4" Background="{Binding Brush}" CornerRadius="{DynamicResource Radius2}" Margin="0,0,6,0" />
+                    <TextBlock DockPanel.Dock="Left" Classes="mono muted" Text="{Binding Time}" Width="64" />
+                    <StackPanel>
+                      <TextBlock Text="{Binding Text}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                      <TextBlock Classes="muted" FontSize="11" Text="{Binding Detail}" TextTrimming="CharacterEllipsis" />
+                    </StackPanel>
+                  </DockPanel>
+                </DataTemplate>
+              </ListBox.ItemTemplate>
+            </ListBox>
+            <TextBlock Grid.Row="3" Text="VASTE TIJDEN EN STREAMS VANDAAG" FontSize="11" FontWeight="Bold" Classes="muted" Margin="0,0,0,4" />
+            <ListBox Grid.Row="4" ItemsSource="{Binding DayAgenda}">
+              <ListBox.ItemTemplate>
+                <DataTemplate x:DataType="vm:DayLine">
+                  <DockPanel>
+                    <Border DockPanel.Dock="Left" Width="4" Background="{Binding Brush}" CornerRadius="{DynamicResource Radius2}" Margin="0,0,6,0" />
+                    <TextBlock DockPanel.Dock="Left" Classes="mono muted" Text="{Binding Time}" Width="64" />
+                    <StackPanel>
+                      <TextBlock Text="{Binding Text}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                      <TextBlock Classes="muted" FontSize="11" Text="{Binding Detail}" TextTrimming="CharacterEllipsis" />
+                    </StackPanel>
+                  </DockPanel>
+                </DataTemplate>
+              </ListBox.ItemTemplate>
+            </ListBox>
+          </Grid>
+        </Grid>
+        </ScrollViewer>
+      </TabItem>
+
+      <!-- ============================================================ week agenda -->
+      <TabItem Header="Week">
+        <DockPanel>
+          <DockPanel DockPanel.Dock="Top" Margin="0,0,0,4">
+            <StackPanel DockPanel.Dock="Left" Orientation="Horizontal" Spacing="4">
+              <Button Classes="small" Content="◀" Command="{Binding PrevWeekCommand}" ToolTip.Tip="Vorige week" />
+              <Button Classes="small go" Content="Deze week" Command="{Binding TodayCommand}" />
+              <Button Classes="small" Content="▶" Command="{Binding NextWeekCommand}" ToolTip.Tip="Volgende week" />
+            </StackPanel>
+            <TextBlock Classes="muted" Text="Klik een blok om die dag te openen" DockPanel.Dock="Right" VerticalAlignment="Center" />
+            <TextBlock Text="{Binding WeekTitle}" FontWeight="SemiBold" VerticalAlignment="Center" Margin="10,0" />
+          </DockPanel>
+          <ScrollViewer HorizontalScrollBarVisibility="Auto">
+            <Grid ColumnDefinitions="30,*" MinWidth="720">
+              <StackPanel Grid.Column="0" Margin="0,24,0,0">
+                <ItemsControl ItemsSource="{x:Static vm:PlannerTool.WeekHours}">
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate><TextBlock Classes="mono muted" Height="26" FontSize="11" Text="{Binding}" /></DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+              </StackPanel>
+              <ItemsControl Grid.Column="1" ItemsSource="{Binding WeekDays}">
+                <ItemsControl.ItemsPanel><ItemsPanelTemplate><UniformGrid Columns="7" Rows="1" /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate x:DataType="vm:WeekDayVm">
+                    <StackPanel Margin="1,0">
+                      <Border Height="22" Margin="0,0,0,2" CornerRadius="{DynamicResource Radius3}" Background="{DynamicResource ControlBrush}"
+                              BorderThickness="0,0,0,2" BorderBrush="{Binding IsToday, Converter={x:Static vm:Brushes.Active}}">
+                        <TextBlock Text="{Binding Title}" HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="12" FontWeight="SemiBold" />
+                      </Border>
+                      <ItemsControl ItemsSource="{Binding Blocks}">
+                        <ItemsControl.ItemTemplate>
+                          <DataTemplate x:DataType="vm:WeekBlockVm">
+                            <Button Height="{Binding Height}" Margin="0,0,0,2" Padding="5,3" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
+                                    HorizontalContentAlignment="Left" VerticalContentAlignment="Top" Background="{Binding Brush}"
+                                    BorderThickness="2" BorderBrush="{Binding IsNow, Converter={x:Static vm:Brushes.Active}}" CornerRadius="{DynamicResource Radius3}"
+                                    Command="{Binding $parent[UserControl].DataContext.OpenBlockCommand}" CommandParameter="{Binding}">
+                              <StackPanel>
+                                <TextBlock Text="{Binding Span}" Classes="mono" FontSize="10" Foreground="White" Opacity="0.85" />
+                                <TextBlock Text="{Binding Name}" FontWeight="SemiBold" Foreground="White" TextWrapping="Wrap" />
+                                <TextBlock Text="{Binding Events}" FontSize="10" Foreground="White" Opacity="0.85" />
+                              </StackPanel>
+                            </Button>
+                          </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                      </ItemsControl>
+                    </StackPanel>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+            </Grid>
+          </ScrollViewer>
+        </DockPanel>
+      </TabItem>
+
+      <!-- ============================================================ clocks -->
+      <TabItem Header="Klokken">
+        <ctl:SplitList ListWidth="160">
+          <DockPanel Grid.Column="0">
+            <StackPanel DockPanel.Dock="Bottom" Spacing="4" Margin="0,4,0,0">
+              <Button Classes="small" Content="Nieuwe klok" Command="{Binding NewClockCommand}" HorizontalAlignment="Stretch" />
+              <Button Classes="small" Content="Verwijderen" Command="{Binding DeleteClockCommand}" HorizontalAlignment="Stretch" />
+            </StackPanel>
+            <ListBox ItemsSource="{Binding Clocks}" SelectedItem="{Binding SelectedClock}">
+              <ListBox.ItemTemplate>
+                <DataTemplate x:DataType="c:ClockDto">
+                  <StackPanel Orientation="Horizontal" Spacing="6">
+                    <Border Width="10" Height="10" CornerRadius="{DynamicResource Radius5}" Background="{Binding Color, Converter={x:Static vm:Brushes.Hex}}" />
+                    <TextBlock Text="{Binding Name}" />
+                  </StackPanel>
+                </DataTemplate>
+              </ListBox.ItemTemplate>
+            </ListBox>
+          </DockPanel>
+          <DockPanel Grid.Column="1">
+            <DockPanel DockPanel.Dock="Top" Margin="0,0,0,4">
+              <Button DockPanel.Dock="Right" Content="Opslaan" Command="{Binding SaveClockCommand}" Background="#2F9E6A" Margin="4,0,0,0" />
+              <TextBox DockPanel.Dock="Right" Text="{Binding ClockColor}" Width="90" Margin="4,0,0,0" ToolTip.Tip="Kleur in het weekgrid" />
+              <TextBox Text="{Binding ClockName}" Watermark="naam van de klok" />
+            </DockPanel>
+            <WrapPanel DockPanel.Dock="Top" Margin="0,0,0,4">
+              <Button Classes="small" Margin="0,0,4,4" Content="+ muziek" Command="{Binding AddRuleCommand}" />
+              <Button Classes="small" Margin="0,0,4,4" Content="+ jingle" Command="{Binding AddJingleRuleCommand}" />
+              <Button Classes="small" Margin="0,0,4,4" Content="+ AI-presentator" Command="{Binding AddAiRuleCommand}" />
+            </WrapPanel>
+            <TextBlock DockPanel.Dock="Bottom" Classes="muted" TextWrapping="Wrap" Margin="0,4,0,0"
+                       Text="Een klok wordt van boven naar beneden gespeeld en herhaalt als het uur langer duurt. Elk nieuw uur begint weer bovenaan." />
+            <ListBox ItemsSource="{Binding Rules}" SelectedItem="{Binding SelectedRule}">
+              <ListBox.ItemTemplate>
+                <DataTemplate x:DataType="vm:RuleRow">
+                  <StackPanel Spacing="3">
+                    <DockPanel>
+                      <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="2" Margin="4,0,0,0">
+                        <Button Classes="small" Content="↑" Command="{Binding $parent[ListBox].DataContext.RuleUpCommand}" CommandParameter="{Binding}" />
+                        <Button Classes="small" Content="↓" Command="{Binding $parent[ListBox].DataContext.RuleDownCommand}" CommandParameter="{Binding}" />
+                        <Button Classes="small" Content="✕" Command="{Binding $parent[ListBox].DataContext.RemoveRuleCommand}" CommandParameter="{Binding}" />
+                      </StackPanel>
+                      <ComboBox DockPanel.Dock="Left" Width="150" ItemsSource="{Binding $parent[ListBox].DataContext.RuleKinds}" SelectedIndex="{Binding Kind}" />
+                      <ComboBox Margin="4,0,0,0" ItemsSource="{Binding $parent[ListBox].DataContext.RuleModes}" SelectedIndex="{Binding Mode}"
+                                HorizontalAlignment="Stretch" IsVisible="{Binding IsCategory}" />
+                    </DockPanel>
+                    <ComboBox ItemsSource="{Binding $parent[ListBox].DataContext.Categories}" SelectedItem="{Binding Category}"
+                              ItemTemplate="{StaticResource CategoryItem}" HorizontalAlignment="Stretch" IsVisible="{Binding IsCategory}" />
+                    <Button Classes="small" HorizontalAlignment="Stretch" IsVisible="{Binding IsMedia}"
+                            Content="{Binding MediaLabel, TargetNullValue='kies: selectie uit bibliotheek', FallbackValue='kies'}"
+                            Command="{Binding $parent[ListBox].DataContext.RuleMediaCommand}" CommandParameter="{Binding}"
+                            ToolTip.Tip="Neem het geselecteerde bibliotheekitem" />
+                  </StackPanel>
+                </DataTemplate>
+              </ListBox.ItemTemplate>
+            </ListBox>
+          </DockPanel>
+        </ctl:SplitList>
+      </TabItem>
+
+      <!-- ============================================================ week grid -->
+      <TabItem Header="Weekgrid">
+        <DockPanel>
+          <WrapPanel DockPanel.Dock="Top" Margin="0,0,0,4">
+            <TextBlock Text="Schilder met klok:" VerticalAlignment="Center" Margin="0,0,6,4" />
+            <ComboBox ItemsSource="{Binding GridChoices}" SelectedItem="{Binding PaintClock}" MinWidth="160" Margin="0,0,6,4">
+              <ComboBox.ItemTemplate>
+                <DataTemplate x:DataType="c:ClockDto">
+                  <TextBlock Text="{Binding Name, FallbackValue='(geen — uur leegmaken)', TargetNullValue='(geen — uur leegmaken)'}" />
+                </DataTemplate>
+              </ComboBox.ItemTemplate>
+            </ComboBox>
+            <Button Classes="small" Content="Hele week" Command="{Binding PaintAllCommand}" Margin="0,0,6,4" />
+            <TextBlock Classes="muted" VerticalAlignment="Center" Margin="0,0,0,4"
+                       Text="Klik = uur · rechtsklik = hele rij of kolom" />
+          </WrapPanel>
+          <Grid ColumnDefinitions="34,*">
+            <StackPanel Grid.Column="0" Margin="0,22,0,0">
+              <ItemsControl ItemsSource="{x:Static v:PlannerView.Hours}">
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate><TextBlock Classes="mono muted" Height="22" FontSize="11" Text="{Binding}" /></DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+            </StackPanel>
+            <StackPanel Grid.Column="1">
+              <ItemsControl ItemsSource="{Binding Days}">
+                <ItemsControl.ItemsPanel><ItemsPanelTemplate><UniformGrid Columns="7" Rows="1" /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate><TextBlock Text="{Binding}" HorizontalAlignment="Center" Height="22" /></DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+              <ItemsControl ItemsSource="{Binding Cells}">
+                <ItemsControl.ItemsPanel><ItemsPanelTemplate><UniformGrid Columns="7" Rows="24" /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate x:DataType="vm:GridCellVm">
+                    <Button Height="21" Margin="1,0,0,1" Padding="2,0" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
+                            Background="{Binding Brush}" FontSize="10" Content="{Binding Label}" Foreground="White"
+                            Command="{Binding $parent[ItemsControl].DataContext.PaintCellCommand}" CommandParameter="{Binding}">
+                      <Button.ContextMenu>
+                        <ContextMenu>
+                          <MenuItem Header="Dit uur, alle dagen" Command="{Binding $parent[UserControl].DataContext.PaintHourCommand}" CommandParameter="{Binding}" />
+                          <MenuItem Header="Deze dag, alle uren" Command="{Binding $parent[UserControl].DataContext.PaintDayCommand}" CommandParameter="{Binding}" />
+                        </ContextMenu>
+                      </Button.ContextMenu>
+                    </Button>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+            </StackPanel>
+          </Grid>
+        </DockPanel>
+      </TabItem>
+
+      <!-- ============================================================ fixed times -->
+      <TabItem Header="Vaste tijden">
+        <Grid ColumnDefinitions="*,280">
+          <DockPanel Grid.Column="0" Margin="0,0,6,0">
+            <Button DockPanel.Dock="Bottom" Classes="small" Content="Nieuwe vaste tijd" Command="{Binding NewEventCommand}" Margin="0,4,0,0" />
+            <ListBox ItemsSource="{Binding Events}" SelectedItem="{Binding SelectedEvent}">
+              <ListBox.ItemTemplate>
+                <DataTemplate x:DataType="c:TimedEventDto">
+                  <StackPanel Opacity="{Binding Enabled, Converter={x:Static vm:Brushes.EnabledOpacity}}">
+                    <TextBlock>
+                      <Run Text="{Binding Name}" FontWeight="SemiBold" /><Run Text="  " /><Run Text="{Binding Timing}" Foreground="{DynamicResource WarnBrush}" />
+                    </TextBlock>
+                    <TextBlock Classes="muted" Text="{Binding Description}" />
+                    <TextBlock Classes="muted" Text="{Binding Next, StringFormat='volgende: {0:ddd HH:mm:ss}'}" />
+                  </StackPanel>
+                </DataTemplate>
+              </ListBox.ItemTemplate>
+            </ListBox>
+          </DockPanel>
+          <ScrollViewer Grid.Column="1">
+            <StackPanel Spacing="5">
+              <TextBox Text="{Binding EventName}" Watermark="naam" />
+              <CheckBox Content="Actief" IsChecked="{Binding EventEnabled}" />
+              <ItemsControl ItemsSource="{Binding EventDays}">
+                <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate x:DataType="vm:DayChoice">
+                    <CheckBox Content="{Binding Name}" IsChecked="{Binding On}" MinWidth="44" />
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+              <TextBlock Text="Uren (* = elk uur, of bijv. 7-9,12,17-19)" />
+              <TextBox Text="{Binding EventHours}" />
+              <StackPanel Orientation="Horizontal" Spacing="6">
+                <TextBlock Text="minuut" VerticalAlignment="Center" />
+                <NumericUpDown Value="{Binding EventMinute}" Minimum="0" Maximum="59" Increment="1" FormatString="0" Width="110" />
+                <TextBlock Text="sec" VerticalAlignment="Center" />
+                <NumericUpDown Value="{Binding EventSecond}" Minimum="0" Maximum="59" Increment="1" FormatString="0" Width="110" />
+              </StackPanel>
+              <ComboBox ItemsSource="{Binding TimingChoices}" SelectedIndex="{Binding EventTiming}" HorizontalAlignment="Stretch" />
+              <ComboBox ItemsSource="{Binding ActionChoices}" SelectedIndex="{Binding EventAction}" HorizontalAlignment="Stretch" />
+              <ComboBox ItemsSource="{Binding Categories}" SelectedItem="{Binding EventCategory}" ItemTemplate="{StaticResource CategoryItem}"
+                        HorizontalAlignment="Stretch" PlaceholderText="categorie" IsVisible="{Binding EventIsAudio}" />
+              <DockPanel IsVisible="{Binding EventIsAudio}">
+                <Button DockPanel.Dock="Right" Classes="small" Content="Selectie" Command="{Binding EventMediaFromSelectionCommand}" />
+                <TextBlock Text="{Binding EventMediaLabel, TargetNullValue='geen vast item'}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+              </DockPanel>
+              <StackPanel Spacing="3" IsVisible="{Binding EventIsText}">
+                <TextBox Text="{Binding EventText}" AcceptsReturn="True" MinHeight="70" TextWrapping="Wrap" FontFamily="Consolas" />
+                <TextBlock Classes="muted" TextWrapping="Wrap" Text="{Binding EventTextHint}" />
+              </StackPanel>
+              <StackPanel Orientation="Horizontal" Spacing="6">
+                <Button Content="Opslaan" Command="{Binding SaveEventCommand}" Background="#2F9E6A" />
+                <Button Content="Verwijderen" Command="{Binding DeleteEventCommand}" />
+              </StackPanel>
+              <TextBlock Classes="muted" TextWrapping="Wrap"
+                         Text="Hard: onderbreekt op de seconde. Zacht: na het lopende item. Overlay: eroverheen, de muziek dimt. Materiaal (en een AI-break) wordt 3 minuten vooraf klaargezet; te laat = overgeslagen, nooit later gespeeld." />
+            </StackPanel>
+          </ScrollViewer>
+        </Grid>
+      </TabItem>
+
+      <!-- ============================================================ planning rules -->
+      <TabItem Header="Regels">
+        <Grid ColumnDefinitions="*,280">
+          <DockPanel Grid.Column="0" Margin="0,0,6,0">
+            <Button DockPanel.Dock="Bottom" Classes="small" Content="Nieuwe regel" Command="{Binding NewScriptRuleCommand}" Margin="0,4,0,0" />
+            <ListBox ItemsSource="{Binding ScriptRules}" SelectedItem="{Binding SelectedScriptRule}">
+              <ListBox.ItemTemplate>
+                <DataTemplate x:DataType="c:ScriptRuleDto">
+                  <StackPanel Opacity="{Binding Enabled, Converter={x:Static vm:Brushes.EnabledOpacity}}">
+                    <TextBlock Text="{Binding Name}" FontWeight="SemiBold" />
+                    <TextBlock Classes="muted" Text="{Binding Description}" />
+                  </StackPanel>
+                </DataTemplate>
+              </ListBox.ItemTemplate>
+            </ListBox>
+          </DockPanel>
+          <ScrollViewer Grid.Column="1">
+            <StackPanel Spacing="5">
+              <TextBox Text="{Binding RuleName}" Watermark="naam" />
+              <CheckBox Content="Actief" IsChecked="{Binding RuleEnabled}" />
+              <ComboBox ItemsSource="{Binding ScriptRuleKinds}" SelectedIndex="{Binding RuleKind}" HorizontalAlignment="Stretch" />
+              <StackPanel Orientation="Horizontal" Spacing="6" IsVisible="{Binding RuleIsMaxInRow}">
+                <TextBlock Text="maximaal" VerticalAlignment="Center" />
+                <NumericUpDown Value="{Binding RuleCount}" Minimum="1" Maximum="50" Increment="1" FormatString="0" Width="110" />
+                <TextBlock Text="op rij uit" VerticalAlignment="Center" />
+              </StackPanel>
+              <TextBlock Text="Categorie (leeg = elke)" />
+              <DockPanel>
+                <Button DockPanel.Dock="Right" Classes="small" Content="✕" Command="{Binding ClearRuleToCommand}" Margin="4,0,0,0" ToolTip.Tip="Elke categorie" />
+                <ComboBox ItemsSource="{Binding Categories}" SelectedItem="{Binding RuleTo}" ItemTemplate="{StaticResource CategoryItem}"
+                          HorizontalAlignment="Stretch" PlaceholderText="elke categorie" />
+              </DockPanel>
+              <StackPanel Spacing="5" IsVisible="{Binding RuleIsNotAfter}">
+                <TextBlock Text="mag niet direct volgen op (leeg = elke)" />
+                <DockPanel>
+                  <Button DockPanel.Dock="Right" Classes="small" Content="✕" Command="{Binding ClearRuleFromCommand}" Margin="4,0,0,0" ToolTip.Tip="Elke categorie" />
+                  <ComboBox ItemsSource="{Binding Categories}" SelectedItem="{Binding RuleFrom}" ItemTemplate="{StaticResource CategoryItem}"
+                            HorizontalAlignment="Stretch" PlaceholderText="elke categorie" />
+                </DockPanel>
+              </StackPanel>
+              <TextBlock Text="Als de regel een item tegenhoudt" />
+              <ComboBox ItemsSource="{Binding ScriptRuleActions}" SelectedIndex="{Binding RuleAction}" HorizontalAlignment="Stretch" />
+              <StackPanel Orientation="Horizontal" Spacing="6">
+                <Button Content="Opslaan" Command="{Binding SaveScriptRuleCommand}" Background="#2F9E6A" />
+                <Button Content="Verwijderen" Command="{Binding DeleteScriptRuleCommand}" />
+              </StackPanel>
+              <TextBlock Classes="muted" TextWrapping="Wrap"
+                         Text="Regels kijken naar wat er net voor gepland staat. Overslaan laat die plek in de klok weg; uitstellen probeert hem na het volgende item nog één keer. Een nieuw uur begint schoon." />
+            </StackPanel>
+          </ScrollViewer>
+        </Grid>
+      </TabItem>
+
+      <!-- ============================================================ external streams -->
+      <TabItem Header="Externe streams">
+        <Grid ColumnDefinitions="*,280">
+          <DockPanel Grid.Column="0" Margin="0,0,6,0">
+            <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" Spacing="4" Margin="0,4,0,0">
+              <Button Classes="small" Content="Nieuwe stream" Command="{Binding NewWatchCommand}" />
+              <Button Classes="small" Content="Live stream stoppen" Command="{Binding StopLiveWatchCommand}" Background="#B4232F"
+                      ToolTip.Tip="Haalt de stream die nu live is OFF AIR; het programma gaat verder" />
+            </StackPanel>
+            <ListBox ItemsSource="{Binding Watches}" SelectedItem="{Binding SelectedWatch}">
+              <ListBox.ItemTemplate>
+                <DataTemplate x:DataType="c:StreamWatchDto">
+                  <StackPanel Opacity="{Binding Enabled, Converter={x:Static vm:Brushes.EnabledOpacity}}">
+                    <TextBlock>
+                      <Run Text="{Binding Name}" FontWeight="SemiBold" /><Run Text="  " /><Run Text="{Binding State}" Foreground="{DynamicResource WarnBrush}" />
+                    </TextBlock>
+                    <TextBlock Classes="muted mono" Text="{Binding Url}" TextTrimming="CharacterEllipsis" />
+                    <TextBlock Classes="muted" Text="{Binding Description}" />
+                  </StackPanel>
+                </DataTemplate>
+              </ListBox.ItemTemplate>
+            </ListBox>
+          </DockPanel>
+          <ScrollViewer Grid.Column="1">
+            <StackPanel Spacing="5">
+              <TextBox Text="{Binding WatchName}" Watermark="naam" />
+              <CheckBox Content="Actief" IsChecked="{Binding WatchEnabled}" />
+              <TextBox Text="{Binding WatchUrl}" Watermark="http://server:8000/live" FontFamily="Consolas" />
+              <ComboBox ItemsSource="{Binding WatchModes}" SelectedIndex="{Binding WatchMode}" HorizontalAlignment="Stretch" />
+              <ItemsControl ItemsSource="{Binding WatchDays}">
+                <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate x:DataType="vm:DayChoice">
+                    <CheckBox Content="{Binding Name}" IsChecked="{Binding On}" MinWidth="44" />
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+              <TextBlock Text="Uren (* = elk uur, of bijv. 18-20)" />
+              <TextBox Text="{Binding WatchHours}" />
+              <StackPanel Orientation="Horizontal" Spacing="6">
+                <TextBlock Text="controleer elke" VerticalAlignment="Center" />
+                <NumericUpDown Value="{Binding WatchCheck}" Minimum="5" Maximum="600" Increment="5" FormatString="0" Width="110" />
+                <TextBlock Text="sec" VerticalAlignment="Center" />
+              </StackPanel>
+              <StackPanel Orientation="Horizontal" Spacing="6">
+                <Button Content="Opslaan" Command="{Binding SaveWatchCommand}" Background="#2F9E6A" />
+                <Button Content="Verwijderen" Command="{Binding DeleteWatchCommand}" />
+              </StackPanel>
+              <TextBlock Classes="muted" TextWrapping="Wrap"
+                         Text="Binnen het tijdvenster kijkt de engine of de stream uitzendt. Is hij live, dan gaat hij ON AIR. Stopt de stream of eindigt het venster, dan gaat het programma verder." />
+            </StackPanel>
+          </ScrollViewer>
+        </Grid>
+      </TabItem>
+    </TabControl>
+  </DockPanel>
+</UserControl>

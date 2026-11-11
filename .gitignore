@@ -9,7 +9,14 @@ TestResults/
 # BASS is not redistributed: scripts/fetch-bass.ps1 downloads it here
 native/
 
+# Spotify Soloist may not be redistributed: each user installs their own copy (Instellingen > Spotify)
+soloist/
+soloist_release_*.zip
+
 # Local media, rendered breaks and caches
 media/
 data/
+data-*/
+# ...but not the source folder Core/Data (Windows matches "data/" case-insensitively)
+!src/ReaRadioDj.Core/Data/
 appsettings.Local.json

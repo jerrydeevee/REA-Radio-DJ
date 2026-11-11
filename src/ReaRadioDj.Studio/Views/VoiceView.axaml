@@ -1,0 +1,217 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:ReaRadioDj.Studio.ViewModels"
+             xmlns:c="using:ReaRadioDj.Contracts"
+             x:Class="ReaRadioDj.Studio.Views.VoiceView"
+             x:DataType="vm:VoiceTool">
+  <ScrollViewer HorizontalScrollBarVisibility="Disabled">
+  <DockPanel Margin="6" MinHeight="660">
+    <!-- ============================================================ status: GPU, server, active voice -->
+    <Grid DockPanel.Dock="Top" ColumnDefinitions="*,6,*" Margin="0,0,0,6">
+      <Border Grid.Column="0" Classes="card">
+        <StackPanel Spacing="3">
+          <TextBlock Text="GPU" FontSize="11" FontWeight="Bold" Classes="muted" />
+          <TextBlock Text="{Binding GpuName}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+          <Grid ColumnDefinitions="40,*" RowDefinitions="Auto,Auto" Margin="0,2,0,0">
+            <TextBlock Classes="muted" Text="VRAM" />
+            <ProgressBar Grid.Column="1" Value="{Binding GpuMemory}" Maximum="100" MinWidth="0" MinHeight="8" Foreground="#A78BFA" VerticalAlignment="Center" />
+            <TextBlock Grid.Row="1" Classes="muted" Text="Last" />
+            <ProgressBar Grid.Row="1" Grid.Column="1" Value="{Binding GpuLoad}" Maximum="100" MinWidth="0" MinHeight="8" Foreground="#3FA7FF" VerticalAlignment="Center" Margin="0,3,0,0" />
+          </Grid>
+          <TextBlock Classes="muted" Text="{Binding GpuDetail}" TextTrimming="CharacterEllipsis" />
+        </StackPanel>
+      </Border>
+      <Border Grid.Column="2" Classes="card">
+        <DockPanel>
+          <StackPanel DockPanel.Dock="Right" Spacing="4" VerticalAlignment="Center" Margin="6,0,0,0">
+            <Button Classes="small" Content="{Binding ServerButtonText}" Command="{Binding ToggleServerCommand}" IsVisible="{Binding ServerManaged}"
+                    ToolTip.Tip="Start of stop de Higgs-server met het commando uit appsettings.json (Presenter:Tts:ServerCommand)" />
+            <Button Classes="small" Content="Serverlog" Command="{Binding ToggleLogCommand}" />
+          </StackPanel>
+          <StackPanel Spacing="3">
+            <StackPanel Orientation="Horizontal" Spacing="6">
+              <Ellipse Width="10" Height="10" Fill="{Binding ServerOnline, Converter={x:Static vm:Brushes.Active}}" VerticalAlignment="Center" />
+              <TextBlock Text="{Binding ServerText}" FontWeight="SemiBold" />
+            </StackPanel>
+            <TextBlock Classes="muted" Text="{Binding ServerDetail}" TextWrapping="Wrap" MaxHeight="34" />
+            <TextBlock Text="{Binding ActiveVoice}" Foreground="#A78BFA" TextTrimming="CharacterEllipsis" Margin="0,2,0,0" />
+          </StackPanel>
+        </DockPanel>
+      </Border>
+    </Grid>
+    <!-- ============================================================ the voice the automation uses -->
+    <Border DockPanel.Dock="Top" Classes="card" Margin="0,0,0,6" BorderBrush="{DynamicResource AccentBrush}" BorderThickness="2">
+      <StackPanel Spacing="6">
+        <TextBlock Text="PRESENTATORSTEM VAN DE AUTOMATISERING" FontSize="11" FontWeight="Bold" Classes="muted" />
+        <DockPanel>
+          <Button DockPanel.Dock="Right" Classes="small" Content="Standaardstemmen toevoegen" Command="{Binding AddPresetsCommand}" Margin="8,0,0,0"
+                  ToolTip.Tip="Vijf Higgs-stemmen met een eigen karakter (warm, enthousiast, vlot, rustig, zakelijk) en de Nederlandse Windows-stem als reserve" />
+          <ComboBox ItemsSource="{Binding Profiles}" SelectedItem="{Binding PresenterVoice}" HorizontalAlignment="Stretch" MinHeight="40" FontSize="15">
+            <ComboBox.ItemTemplate>
+              <DataTemplate x:DataType="c:VoiceProfileDto">
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                  <TextBlock Text="★" Foreground="{DynamicResource WarnBrush}" IsVisible="{Binding IsDefault}" VerticalAlignment="Center" />
+                  <TextBlock Text="{Binding Name}" FontWeight="SemiBold" VerticalAlignment="Center" />
+                  <TextBlock Text="{Binding Engine}" Classes="muted" VerticalAlignment="Center" />
+                </StackPanel>
+              </DataTemplate>
+            </ComboBox.ItemTemplate>
+          </ComboBox>
+        </DockPanel>
+        <TextBlock Text="{Binding PresenterVoiceNote}" TextWrapping="Wrap" />
+      </StackPanel>
+    </Border>
+    <Border DockPanel.Dock="Top" Classes="card" IsVisible="{Binding ShowLog}" Margin="0,0,0,6" MaxHeight="140">
+      <ListBox ItemsSource="{Binding ServerLog}" Classes="mono" FontSize="11" />
+    </Border>
+
+    <!-- ============================================================ test console -->
+    <Border DockPanel.Dock="Bottom" Classes="card" Margin="0,6,0,0">
+      <StackPanel Spacing="5">
+        <TextBlock Text="PROEFOPNAME" FontSize="11" FontWeight="Bold" Classes="muted" />
+        <TextBox Text="{Binding TestText}" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="54" MaxHeight="110" />
+        <DockPanel>
+          <Button DockPanel.Dock="Left" Classes="transport go" Content="▶ Genereer en beluister" Command="{Binding TestCommand}"
+                  IsEnabled="{Binding !Busy}" ToolTip.Tip="Rendert de tekst met de stem uit de editor en speelt hem af op PFL (niet ON AIR)" />
+          <TextBlock Text="{Binding LastResult}" VerticalAlignment="Center" Margin="10,0,0,0" TextWrapping="Wrap" />
+        </DockPanel>
+        <ListBox ItemsSource="{Binding Results}" MaxHeight="80" FontSize="11" Classes="mono" />
+      </StackPanel>
+    </Border>
+
+    <!-- ============================================================ profiles + editor -->
+    <Grid ColumnDefinitions="190,6,*">
+      <DockPanel Grid.Column="0">
+        <StackPanel DockPanel.Dock="Bottom" Spacing="4" Margin="0,4,0,0">
+          <Button Classes="small" Content="+ Higgs-stem" Command="{Binding NewHiggsCommand}" HorizontalAlignment="Stretch" />
+          <Button Classes="small" Content="+ Windows-stem" Command="{Binding NewSapiCommand}" HorizontalAlignment="Stretch" />
+          <Button Classes="small" Content="+ Online stem" Command="{Binding NewCloudCommand}" HorizontalAlignment="Stretch" />
+          <Button Classes="small" Content="★ Als presentatorstem" Command="{Binding MakeDefaultCommand}" HorizontalAlignment="Stretch" />
+          <Button Classes="small" Content="Verwijderen" Command="{Binding DeleteCommand}" HorizontalAlignment="Stretch" />
+        </StackPanel>
+        <TextBlock DockPanel.Dock="Top" Text="Bewerken:" Classes="muted" FontSize="11" Margin="2,0,0,4" />
+        <ListBox ItemsSource="{Binding Profiles}" SelectedItem="{Binding Selected}" Classes="voices">
+          <ListBox.Styles>
+            <Style Selector="ListBox.voices ListBoxItem:selected /template/ ContentPresenter">
+              <Setter Property="Background" Value="{DynamicResource SelectedBrush}" />
+              <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+              <Setter Property="BorderThickness" Value="3,0,0,0" />
+            </Style>
+          </ListBox.Styles>
+          <ListBox.ItemTemplate>
+            <DataTemplate x:DataType="c:VoiceProfileDto">
+              <StackPanel>
+                <StackPanel Orientation="Horizontal" Spacing="4">
+                  <TextBlock Text="★" Foreground="{DynamicResource WarnBrush}" IsVisible="{Binding IsDefault}" />
+                  <TextBlock Text="{Binding Name}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                </StackPanel>
+                <TextBlock Classes="muted" Text="{Binding Engine}" />
+                <TextBlock Text="{Binding Problem}" Foreground="#E5484D" FontSize="11" TextWrapping="Wrap"
+                           IsVisible="{Binding Problem, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+              </StackPanel>
+            </DataTemplate>
+          </ListBox.ItemTemplate>
+        </ListBox>
+      </DockPanel>
+
+      <ScrollViewer Grid.Column="2" MinHeight="260">
+        <StackPanel Spacing="6">
+          <DockPanel>
+            <Button DockPanel.Dock="Right" Content="Opslaan" Command="{Binding SaveCommand}" Background="#2F9E6A" Margin="6,0,0,0" />
+            <ComboBox DockPanel.Dock="Right" ItemsSource="{Binding Engines}" SelectedIndex="{Binding Engine}" MinWidth="170" Margin="6,0,0,0" />
+            <TextBox Text="{Binding Name}" Watermark="naam van de stem" />
+          </DockPanel>
+
+          <!-- Higgs -->
+          <StackPanel Spacing="6" IsVisible="{Binding IsHiggs}">
+            <TextBlock Text="Stuurtags (voor elke break)" />
+            <TextBox Text="{Binding ProfileTags}" FontFamily="Consolas" Watermark="&lt;|emotion:enthusiasm|&gt;&lt;|prosody:speed_fast|&gt;" />
+            <ItemsControl ItemsSource="{Binding Tags}">
+              <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="x:String">
+                  <Button Classes="small" Content="{Binding}" Margin="0,0,4,4" FontFamily="Consolas"
+                          Command="{Binding $parent[ItemsControl].DataContext.AddTagCommand}" CommandParameter="{Binding}" />
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+            <DockPanel>
+              <TextBlock DockPanel.Dock="Left" Text="Variatie" VerticalAlignment="Center" Width="70" />
+              <TextBlock DockPanel.Dock="Right" Classes="mono" Text="{Binding TemperatureText}" VerticalAlignment="Center" Width="40" Margin="6,0,0,0" />
+              <Slider Minimum="0.1" Maximum="1.5" Value="{Binding Temperature}" TickFrequency="0.05" IsSnapToTickEnabled="True"
+                      ToolTip.Tip="Laag = rustig en voorspelbaar, hoog = levendiger en wisselender" />
+            </DockPanel>
+
+            <Border Classes="card" Margin="0,4,0,0">
+              <StackPanel Spacing="5">
+                <TextBlock Text="STEM KLONEN (optioneel)" FontSize="11" FontWeight="Bold" Classes="muted" />
+                <TextBlock Classes="muted" TextWrapping="Wrap"
+                           Text="Een korte, schone opname (5-15 s) van de stem plus de letterlijke tekst. Het pad moet leesbaar zijn voor de Higgs-server (bij WSL bijv. /mnt/c/…)." />
+                <TextBox Text="{Binding ReferenceAudio}" Watermark="pad of URL van de referentieclip" FontFamily="Consolas" />
+                <TextBox Text="{Binding ReferenceText}" Watermark="letterlijke tekst van de clip" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="44" />
+                <StackPanel Spacing="4" IsVisible="{Binding IsClone}">
+                  <CheckBox IsChecked="{Binding Consent}" Content="Deze persoon heeft schriftelijk toestemming gegeven voor het klonen van de stem" />
+                  <TextBox Text="{Binding ConsentNote}" Watermark="waar ligt de toestemming vast (datum, document)" />
+                  <TextBlock Foreground="{DynamicResource WarnBrush}" TextWrapping="Wrap" FontSize="12"
+                             Text="Zonder toestemming wordt een gekloonde stem niet gebruikt. Nooit stemmen imiteren van mensen die daar geen ja op hebben gezegd." />
+                </StackPanel>
+              </StackPanel>
+            </Border>
+          </StackPanel>
+
+          <!-- Windows speech -->
+          <StackPanel Spacing="6" IsVisible="{Binding IsSapi}">
+            <TextBlock Text="Windows-stem" />
+            <ComboBox ItemsSource="{Binding SapiVoices}" SelectedItem="{Binding SapiVoice}" HorizontalAlignment="Stretch" PlaceholderText="eerste stem voor de taal" />
+            <TextBlock Classes="muted" TextWrapping="Wrap" Text="Werkt altijd, ook zonder GPU of server. Stuurtags worden genegeerd." />
+          </StackPanel>
+
+          <!-- online voices -->
+          <StackPanel Spacing="6" IsVisible="{Binding IsCloud}">
+            <TextBlock Text="Stem" />
+            <TextBox Text="{Binding CloudVoice}" FontFamily="Consolas" />
+            <TextBlock Classes="muted" TextWrapping="Wrap" Text="{Binding CloudVoiceHint}" />
+            <TextBlock Classes="muted" TextWrapping="Wrap" Text="De sleutel staat onder 'Online stemmen en controle'. Online stemmen kosten geld per teken en sturen de tekst naar de dienst." />
+          </StackPanel>
+
+          <DockPanel>
+            <TextBlock DockPanel.Dock="Left" Text="Reservestem" VerticalAlignment="Center" Width="100" />
+            <ComboBox ItemsSource="{Binding FallbackChoices}" SelectedItem="{Binding Fallback}" HorizontalAlignment="Stretch"
+                      ToolTip.Tip="Valt deze stem uit (server weg, fout van de dienst), dan spreekt deze stem de break in." />
+          </DockPanel>
+
+          <Expander Header="Online stemmen en controle (Whisper)" HorizontalAlignment="Stretch" Margin="0,6,0,0">
+            <StackPanel Spacing="6">
+              <Grid ColumnDefinitions="130,*" RowDefinitions="Auto,Auto,Auto,Auto">
+                <TextBlock Grid.Row="0" Text="ElevenLabs-sleutel" VerticalAlignment="Center" />
+                <TextBox Grid.Row="0" Grid.Column="1" Text="{Binding ElevenLabsKey}" PasswordChar="•" Margin="0,0,0,4" />
+                <TextBlock Grid.Row="1" Text="ElevenLabs-model" VerticalAlignment="Center" />
+                <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding ElevenLabsModel}" Margin="0,0,0,4" />
+                <TextBlock Grid.Row="2" Text="Azure-sleutel" VerticalAlignment="Center" />
+                <TextBox Grid.Row="2" Grid.Column="1" Text="{Binding AzureKey}" PasswordChar="•" Margin="0,0,0,4" />
+                <TextBlock Grid.Row="3" Text="Azure-regio" VerticalAlignment="Center" />
+                <TextBox Grid.Row="3" Grid.Column="1" Text="{Binding AzureRegion}" Watermark="westeurope" Margin="0,0,0,4" />
+              </Grid>
+              <CheckBox Content="Elke break terugluisteren met Whisper en vergelijken met het script" IsChecked="{Binding CheckEnabled}" />
+              <WrapPanel>
+                <TextBox Text="{Binding CheckUrl}" Width="210" Margin="0,0,4,4" ToolTip.Tip="adres van de spraakherkenning (tools/whisper)" />
+                <TextBox Text="{Binding CheckModel}" Width="90" Margin="0,0,8,4" ToolTip.Tip="Whisper-model" />
+                <TextBlock Classes="muted" Text="min. score" VerticalAlignment="Center" Margin="0,0,4,4" />
+                <NumericUpDown Value="{Binding CheckMinScore}" Minimum="0.3" Maximum="1" Increment="0.05" FormatString="0.00" Width="110" Margin="0,0,8,4" />
+                <TextBlock Classes="muted" Text="opnieuw" VerticalAlignment="Center" Margin="0,0,4,4" />
+                <NumericUpDown Value="{Binding CheckRetries}" Minimum="0" Maximum="3" FormatString="0" Width="90" Margin="0,0,4,4" />
+              </WrapPanel>
+              <CheckBox Content="Na mislukte pogingen overslaan (jingle in de plaats) in plaats van uitzenden met waarschuwing" IsChecked="{Binding CheckReject}" />
+              <WrapPanel>
+                <Button Classes="small" Content="Opslaan" Command="{Binding SaveServicesCommand}" Margin="0,0,4,0" />
+                <Button Classes="small" Content="Proeftekst inspreken en terugluisteren" Command="{Binding CheckTestCommand}" IsEnabled="{Binding !Busy}" />
+              </WrapPanel>
+              <TextBlock Classes="muted" Text="{Binding CheckResult}" TextWrapping="Wrap" />
+            </StackPanel>
+          </Expander>
+        </StackPanel>
+      </ScrollViewer>
+    </Grid>
+  </DockPanel>
+  </ScrollViewer>
+</UserControl>

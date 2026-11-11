@@ -18,10 +18,93 @@ public sealed class PlayoutLog
 
     public void Append(LogItem item) { lock (_gate) _upcoming.Add(item); Changed?.Invoke(); }
 
+    /// <summary>Containers as their items, in playing order (for rules that look at songs).</summary>
+    public static IEnumerable<LogItem> Flat(IEnumerable<LogItem> items) =>
+        items.SelectMany(i => i.Type == LogItemType.Container ? i.Children : [i]);
+
+    /// <summary>
+    /// Opens a container into its items, in its place: each item gets the origin "container: name · 2/5", so the items
+    /// stay together as a block (nothing is put in between them once the block plays). Caller holds the lock.
+    /// </summary>
+    private bool OpenAt(int index)
+    {
+        if (index < 0 || index >= _upcoming.Count || _upcoming[index] is not { Type: LogItemType.Container } c) return false;
+        _upcoming.RemoveAt(index);
+        int n = c.Children.Count;
+        for (int k = 0; k < n; k++) c.Children[k].Origin = $"container: {c.Name} · {k + 1}/{n}";
+        _upcoming.InsertRange(index, c.Children);
+        return true;
+    }
+
+    /// <summary>Opens the containers at the top of the log, so the next item is always something that can play.</summary>
+    private bool OpenTop()
+    {
+        bool opened = false;
+        while (OpenAt(0)) opened = true;
+        return opened;
+    }
+
+    /// <summary>Opens a container in the log by hand (its items become ordinary lines in its place).</summary>
+    public bool Open(long id)
+    {
+        bool opened;
+        lock (_gate) opened = OpenAt(_upcoming.FindIndex(x => x.Id == id));
+        if (opened) Changed?.Invoke();
+        return opened;
+    }
+
+    /// <summary>Puts a copy of an upcoming item (a container with all its items) right after it. Null when it cannot be copied.</summary>
+    public LogItem? CopyAfter(long id)
+    {
+        LogItem? copy;
+        lock (_gate)
+        {
+            int i = _upcoming.FindIndex(x => x.Id == id);
+            copy = i < 0 ? null : _upcoming[i].Copy();
+            if (copy is not null) _upcoming.Insert(i + 1, copy);
+        }
+        if (copy is not null) Changed?.Invoke();
+        return copy;
+    }
+
     public void Insert(int index, LogItem item)
     {
         lock (_gate) _upcoming.Insert(Math.Clamp(index, 0, _upcoming.Count), item);
         Changed?.Invoke();
+    }
+
+    /// <summary>
+    /// Inserts an item as the next thing to play, but never inside a block that is on air: items that belong to the same
+    /// news or ad block as the item on air (same origin before " · ") stay together and the new item goes after them.
+    /// </summary>
+    public void InsertAfterBlock(LogItem item)
+    {
+        lock (_gate)
+        {
+            int at = 0;
+            if (_history.Count > 0 && Block(_history[0].Origin) is { } onAir)
+                while (at < _upcoming.Count && Block(_upcoming[at].Origin) == onAir) at++;
+            _upcoming.Insert(at, item);
+        }
+        Changed?.Invoke();
+    }
+
+    /// <summary>"nieuws: 14 uur · sluiter" → "nieuws: 14 uur"; null for items that are not part of a block.</summary>
+    private static string? Block(string? origin) =>
+        origin?.IndexOf(" · ", StringComparison.Ordinal) is int i and > 0 ? origin[..i] : null;
+
+    /// <summary>Items the planner added (from a clock or an imported log): these are thrown away and planned again.</summary>
+    public static bool IsPlanned(string origin) =>
+        origin.StartsWith("klok", StringComparison.Ordinal) || origin.StartsWith("import", StringComparison.Ordinal);
+
+    /// <summary>
+    /// Position after the last item of an imported hour that is already in the log or was played (-1 = none yet), so
+    /// the planner goes on with the right line, also after replanning or a restart.
+    /// </summary>
+    public int LastImported(DateTime hour)
+    {
+        lock (_gate)
+            return _upcoming.Concat(_history).Where(i => i.ImportHour == hour).Select(i => i.ImportIndex).DefaultIfEmpty(-1).Max();
     }
 
     /// <summary>Takes the next item off the top of the log and moves it into the history.</summary>
@@ -30,6 +113,7 @@ public sealed class PlayoutLog
         LogItem? item;
         lock (_gate)
         {
+            OpenTop();
             if (_upcoming.Count == 0) return null;
             item = _upcoming[0];
             _upcoming.RemoveAt(0);
@@ -40,7 +124,60 @@ public sealed class PlayoutLog
         return item;
     }
 
-    public LogItem? PeekNext() { lock (_gate) return _upcoming.Count > 0 ? _upcoming[0] : null; }
+    /// <summary>Replaces the whole log with saved items (at start-up, before anything plays).</summary>
+    public void Restore(IEnumerable<LogItem> upcoming, IEnumerable<LogItem> history)
+    {
+        lock (_gate)
+        {
+            _upcoming.Clear();
+            _upcoming.AddRange(upcoming);
+            _history.Clear();
+            _history.AddRange(history.Take(HistorySize));
+        }
+        Changed?.Invoke();
+    }
+
+    /// <summary>Tells listeners that an item changed in place (for example its transition).</summary>
+    public void Touch() => Changed?.Invoke();
+
+    public LogItem? PeekNext()
+    {
+        LogItem? next;
+        bool opened;
+        lock (_gate)
+        {
+            opened = OpenTop();
+            next = _upcoming.Count > 0 ? _upcoming[0] : null;
+        }
+        if (opened) Changed?.Invoke();
+        return next;
+    }
+
+    public LogItem? Find(long id) { lock (_gate) return _upcoming.FirstOrDefault(i => i.Id == id); }
+
+    /// <summary>Removes every upcoming item that was planned automatically (clock items); manual items stay.</summary>
+    public int ClearPlanned()
+    {
+        int n;
+        lock (_gate) n = _upcoming.RemoveAll(i => IsPlanned(i.Origin));
+        if (n > 0) Changed?.Invoke();
+        return n;
+    }
+
+    /// <summary>Moves an item to a new position (0 = next).</summary>
+    public bool MoveTo(long id, int index)
+    {
+        lock (_gate)
+        {
+            int i = _upcoming.FindIndex(x => x.Id == id);
+            if (i < 0) return false;
+            var item = _upcoming[i];
+            _upcoming.RemoveAt(i);
+            _upcoming.Insert(Math.Clamp(index, 0, _upcoming.Count), item);
+        }
+        Changed?.Invoke();
+        return true;
+    }
 
     public bool Remove(long id)
     {
@@ -84,7 +221,18 @@ public sealed class PlayoutLog
         lock (_gate)
         {
             var list = _history.Where(h => h.Type == LogItemType.Song && h.Media is not null).Select(h => h.Media!).Reverse().ToList();
-            list.AddRange(_upcoming.Where(u => u.Type == LogItemType.Song && u.Media is not null).Select(u => u.Media!));
+            list.AddRange(Flat(_upcoming).Where(u => u.Type == LogItemType.Song && u.Media is not null).Select(u => u.Media!));
+            return list;
+        }
+    }
+
+    /// <summary>The last items played plus everything planned, oldest first (used by the script rules).</summary>
+    public IReadOnlyList<LogItem> Sequence(int recent = 10)
+    {
+        lock (_gate)
+        {
+            var list = _history.Take(recent).Reverse().ToList();
+            list.AddRange(Flat(_upcoming));
             return list;
         }
     }
@@ -94,10 +242,11 @@ public sealed class PlayoutLog
         lock (_gate)
         {
             int count = 0;
-            for (int k = _upcoming.Count - 1; k >= 0; k--)
+            var flat = Flat(_upcoming).ToList();
+            for (int k = flat.Count - 1; k >= 0; k--)
             {
-                if (_upcoming[k].Type == type) return count;
-                if (_upcoming[k].Type == LogItemType.Song) count++;
+                if (flat[k].Type == type) return count;
+                if (flat[k].Type == LogItemType.Song) count++;
             }
             foreach (var h in _history)
             {

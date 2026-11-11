@@ -1,0 +1,55 @@
+<Styles xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <!-- Touch mode (Instellingen › Uiterlijk): added after all other styles, so everything a finger has to hit is at
+       least 44 px. Loaded and removed at run time by Services/Appearance. Only inside the studio windows (UserControl),
+       so the small pin and close buttons on each window's title bar keep their size. -->
+  <Style Selector=":is(UserControl) Button">
+    <Setter Property="MinHeight" Value="44" />
+    <Setter Property="MinWidth" Value="44" />
+    <Setter Property="Padding" Value="14,8" />
+    <Setter Property="VerticalContentAlignment" Value="Center" />
+  </Style>
+  <Style Selector=":is(UserControl) Button.small">
+    <Setter Property="MinHeight" Value="40" />
+    <Setter Property="MinWidth" Value="40" />
+    <Setter Property="Padding" Value="12,6" />
+    <Setter Property="FontSize" Value="14" />
+  </Style>
+  <Style Selector=":is(UserControl) ToggleButton">
+    <Setter Property="MinHeight" Value="44" />
+    <Setter Property="Padding" Value="14,8" />
+    <Setter Property="VerticalContentAlignment" Value="Center" />
+  </Style>
+  <Style Selector=":is(UserControl) CheckBox, :is(UserControl) RadioButton">
+    <Setter Property="MinHeight" Value="44" />
+  </Style>
+  <Style Selector=":is(UserControl) ComboBox, :is(UserControl) TextBox, :is(UserControl) NumericUpDown, :is(UserControl) DatePicker, :is(UserControl) TimePicker">
+    <Setter Property="MinHeight" Value="44" />
+    <Setter Property="FontSize" Value="15" />
+  </Style>
+  <Style Selector="ComboBoxItem, MenuItem">
+    <Setter Property="MinHeight" Value="44" />
+  </Style>
+  <Style Selector=":is(UserControl) ListBoxItem">
+    <Setter Property="MinHeight" Value="52" />
+    <!-- room on the right for the wide scroll bar, which lies over the list -->
+    <Setter Property="Padding" Value="10,8,26,8" />
+  </Style>
+  <Style Selector="TabItem">
+    <Setter Property="MinHeight" Value="44" />
+    <Setter Property="FontSize" Value="16" />
+  </Style>
+  <!-- scroll bars always visible and wide enough to drag -->
+  <Style Selector="ScrollBar">
+    <Setter Property="AllowAutoHide" Value="False" />
+  </Style>
+  <Style Selector="ScrollBar:vertical">
+    <Setter Property="Width" Value="20" />
+  </Style>
+  <Style Selector="ScrollBar:horizontal">
+    <Setter Property="Height" Value="20" />
+  </Style>
+  <Style Selector=":is(UserControl) Slider /template/ Thumb">
+    <Setter Property="Width" Value="28" />
+    <Setter Property="Height" Value="28" />
+  </Style>
+</Styles>

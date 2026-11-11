@@ -28,8 +28,11 @@ internal static partial class BassNative
     public const uint BASS_SAMPLE_FLOAT = 0x100;
     public const uint BASS_STREAM_PRESCAN = 0x20000;
     public const uint BASS_STREAM_AUTOFREE = 0x40000;
+    public const uint BASS_STREAMPROC_END = 0x80000000;
     public const uint BASS_STREAM_DECODE = 0x200000;
     public const uint BASS_UNICODE = 0x80000000;
+    /// <summary>Internet stream: download in small blocks, no seeking (live streams).</summary>
+    public const uint BASS_STREAM_BLOCK = 0x100000;
 
     public const uint BASS_ACTIVE_STOPPED = 0;
     public const uint BASS_ACTIVE_PLAYING = 1;
@@ -69,6 +72,9 @@ internal static partial class BassNative
     [LibraryImport(Bass)]
     [return: MarshalAs(UnmanagedType.Bool)]
     public static partial bool BASS_GetDeviceInfo(uint device, out BASS_DEVICEINFO info);
+
+    [LibraryImport(Bass, EntryPoint = "BASS_StreamCreateURL", StringMarshalling = StringMarshalling.Utf16)]
+    public static partial int BASS_StreamCreateURL(string url, uint offset, uint flags, IntPtr proc, IntPtr user);
 
     [LibraryImport(Bass, EntryPoint = "BASS_StreamCreateFile", StringMarshalling = StringMarshalling.Utf16)]
     public static partial int BASS_StreamCreateFile([MarshalAs(UnmanagedType.Bool)] bool mem, string file, ulong offset, ulong length, uint flags);
@@ -114,6 +120,47 @@ internal static partial class BassNative
 
     [LibraryImport(Bass)] public static partial uint BASS_ChannelGetData(int handle, [Out] float[] buffer, uint length);
 
+    public const int BASS_ATTRIB_PAN = 3;
+    public const int BASS_ERROR_INIT = 8;
+    public const int BASS_ERROR_DEVICE = 23;
+    public const uint BASS_DEVICE_INIT = 4;
+    public const uint BASS_SAMPLE_LOOP = 4;
+    public static readonly IntPtr STREAMPROC_PUSH = new(-1);
+
+    [LibraryImport(Bass)] public static partial uint BASS_GetDevice();
+
+    [LibraryImport(Bass)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static partial bool BASS_SetDevice(uint device);
+
+    [LibraryImport(Bass)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static partial bool BASS_ChannelSetDevice(int handle, uint device);
+
+    [LibraryImport(Bass)] public static partial uint BASS_ChannelGetDevice(int handle);
+
+    [LibraryImport(Bass)] public static partial int BASS_StreamCreate(uint freq, uint chans, uint flags, IntPtr proc, IntPtr user);
+    [LibraryImport(Bass)] public static partial uint BASS_StreamPutData(int handle, IntPtr buffer, uint length);
+
+    // Recording
+    [LibraryImport(Bass)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static partial bool BASS_RecordGetDeviceInfo(uint device, out BASS_DEVICEINFO info);
+
+    [LibraryImport(Bass)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static partial bool BASS_RecordInit(int device);
+
+    [LibraryImport(Bass)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static partial bool BASS_RecordFree();
+
+    [LibraryImport(Bass)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static partial bool BASS_RecordSetDevice(int device);
+
+    [LibraryImport(Bass)] public static partial int BASS_RecordStart(uint freq, uint chans, uint flags, IntPtr proc, IntPtr user);
+
     // ---- bassmix.h ----------------------------------------------------------------------
     public const uint BASS_MIXER_END = 0x10000;
     public const uint BASS_MIXER_NONSTOP = 0x20000;
@@ -134,10 +181,25 @@ internal static partial class BassNative
 
     [LibraryImport(BassMix)] public static partial ulong BASS_Mixer_ChannelGetPosition(int handle, uint mode);
 
+    public const uint BASS_MIXER_CHAN_BUFFER = 0x2000;
+    public const uint BASS_POS_MIXER_RESET = 0x10000;
+
+    [LibraryImport(BassMix)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static partial bool BASS_Mixer_ChannelSetPosition(int handle, ulong pos, uint mode);
+
+    [LibraryImport(BassMix)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static partial bool BASS_Mixer_ChannelGetLevelEx(int handle, [Out] float[] levels, float length, uint flags);
+
     // ---- bassenc.h / bassenc_mp3.h ------------------------------------------------------
     public const uint BASS_ENCODE_AUTOFREE = 0x40000;
     public const uint BASS_ENCODE_COUNT_CAST = 2;
     public const uint BASS_ACTIVE_PAUSED = 3;
+
+    /// <summary>MP3 into a file; with BASS_UNICODE the options and file name are UTF-16.</summary>
+    [LibraryImport(BassEncMp3, StringMarshalling = StringMarshalling.Utf16)]
+    public static partial int BASS_Encode_MP3_StartFile(int handle, string options, uint flags, string file);
 
     [LibraryImport(BassEncMp3, StringMarshalling = StringMarshalling.Utf8)]
     public static partial int BASS_Encode_MP3_Start(int handle, string options, uint flags, IntPtr proc, IntPtr user);

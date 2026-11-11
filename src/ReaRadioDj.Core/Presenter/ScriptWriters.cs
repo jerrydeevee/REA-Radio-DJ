@@ -8,11 +8,15 @@ using ReaRadioDj.Core.Model;
 namespace ReaRadioDj.Core.Presenter;
 
 /// <summary>What the presenter knows when writing a break.</summary>
-public sealed record BreakContext(string StationName, string PresenterName, DateTime Time, MediaItem? Previous, MediaItem? Next);
+/// <param name="Character">Persona instructions for the language model; null = the general ones.</param>
+public sealed record BreakContext(string StationName, string PresenterName, DateTime Time, MediaItem? Previous, MediaItem? Next,
+    string? Character = null, int? MaxWords = null, BreakExtra? Extra = null, CreativeIdea? Creative = null);
 
 public interface IScriptWriter
 {
     string Name { get; }
+    /// <summary>False when the writer has no settings yet; the renderer then uses the template.</summary>
+    bool Configured => true;
     Task<string> WriteAsync(BreakContext context, CancellationToken ct);
 }
 
@@ -47,6 +51,12 @@ public sealed class TemplateScriptWriter(Random? random = null) : IScriptWriter
             .Replace("{station}", c.StationName)
             .Replace("{presenter}", c.PresenterName)
             .Replace("{time}", SpokenTime(c.Time));
+        if (c.Extra is { } extra)
+        {
+            // weather/news/note between the station line and the next song; for notes the text is read as written
+            int cut = text.LastIndexOf(". ", StringComparison.Ordinal);
+            text = cut > 0 ? $"{text[..(cut + 1)]} {extra.Spoken} {text[(cut + 2)..]}" : $"{extra.Spoken} {text}";
+        }
         return Task.FromResult(text);
     }
 
@@ -83,35 +93,66 @@ public sealed class TemplateScriptWriter(Random? random = null) : IScriptWriter
 public sealed class OpenAiScriptWriter(HttpClient http, PresenterOptions options) : IScriptWriter
 {
     public string Name => $"llm:{options.Llm.Model}";
+    public bool Configured => !string.IsNullOrWhiteSpace(options.Llm.BaseUrl) && !string.IsNullOrWhiteSpace(options.Llm.Model);
+
+    /// <summary>The server root without a trailing "/v1", so both "http://localhost:11434" and ".../v1" work.</summary>
+    internal static string Root(string baseUrl)
+    {
+        var u = baseUrl.Trim().TrimEnd('/');
+        return u.EndsWith("/v1", StringComparison.OrdinalIgnoreCase) ? u[..^3] : u;
+    }
+
+    /// <summary>Model names the server offers (OpenAI-compatible /v1/models; Ollama and LM Studio both have it).</summary>
+    public static async Task<IReadOnlyList<string>> ListModelsAsync(HttpClient http, string baseUrl, string apiKey, CancellationToken ct)
+    {
+        using var request = new HttpRequestMessage(HttpMethod.Get, Root(baseUrl) + "/v1/models");
+        if (!string.IsNullOrWhiteSpace(apiKey)) request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", apiKey);
+        using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        cts.CancelAfter(TimeSpan.FromSeconds(10));
+        using var response = await http.SendAsync(request, cts.Token);
+        response.EnsureSuccessStatusCode();
+        using var doc = JsonDocument.Parse(await response.Content.ReadAsStringAsync(cts.Token));
+        return doc.RootElement.TryGetProperty("data", out var data)
+            ? data.EnumerateArray().Select(m => m.TryGetProperty("id", out var id) ? id.GetString() : null)
+                .Where(id => !string.IsNullOrEmpty(id)).Select(id => id!).Order(StringComparer.OrdinalIgnoreCase).ToList()
+            : [];
+    }
+
+    /// <summary>Servers that refused "reasoning_effort" (they get requests without it).</summary>
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, bool> NoReasoningOption = new();
 
     public async Task<string> WriteAsync(BreakContext c, CancellationToken ct)
     {
         var llm = options.Llm;
-        var system = $"""
-            {options.Persona}
-            Je heet {c.PresenterName} en presenteert op {c.StationName}. Taal: {options.Language}.
-            Schrijf ALLEEN de gesproken tekst voor één korte presentatie tussen twee nummers, maximaal {options.MaxWords} woorden.
-            Geen aanhalingstekens, geen opsommingen, geen regieaanwijzingen, geen emoji. Verzin geen feiten over artiesten.
-            """;
-        string previous = TemplateScriptWriter.Describe(c.Previous), next = TemplateScriptWriter.Describe(c.Next);
-        var user = $"""
-            Tijd: {c.Time:HH:mm} ({TemplateScriptWriter.SpokenTime(c.Time)}).
-            Vorig nummer: {(previous.Length > 0 ? previous : "(geen)")}.
-            Volgend nummer: {(next.Length > 0 ? next : "(geen)")}.
-            Kondig het volgende nummer aan.
-            """;
-
-        using var request = new HttpRequestMessage(HttpMethod.Post, llm.BaseUrl.TrimEnd('/') + "/v1/chat/completions")
-        {
-            Content = JsonContent.Create(new ChatRequest(llm.Model,
-                [new ChatMessage("system", system), new ChatMessage("user", user)], llm.Temperature, 200)),
-        };
-        if (!string.IsNullOrWhiteSpace(llm.ApiKey))
-            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", llm.ApiKey);
+        var (system, user) = Prompt(options, c);
+        var root = Root(llm.BaseUrl);
 
         using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
         cts.CancelAfter(TimeSpan.FromSeconds(llm.TimeoutSeconds));
-        using var response = await http.SendAsync(request, cts.Token);
+        // Thinking models (qwen3, deepseek-r1 ...) would spend all tokens on reasoning and say nothing: ask them not to
+        // think. A server that does not know the option gets the request again without it.
+        bool noThinking = !NoReasoningOption.ContainsKey(root);
+        HttpResponseMessage response;
+        while (true)
+        {
+            using var request = new HttpRequestMessage(HttpMethod.Post, root + "/v1/chat/completions")
+            {
+                Content = JsonContent.Create(new ChatRequest(llm.Model,
+                    [new ChatMessage("system", system), new ChatMessage("user", user)], llm.Temperature, 400, noThinking ? "none" : null)),
+            };
+            if (!string.IsNullOrWhiteSpace(llm.ApiKey))
+                request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", llm.ApiKey);
+            response = await http.SendAsync(request, cts.Token);
+            if (noThinking && response.StatusCode == System.Net.HttpStatusCode.BadRequest)
+            {
+                response.Dispose();
+                NoReasoningOption[root] = true;
+                noThinking = false;
+                continue;
+            }
+            break;
+        }
+        using var _ = response;
         response.EnsureSuccessStatusCode();
         var body = await response.Content.ReadFromJsonAsync<ChatResponse>(cts.Token);
         var text = body?.Choices?.FirstOrDefault()?.Message?.Content;
@@ -119,11 +160,98 @@ public sealed class OpenAiScriptWriter(HttpClient http, PresenterOptions options
         return text;
     }
 
+    /// <summary>
+    /// The instructions for one break. Small local models write much better Dutch with firm rules and two examples of
+    /// the style than with a bare request; the examples use made-up songs so they are never copied literally.
+    /// </summary>
+    internal static (string System, string User) Prompt(PresenterOptions options, BreakContext c)
+    {
+        int maxWords = c.MaxWords ?? options.MaxWords;
+        if (c.Creative is { } idea) return CreativePrompt(options, c, idea, Math.Max(maxWords, options.Creative.MaxWords));
+        var system = $"""
+            {(string.IsNullOrWhiteSpace(c.Character) ? options.Persona : c.Character)}
+            Je heet {c.PresenterName} en presenteert op {c.StationName}.
+            Je schrijft ALLEEN de tekst die je hardop zegt tussen twee nummers, in correct en natuurlijk Nederlands,
+            zoals een ervaren presentator het live zou zeggen.
+
+            Regels:
+            - Hoogstens {maxWords} woorden, één tot drie korte zinnen.
+            - Noem titels en artiesten precies zoals ze gegeven worden; vertaal of verbuig ze niet. Wat tussen [ ] staat
+              zegt welk deel de titel en welk deel de artiest is; dat zeg je niet hardop.
+            - Verzin geen feiten over artiesten, nummers, het weer of het nieuws.
+            - Geen aanhalingstekens, opsommingen, regieaanwijzingen, emoji of Engelse zinnen.
+            - Wissel af: begin niet altijd met "Dat was" of "Hier is".
+
+            Voorbeelden van de toon (andere nummers):
+            Dat was Zomeravond van De Kustband. Het is kwart over vier, je luistert naar {c.StationName}. Nu Lisa Mol met Nooit Meer Alleen!
+            Op {c.StationName} is het tien voor half negen. Na Regen in Mei van Tom Brink zet ik er eentje op om lekker mee te zingen: Licht Aan van De Fietsers.
+            """;
+        string previous = Song(c.Previous), next = Song(c.Next);
+        var user = $"""
+            Het is {TemplateScriptWriter.SpokenTime(c.Time)} ({c.Time:HH:mm}).
+            Net gedraaid: {(previous.Length > 0 ? previous : "(niets)")}.
+            Hierna: {(next.Length > 0 ? next : "(nog niet bekend)")}.
+            {(c.Extra is { } x ? $"Verwerk dit er kort en natuurlijk in, vóór je het volgende nummer aankondigt:\n{x.Fact}" : "")}
+            Schrijf de presentatie.
+            """;
+        return (system, user);
+    }
+
+    /// <summary>
+    /// A song for the prompt, with title and artist spelled out separately: "Riva (Restart The Game)" by Klingande was
+    /// otherwise read as artist Riva with the song Restart The Game.
+    /// </summary>
+    internal static string Song(MediaItem? m)
+    {
+        var said = TemplateScriptWriter.Describe(m);
+        if (m is null || said.Length == 0) return said;
+        return string.IsNullOrWhiteSpace(m.Artist) ? $"{said} [titel: {m.Title}]" : $"{said} [titel: {m.Title} | artiest: {m.Artist}]";
+    }
+
+    /// <summary>
+    /// A creative break: the presenter talks about a theme in the chosen tone and then leads into the next song. The tone
+    /// changes, the limits never do.
+    /// </summary>
+    internal static (string System, string User) CreativePrompt(PresenterOptions options, BreakContext c, CreativeIdea idea, int maxWords)
+    {
+        var system = $"""
+            {(string.IsNullOrWhiteSpace(c.Character) ? options.Persona : c.Character)}
+            Je heet {c.PresenterName} en presenteert op {c.StationName}, een lokale radiozender.
+            Je bent een creatieve presentator: tussen twee nummers praat je even over een onderwerp, op een persoonlijke manier,
+            alsof je het tegen één luisteraar thuis of in de auto hebt. Je schrijft ALLEEN de tekst die je hardop zegt,
+            in correct en natuurlijk Nederlands.
+
+            Toon van deze keer: {CreativeTones.Name(idea.Tone)}.
+            {CreativeTones.Instruction(idea.Tone)}
+
+            {CreativeTones.Limits}
+            {(idea.Headline ? CreativeTones.HeadlineRules : "")}
+
+            Regels:
+            - Hoogstens {maxWords} woorden, twee tot vier korte zinnen.
+            - Maak er iets eigens van: een observatie, een herkenbaar moment of een vraag aan de luisteraars.
+            - Eindig met een natuurlijke overgang naar het volgende nummer; noem titel en artiest precies zoals gegeven
+              (wat tussen [ ] staat zegt welk deel de titel en welk de artiest is; dat zeg je niet hardop).
+            - Geen aanhalingstekens, opsommingen, regieaanwijzingen, emoji of Engelse zinnen.
+            - Begin niet met "Dat was" en niet met het onderwerp als kop.
+            """;
+        string previous = Song(c.Previous), next = Song(c.Next);
+        var user = $"""
+            Het is {TemplateScriptWriter.SpokenTime(c.Time)} op een {c.Time.ToString("dddd", new System.Globalization.CultureInfo("nl-NL"))}.
+            Net gedraaid: {(previous.Length > 0 ? previous : "(niets)")}.
+            Hierna: {(next.Length > 0 ? next : "(nog niet bekend)")}.
+            Onderwerp: {idea.Theme}
+            Schrijf de presentatie.
+            """;
+        return (system, user);
+    }
+
     private sealed record ChatRequest(
         [property: JsonPropertyName("model")] string Model,
         [property: JsonPropertyName("messages")] ChatMessage[] Messages,
         [property: JsonPropertyName("temperature")] double Temperature,
-        [property: JsonPropertyName("max_tokens")] int MaxTokens);
+        [property: JsonPropertyName("max_tokens")] int MaxTokens,
+        [property: JsonPropertyName("reasoning_effort"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? ReasoningEffort = null);
 
     private sealed record ChatMessage(
         [property: JsonPropertyName("role")] string Role,
@@ -141,9 +269,11 @@ public static partial class ScriptSanitizer
         var t = ThinkBlock().Replace(text, " ");       // reasoning models: <think>...</think>
         t = t.Replace("**", "").Replace("__", "");     // markdown bold is emphasis, not a stage direction
         t = StageDirection().Replace(t, " ");          // (lacht), [jingle], *pauze*
+        t = ForeignScript().Replace(t, "");            // multilingual models sometimes slip in a Chinese or Japanese word
         t = Markup().Replace(t, " ");                  // markdown and stray symbols
         t = t.Replace('“', ' ').Replace('”', ' ').Replace('"', ' ').Replace('„', ' ');
         t = Whitespace().Replace(t, " ").Trim();
+        t = SpaceBeforeStop().Replace(t, "$1");        // "Hooked On You ." → "Hooked On You."
         var words = t.Split(' ', StringSplitOptions.RemoveEmptyEntries);
         if (words.Length > maxWords)
         {
@@ -158,4 +288,7 @@ public static partial class ScriptSanitizer
     [GeneratedRegex(@"\([^)]*\)|\[[^\]]*\]|\*[^*]+\*")] private static partial Regex StageDirection();
     [GeneratedRegex(@"[#*_`~>|]+|^\s*[-•]\s*", RegexOptions.Multiline)] private static partial Regex Markup();
     [GeneratedRegex(@"\s+")] private static partial Regex Whitespace();
+    [GeneratedRegex(@" ([.,!?;:])")] private static partial Regex SpaceBeforeStop();
+    [GeneratedRegex(@"[\p{IsCJKUnifiedIdeographs}\p{IsHiragana}\p{IsKatakana}\p{IsHangulSyllables}\p{IsCJKSymbolsandPunctuation}]+")]
+    private static partial Regex ForeignScript();
 }

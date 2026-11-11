@@ -1,0 +1,78 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:ReaRadioDj.Studio.ViewModels"
+             xmlns:ctl="using:ReaRadioDj.Studio.Controls"
+             x:Class="ReaRadioDj.Studio.Views.CartwallView"
+             x:DataType="vm:CartwallTool"
+             ctl:WidthClasses.Track="True">
+  <!-- Tiles never shrink below a usable size: a narrower wall gets fewer columns and scrolls (see the code-behind). -->
+  <DockPanel Margin="6">
+    <DockPanel DockPanel.Dock="Top" Margin="0,0,0,6">
+      <Button DockPanel.Dock="Right" Classes="small" Content="{Binding StopText}" Command="{Binding StopAllCommand}" />
+      <StackPanel Orientation="Horizontal" Spacing="4">
+        <RadioButton Content="1" IsChecked="{Binding Page1}" GroupName="{Binding Id}" />
+        <RadioButton Content="2" IsChecked="{Binding Page2}" GroupName="{Binding Id}" />
+        <RadioButton Content="3" IsChecked="{Binding Page3}" GroupName="{Binding Id}" />
+        <RadioButton Content="4" IsChecked="{Binding Page4}" GroupName="{Binding Id}" />
+        <TextBlock Classes="muted hide-narrow" Text="{Binding PlayingText}" VerticalAlignment="Center" Margin="8,0,0,0" TextTrimming="CharacterEllipsis" />
+      </StackPanel>
+    </DockPanel>
+    <TextBlock DockPanel.Dock="Top" Classes="muted" FontSize="12" TextWrapping="Wrap" Margin="0,0,0,6" IsVisible="{Binding IsSampler}"
+               Text="Pads spelen via de DJ-tafel: OFF AIR in de koptelefoon, ON AIR op de zender. Met Quantize start een pad op de volgende tel." />
+    <ScrollViewer HorizontalScrollBarVisibility="Disabled">
+    <ItemsControl x:Name="Grid" ItemsSource="{Binding Buttons}">
+      <ItemsControl.ItemsPanel>
+        <ItemsPanelTemplate>
+          <UniformGrid Columns="4" />
+        </ItemsPanelTemplate>
+      </ItemsControl.ItemsPanel>
+      <ItemsControl.ItemTemplate>
+        <DataTemplate x:DataType="vm:CartButton">
+          <Button Classes="cart" Margin="4" Padding="8" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
+                  HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch"
+                  Background="{Binding Background}" BorderThickness="2"
+                  BorderBrush="{Binding Playing, Converter={x:Static vm:Brushes.Active}}"
+                  Command="{Binding PressCommand}">
+            <Button.ContextMenu>
+              <ContextMenu>
+                <MenuItem Header="Selectie uit bibliotheek toewijzen" Command="{Binding AssignSelectedCommand}" />
+                <MenuItem Header="Herhalen (lus) aan/uit" Command="{Binding ToggleLoopCommand}" />
+                <MenuItem Header="Overlay aan/uit (automatisering dimt)" Command="{Binding ToggleOverlayCommand}" />
+                <MenuItem Header="Kleur">
+                  <MenuItem Header="Blauw" Command="{Binding SetColorCommand}" CommandParameter="#3FA7FF" />
+                  <MenuItem Header="Groen" Command="{Binding SetColorCommand}" CommandParameter="#2F9E6A" />
+                  <MenuItem Header="Geel" Command="{Binding SetColorCommand}" CommandParameter="#B8860B" />
+                  <MenuItem Header="Paars" Command="{Binding SetColorCommand}" CommandParameter="#7C5CD6" />
+                  <MenuItem Header="Rood" Command="{Binding SetColorCommand}" CommandParameter="#C2373C" />
+                  <MenuItem Header="Grijs" Command="{Binding SetColorCommand}" CommandParameter="#475569" />
+                </MenuItem>
+                <MenuItem Header="Cue-editor" Command="{Binding EditCuesCommand}" />
+                <Separator />
+                <MenuItem Header="Leegmaken" Command="{Binding ClearCommand}" />
+              </ContextMenu>
+            </Button.ContextMenu>
+            <Grid RowDefinitions="Auto,*,Auto">
+              <DockPanel Grid.Row="0">
+                <TextBlock DockPanel.Dock="Right" FontSize="11" Text="{Binding Flags}" Foreground="White" />
+                <TextBlock DockPanel.Dock="Right" FontSize="10" Opacity="0.7" Text="{Binding Number}" Foreground="White" Margin="0,0,6,0" />
+                <TextBlock Text="{Binding Label}" TextWrapping="Wrap" FontWeight="SemiBold" FontSize="14" MaxLines="2"
+                           Foreground="White" TextTrimming="CharacterEllipsis" IsVisible="{Binding Loaded}" />
+                <TextBlock Text="Leeg" FontSize="13" Foreground="White" Opacity="0.75" IsVisible="{Binding !Loaded}" />
+              </DockPanel>
+              <StackPanel Grid.Row="2" Spacing="3">
+                <DockPanel>
+                  <TextBlock DockPanel.Dock="Right" Text="▶ speelt" FontSize="11" FontWeight="Bold" Foreground="White" IsVisible="{Binding Playing}" />
+                  <TextBlock Classes="mono" FontSize="12" FontWeight="Bold" Text="{Binding Sub}" Foreground="White" IsVisible="{Binding Loaded}" />
+                  <TextBlock FontSize="11" Text="sleep hierheen" Foreground="White" Opacity="0.6" IsVisible="{Binding !Loaded}" />
+                </DockPanel>
+                <ProgressBar Value="{Binding Left}" Maximum="100" MinHeight="5" Height="5" MinWidth="0" IsVisible="{Binding Loaded}"
+                             Foreground="#3DBD7D" Background="#33000000" CornerRadius="{DynamicResource Radius2}" />
+              </StackPanel>
+            </Grid>
+          </Button>
+        </DataTemplate>
+      </ItemsControl.ItemTemplate>
+    </ItemsControl>
+    </ScrollViewer>
+  </DockPanel>
+</UserControl>

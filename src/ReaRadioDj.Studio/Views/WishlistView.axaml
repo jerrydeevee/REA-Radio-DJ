@@ -1,0 +1,67 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:ReaRadioDj.Studio.ViewModels"
+             xmlns:c="using:ReaRadioDj.Contracts"
+             x:Class="ReaRadioDj.Studio.Views.WishlistView"
+             x:DataType="vm:WishlistTool">
+  <DockPanel Margin="6">
+    <!-- import -->
+    <Border DockPanel.Dock="Top" Classes="card" Margin="0,0,0,6">
+      <StackPanel Spacing="5">
+        <DockPanel>
+          <Button DockPanel.Dock="Right" Classes="small go" Content="Importeren" Command="{Binding ImportCommand}" IsEnabled="{Binding !Busy}" Margin="6,0,0,0" />
+          <TextBox Text="{Binding Link}" Watermark="link naar een openbare Spotify-playlist (open.spotify.com/playlist/…)" />
+        </DockPanel>
+        <TextBlock Classes="muted" Text="{Binding Status}" TextWrapping="Wrap" />
+        <TextBlock Foreground="{DynamicResource WarnBrush}" TextWrapping="Wrap" FontSize="12" IsVisible="{Binding !Configured}"
+                   Text="Spotify is nog niet ingesteld: maak een app op developer.spotify.com en vul ReaRadioDj:Spotify:ClientId en ClientSecret in appsettings.json in." />
+        <TextBlock Classes="muted" TextWrapping="Wrap" FontSize="11"
+                   Text="Alleen de gegevens komen uit Spotify (titel, artiest, ISRC, uitgavedatum). Uitgezonden wordt altijd het eigen bestand uit de bibliotheek." />
+      </StackPanel>
+    </Border>
+
+    <!-- filter and actions -->
+    <WrapPanel DockPanel.Dock="Top" Margin="0,0,0,4">
+      <ComboBox ItemsSource="{Binding Playlists}" SelectedItem="{Binding Playlist}" MinWidth="200" Margin="0,0,6,4" />
+      <ComboBox ItemsSource="{Binding FilterChoices}" SelectedIndex="{Binding Filter}" MinWidth="150" Margin="0,0,6,4" />
+      <Button Classes="small" Content="Opnieuw matchen" Command="{Binding MatchCommand}" Margin="0,0,4,4"
+              ToolTip.Tip="Na het toevoegen van nieuwe bestanden aan de bibliotheek" />
+      <Button Classes="small" Content="Alles uit bibliotheek → log" Command="{Binding AddAllToLogCommand}" Margin="0,0,4,4"
+              ToolTip.Tip="Zet alle getoonde nummers die de bibliotheek heeft achteraan in de log" />
+      <Button Classes="small" x:Name="ExportMissing" Content="Ontbrekende exporteren…" Margin="0,0,4,4" />
+      <Button Classes="small" Content="Playlist verwijderen" Command="{Binding DeletePlaylistCommand}" Margin="0,0,4,4" />
+    </WrapPanel>
+
+    <ListBox ItemsSource="{Binding Items}" SelectedItem="{Binding Selected}">
+      <ListBox.ItemTemplate>
+        <DataTemplate x:DataType="c:WishItemDto">
+          <Grid ColumnDefinitions="Auto,*,Auto,Auto">
+            <Border Grid.Column="0" Width="10" Height="10" CornerRadius="{DynamicResource Radius5}" Margin="0,0,8,0" VerticalAlignment="Center"
+                    Background="{Binding InLibrary, Converter={x:Static vm:Brushes.Active}}"
+                    ToolTip.Tip="groen = in de bibliotheek, grijs = ontbreekt nog" />
+            <StackPanel Grid.Column="1">
+              <TextBlock TextTrimming="CharacterEllipsis" FontWeight="SemiBold">
+                <Run Text="{Binding Artist}" /><Run Text=" – " /><Run Text="{Binding Title}" />
+              </TextBlock>
+              <TextBlock Classes="muted" FontSize="11" TextTrimming="CharacterEllipsis">
+                <Run Text="{Binding Album}" /><Run Text=" · " /><Run Text="{Binding Release}" /><Run Text=" · ISRC " /><Run Text="{Binding Isrc}" />
+              </TextBlock>
+            </StackPanel>
+            <TextBlock Grid.Column="2" Classes="mono muted" Margin="6,0" VerticalAlignment="Center"
+                       Text="{Binding Duration, StringFormat='{}{0:0}s'}" />
+            <StackPanel Grid.Column="3" Orientation="Horizontal" Spacing="2" VerticalAlignment="Center">
+              <Button Classes="small" Content="⤒" IsVisible="{Binding InLibrary}" ToolTip.Tip="Als volgende in de log"
+                      Command="{Binding $parent[ListBox].DataContext.AddNextCommand}" CommandParameter="{Binding}" />
+              <Button Classes="small" Content="+ log" IsVisible="{Binding InLibrary}" ToolTip.Tip="Achteraan in de log"
+                      Command="{Binding $parent[ListBox].DataContext.AddEndCommand}" CommandParameter="{Binding}" />
+              <Button Classes="small" Content="♪" ToolTip.Tip="Openen in Spotify (beluisteren)"
+                      Command="{Binding $parent[ListBox].DataContext.OpenLinkCommand}" CommandParameter="{Binding}" />
+              <Button Classes="small" Content="✕" ToolTip.Tip="Van de wensenlijst halen"
+                      Command="{Binding $parent[ListBox].DataContext.DeleteCommand}" CommandParameter="{Binding}" />
+            </StackPanel>
+          </Grid>
+        </DataTemplate>
+      </ListBox.ItemTemplate>
+    </ListBox>
+  </DockPanel>
+</UserControl>

@@ -1,0 +1,123 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:ReaRadioDj.Studio.ViewModels"
+             xmlns:ctl="using:ReaRadioDj.Studio.Controls"
+             x:Class="ReaRadioDj.Studio.Views.LogView"
+             x:DataType="vm:LogTool"
+             ctl:WidthClasses.Track="True">
+  <!-- Narrower than 560 px: the detail line, the position row and the command row fold away (commands go in the ⋯ menu);
+       the remaining time, the title and every row's start time and length always stay. -->
+  <DockPanel Margin="6">
+    <!-- Now playing -->
+    <Border x:Name="NowCard" DockPanel.Dock="Top" Classes="card" Margin="0,0,0,6">
+      <StackPanel Spacing="4">
+        <DockPanel>
+          <Border DockPanel.Dock="Left" CornerRadius="{DynamicResource Radius3}" Padding="6,1" Margin="0,0,8,0" Background="#E5484D"
+                  IsVisible="{Binding NowType, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+            <TextBlock Text="{Binding NowType}" FontSize="11" FontWeight="Bold" Foreground="White" />
+          </Border>
+          <TextBlock DockPanel.Dock="Right" Classes="mono" FontSize="22" Text="{Binding NowRemaining}" />
+          <TextBlock Text="{Binding NowLabel}" FontSize="18" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+        </DockPanel>
+        <TextBlock Classes="muted hide-narrow" Text="{Binding NowDetail}" TextTrimming="CharacterEllipsis" />
+        <ProgressBar Value="{Binding Progress}" Maximum="100" Height="14" MinHeight="14" CornerRadius="{DynamicResource Radius3}" />
+        <DockPanel Classes="hide-narrow">
+          <TextBlock DockPanel.Dock="Left" Classes="mono muted" Text="{Binding NowPosition}" />
+          <TextBlock DockPanel.Dock="Right" Classes="muted" Text="{Binding NowMix}" />
+          <TextBlock HorizontalAlignment="Center" FontSize="12" Foreground="{DynamicResource WarnBrush}" Text="{Binding NowIntro}" />
+        </DockPanel>
+      </StackPanel>
+    </Border>
+
+    <!-- Commands -->
+    <DockPanel DockPanel.Dock="Top" Margin="0,0,0,4">
+      <Button DockPanel.Dock="Right" Classes="small narrow-only" Content="⋯" Margin="4,0,0,0" ToolTip.Tip="Opdrachten">
+        <Button.Flyout>
+          <MenuFlyout>
+            <MenuItem Header="Selectie als volgende" Command="{Binding AddSelectedNextCommand}" />
+            <MenuItem Header="Selectie achteraan" Command="{Binding AddSelectedEndCommand}" />
+            <MenuItem Header="AI-break" Command="{Binding AddBreakCommand}" />
+            <MenuItem Header="Opnieuw plannen" Command="{Binding ReplanCommand}" />
+          </MenuFlyout>
+        </Button.Flyout>
+      </Button>
+      <TextBlock DockPanel.Dock="Right" Classes="muted" FontSize="12" Text="{Binding Summary}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+      <WrapPanel Classes="hide-narrow">
+        <Button Classes="small" Margin="0,0,4,4" Content="Selectie als volgende" Command="{Binding AddSelectedNextCommand}" ToolTip.Tip="Het geselecteerde bibliotheekitem als volgende" />
+        <Button Classes="small" Margin="0,0,4,4" Content="Selectie achteraan" Command="{Binding AddSelectedEndCommand}" />
+        <Button Classes="small" Margin="0,0,4,4" Content="AI-break" Command="{Binding AddBreakCommand}" />
+        <Button Classes="small" Margin="0,0,4,4" Content="Opnieuw plannen" Command="{Binding ReplanCommand}" ToolTip.Tip="Gooit de klokitems weg en plant opnieuw (handmatige items blijven)" />
+      </WrapPanel>
+    </DockPanel>
+
+    <Expander x:Name="Played" DockPanel.Dock="Bottom" Header="Gespeeld" Margin="0,4,0,0" HorizontalAlignment="Stretch">
+      <ListBox ItemsSource="{Binding History}" MaxHeight="190">
+        <ListBox.ItemTemplate>
+          <DataTemplate x:DataType="vm:LogRow">
+            <DockPanel>
+              <TextBlock DockPanel.Dock="Left" Text="{Binding TypeText}" Width="54" FontSize="12"
+                         Foreground="{Binding Type, Converter={x:Static vm:Brushes.TypeColor}}" />
+              <TextBlock Text="{Binding Label}" TextTrimming="CharacterEllipsis" FontSize="12" />
+            </DockPanel>
+          </DataTemplate>
+        </ListBox.ItemTemplate>
+      </ListBox>
+    </Expander>
+
+    <ListBox x:Name="List" ItemsSource="{Binding Upcoming}" SelectedItem="{Binding Selected}">
+      <ListBox.ItemTemplate>
+        <DataTemplate x:DataType="vm:LogRow">
+          <Grid ColumnDefinitions="Auto,4,*,Auto,Auto" MinHeight="44">
+            <Border Grid.Column="0" Grid.ColumnSpan="5" Margin="-6,-2" Background="{Binding DeckBrush}" Opacity="0.14" IsHitTestVisible="False" />
+            <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center" MinWidth="80" Margin="0,0,10,0">
+              <Border Background="{Binding DeckBrush}" CornerRadius="{DynamicResource Radius2}" Width="14" IsVisible="{Binding Deck, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+                <TextBlock Text="{Binding Deck}" FontSize="10" FontWeight="Black" Foreground="#11161D" HorizontalAlignment="Center" />
+              </Border>
+              <TextBlock Classes="mono muted" FontSize="13" Text="{Binding StartsAt}" VerticalAlignment="Center" />
+            </StackPanel>
+            <Border Grid.Column="1" CornerRadius="{DynamicResource Radius2}" Width="4" Height="32" VerticalAlignment="Center"
+                    Background="{Binding Type, Converter={x:Static vm:Brushes.TypeColor}}" />
+            <StackPanel Grid.Column="2" Margin="12,0,4,0" VerticalAlignment="Center">
+              <TextBlock Text="{Binding Label}" FontWeight="SemiBold" FontSize="14" TextTrimming="CharacterEllipsis" />
+              <TextBlock Classes="muted" FontSize="12" TextTrimming="CharacterEllipsis">
+                <Run Text="{Binding TypeText, Mode=OneWay}" Foreground="{Binding Type, Converter={x:Static vm:Brushes.TypeColor}}" /><Run Text="{Binding Detail, Mode=OneWay, StringFormat=' · {0}', TargetNullValue=''}" />
+              </TextBlock>
+              <TextBlock FontSize="11" Foreground="#E5484D" Text="{Binding Error}"
+                         IsVisible="{Binding Error, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+              <!-- a container shows what is in it; it opens into these lines when it is next -->
+              <Border Classes="hide-narrow" IsVisible="{Binding IsContainer}" Margin="0,4,0,2" Padding="8,2,0,2"
+                      BorderBrush="{Binding Type, Converter={x:Static vm:Brushes.TypeColor}}" BorderThickness="2,0,0,0">
+                <ItemsControl ItemsSource="{Binding Children}">
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="x:String">
+                      <TextBlock Classes="mono muted" FontSize="11" Text="{Binding}" TextTrimming="CharacterEllipsis" />
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+              </Border>
+            </StackPanel>
+            <StackPanel Grid.Column="3" Margin="4,0" VerticalAlignment="Center">
+              <TextBlock Classes="mono" FontSize="13" Text="{Binding Length}" HorizontalAlignment="Right" />
+              <TextBlock Classes="muted wide-only" FontSize="10" Text="{Binding Origin}" HorizontalAlignment="Right" />
+            </StackPanel>
+            <StackPanel Grid.Column="4" Classes="rowactions hide-narrow" Orientation="Horizontal" Spacing="2" VerticalAlignment="Center">
+              <Button Classes="small" Content="⇄" ToolTip.Tip="Overgang naar dit item bewerken"
+                      Command="{Binding $parent[ListBox].DataContext.EditTransitionCommand}" CommandParameter="{Binding}" />
+              <Button Classes="small" Content="⤒" ToolTip.Tip="Als volgende"
+                      Command="{Binding $parent[ListBox].DataContext.MakeNextCommand}" CommandParameter="{Binding}" />
+              <Button Classes="small" Content="↑" Command="{Binding $parent[ListBox].DataContext.UpCommand}" CommandParameter="{Binding}" />
+              <Button Classes="small" Content="↓" Command="{Binding $parent[ListBox].DataContext.DownCommand}" CommandParameter="{Binding}" />
+              <Button Classes="small" Content="⧉" ToolTip.Tip="Kopie direct hierna (een container met alles erin)"
+                      Command="{Binding $parent[ListBox].DataContext.CopyCommand}" CommandParameter="{Binding}" />
+              <Button Classes="small" Content="⊞" ToolTip.Tip="Container openklappen: de items komen als losse regels op deze plek"
+                      IsVisible="{Binding IsContainer}"
+                      Command="{Binding $parent[ListBox].DataContext.OpenCommand}" CommandParameter="{Binding}" />
+              <Button Classes="small" Content="✕" ToolTip.Tip="Uit de log (een container met alles erin: het hele blok overslaan)"
+                      Command="{Binding $parent[ListBox].DataContext.RemoveCommand}" CommandParameter="{Binding}" />
+            </StackPanel>
+          </Grid>
+        </DataTemplate>
+      </ListBox.ItemTemplate>
+    </ListBox>
+  </DockPanel>
+</UserControl>

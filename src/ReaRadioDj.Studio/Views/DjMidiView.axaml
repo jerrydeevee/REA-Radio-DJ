@@ -1,0 +1,76 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:ReaRadioDj.Studio.ViewModels"
+             x:Class="ReaRadioDj.Studio.Views.DjMidiView"
+             x:DataType="vm:DjMidiTool">
+  <DockPanel Margin="8">
+    <!-- the controller and its presets -->
+    <WrapPanel DockPanel.Dock="Top" Margin="0,0,0,4">
+      <TextBlock Classes="muted" Text="Controller" VerticalAlignment="Center" Margin="0,0,6,6" />
+      <ComboBox ItemsSource="{Binding Devices}" SelectedItem="{Binding Device}" MinWidth="180" Margin="0,0,12,6" IsVisible="{Binding !NoDevice}"
+                ToolTip.Tip="De MIDI-controller waarop een voorinstelling wordt gezet" />
+      <ComboBox ItemsSource="{Binding Ports}" SelectedItem="{Binding Port}" MinWidth="180" Margin="0,0,6,6" IsVisible="{Binding NoDevice}"
+                ToolTip.Tip="De MIDI-poort van je controller" />
+      <Button Classes="bar" Content="Controller toevoegen" Command="{Binding AddControllerCommand}" Margin="0,0,12,6" IsVisible="{Binding NoDevice}"
+              ToolTip.Tip="Luister naar deze MIDI-poort; daarna kun je de knoppen leren" />
+      <TextBlock Classes="muted" Text="Voorinstelling" VerticalAlignment="Center" Margin="0,0,6,6" />
+      <ComboBox ItemsSource="{Binding Presets}" SelectedItem="{Binding Preset}" MinWidth="150" Margin="0,0,4,6" PlaceholderText="(geen)" />
+      <Button Classes="bar" Content="Toepassen" Command="{Binding ApplyPresetCommand}" Margin="0,0,4,6"
+              ToolTip.Tip="Zet deze voorinstelling op de gekozen controller (vervangt wat er nu geleerd is)" />
+      <Button Classes="bar" Content="✕" Command="{Binding DeletePresetCommand}" Margin="0,0,12,6" ToolTip.Tip="Voorinstelling verwijderen" />
+      <TextBox Text="{Binding PresetName}" Watermark="naam, bijv. merk en type" MinWidth="170" Margin="0,0,4,6" />
+      <Button Classes="bar" Content="Bewaren" Command="{Binding SavePresetCommand}" Margin="0,0,0,6"
+              ToolTip.Tip="Bewaar wat nu geleerd is als voorinstelling, voor dezelfde controller op een andere plek" />
+    </WrapPanel>
+    <!-- which part of the desk -->
+    <Border DockPanel.Dock="Top" BorderBrush="{DynamicResource ControlBorderBrush}" BorderThickness="1" CornerRadius="{DynamicResource Radius8}"
+            ClipToBounds="True" HorizontalAlignment="Left" Margin="0,0,0,6">
+      <StackPanel Orientation="Horizontal">
+        <ToggleButton Classes="seg" Content="Mengpaneel" IsChecked="{Binding Group, Converter={x:Static vm:Brushes.Is}, ConverterParameter=Mengpaneel, Mode=OneWay}"
+                      Command="{Binding SetGroupCommand}" CommandParameter="Mengpaneel" />
+        <ToggleButton Classes="seg" Content="Deck A" IsChecked="{Binding Group, Converter={x:Static vm:Brushes.Is}, ConverterParameter=Deck A, Mode=OneWay}"
+                      Command="{Binding SetGroupCommand}" CommandParameter="Deck A" />
+        <ToggleButton Classes="seg" Content="Deck B" IsChecked="{Binding Group, Converter={x:Static vm:Brushes.Is}, ConverterParameter=Deck B, Mode=OneWay}"
+                      Command="{Binding SetGroupCommand}" CommandParameter="Deck B" />
+        <ToggleButton Classes="seg" Content="Deck C" IsChecked="{Binding Group, Converter={x:Static vm:Brushes.Is}, ConverterParameter=Deck C, Mode=OneWay}"
+                      Command="{Binding SetGroupCommand}" CommandParameter="Deck C" />
+        <ToggleButton Classes="seg" Content="Deck D" IsChecked="{Binding Group, Converter={x:Static vm:Brushes.Is}, ConverterParameter=Deck D, Mode=OneWay}"
+                      Command="{Binding SetGroupCommand}" CommandParameter="Deck D" />
+      </StackPanel>
+    </Border>
+    <StackPanel DockPanel.Dock="Top" Spacing="2" Margin="0,0,0,6">
+      <DockPanel>
+        <TextBlock DockPanel.Dock="Right" Classes="muted" FontSize="12" Text="{Binding CountText}" VerticalAlignment="Center" />
+        <TextBlock Classes="mono" FontSize="12" Text="{Binding LastSignal}" TextTrimming="CharacterEllipsis" />
+      </DockPanel>
+      <DockPanel IsVisible="{Binding LearningAny}">
+        <Button DockPanel.Dock="Right" Classes="small" Content="Stoppen" Command="{Binding StopLearningCommand}" />
+        <TextBlock Foreground="{DynamicResource WarnBrush}" FontWeight="SemiBold" Text="{Binding Status}" VerticalAlignment="Center" TextWrapping="Wrap" />
+      </DockPanel>
+      <TextBlock Classes="muted" FontSize="13" Text="{Binding Status}" IsVisible="{Binding !LearningAny}" TextWrapping="Wrap" />
+      <TextBlock Classes="muted" FontSize="13" IsVisible="{Binding NoDevice}" TextWrapping="Wrap"
+                 Text="Nog geen MIDI-controller: sluit hem aan, kies de poort en voeg hem toe. Druk daarna bij een functie op Leren en beweeg de knop." />
+    </StackPanel>
+    <Border Classes="card" Padding="4" Background="{DynamicResource CardBrush}">
+      <ListBox ItemsSource="{Binding Rows}" Background="Transparent">
+        <ListBox.ItemTemplate>
+          <DataTemplate x:DataType="vm:DjMidiRow">
+            <DockPanel>
+              <Button DockPanel.Dock="Right" Classes="small" Content="✕" Margin="4,0,0,0" IsEnabled="{Binding Learned}" ToolTip.Tip="Koppeling vergeten"
+                      Command="{Binding $parent[UserControl].DataContext.ForgetCommand}" CommandParameter="{Binding}" />
+              <ToggleButton DockPanel.Dock="Right" Classes="small" Content="Omkeren" Margin="4,0,0,0" IsVisible="{Binding CanInvert}" IsEnabled="{Binding Learned}"
+                            IsChecked="{Binding Invert, Mode=OneWay}" ToolTip.Tip="Draai de richting om, bijv. een tempofader met min bovenaan"
+                            Command="{Binding $parent[UserControl].DataContext.ToggleInvertCommand}" CommandParameter="{Binding}" />
+              <ToggleButton DockPanel.Dock="Right" Classes="small" Content="{Binding LearnText}" Margin="8,0,0,0" MinWidth="64"
+                            IsChecked="{Binding Learning, Mode=OneWay}" ToolTip.Tip="Druk hierop en beweeg daarna de knop, fader of het wiel op je controller"
+                            Command="{Binding $parent[UserControl].DataContext.LearnCommand}" CommandParameter="{Binding}" />
+              <TextBlock DockPanel.Dock="Right" Classes="mono" Text="{Binding Trigger}" VerticalAlignment="Center" MinWidth="110" Margin="8,0,0,0" />
+              <TextBlock DockPanel.Dock="Right" Classes="muted" FontSize="12" Text="{Binding KindText}" VerticalAlignment="Center" MinWidth="70" />
+              <TextBlock Text="{Binding Name}" FontWeight="SemiBold" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+            </DockPanel>
+          </DataTemplate>
+        </ListBox.ItemTemplate>
+      </ListBox>
+    </Border>
+  </DockPanel>
+</UserControl>

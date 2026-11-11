@@ -1,0 +1,86 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:ReaRadioDj.Studio.ViewModels"
+             xmlns:ctl="using:ReaRadioDj.Studio.Controls"
+             x:Class="ReaRadioDj.Studio.Views.ClockView"
+             x:DataType="vm:ClockTool">
+  <DockPanel Margin="6">
+    <!-- settings: hidden behind the gear so the clock stays calm -->
+    <DockPanel DockPanel.Dock="Top">
+      <Button DockPanel.Dock="Right" Classes="small" Content="⚙" Command="{Binding ToggleOptionsCommand}" ToolTip.Tip="Klok en tellers instellen" />
+      <TextBlock Classes="muted" Text="{Binding Date}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+    </DockPanel>
+    <Border DockPanel.Dock="Top" Classes="card" Margin="0,4,0,0" IsVisible="{Binding ShowOptions}">
+      <WrapPanel>
+        <StackPanel Margin="0,0,12,4" Spacing="2">
+          <TextBlock Classes="muted" Text="Klok" />
+          <ComboBox ItemsSource="{Binding Styles}" SelectedIndex="{Binding StyleIndex}" MinWidth="130" />
+        </StackPanel>
+        <StackPanel Margin="0,0,12,4" Spacing="2">
+          <TextBlock Classes="muted" Text="Grootte tellers" />
+          <ComboBox ItemsSource="{Binding Sizes}" SelectedIndex="{Binding SizeIndex}" MinWidth="130" />
+        </StackPanel>
+        <StackPanel Margin="0,0,12,4" Spacing="2">
+          <TextBlock Classes="muted" Text="Flitskleur einde item" />
+          <ComboBox ItemsSource="{Binding Flashes}" SelectedIndex="{Binding FlashIndex}" MinWidth="130" />
+        </StackPanel>
+        <CheckBox Content="Seconden" IsChecked="{Binding ShowSeconds}" VerticalAlignment="Bottom" Margin="0,0,0,4" />
+      </WrapPanel>
+    </Border>
+
+    <!-- counters: always readable, the item counter flashes at the end -->
+    <StackPanel DockPanel.Dock="Bottom" Spacing="6" Margin="0,6,0,0">
+      <Border CornerRadius="{DynamicResource Radius8}" Padding="12,6" Background="{Binding CounterBackground}">
+        <DockPanel>
+          <StackPanel DockPanel.Dock="Right" VerticalAlignment="Center" HorizontalAlignment="Right">
+            <TextBlock Classes="mono" FontWeight="Bold" FontSize="{Binding CounterFont}" Foreground="{Binding CounterForeground}"
+                       Text="{Binding ItemRemaining}" HorizontalAlignment="Right" />
+          </StackPanel>
+          <StackPanel VerticalAlignment="Center" Margin="0,0,10,0">
+            <TextBlock Text="ON AIR" FontSize="11" FontWeight="Bold" Foreground="{Binding CounterForeground}" Opacity="0.75" />
+            <TextBlock Text="{Binding NowLabel}" FontWeight="SemiBold" Foreground="{Binding CounterForeground}" TextTrimming="CharacterEllipsis" />
+            <TextBlock Classes="mono" Text="{Binding ItemElapsed, StringFormat='gespeeld {0}'}" FontSize="12" Foreground="{Binding CounterForeground}" Opacity="0.7" />
+          </StackPanel>
+        </DockPanel>
+      </Border>
+      <Grid ColumnDefinitions="*,6,*,6,*">
+        <Border Grid.Column="0" Classes="card" IsVisible="{Binding HasIntro}" Background="#26F59E0B" BorderBrush="{DynamicResource WarnBrush}">
+          <StackPanel HorizontalAlignment="Center">
+            <TextBlock Text="INTRO" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource WarnBrush}" HorizontalAlignment="Center" />
+            <TextBlock Classes="mono" FontWeight="Bold" FontSize="{Binding SmallCounterFont}" Foreground="{DynamicResource WarnBrush}" Text="{Binding IntroText}" HorizontalAlignment="Center" />
+          </StackPanel>
+        </Border>
+        <Border Grid.Column="0" Classes="card" IsVisible="{Binding !HasIntro}">
+          <StackPanel HorizontalAlignment="Center">
+            <TextBlock Text="VOLGENDE" FontSize="11" FontWeight="Bold" Classes="muted" HorizontalAlignment="Center" />
+            <TextBlock Classes="mono" FontWeight="Bold" FontSize="{Binding SmallCounterFont}" Text="{Binding ToNext}" HorizontalAlignment="Center" />
+          </StackPanel>
+        </Border>
+        <Border Grid.Column="2" Classes="card" IsVisible="{Binding HasIntro}">
+          <StackPanel HorizontalAlignment="Center">
+            <TextBlock Text="VOLGENDE" FontSize="11" FontWeight="Bold" Classes="muted" HorizontalAlignment="Center" />
+            <TextBlock Classes="mono" FontWeight="Bold" FontSize="{Binding SmallCounterFont}" Text="{Binding ToNext}" HorizontalAlignment="Center" />
+          </StackPanel>
+        </Border>
+        <Border Grid.Column="2" Classes="card" IsVisible="{Binding !HasIntro}">
+          <StackPanel HorizontalAlignment="Center">
+            <TextBlock Text="KLOK" FontSize="11" FontWeight="Bold" Classes="muted" HorizontalAlignment="Center" />
+            <TextBlock Text="{Binding ClockName}" FontSize="{Binding SmallCounterFont, Converter={x:Static vm:Brushes.Half}}" HorizontalAlignment="Center"
+                       TextTrimming="CharacterEllipsis" VerticalAlignment="Center" Margin="0,4,0,0" />
+          </StackPanel>
+        </Border>
+        <Border Grid.Column="4" Classes="card" ToolTip.Tip="{Binding NextEvent}">
+          <StackPanel HorizontalAlignment="Center">
+            <TextBlock Text="VASTE TIJD" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource WarnBrush}" HorizontalAlignment="Center" />
+            <TextBlock Classes="mono" FontWeight="Bold" FontSize="{Binding SmallCounterFont}" Foreground="{DynamicResource WarnBrush}" Text="{Binding ToEvent}" HorizontalAlignment="Center" />
+          </StackPanel>
+        </Border>
+      </Grid>
+      <TextBlock Classes="muted" Text="{Binding NextEvent}" HorizontalAlignment="Center" TextTrimming="CharacterEllipsis" />
+    </StackPanel>
+
+    <!-- the clock takes all remaining space and scales with the window -->
+    <ctl:StudioClock Time="{Binding Now}" ClockStyle="{Binding ClockStyle}" ShowSeconds="{Binding ShowSeconds}"
+                     ItemLeft="{Binding ItemLeft}" ItemSecondsLeft="{Binding ItemSecondsLeft}" MinHeight="120" Margin="0,6,0,0" />
+  </DockPanel>
+</UserControl>

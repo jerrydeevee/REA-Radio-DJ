@@ -1,0 +1,173 @@
+using ReaRadioDj.Contracts;
+using ReaRadioDj.Core.Audio;
+using ReaRadioDj.Core.Library;
+
+namespace ReaRadioDj.Server;
+
+/// <summary>The DJ desk over HTTP: one address per deck action, one for the crossfader and the on-air switch.</summary>
+public static class DjApi
+{
+    public static void Map(RouteGroupBuilder api)
+    {
+        api.MapGet("/dj", (DjMixer dj, DjHandover handover) => Dto(dj.Info, handover.Following, dj.Automix.Info));
+
+        // Deck A starts copying what the automation plays (see DjHandover).
+        api.MapPost("/dj/follow", (DjMixer dj, DjHandover handover) =>
+            dj.Automix.On ? Results.BadRequest("automix speelt op deck A en B; zet automix eerst uit")
+            : handover.Follow() is { } problem ? Results.BadRequest(problem) : Results.Ok(Dto(dj.Info, handover.Following, dj.Automix.Info)));
+
+        api.MapPost("/dj/mixer", (DjMixerRequest r, DjMixer dj, DjHandover handover, MessageCenter messages, RecordingService recordings,
+            ReaRadioDj.Core.ReaRadioDjOptions options) =>
+        {
+            if (r.Record is true && dj.Recording.File is null)
+            {
+                try
+                {
+                    var file = dj.StartRecording(Path.Combine(options.RecordingPath, "DJ"));
+                    messages.Info($"Mix wordt opgenomen: {Path.GetFileName(file)}");
+                }
+                catch (Exception ex) when (ex is BassException or IOException or UnauthorizedAccessException)
+                {
+                    return Results.BadRequest($"Opnemen lukte niet: {ex.Message}");
+                }
+            }
+            else if (r.Record is false && dj.StopRecording() is { } done)
+                recordings.AddToLibrary(done, "DJ-mix");
+            if (r.Crossfader is double x) dj.SetCrossfader(x);
+            if (r.Curve is { } curve) dj.SetCurve(curve);
+            if (r.Quantize is bool q) dj.SetQuantize(q);
+            if (r.CueMix is double cm) dj.SetCueMix(cm);
+            if (r.Limiter is not null || r.LimiterDb is not null)
+            {
+                var now = dj.Info;
+                try { dj.SetLimiter(r.Limiter ?? now.Limiter, r.LimiterDb ?? now.LimiterDb); }
+                catch (BassException ex) { return Results.BadRequest($"Begrenzer niet beschikbaar: {ex.Message}"); }
+            }
+            if (r.OnAir is bool on && on != dj.OnAir)
+            {
+                // On air: the automation goes quiet and runs on unheard; off air: it is heard again where it is.
+                if (on)
+                    messages.Info(handover.GoOnAir()
+                        ? "DJ-tafel heeft de uitzending naadloos overgenomen; de automatisering loopt onhoorbaar mee"
+                        : "DJ-tafel is op de lucht; de automatisering loopt onhoorbaar mee");
+                else
+                {
+                    handover.GiveBack();
+                    messages.Info("Teruggegeven aan de automatisering");
+                }
+            }
+            return Results.Ok(Dto(dj.Info, handover.Following, dj.Automix.Info));
+        });
+
+        api.MapPost("/dj/automix", (DjAutomixRequest r, DjMixer dj, MediaLibrary library, DjHandover handover) =>
+        {
+            var am = dj.Automix;
+            if (r.Clear is true) am.Clear();
+            if (r.Remove is int rm && !am.Remove(rm)) return Results.BadRequest("geen nummer op die plaats");
+            if (r.MoveFrom is int mf && !am.Move(mf, r.MoveTo ?? 0)) return Results.BadRequest("geen nummer op die plaats");
+            if (r.MediaIds is { } ids)
+            {
+                int? at = r.Index;
+                foreach (var id in ids)
+                {
+                    if (library.Get(id) is not { } media) return Results.BadRequest($"nummer {id} niet gevonden");
+                    am.Add(media, at);
+                    if (at is not null) at++;
+                }
+            }
+            if (r.Transition is { } t) am.SetTransition(t);
+            if (r.Beats is double b) am.SetBeats(b);
+            if (r.On is bool on)
+            {
+                // Automix plays decks A and B itself: deck A no longer follows the automation.
+                if (on) handover.Release();
+                am.SetOn(on);
+            }
+            if (r.MixNow is true && !am.MixNow()) return Results.BadRequest("er wacht geen volgend nummer om naartoe te mixen");
+            return Results.Ok(Dto(dj.Info, handover.Following, am.Info));
+        });
+
+        api.MapPost("/dj/decks/{id}/{action}", (string id, string action, DjCommand? body, DjMixer dj, MediaLibrary library, DjHandover handover) =>
+        {
+            if (dj.Find(id) is not { } deck) return Results.NotFound();
+            // Sound shaping leaves deck A following; anything that moves the track makes it the DJ's own.
+            if (deck.Id == "A" && !Shaping.Contains(action.ToLowerInvariant())) handover.Release();
+            try
+            {
+                return Run(dj, deck, library, action.ToLowerInvariant(), body ?? new DjCommand()) is { } problem
+                    ? Results.BadRequest(problem)
+                    : Results.Ok(Deck(deck.Info));
+            }
+            catch (BassException ex) { return Results.BadRequest($"bestand niet te openen: {ex.Message}"); }
+            catch (DllNotFoundException) { return Results.BadRequest("bass_fx.dll ontbreekt: voer scripts\fetch-bass.ps1 uit"); }
+        });
+    }
+
+    internal static readonly HashSet<string> Shaping =
+        ["fx", "fxtype", "fxmix", "fxbeats", "gain", "fader", "eqlow", "eqmid", "eqhigh", "killlow", "killmid", "killhigh", "filter", "pfl", "keylock", "range"];
+
+    /// <summary>Runs one deck action; returns what is wrong, or null when it is done.</summary>
+    public static string? Run(DjMixer dj, DjDeck deck, MediaLibrary library, string action, DjCommand c)
+    {
+        double? v = c.Value;
+        switch (action)
+        {
+            case "load" when c.MediaId is long id && library.Get(id) is { } media: deck.Load(media); break;
+            case "eject": deck.Eject(); break;
+            case "play": deck.Play(); break;
+            case "pause": deck.Pause(); break;
+            case "toggle": deck.Toggle(); break;
+            case "cue": deck.Cue(); break;
+            case "seek" when v is double s: deck.Seek(s); break;
+            case "tempo" when v is double t: deck.SetTempo(t); break;
+            case "range" when v is double r: deck.SetTempoRange(r); break;
+            case "keylock": deck.SetKeyLock(c.On ?? !deck.KeyLock); break;
+            case "bend" when v is double b: deck.Bend(b); break;
+            case "sync": if (!dj.Sync(deck)) return "geen ander spelend deck met een tempo om te volgen"; break;
+            case "gain" when v is double g: deck.SetGain(g); break;
+            case "fader" when v is double f: deck.SetFader(f); break;
+            case "eqlow" or "eqmid" or "eqhigh" when v is double e: deck.SetEq(action[2..], e); break;
+            case "killlow": deck.SetKill("low", c.On ?? !deck.KillLow); break;
+            case "killmid": deck.SetKill("mid", c.On ?? !deck.KillMid); break;
+            case "killhigh": deck.SetKill("high", c.On ?? !deck.KillHigh); break;
+            case "filter" when v is double x: deck.SetFilter(x); break;
+            case "pfl": deck.SetPfl(c.On ?? !deck.Pfl); break;
+            case "hotcue" when c.Index is int i: deck.HotCue(i); break;
+            case "hotcueclear" when c.Index is int i: deck.ClearHotCue(i); break;
+            case "loopin": deck.SetLoopIn(); break;
+            case "loopout": deck.SetLoopOut(); break;
+            case "loop": deck.Loop(v ?? deck.LoopBeats); break;
+            case "loophalf": deck.ScaleLoop(0.5); break;
+            case "loopdouble": deck.ScaleLoop(2); break;
+            case "loopexit": deck.ExitLoop(); break;
+            // One button for a loop: on (Value beats, else the loop length) and off again.
+            case "looptoggle": if (deck.LoopActive) deck.ExitLoop(); else deck.Loop(v ?? deck.LoopBeats); break;
+            // Loop roll: On = true while the button is held (Value = beats), false on release.
+            case "roll": deck.Roll(v ?? 1, c.On ?? false); break;
+            case "censor" when !deck.CanReverse: return "achteruit spelen kan niet: bass_fx is te oud of ontbreekt";
+            case "censor": deck.Censor(c.On ?? false); break;
+            case "brake": deck.Brake(v ?? 1.5); break;
+            case "backspin" when !deck.CanReverse: return "achteruit spelen kan niet: bass_fx is te oud of ontbreekt";
+            case "backspin": deck.Backspin(v ?? 1.2); break;
+            // Beat effect: type by Name (echo, flanger, reverb), on/off, mix 0..1, length in beats.
+            case "fx": deck.SetFx(c.Name, c.On ?? !deck.FxOn); break;
+            case "fxtype" when c.Name is { } fx: deck.SetFx(type: fx); break;
+            case "fxmix" when v is double fm: deck.SetFx(mix: fm); break;
+            case "fxbeats" when v is double fb: deck.SetFx(beats: fb); break;
+            default: return $"onbekende opdracht '{action}' of gegevens ontbreken";
+        }
+        return null;
+    }
+
+    public static DjDto Dto(DjMixerInfo m, bool following = false, DjAutomixInfo? automix = null) =>
+        new(m.Crossfader, m.Curve, m.OnAir, m.Decks.Select(Deck).ToList(), following, m.Recording is { } f ? Path.GetFileName(f) : null, m.RecordingSeconds,
+            m.Quantize, m.CueMix, m.Limiter, m.LimiterDb, automix is { } a ? Automix(a) : null);
+
+    public static DjAutomixDto Automix(DjAutomixInfo a) => new(a.On, a.Transition, a.Beats,
+        a.Queue.Select(q => new DjAutomixItemDto(q.Id, q.Title, q.Artist, Math.Round(q.Duration, 1))).ToList(), a.State, a.Progress, a.SecondsToMix, a.OutDeck);
+
+    public static DjDeckDto Deck(DjDeckInfo d) => new(d.Id, d.Media is { Id: > 0 } m ? m.Id : null, d.Media?.Title ?? "", d.Media?.Artist ?? "",
+        d.Media is not null, d.Playing, d.Position, Math.Round(d.Duration, 3), d.Bpm, d.FirstBeat, d.Analysing, Math.Round(d.Tempo, 3), d.TempoRange,
+        d.KeyLock, d.Synced, d.CuePoint, d.HotCues, d.LoopIn, d.LoopOut, d.LoopActive, d.LoopBeats, d.Gain, d.EqLow, d.EqMid, d.EqHigh,
+        d.KillLow, d.KillMid, d.KillHigh, d.Filter, d.Fader, d.Pfl, d.LevelLeft, d.LevelRight, d.Rolling, d.FxType, d.FxOn, d.FxMix, d.FxBeats, d.Censoring, d.Spinning);
+}

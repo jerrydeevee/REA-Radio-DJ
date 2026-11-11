@@ -1,0 +1,303 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:ReaRadioDj.Studio.ViewModels"
+        xmlns:ctl="using:ReaRadioDj.Studio.Controls"
+        x:Class="ReaRadioDj.Studio.Views.MainWindow"
+        x:DataType="vm:MainWindowViewModel"
+        Title="{Binding Station, StringFormat='{}{0} · Studio'}"
+        Width="1600" Height="950" MinWidth="900" MinHeight="600"
+        Icon="/Assets/rea.ico"
+        Background="{DynamicResource AppBrush}"
+        WindowStartupLocation="CenterScreen">
+  <Panel>
+  <DockPanel>
+    <!-- The size setting scales the bars and every window's contents, but not the docking area itself: Dock works out
+         its drop targets without transforms (see ScaledContent). -->
+    <LayoutTransformControl x:Name="Zoom" DockPanel.Dock="Top">
+    <!-- App bar: name, menu, workspaces, layout and engine state -->
+    <Border Padding="16,6" Background="{DynamicResource BarBrush}" BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="0,0,0,1">
+      <!-- Narrower windows: the name, the connection text and the layout choice drop off first (all three are also
+           elsewhere: window title, status dot with tooltip, Indeling menu); below 1100 px the workspaces get their own row. -->
+      <Grid x:Name="AppBar" ColumnDefinitions="Auto,Auto,Auto,*,Auto,Auto" RowDefinitions="Auto,Auto">
+        <StackPanel x:Name="Brand" Grid.Column="0" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center" Margin="0,0,12,0">
+          <TextBlock Text="REA-Radio-DJ" FontWeight="Bold" FontSize="16" VerticalAlignment="Center" />
+          <TextBlock Classes="muted" Text="{Binding Station}" FontSize="13" VerticalAlignment="Center" IsVisible="{Binding StationDiffers}" />
+        </StackPanel>
+        <Menu Grid.Column="1" VerticalAlignment="Center" Background="Transparent">
+          <MenuItem Header="_Studio">
+            <MenuItem Header="Engine starten" Command="{Binding StartEngineCommand}" />
+            <Separator />
+            <MenuItem Header="AI-break als volgende" Command="{Binding AddBreakCommand}" />
+            <MenuItem Header="Alle carts stoppen" Command="{Binding StopCartsCommand}" />
+            <MenuItem Header="Alle overlays stoppen" Command="{Binding StopOverlaysCommand}" />
+            <Separator />
+            <MenuItem Header="Ga naar venster…" InputGesture="Ctrl+K" Command="{Binding OpenGoToCommand}" />
+            <MenuItem Header="Instellingen…" Command="{Binding ShowWindowCommand}" CommandParameter="settings" />
+        <MenuItem Header="Bediening en sneltoetsen…" Command="{Binding ShowWindowCommand}" CommandParameter="control" />
+          </MenuItem>
+          <MenuItem Header="_Vensters" ItemsSource="{Binding WindowMenu}" Command="{x:Null}" CommandParameter="{x:Null}">
+            <MenuItem.Styles>
+              <Style Selector="MenuItem" x:DataType="vm:WindowEntry">
+                <Setter Property="Header" Value="{Binding Name}" />
+                <Setter Property="Command" Value="{Binding $parent[Window].DataContext.ShowWindowCommand}" />
+                <Setter Property="CommandParameter" Value="{Binding Id}" />
+              </Style>
+            </MenuItem.Styles>
+          </MenuItem>
+          <MenuItem Header="_Zwevend" ItemsSource="{Binding WindowMenu}" Command="{x:Null}" CommandParameter="{x:Null}">
+            <MenuItem.Styles>
+              <Style Selector="MenuItem" x:DataType="vm:WindowEntry">
+                <Setter Property="Header" Value="{Binding Name}" />
+                <Setter Property="Command" Value="{Binding $parent[Window].DataContext.FloatWindowCommand}" />
+                <Setter Property="CommandParameter" Value="{Binding Id}" />
+              </Style>
+            </MenuItem.Styles>
+          </MenuItem>
+          <MenuItem Header="_Werkbladen" ItemsSource="{Binding ScreenMenu}" Command="{x:Null}" CommandParameter="{x:Null}"
+                    ToolTip.Tip="Een werkblad is een extra studiovenster op een scherm naar keuze; sleep er vensters heen. Het wordt bewaard met de indeling.">
+            <MenuItem.Styles>
+              <Style Selector="MenuItem" x:DataType="vm:ScreenEntry">
+                <Setter Property="Header" Value="{Binding Name}" />
+                <Setter Property="Command" Value="{Binding $parent[Window].DataContext.NewWorkbenchCommand}" />
+                <Setter Property="CommandParameter" Value="{Binding}" />
+              </Style>
+            </MenuItem.Styles>
+          </MenuItem>
+          <MenuItem Header="_Indeling">
+            <MenuItem Header="Laden" ItemsSource="{Binding LayoutNames}" Command="{x:Null}" CommandParameter="{x:Null}">
+              <MenuItem.Styles>
+                <Style Selector="MenuItem" x:DataType="x:String">
+                  <Setter Property="Header" Value="{Binding}" />
+                  <Setter Property="Command" Value="{Binding $parent[Window].DataContext.LoadLayoutCommand}" />
+                  <Setter Property="CommandParameter" Value="{Binding}" />
+                </Style>
+              </MenuItem.Styles>
+            </MenuItem>
+            <MenuItem Header="Opslaan" Command="{Binding SaveLayoutCommand}" />
+            <MenuItem Header="Venster plaatsen…" Command="{Binding OpenPlaceCommand}" />
+            <MenuItem Header="Standaardindeling herstellen" Command="{Binding ResetLayoutCommand}" />
+            <MenuItem Header="Alle werkbladen sluiten" Command="{Binding CloseWorkbenchesCommand}" />
+          </MenuItem>
+          <MenuItem Header="I_nfo">
+            <MenuItem Header="Over REA-Radio-DJ…" Click="OnAbout" />
+            <Separator />
+            <MenuItem Header="Broncode op GitHub" Click="OnSource" />
+            <MenuItem Header="Licentie en onderdelen" Click="OnLicense" />
+          </MenuItem>
+        </Menu>
+        <StackPanel x:Name="Workspaces" Grid.Column="2" Orientation="Horizontal" Spacing="4" Margin="12,0,0,0"
+                    ToolTip.Tip="Werkruimte: rustig bewaken of de volledige studio. Elke werkruimte onthoudt zijn eigen indeling.">
+          <ToggleButton Classes="nav" Content="Live" IsChecked="{Binding LiveWorkspace, Mode=OneWay}" Command="{Binding SwitchViewCommand}" CommandParameter="assist" />
+          <ToggleButton Classes="nav" Content="DJ" IsChecked="{Binding DjWorkspace, Mode=OneWay}" Command="{Binding SwitchViewCommand}" CommandParameter="dj"
+                        ToolTip.Tip="DJ-mengtafel: decks, mengpaneel en crossfader om met de hand te mixen" />
+          <ToggleButton Classes="nav" Content="Automatisering" IsChecked="{Binding AutomationView, Mode=OneWay}" Command="{Binding SwitchViewCommand}" CommandParameter="auto" />
+          <ToggleButton Classes="nav" Content="Productie" IsChecked="{Binding ProductionWorkspace, Mode=OneWay}" Command="{Binding SwitchViewCommand}" CommandParameter="prod"
+                        ToolTip.Tip="Productie: bibliotheek, cue-editor, voicetracking, stemmen en AI-presentator" />
+          <ToggleButton Classes="nav" Content="Planning" IsChecked="{Binding PlanningWorkspace, Mode=OneWay}" Command="{Binding SwitchViewCommand}" CommandParameter="plan"
+                        ToolTip.Tip="Planning: klokken en dagplanning, reclame, nieuws, log-import en databronnen" />
+          <ToggleButton Classes="nav" Content="Rapportage" IsChecked="{Binding ReportWorkspace, Mode=OneWay}" Command="{Binding SwitchViewCommand}" CommandParameter="report"
+                        ToolTip.Tip="Rapportage en techniek: as-run, muziekrapport, stream, hardware en bediening" />
+        </StackPanel>
+        <StackPanel x:Name="LayoutPick" Grid.Column="4" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center" Margin="0,0,16,0">
+          <ComboBox ItemsSource="{Binding LayoutNames}" SelectedItem="{Binding SelectedLayoutName}" MinWidth="170" MinHeight="36" CornerRadius="{DynamicResource Radius8}"
+                    ToolTip.Tip="Kies een opgeslagen indeling" />
+        </StackPanel>
+        <StackPanel Grid.Column="5" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center" ToolTip.Tip="{Binding Hub.ConnectionText}">
+          <Ellipse Width="10" Height="10" Fill="{Binding Hub.Connected, Converter={x:Static vm:Brushes.Connection}}" />
+          <TextBlock x:Name="ConnectionText" Classes="muted" FontSize="13" Text="{Binding Hub.ConnectionText}" VerticalAlignment="Center" />
+        </StackPanel>
+      </Grid>
+    </Border>
+    </LayoutTransformControl>
+
+    <!-- Status bar -->
+    <LayoutTransformControl x:Name="ZoomStatus" DockPanel.Dock="Bottom">
+    <Border Padding="16,3" Background="{DynamicResource BarBrush}">
+      <DockPanel>
+        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="6">
+          <TextBox Text="{Binding NewLayoutName}" Watermark="naam nieuwe indeling" Width="170" FontSize="12" MinHeight="24" Padding="4,2" />
+          <Button Classes="small" Content="Opslaan" Command="{Binding SaveLayoutCommand}" />
+        </StackPanel>
+        <TextBlock Classes="muted" Text="{Binding StatusLine}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+      </DockPanel>
+    </Border>
+    </LayoutTransformControl>
+
+    <!-- On-air bar: always visible, whatever the layout -->
+    <LayoutTransformControl x:Name="ZoomOnAir" DockPanel.Dock="Top">
+    <Border Padding="24,12" Background="{DynamicResource BarBrush}" BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="0,0,0,1">
+      <Grid x:Name="OnAirGrid" ColumnDefinitions="Auto,*,Auto,Auto,Auto,Auto" RowDefinitions="Auto,Auto">
+        <Border Grid.Column="0" CornerRadius="{DynamicResource Radius8}" Padding="12,8" Margin="0,0,24,0" VerticalAlignment="Center"
+                Background="{Binding OnAir, Converter={x:Static vm:Brushes.OnAir}}">
+          <StackPanel Orientation="Horizontal" Spacing="8">
+            <Panel Width="12" Height="12" VerticalAlignment="Center">
+              <Ellipse Stroke="White" StrokeThickness="2" />
+              <Ellipse Fill="White" Width="4" Height="4" />
+            </Panel>
+            <TextBlock Text="{Binding OnAir, Converter={x:Static vm:Brushes.OnAirText}}" FontWeight="Bold" FontSize="14" LetterSpacing="1" Foreground="White" VerticalAlignment="Center" />
+          </StackPanel>
+        </Border>
+        <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="6" ClipToBounds="True">
+          <DockPanel>
+            <Button DockPanel.Dock="Right" Classes="overlaypill" Margin="12,0,0,0" VerticalAlignment="Center"
+                    IsVisible="{Binding OverlayOn}" Command="{Binding StopOverlaysCommand}" ToolTip.Tip="{Binding OverlayTip}">
+              <StackPanel Orientation="Horizontal" Spacing="8">
+                <Ellipse Classes="pulse" Width="8" Height="8" Fill="White" VerticalAlignment="Center" />
+                <TextBlock Text="OVERLAY" FontWeight="Bold" LetterSpacing="1" VerticalAlignment="Center" />
+                <TextBlock Text="{Binding OverlayText}" MaxWidth="260" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                <Border Background="#33FFFFFF" CornerRadius="{DynamicResource Radius4}" Padding="6,1">
+                  <StackPanel Orientation="Horizontal" Spacing="4">
+                    <Border Width="8" Height="8" Background="White" CornerRadius="1" VerticalAlignment="Center" />
+                    <TextBlock Text="Stop" FontWeight="Bold" VerticalAlignment="Center" />
+                  </StackPanel>
+                </Border>
+              </StackPanel>
+            </Button>
+            <Border DockPanel.Dock="Right" Background="{DynamicResource WarnBrush}" CornerRadius="{DynamicResource Radius4}" Padding="8,1" Margin="12,0,0,0" VerticalAlignment="Center"
+                    IsVisible="{Binding IntroText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" ToolTip.Tip="Tijd tot de zang begint: zolang kun je praten">
+              <TextBlock Text="{Binding IntroText}" Foreground="#1A1206" FontWeight="Bold" Classes="mono" />
+            </Border>
+            <TextBlock Text="{Binding NowTitle}" FontSize="22" FontWeight="Bold" TextTrimming="CharacterEllipsis" VerticalAlignment="Bottom" />
+            <TextBlock Text="{Binding NowSub}" FontSize="15" Foreground="{DynamicResource MutedTextBrush}" Margin="12,0,0,2" TextTrimming="CharacterEllipsis" VerticalAlignment="Bottom" />
+          </DockPanel>
+          <ctl:OnAirProgress Value="{Binding NowPos}" Intro="{Binding IntroMark}" Mix="{Binding MixMark}"
+                             Classes.warn="{Binding EndState, Converter={x:Static vm:Brushes.Is}, ConverterParameter=warn}"
+                             Classes.end="{Binding EndState, Converter={x:Static vm:Brushes.Is}, ConverterParameter=end}"
+                             Classes.flash="{Binding Flash}" />
+          <StackPanel Orientation="Horizontal" Spacing="16">
+            <StackPanel Orientation="Horizontal" Spacing="4" IsVisible="{Binding IntroState, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+              <TextBlock Classes="muted" Text="Intro" />
+              <TextBlock Classes="mono" FontSize="12" FontWeight="Bold" Foreground="{DynamicResource WarnBrush}" Text="{Binding IntroState}" />
+            </StackPanel>
+            <StackPanel Orientation="Horizontal" Spacing="4" IsVisible="{Binding MixText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+              <TextBlock Classes="muted" Text="Mix over" />
+              <TextBlock Classes="mono" FontSize="12" FontWeight="Bold" Text="{Binding MixText}" />
+            </StackPanel>
+            <TextBlock Classes="muted" Text="{Binding NextLabel}" TextTrimming="CharacterEllipsis" />
+          </StackPanel>
+        </StackPanel>
+        <StackPanel Grid.Column="2" VerticalAlignment="Center" Margin="24,0" MinWidth="130">
+          <TextBlock Classes="lbl" Text="RESTEREND" HorizontalAlignment="Right" />
+          <TextBlock Classes="mono remaining" FontSize="44" FontWeight="Bold" HorizontalAlignment="Right" Text="{Binding NowRemaining}"
+                     Classes.warn="{Binding EndState, Converter={x:Static vm:Brushes.Is}, ConverterParameter=warn}"
+                     Classes.end="{Binding EndState, Converter={x:Static vm:Brushes.Is}, ConverterParameter=end}" />
+        </StackPanel>
+        <StackPanel x:Name="Transport" Grid.Column="3" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+          <Button Classes="bar primary" Command="{Binding NextCommand}" ToolTip.Tip="Start het volgende item">
+            <StackPanel Orientation="Horizontal" Spacing="8">
+              <Path Data="M3,2 L12,8 L3,14 Z M12,2 H14 V14 H12 Z" Fill="White" Width="16" Height="16" Stretch="None" VerticalAlignment="Center" />
+              <TextBlock Text="Volgende" VerticalAlignment="Center" />
+              <Border Classes="key"><TextBlock Text="F5" /></Border>
+            </StackPanel>
+          </Button>
+          <Border BorderBrush="{DynamicResource ControlBorderBrush}" BorderThickness="1" CornerRadius="{DynamicResource Radius8}" ClipToBounds="True" VerticalAlignment="Center">
+            <StackPanel Orientation="Horizontal">
+              <ToggleButton Classes="seg" Content="Automatisch" IsChecked="{Binding AutoPlay, Mode=OneWay}" Command="{Binding SetModeCommand}" CommandParameter="auto"
+                            ToolTip.Tip="De engine start elk volgend item zelf" />
+              <ToggleButton Classes="seg" IsChecked="{Binding !AutoPlay, Mode=OneWay}" Command="{Binding SetModeCommand}" CommandParameter="assist"
+                            ToolTip.Tip="Live-assist: jij start elk volgend item">
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                  <TextBlock Text="Assist" VerticalAlignment="Center" />
+                  <Border Classes="key"><TextBlock Text="F6" /></Border>
+                </StackPanel>
+              </ToggleButton>
+            </StackPanel>
+          </Border>
+          <Button Classes="bar" Command="{Binding SkipCommand}" ToolTip.Tip="Het item dat ON AIR is overslaan">
+            <StackPanel Orientation="Horizontal" Spacing="8">
+              <TextBlock Text="Overslaan" VerticalAlignment="Center" />
+              <Border Classes="key"><TextBlock Text="F7" /></Border>
+            </StackPanel>
+          </Button>
+          <ToggleButton Classes="bar mic" IsChecked="{Binding MicOpen, Mode=OneWay}" Command="{Binding ToggleMicCommand}" ToolTip.Tip="{Binding MicStatus}">
+            <StackPanel Orientation="Horizontal" Spacing="8">
+              <Path Data="M7,1 A3,3 0 0 1 10,4 V7 A3,3 0 0 1 4,7 V4 A3,3 0 0 1 7,1 M2,8 A5,5 0 0 0 12,8 M7,13 V15" Stroke="{Binding $parent[ToggleButton].Foreground}" StrokeThickness="1.6"
+                    Width="14" Height="16" Stretch="None" VerticalAlignment="Center" />
+              <TextBlock Text="Mic" VerticalAlignment="Center" />
+              <Border Classes="key"><TextBlock Text="F8" /></Border>
+            </StackPanel>
+          </ToggleButton>
+          <Border Width="1" Height="40" Background="{DynamicResource CardBorderBrush}" Margin="8,0" />
+          <Button x:Name="StopButton" Classes="bar danger" ToolTip.Tip="Houd 1 seconde vast om de automatisering te stoppen (F9 stopt direct)">
+            <StackPanel Orientation="Horizontal" Spacing="8">
+              <Border Width="12" Height="12" CornerRadius="{DynamicResource Radius2}" Background="#FF9B9E" VerticalAlignment="Center" />
+              <TextBlock Text="Stop" VerticalAlignment="Center" />
+              <Border Classes="key"><TextBlock Text="F9" /></Border>
+            </StackPanel>
+          </Button>
+        </StackPanel>
+        <StackPanel Grid.Column="4" Width="72" VerticalAlignment="Center" Spacing="4" Margin="16,0,0,0" ToolTip.Tip="Niveau van het programma, links en rechts">
+          <ProgressBar Value="{Binding LevelLeft}" Maximum="100" MinHeight="6" MinWidth="0" Foreground="{DynamicResource OkBrush}" />
+          <ProgressBar Value="{Binding LevelRight}" Maximum="100" MinHeight="6" MinWidth="0" Foreground="{DynamicResource OkBrush}" />
+          <TextBlock Text="{Binding LufsText}" FontSize="11" Foreground="{DynamicResource MutedTextBrush}" HorizontalAlignment="Center" ToolTip.Tip="{Binding LufsTip}" />
+        </StackPanel>
+        <Border Grid.Column="5" BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1,0,0,0" Padding="16,0,0,0" Margin="16,0,0,0">
+          <StackPanel VerticalAlignment="Center">
+            <TextBlock Classes="mono" FontSize="28" FontWeight="Bold" Text="{Binding Clock}" HorizontalAlignment="Right" />
+            <TextBlock FontSize="12" Foreground="{DynamicResource WarnBrush}" Text="{Binding NextEvent}" HorizontalAlignment="Right" />
+          </StackPanel>
+        </Border>
+      </Grid>
+    </Border>
+
+    </LayoutTransformControl>
+
+    <DockControl Layout="{Binding Layout}" Margin="2" />
+  </DockPanel>
+
+  <LayoutTransformControl x:Name="ZoomOver">
+  <Panel>
+
+  <!-- Ctrl+K: go to a window by name. Over everything, near the top, closed with Esc or by picking a window. -->
+  <Border IsVisible="{Binding GoToOpen}" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,96,0,0" Width="520"
+          Background="{DynamicResource CardBrush}" BorderBrush="{DynamicResource AccentBrush}" BorderThickness="1"
+          CornerRadius="{DynamicResource Radius10}" Padding="10" BoxShadow="0 12 32 0 #66000000">
+    <StackPanel Spacing="8">
+      <TextBlock Classes="muted" Text="Ga naar venster · typ een deel van de naam · Enter opent · Esc sluit" />
+      <TextBox x:Name="GoToBox" Text="{Binding GoToQuery}" Watermark="bijv. log, cart, bibliotheek, dj" />
+      <ListBox x:Name="GoToList" ItemsSource="{Binding GoToResults}" SelectedItem="{Binding GoToSelected}" MaxHeight="360">
+        <ListBox.ItemTemplate>
+          <DataTemplate x:DataType="vm:WindowEntry">
+            <TextBlock Text="{Binding Name}" FontSize="14" />
+          </DataTemplate>
+        </ListBox.ItemTemplate>
+      </ListBox>
+    </StackPanel>
+  </Border>
+
+  <!-- Indeling › Venster plaatsen: a window exactly next to another one, without aiming at drop targets. -->
+  <Border IsVisible="{Binding PlaceOpen}" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,96,0,0" Width="560"
+          Background="{DynamicResource CardBrush}" BorderBrush="{DynamicResource AccentBrush}" BorderThickness="1"
+          CornerRadius="{DynamicResource Radius10}" Padding="12" BoxShadow="0 12 32 0 #66000000">
+    <StackPanel Spacing="8">
+      <TextBlock FontWeight="SemiBold" Text="Venster plaatsen" />
+      <TextBlock Classes="muted" FontSize="12" TextWrapping="Wrap"
+                 Text="Zet een venster precies waar je het wilt: naast een ander venster of langs een rand van het hoofdvenster, met de grootte die je kiest. Een zwevend venster komt zo ook terug." />
+      <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto,Auto,Auto" ColumnSpacing="8" RowSpacing="6">
+        <TextBlock Grid.Row="0" Classes="muted" Text="Venster" VerticalAlignment="Center" />
+        <ComboBox Grid.Row="0" Grid.Column="1" ItemsSource="{Binding WindowMenu}" SelectedItem="{Binding PlaceWindow}" HorizontalAlignment="Stretch">
+          <ComboBox.ItemTemplate><DataTemplate x:DataType="vm:WindowEntry"><TextBlock Text="{Binding Name}" /></DataTemplate></ComboBox.ItemTemplate>
+        </ComboBox>
+        <TextBlock Grid.Row="1" Classes="muted" Text="Kant" VerticalAlignment="Center" />
+        <ComboBox Grid.Row="1" Grid.Column="1" ItemsSource="{Binding PlaceSides}" SelectedItem="{Binding PlaceSide}" MinWidth="140" />
+        <TextBlock Grid.Row="2" Classes="muted" Text="Van" VerticalAlignment="Center" />
+        <ComboBox Grid.Row="2" Grid.Column="1" ItemsSource="{Binding PlaceTargets}" SelectedItem="{Binding PlaceTarget}" HorizontalAlignment="Stretch">
+          <ComboBox.ItemTemplate><DataTemplate x:DataType="vm:WindowEntry"><TextBlock Text="{Binding Name}" /></DataTemplate></ComboBox.ItemTemplate>
+        </ComboBox>
+        <TextBlock Grid.Row="3" Classes="muted" Text="Grootte" VerticalAlignment="Center" IsVisible="{Binding PlaceSizeUsed}" />
+        <StackPanel Grid.Row="3" Grid.Column="1" Orientation="Horizontal" Spacing="6" IsVisible="{Binding PlaceSizeUsed}">
+          <ComboBox ItemsSource="{Binding PlaceSizes}" SelectedItem="{Binding PlaceSize}" MinWidth="80" />
+          <TextBlock Classes="muted" Text="van de ruimte" VerticalAlignment="Center" />
+        </StackPanel>
+      </Grid>
+      <StackPanel Orientation="Horizontal" Spacing="6">
+        <Button Content="Plaatsen" Command="{Binding PlaceCommand}" Classes="accent" />
+        <Button Content="Sluiten" Command="{Binding ClosePlaceCommand}" />
+        <TextBlock Foreground="{DynamicResource WarnBrush}" Text="{Binding PlaceResult}" VerticalAlignment="Center" TextWrapping="Wrap" />
+      </StackPanel>
+    </StackPanel>
+  </Border>
+  </Panel>
+  </LayoutTransformControl>
+  </Panel>
+</Window>

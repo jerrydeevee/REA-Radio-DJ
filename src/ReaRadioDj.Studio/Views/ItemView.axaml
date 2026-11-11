@@ -1,0 +1,38 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:ReaRadioDj.Studio.ViewModels"
+             x:Class="ReaRadioDj.Studio.Views.ItemView"
+             x:DataType="vm:ItemTool">
+  <DockPanel Margin="6">
+    <Border DockPanel.Dock="Top" BorderBrush="{DynamicResource ControlBorderBrush}" BorderThickness="1" CornerRadius="{DynamicResource Radius8}"
+            ClipToBounds="True" HorizontalAlignment="Left" Margin="0,0,0,8">
+      <StackPanel Orientation="Horizontal">
+        <ToggleButton Classes="seg" Content="ON AIR" IsChecked="{Binding FollowOnAir, Mode=OneWay}" Command="{Binding FollowCommand}" CommandParameter="onair"
+                      ToolTip.Tip="Het item dat nu ON AIR is; volgt de log" />
+        <ToggleButton Classes="seg" Content="Selectie" IsChecked="{Binding !FollowOnAir, Mode=OneWay}" Command="{Binding FollowCommand}" CommandParameter="selection"
+                      ToolTip.Tip="Het item dat in de bibliotheek is geselecteerd" />
+      </StackPanel>
+    </Border>
+    <DockPanel DockPanel.Dock="Top" Margin="0,0,0,8">
+      <Border DockPanel.Dock="Left" Width="6" CornerRadius="{DynamicResource Radius2}" Margin="0,2,10,2"
+              Background="{Binding Kind, Converter={x:Static vm:Brushes.TypeColor}}" IsVisible="{Binding HasItem}" />
+      <StackPanel>
+        <TextBlock Text="{Binding Heading}" FontSize="20" FontWeight="Bold" TextTrimming="CharacterEllipsis" />
+        <TextBlock Classes="muted" FontSize="14" Text="{Binding Sub}" TextTrimming="CharacterEllipsis"
+                   IsVisible="{Binding Sub, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+      </StackPanel>
+    </DockPanel>
+    <ScrollViewer HorizontalScrollBarVisibility="Disabled">
+      <ItemsControl ItemsSource="{Binding Fields}">
+        <ItemsControl.ItemTemplate>
+          <DataTemplate x:DataType="vm:ItemField">
+            <Grid ColumnDefinitions="110,*" Margin="0,0,0,5">
+              <TextBlock Classes="muted" FontSize="13" Text="{Binding Name}" />
+              <SelectableTextBlock Grid.Column="1" FontSize="13" Text="{Binding Value}" TextWrapping="Wrap" />
+            </Grid>
+          </DataTemplate>
+        </ItemsControl.ItemTemplate>
+      </ItemsControl>
+    </ScrollViewer>
+  </DockPanel>
+</UserControl>

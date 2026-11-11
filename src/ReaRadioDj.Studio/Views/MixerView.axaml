@@ -1,0 +1,194 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:ReaRadioDj.Studio.ViewModels"
+             xmlns:c="using:ReaRadioDj.Contracts"
+             x:Class="ReaRadioDj.Studio.Views.MixerView"
+             x:DataType="vm:MixerTool">
+  <ScrollViewer Margin="6">
+    <StackPanel Spacing="8">
+      <ItemsControl ItemsSource="{Binding Strips}" x:Name="StripList">
+        <ItemsControl.ItemsPanel>
+          <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
+        </ItemsControl.ItemsPanel>
+        <ItemsControl.ItemTemplate>
+          <DataTemplate x:DataType="vm:StripCard">
+            <Border Classes="card" Width="96" Margin="0,0,6,6" Padding="6">
+              <StackPanel Spacing="4">
+                <TextBlock Text="{Binding Name}" FontWeight="SemiBold" HorizontalAlignment="Center" TextTrimming="CharacterEllipsis"
+                           ToolTip.Tip="{Binding Name}" />
+                <TextBlock Classes="muted" FontSize="10" Text="{Binding BusLabel}" HorizontalAlignment="Center" />
+                <!-- the fader grows and shrinks with the panel, so ZENDER stays in view without scrolling -->
+                <Grid ColumnDefinitions="*,6,6" Height="{Binding $parent[UserControl].Bounds.Height, Converter={x:Static vm:Brushes.FaderHeight}}">
+                  <Slider Grid.Column="0" Orientation="Vertical" Minimum="0" Maximum="125" Value="{Binding Volume}" HorizontalAlignment="Center" />
+                  <ProgressBar Grid.Column="1" Orientation="Vertical" Maximum="100" Value="{Binding Left}" MinWidth="5" Width="5" Foreground="#3DBD7D" />
+                  <ProgressBar Grid.Column="2" Orientation="Vertical" Maximum="100" Value="{Binding Right}" MinWidth="5" Width="5" Foreground="#3DBD7D" Margin="1,0,0,0" />
+                </Grid>
+                <TextBlock Classes="mono" FontSize="11" HorizontalAlignment="Center" Text="{Binding Volume, StringFormat='{}{0:0}%'}" />
+                <!-- two by two, so nothing falls off a narrow strip -->
+                <UniformGrid Columns="2" ColumnSpacing="4" RowSpacing="4">
+                  <UniformGrid.Styles>
+                    <Style Selector="ToggleButton, Button">
+                      <Setter Property="HorizontalAlignment" Value="Stretch" />
+                      <Setter Property="HorizontalContentAlignment" Value="Center" />
+                      <Setter Property="Padding" Value="0,3" />
+                      <Setter Property="MinWidth" Value="0" />
+                      <Setter Property="FontSize" Value="12" />
+                    </Style>
+                  </UniformGrid.Styles>
+                  <ToggleButton Content="M" IsChecked="{Binding Muted}" Classes="mic" ToolTip.Tip="Dempen" />
+                  <ToggleButton Content="REC" IsChecked="{Binding Recording}" Classes="mic"
+                                ToolTip.Tip="Dit kanaal opnemen (na de kanaalstrip, voor de fader) naar een WAV-bestand in de map Opnamen" />
+                  <Button Content="⚙" ToolTip.Tip="Kanaalstrip: gain, balans, equalizer, compressor, automatische niveauregeling"
+                          Command="{Binding $parent[UserControl].DataContext.EditChannelCommand}" CommandParameter="{Binding}" />
+                  <ToggleButton Content="FX" IsChecked="{Binding EffectOn}" Classes="mic" IsVisible="{Binding HasEffect}" ToolTip.Tip="{Binding EffectTip}" />
+                </UniformGrid>
+                <ToggleButton Content="ZENDER" IsChecked="{Binding OnAir}" Classes="mic" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" FontSize="11"
+                              ToolTip.Tip="Aan: dit kanaal gaat naar de zender. Uit: het kanaal is dicht (bij een ingang de doorzetknop)." />
+                <TextBlock FontSize="10" Foreground="{DynamicResource WarnBrush}" HorizontalAlignment="Center" Text="{Binding Duck}" />
+                <TextBlock FontSize="10" Foreground="#E5484D" HorizontalAlignment="Center" Text="{Binding RecordText, StringFormat='● {0}'}" IsVisible="{Binding Recording}" />
+              </StackPanel>
+            </Border>
+          </DataTemplate>
+        </ItemsControl.ItemTemplate>
+      </ItemsControl>
+
+      <!-- ============================================================ channel strip of the chosen channel -->
+      <Border Classes="card" IsVisible="{Binding Editor, Converter={x:Static ObjectConverters.IsNotNull}}">
+        <StackPanel Spacing="6" DataContext="{Binding Editor}" x:DataType="vm:ChannelEditor">
+          <DockPanel>
+            <Button DockPanel.Dock="Right" Content="Sluiten" Command="{Binding $parent[UserControl].DataContext.CloseEditorCommand}" />
+            <Button DockPanel.Dock="Right" Content="Alles neutraal" Command="{Binding FlatCommand}" Margin="0,0,6,0" />
+            <StackPanel>
+              <TextBlock Classes="h" Text="{Binding Name, StringFormat='Kanaalstrip: {0}'}" />
+              <TextBlock Classes="muted" Text="{Binding SourceText, StringFormat='Bron: {0}'}" IsVisible="{Binding IsInput}" />
+            </StackPanel>
+          </DockPanel>
+          <CheckBox Content="Naar de zender" IsChecked="{Binding OnAir}" />
+          <Grid ColumnDefinitions="150,*,90" RowDefinitions="Auto,Auto,Auto,Auto,Auto">
+            <TextBlock Grid.Row="0" Text="Gain" VerticalAlignment="Center" />
+            <Slider Grid.Row="0" Grid.Column="1" Minimum="-24" Maximum="24" Value="{Binding GainDb}" TickFrequency="0.5" IsSnapToTickEnabled="True" />
+            <TextBlock Grid.Row="0" Grid.Column="2" Classes="mono" VerticalAlignment="Center" Text="{Binding GainDb, StringFormat='{}{0:+0.0;-0.0;0} dB'}" />
+            <TextBlock Grid.Row="1" Text="Balans" VerticalAlignment="Center" />
+            <Slider Grid.Row="1" Grid.Column="1" Minimum="-1" Maximum="1" Value="{Binding Pan}" TickFrequency="0.05" IsSnapToTickEnabled="True" />
+            <TextBlock Grid.Row="1" Grid.Column="2" Classes="mono" VerticalAlignment="Center" Text="{Binding PanText}" />
+            <TextBlock Grid.Row="2" Text="Laag (120 Hz)" VerticalAlignment="Center" />
+            <Slider Grid.Row="2" Grid.Column="1" Minimum="-15" Maximum="15" Value="{Binding EqLowDb}" TickFrequency="0.5" IsSnapToTickEnabled="True" />
+            <TextBlock Grid.Row="2" Grid.Column="2" Classes="mono" VerticalAlignment="Center" Text="{Binding EqLowDb, StringFormat='{}{0:+0.0;-0.0;0} dB'}" />
+            <TextBlock Grid.Row="3" Text="Midden (1 kHz)" VerticalAlignment="Center" />
+            <Slider Grid.Row="3" Grid.Column="1" Minimum="-15" Maximum="15" Value="{Binding EqMidDb}" TickFrequency="0.5" IsSnapToTickEnabled="True" />
+            <TextBlock Grid.Row="3" Grid.Column="2" Classes="mono" VerticalAlignment="Center" Text="{Binding EqMidDb, StringFormat='{}{0:+0.0;-0.0;0} dB'}" />
+            <TextBlock Grid.Row="4" Text="Hoog (8 kHz)" VerticalAlignment="Center" />
+            <Slider Grid.Row="4" Grid.Column="1" Minimum="-15" Maximum="15" Value="{Binding EqHighDb}" TickFrequency="0.5" IsSnapToTickEnabled="True" />
+            <TextBlock Grid.Row="4" Grid.Column="2" Classes="mono" VerticalAlignment="Center" Text="{Binding EqHighDb, StringFormat='{}{0:+0.0;-0.0;0} dB'}" />
+          </Grid>
+          <CheckBox Content="Compressor" IsChecked="{Binding CompressorOn}" Margin="0,6,0,0" />
+          <Grid ColumnDefinitions="150,*,90" RowDefinitions="Auto,Auto" IsEnabled="{Binding CompressorOn}">
+            <TextBlock Grid.Row="0" Text="Drempel" VerticalAlignment="Center" />
+            <Slider Grid.Row="0" Grid.Column="1" Minimum="-50" Maximum="0" Value="{Binding CompressorThresholdDb}" TickFrequency="1" IsSnapToTickEnabled="True" />
+            <TextBlock Grid.Row="0" Grid.Column="2" Classes="mono" VerticalAlignment="Center" Text="{Binding CompressorThresholdDb, StringFormat='{}{0:0} dB'}" />
+            <TextBlock Grid.Row="1" Text="Verhouding" VerticalAlignment="Center" />
+            <Slider Grid.Row="1" Grid.Column="1" Minimum="1" Maximum="20" Value="{Binding CompressorRatio}" TickFrequency="0.5" IsSnapToTickEnabled="True" />
+            <TextBlock Grid.Row="1" Grid.Column="2" Classes="mono" VerticalAlignment="Center" Text="{Binding CompressorRatio, StringFormat='{}{0:0.0}:1'}" />
+          </Grid>
+          <TextBlock Classes="h" Text="Effect op de fader" Margin="0,8,0,0" />
+          <Grid ColumnDefinitions="150,*,90" RowDefinitions="Auto,Auto" RowSpacing="4">
+            <TextBlock Text="Effect" VerticalAlignment="Center" />
+            <ComboBox Grid.Column="1" ItemsSource="{Binding EffectChoices}" SelectedItem="{Binding Effect}" HorizontalAlignment="Stretch">
+              <ComboBox.ItemTemplate><DataTemplate x:DataType="c:OutputChoiceDto"><TextBlock Text="{Binding Name}" /></DataTemplate></ComboBox.ItemTemplate>
+            </ComboBox>
+            <CheckBox Grid.Column="2" Content="Aan" IsChecked="{Binding EffectOn}" IsEnabled="{Binding HasEffect}" Margin="8,0,0,0" />
+            <TextBlock Grid.Row="1" Text="Mengverhouding" VerticalAlignment="Center" IsVisible="{Binding HasMix}" />
+            <Slider Grid.Row="1" Grid.Column="1" Minimum="0" Maximum="100" Value="{Binding EffectMix}" TickFrequency="5" IsSnapToTickEnabled="True" IsVisible="{Binding HasMix}" />
+            <TextBlock Grid.Row="1" Grid.Column="2" Classes="mono" VerticalAlignment="Center" Text="{Binding EffectMix, StringFormat='{}{0:0}%'}" IsVisible="{Binding HasMix}" />
+          </Grid>
+          <TextBlock Classes="h" Text="VST-effecten (VST 2, 64-bit)" Margin="0,8,0,0" />
+          <ItemsControl ItemsSource="{Binding VstSlots}">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="vm:VstSlotVm">
+                <StackPanel Spacing="3" Margin="0,0,0,4">
+                  <Grid ColumnDefinitions="150,*,90">
+                    <TextBlock Text="{Binding Title}" VerticalAlignment="Center" />
+                    <ComboBox Grid.Column="1" ItemsSource="{Binding Plugins}" SelectedItem="{Binding Plugin}" HorizontalAlignment="Stretch">
+                      <ComboBox.ItemTemplate><DataTemplate x:DataType="c:VstPluginDto"><TextBlock Text="{Binding Name}" /></DataTemplate></ComboBox.ItemTemplate>
+                    </ComboBox>
+                    <CheckBox Grid.Column="2" Content="Aan" IsChecked="{Binding On}" IsEnabled="{Binding HasPlugin}" Margin="8,0,0,0" />
+                  </Grid>
+                  <TextBlock Text="{Binding Error}" Foreground="#E5484D" TextWrapping="Wrap" IsVisible="{Binding HasError}" Margin="150,0,0,0" />
+                  <Button Content="{Binding ParamsText}" Command="{Binding ToggleParamsCommand}" IsVisible="{Binding HasParams}" Margin="150,0,0,0" Padding="6,2" />
+                  <ItemsControl ItemsSource="{Binding Params}" IsVisible="{Binding ShowParams}" Margin="150,0,0,0">
+                    <ItemsControl.ItemTemplate>
+                      <DataTemplate x:DataType="vm:VstParamVm">
+                        <Grid ColumnDefinitions="130,*,110">
+                          <TextBlock Text="{Binding Name}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                          <Slider Grid.Column="1" Minimum="0" Maximum="100" Value="{Binding Value}" />
+                          <TextBlock Grid.Column="2" Classes="mono" Text="{Binding Display}" VerticalAlignment="Center" Margin="8,0,0,0" TextTrimming="CharacterEllipsis" />
+                        </Grid>
+                      </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                  </ItemsControl>
+                </StackPanel>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+          <StackPanel Orientation="Horizontal" Spacing="8">
+            <Button Content="Plug-ins zoeken" Command="{Binding $parent[UserControl].DataContext.ScanVstCommand}" Padding="8,3"
+                    ToolTip.Tip="Laadt elk .dll-bestand in de VST-mappen één keer om te zien of het een bruikbaar effect is" />
+            <TextBlock Text="{Binding $parent[UserControl].DataContext.VstStatus}" VerticalAlignment="Center" TextWrapping="Wrap" MaxWidth="520" Opacity="0.8" />
+          </StackPanel>
+          <CheckBox Content="Automatische niveauregeling (brengt het kanaal rustig naar een vast niveau, hooguit 12 dB)" IsChecked="{Binding AgcOn}" Margin="0,6,0,0" />
+          <Button Content="Ingang verwijderen" IsVisible="{Binding IsInput}" Command="{Binding $parent[UserControl].DataContext.RemoveInputCommand}" HorizontalAlignment="Left" Margin="0,6,0,0" />
+        </StackPanel>
+      </Border>
+      <TextBlock Classes="muted" Text="{Binding ChannelStatus}" TextWrapping="Wrap" IsVisible="{Binding ChannelStatus, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+
+      <Expander Header="Ingangen (lijn-in, tweede microfoon, testtoon)" HorizontalAlignment="Stretch">
+        <StackPanel Spacing="6">
+          <TextBlock Classes="muted" TextWrapping="Wrap" Text="Een ingang komt als kanaal in de mixer en staat eerst dicht. Met ZENDER zet je hem door naar de uitzending; met het tandwiel stel je gain, equalizer en compressor in." />
+          <Grid ColumnDefinitions="*,6,2*,6,Auto">
+            <TextBox Text="{Binding NewInputName}" Watermark="Naam (bijv. cd-speler)" />
+            <ComboBox Grid.Column="2" ItemsSource="{Binding Sources}" SelectedItem="{Binding NewInputSource}" HorizontalAlignment="Stretch">
+              <ComboBox.ItemTemplate><DataTemplate x:DataType="c:OutputChoiceDto"><TextBlock Text="{Binding Name}" /></DataTemplate></ComboBox.ItemTemplate>
+            </ComboBox>
+            <Button Grid.Column="4" Content="Toevoegen" Command="{Binding AddInputCommand}" />
+          </Grid>
+        </StackPanel>
+      </Expander>
+
+      <Border Classes="card">
+        <DockPanel>
+          <ToggleButton DockPanel.Dock="Right" Classes="mic" Content="🎤 MIC (F8)" IsChecked="{Binding MicOpen, Mode=OneWay}" Command="{Binding ToggleMicCommand}" />
+          <StackPanel>
+            <TextBlock Classes="h" Text="Microfoon" />
+            <TextBlock Classes="muted" Text="{Binding MicStatus}" />
+          </StackPanel>
+        </DockPanel>
+      </Border>
+
+      <Expander Header="Routing en geluidskaarten" HorizontalAlignment="Stretch">
+        <StackPanel Spacing="6">
+          <TextBlock Text="Zender (uitzending)" />
+          <ComboBox ItemsSource="{Binding Outputs}" SelectedItem="{Binding OutputDevice}" HorizontalAlignment="Stretch">
+            <ComboBox.ItemTemplate><DataTemplate x:DataType="c:DeviceDto"><TextBlock Text="{Binding Name}" /></DataTemplate></ComboBox.ItemTemplate>
+          </ComboBox>
+          <TextBlock Text="PFL (koptelefoon)" />
+          <ComboBox ItemsSource="{Binding Outputs}" SelectedItem="{Binding PreviewDevice}" HorizontalAlignment="Stretch">
+            <ComboBox.ItemTemplate><DataTemplate x:DataType="c:DeviceDto"><TextBlock Text="{Binding Name}" /></DataTemplate></ComboBox.ItemTemplate>
+          </ComboBox>
+          <CheckBox Content="Microfoon opnemen (talkover)" IsChecked="{Binding MicEnabled}" />
+          <ComboBox ItemsSource="{Binding Inputs}" SelectedItem="{Binding MicDevice}" HorizontalAlignment="Stretch" IsEnabled="{Binding MicEnabled}">
+            <ComboBox.ItemTemplate><DataTemplate x:DataType="c:DeviceDto"><TextBlock Text="{Binding Name}" /></DataTemplate></ComboBox.ItemTemplate>
+          </ComboBox>
+          <TextBlock Text="{Binding MicDuck, StringFormat='Muziek onder de microfoon: {0:0}%'}" />
+          <Slider Minimum="0" Maximum="100" Value="{Binding MicDuck}" />
+          <TextBlock Text="{Binding OverlayDuck, StringFormat='Muziek onder overlays: {0:0}%'}" />
+          <Slider Minimum="0" Maximum="100" Value="{Binding OverlayDuck}" />
+          <StackPanel Orientation="Horizontal" Spacing="6">
+            <Button Content="Opslaan" Command="{Binding SaveRoutingCommand}" />
+            <Button Content="Opnieuw lezen" Command="{Binding ReloadRoutingCommand}" />
+          </StackPanel>
+          <TextBlock Classes="muted" TextWrapping="Wrap" Text="Uitgangen wisselen direct. Een andere microfoon wordt actief na een herstart van de engine." />
+        </StackPanel>
+      </Expander>
+    </StackPanel>
+  </ScrollViewer>
+</UserControl>

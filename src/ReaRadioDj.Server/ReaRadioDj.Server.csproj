@@ -2,8 +2,25 @@
   <PropertyGroup>
     <RootNamespace>ReaRadioDj.Server</RootNamespace>
     <AssemblyName>REA-Radio-DJ</AssemblyName>
+    <!-- Windows Forms only for the notification-area icon (the engine itself has no window). -->
+    <UseWindowsForms>true</UseWindowsForms>
+    <ApplicationIcon>Assets\rea.ico</ApplicationIcon>
   </PropertyGroup>
   <ItemGroup>
+    <!-- Keep WinForms names out of the global usings: they clash with ASP.NET and threading types. -->
+    <Using Remove="System.Windows.Forms" />
+    <Using Remove="System.Drawing" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="Assets\*.ico" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <!-- The engine serves its web pages from its own folder (ContentRootPath), so they go next to the program. -->
+    <Content Update="wwwroot\**" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+  <ItemGroup>
     <ProjectReference Include="..\ReaRadioDj.Core\ReaRadioDj.Core.csproj" />
+    <ProjectReference Include="..\ReaRadioDj.Contracts\ReaRadioDj.Contracts.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="System.IO.Ports" Version="10.0.14" />
   </ItemGroup>
 </Project>

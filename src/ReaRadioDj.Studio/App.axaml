@@ -1,0 +1,39 @@
+<Application xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:local="using:ReaRadioDj.Studio"
+             xmlns:dock="using:Dock.Avalonia.Themes.Fluent"
+             x:Class="ReaRadioDj.Studio.App"
+             RequestedThemeVariant="Dark">
+  <Application.DataTemplates>
+    <local:ViewLocator />
+  </Application.DataTemplates>
+  <Application.Resources>
+    <SolidColorBrush x:Key="OnAirBrush" Color="#E5484D" />
+    <SolidColorBrush x:Key="AccentBrush" Color="#4C8DFF" />
+    <SolidColorBrush x:Key="PrimaryBrush" Color="#2563EB" />
+    <SolidColorBrush x:Key="WarnBrush" Color="#F5A524" />
+    <SolidColorBrush x:Key="OkBrush" Color="#3FB950" />
+    <SolidColorBrush x:Key="TextBrush" Color="#E6EAF0" />
+    <SolidColorBrush x:Key="AppBrush" Color="#0E1116" />
+    <SolidColorBrush x:Key="BarBrush" Color="#11161D" />
+    <SolidColorBrush x:Key="ControlBrush" Color="#1E2530" />
+    <SolidColorBrush x:Key="ControlBorderBrush" Color="#3A4454" />
+    <SolidColorBrush x:Key="SelectedBrush" Color="#2D3748" />
+    <SolidColorBrush x:Key="MutedTextBrush" Color="#9AA4B2" />
+    <SolidColorBrush x:Key="CardBrush" Color="#161B22" />
+    <SolidColorBrush x:Key="CardBorderBrush" Color="#2A3240" />
+    <CornerRadius x:Key="Radius2">2</CornerRadius>
+    <CornerRadius x:Key="Radius3">3</CornerRadius>
+    <CornerRadius x:Key="Radius4">4</CornerRadius>
+    <CornerRadius x:Key="Radius5">5</CornerRadius>
+    <CornerRadius x:Key="Radius6">6</CornerRadius>
+    <CornerRadius x:Key="Radius8">8</CornerRadius>
+    <CornerRadius x:Key="Radius10">10</CornerRadius>
+    <CornerRadius x:Key="Radius12">12</CornerRadius>
+  </Application.Resources>
+  <Application.Styles>
+    <FluentTheme />
+    <dock:DockFluentTheme />
+    <StyleInclude Source="/Styles.axaml" />
+  </Application.Styles>
+</Application>

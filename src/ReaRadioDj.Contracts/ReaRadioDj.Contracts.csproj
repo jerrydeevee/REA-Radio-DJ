@@ -1,0 +1,6 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- The data exchanged between the engine service and the studio apps (REST + WebSocket). No audio code. -->
+  <PropertyGroup>
+    <RootNamespace>ReaRadioDj.Contracts</RootNamespace>
+  </PropertyGroup>
+</Project>

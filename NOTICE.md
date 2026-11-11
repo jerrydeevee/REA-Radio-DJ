@@ -14,8 +14,9 @@ bassenc_mp3, bassloud, bassflac). BASS is geen vrije software. Daarom geldt de v
 > De broncode van REA-Radio-DJ zelf valt wel volledig onder de GPL.
 
 BASS zit **niet** in deze repository. Het script `scripts/fetch-bass.ps1` downloadt het bij de gebruiker zelf van
-<https://www.un4seen.com/>. BASS is gratis voor niet-commercieel gebruik; voor commercieel gebruik is een licentie
-van un4seen nodig.
+<https://www.un4seen.com/>. De kant-en-klare downloads bij een release bevatten de BASS-DLL's wel, zodat het
+programma direct start. BASS is gratis voor niet-commercieel gebruik; voor commercieel gebruik (bijvoorbeeld een
+zender met reclame-inkomsten) is een licentie van un4seen nodig. Zie <https://www.un4seen.com/bass.html#license>.
 
 ## Overige onderdelen
 
@@ -23,7 +24,14 @@ van un4seen nodig.
 |---|---|---|
 | [TagLibSharp](https://github.com/mono/taglib-sharp) | LGPL-2.1 | Tags lezen (NuGet) |
 | System.Speech (.NET) | MIT | Windows-spraak als offline stem (NuGet) |
-| ASP.NET Core / .NET | MIT | Server en web-UI |
+| ASP.NET Core / .NET | MIT | Engine-service en web-UI |
+| [Microsoft.Data.Sqlite](https://github.com/dotnet/efcore) | MIT | Stationsdatabase (NuGet) |
+| [SQLitePCLRaw](https://github.com/ericsink/SQLitePCL.raw) en SQLite | Apache-2.0 en public domain | SQLite-binaries (NuGet) |
+| [Avalonia](https://github.com/AvaloniaUI/Avalonia) | MIT | Desktop-studio (NuGet) |
+| [Dock](https://github.com/wieslawsoltes/Dock) | MIT | Dokbare en zwevende vensters (NuGet) |
+| [CommunityToolkit.Mvvm](https://github.com/CommunityToolkit/dotnet) | MIT | MVVM-hulpmiddelen (NuGet) |
+| [Newtonsoft.Json](https://github.com/JamesNK/Newtonsoft.Json) | MIT | Opslaan van vensterindelingen (NuGet) |
+| [Chromaprint / fpcalc](https://acoustid.org/chromaprint) | LGPL-2.1 | Vingerafdruk voor AcoustID; los programma, opgehaald met `scripts/fetch-fpcalc.ps1` en meegeleverd in de releasedownloads |
 | Higgs TTS 3 (Boson AI) | Onderzoek / niet-commercieel | Optioneel; draait als losse server en zit niet in deze repository |
 
 **Let op bij Higgs TTS 3:** de modellicentie staat alleen onderzoek en niet-commercieel gebruik toe. Wie

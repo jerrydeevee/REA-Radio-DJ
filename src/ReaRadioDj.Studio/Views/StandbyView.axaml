@@ -1,0 +1,16 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:ReaRadioDj.Studio.ViewModels"
+             xmlns:v="using:ReaRadioDj.Studio.Views"
+             x:Class="ReaRadioDj.Studio.Views.StandbyView"
+             x:DataType="vm:StandbyTool">
+  <ScrollViewer Margin="6">
+    <ItemsControl ItemsSource="{Binding Players}">
+      <ItemsControl.ItemTemplate>
+        <DataTemplate x:DataType="vm:PlayerCard">
+          <v:PlayerCardView DataContext="{Binding}" />
+        </DataTemplate>
+      </ItemsControl.ItemTemplate>
+    </ItemsControl>
+  </ScrollViewer>
+</UserControl>

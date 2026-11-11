@@ -1,0 +1,27 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:ReaRadioDj.Studio.ViewModels"
+             x:Class="ReaRadioDj.Studio.Views.WorkbenchView"
+             x:DataType="vm:WorkbenchTool">
+  <ScrollViewer>
+    <StackPanel Margin="16" Spacing="10" MaxWidth="900" HorizontalAlignment="Left">
+      <TextBlock Classes="title" Text="{Binding Title}" />
+      <TextBlock TextWrapping="Wrap"
+                 Text="Een werkblad is een eigen studiovenster, bijvoorbeeld op een tweede of derde scherm. Sleep vensters hierheen aan hun tabblad en zet ze naast, onder of achter elkaar, of open er hieronder een met één klik. Het werkblad wordt bewaard met de indeling en komt na een herstart terug op hetzelfde scherm." />
+      <TextBlock Classes="muted" TextWrapping="Wrap"
+                 Text="Dit tabblad mag je sluiten zodra er andere vensters op het werkblad staan. Sluit je het hele werkblad, dan vind je de vensters terug via het menu Vensters." />
+      <TextBlock Classes="field" Text="Hier openen" Margin="0,8,0,0" />
+      <ItemsControl ItemsSource="{Binding Choices}">
+        <ItemsControl.ItemsPanel>
+          <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
+        </ItemsControl.ItemsPanel>
+        <ItemsControl.ItemTemplate>
+          <DataTemplate x:DataType="vm:WindowEntry">
+            <Button Classes="small" Margin="0,0,6,6" Content="{Binding Name}"
+                    Command="{Binding $parent[ItemsControl].DataContext.OpenHereCommand}" CommandParameter="{Binding Id}" />
+          </DataTemplate>
+        </ItemsControl.ItemTemplate>
+      </ItemsControl>
+    </StackPanel>
+  </ScrollViewer>
+</UserControl>

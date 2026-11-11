@@ -1,0 +1,63 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:ReaRadioDj.Studio.ViewModels"
+             x:Class="ReaRadioDj.Studio.Views.AutomixView"
+             x:DataType="vm:AutomixTool">
+  <DockPanel Margin="8">
+    <!-- on/off, transition and its length -->
+    <WrapPanel DockPanel.Dock="Top" Margin="0,0,0,4">
+      <ToggleButton Classes="bar fx" Content="AUTOMIX" IsChecked="{Binding On, Mode=OneWay}" Command="{Binding ToggleCommand}" Margin="0,0,8,6"
+                    ToolTip.Tip="Aan: de lijst speelt zichzelf op deck A en B en mixt elk nummer in het volgende" />
+      <Border BorderBrush="{DynamicResource ControlBorderBrush}" BorderThickness="1" CornerRadius="{DynamicResource Radius8}" ClipToBounds="True" Margin="0,0,8,6">
+        <StackPanel Orientation="Horizontal">
+          <ToggleButton Classes="seg" Content="Beatmix" IsChecked="{Binding Transition, Converter={x:Static vm:Brushes.Is}, ConverterParameter=beat, Mode=OneWay}"
+                        Command="{Binding SetTransitionCommand}" CommandParameter="beat" ToolTip.Tip="Tempo en tel gelijk, daarna glijdt het nieuwe nummer terug naar zijn eigen tempo" />
+          <ToggleButton Classes="seg" Content="Fade" IsChecked="{Binding Transition, Converter={x:Static vm:Brushes.Is}, ConverterParameter=fade, Mode=OneWay}"
+                        Command="{Binding SetTransitionCommand}" CommandParameter="fade" ToolTip.Tip="Gewone crossfade, zonder tempo aan te passen" />
+          <ToggleButton Classes="seg" Content="Cut" IsChecked="{Binding Transition, Converter={x:Static vm:Brushes.Is}, ConverterParameter=cut, Mode=OneWay}"
+                        Command="{Binding SetTransitionCommand}" CommandParameter="cut" ToolTip.Tip="Harde wissel op de tel, zonder overlap" />
+          <ToggleButton Classes="seg" Content="Echo" IsChecked="{Binding Transition, Converter={x:Static vm:Brushes.Is}, ConverterParameter=echo, Mode=OneWay}"
+                        Command="{Binding SetTransitionCommand}" CommandParameter="echo" ToolTip.Tip="Het oude nummer echoot weg terwijl het nieuwe opkomt" />
+          <ToggleButton Classes="seg" Content="Filter" IsChecked="{Binding Transition, Converter={x:Static vm:Brushes.Is}, ConverterParameter=filter, Mode=OneWay}"
+                        Command="{Binding SetTransitionCommand}" CommandParameter="filter" ToolTip.Tip="Het oude nummer wordt dunner (hoogdoorlaat) terwijl het nieuwe opkomt" />
+        </StackPanel>
+      </Border>
+      <Button Classes="bar" Content="◀" Command="{Binding BeatsStepCommand}" CommandParameter="-" Margin="0,0,4,6" ToolTip.Tip="Kortere overgang" />
+      <TextBlock Classes="mono" FontWeight="Bold" Text="{Binding BeatsText}" VerticalAlignment="Center" MinWidth="80" TextAlignment="Center" Margin="0,0,4,6" />
+      <Button Classes="bar" Content="▶" Command="{Binding BeatsStepCommand}" CommandParameter="+" Margin="0,0,8,6" ToolTip.Tip="Langere overgang" />
+      <Button Classes="bar" Content="Nu mixen" Command="{Binding MixNowCommand}" Margin="0,0,8,6" ToolTip.Tip="Begin de overgang naar het volgende nummer nu" />
+      <Button Classes="bar" Content="Lijst wissen" Command="{Binding ClearCommand}" Margin="0,0,0,6" />
+    </WrapPanel>
+    <StackPanel DockPanel.Dock="Top" Spacing="4" Margin="0,0,0,6">
+      <DockPanel>
+        <TextBlock DockPanel.Dock="Right" Classes="muted" FontSize="12" Text="{Binding CountText}" VerticalAlignment="Center" />
+        <TextBlock Classes="muted" FontSize="13" Text="{Binding StateText}" TextTrimming="CharacterEllipsis" />
+      </DockPanel>
+      <ProgressBar Minimum="0" Maximum="100" Value="{Binding Progress}" Height="4" IsVisible="{Binding Mixing}" />
+      <TextBlock Foreground="{DynamicResource WarnBrush}" FontSize="13" IsVisible="{Binding !Available}" Text="Deze engine heeft nog geen automix: werk de engine bij" />
+    </StackPanel>
+    <Border Name="Drop" Classes="card" Padding="4" Background="{DynamicResource CardBrush}">
+      <Panel>
+        <TextBlock Classes="muted" Text="Sleep nummers uit de bibliotheek hierheen" HorizontalAlignment="Center" VerticalAlignment="Center" IsVisible="{Binding Empty}" />
+        <ListBox ItemsSource="{Binding Queue}" Background="Transparent">
+          <ListBox.ItemTemplate>
+            <DataTemplate x:DataType="vm:AutomixRow">
+              <DockPanel>
+                <Button DockPanel.Dock="Right" Classes="small" Content="✕" Margin="4,0,0,0" ToolTip.Tip="Uit de lijst halen"
+                        Command="{Binding $parent[UserControl].DataContext.RemoveCommand}" CommandParameter="{Binding}" />
+                <Button DockPanel.Dock="Right" Classes="small" Content="▲" Margin="4,0,0,0" ToolTip.Tip="Eén plaats omhoog"
+                        Command="{Binding $parent[UserControl].DataContext.UpCommand}" CommandParameter="{Binding}" />
+                <TextBlock DockPanel.Dock="Right" Classes="mono" Text="{Binding Length}" VerticalAlignment="Center" Margin="8,0,0,0" />
+                <TextBlock DockPanel.Dock="Left" Classes="muted" Text="{Binding Number}" VerticalAlignment="Center" MinWidth="28" />
+                <StackPanel VerticalAlignment="Center">
+                  <TextBlock Text="{Binding Title}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                  <TextBlock Classes="muted" FontSize="12" Text="{Binding Artist}" TextTrimming="CharacterEllipsis" />
+                </StackPanel>
+              </DockPanel>
+            </DataTemplate>
+          </ListBox.ItemTemplate>
+        </ListBox>
+      </Panel>
+    </Border>
+  </DockPanel>
+</UserControl>

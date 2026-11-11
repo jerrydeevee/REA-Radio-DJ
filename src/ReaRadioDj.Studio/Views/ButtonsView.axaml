@@ -1,0 +1,95 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:ReaRadioDj.Studio.ViewModels"
+             xmlns:c="using:ReaRadioDj.Contracts"
+             x:Class="ReaRadioDj.Studio.Views.ButtonsView"
+             x:DataType="vm:ButtonsTool">
+  <DockPanel Margin="6">
+    <DockPanel DockPanel.Dock="Top" Margin="0,0,0,6">
+      <ToggleButton DockPanel.Dock="Right" Classes="small" Content="Bewerken" IsChecked="{Binding Editing}"
+                    ToolTip.Tip="Knoppen toevoegen, een naam, commando of kleur geven, verplaatsen of verwijderen" />
+      <Button DockPanel.Dock="Right" Classes="small" Content="+ Knop" Command="{Binding AddCommand}" Margin="0,0,6,0" />
+      <TextBlock Classes="muted" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"
+                 Text="Elke knop voert een commando uit, net als een sneltoets." />
+    </DockPanel>
+
+    <!-- editor of the chosen button -->
+    <Border DockPanel.Dock="Top" Classes="card" Margin="0,0,0,8" Padding="10" IsVisible="{Binding Editing}">
+      <StackPanel Spacing="6">
+        <TextBlock Classes="muted" Text="Klik op een knop om hem te bewerken." IsVisible="{Binding !HasSelection}" />
+        <Grid ColumnDefinitions="90,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto" RowSpacing="6" IsVisible="{Binding HasSelection}">
+          <TextBlock Grid.Row="0" Text="Naam" VerticalAlignment="Center" />
+          <TextBox Grid.Row="0" Grid.Column="1" Text="{Binding Selected.Label}" Watermark="bijv. Lamp ON AIR" />
+          <TextBlock Grid.Row="1" Text="Commando" VerticalAlignment="Center" />
+          <TextBox Grid.Row="1" Grid.Column="1" Classes="mono" Text="{Binding Selected.Command}" Watermark="bijv. CART 1 5, MIC TOGGLE, HTTP http://…" />
+          <ComboBox Grid.Row="2" Grid.Column="1" ItemsSource="{Binding Commands}" SelectedItem="{Binding PickedCommand}"
+                    PlaceholderText="of kies een commando…" HorizontalAlignment="Stretch">
+            <ComboBox.ItemTemplate>
+              <DataTemplate x:DataType="c:CommandInfoDto">
+                <StackPanel>
+                  <TextBlock Classes="mono" Text="{Binding Syntax}" FontWeight="SemiBold" />
+                  <TextBlock Classes="muted" Text="{Binding Description}" TextWrapping="Wrap" />
+                </StackPanel>
+              </DataTemplate>
+            </ComboBox.ItemTemplate>
+          </ComboBox>
+          <TextBlock Grid.Row="3" Text="Kleur" VerticalAlignment="Center" />
+          <ComboBox Grid.Row="3" Grid.Column="1" ItemsSource="{Binding ColorChoices}" SelectedIndex="{Binding Selected.ColorIndex}" MinWidth="160">
+            <ComboBox.ItemTemplate>
+              <DataTemplate x:DataType="vm:KindColorChoice">
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                  <Border Width="18" Height="18" CornerRadius="{DynamicResource Radius3}" Background="{Binding Brush}" VerticalAlignment="Center" />
+                  <TextBlock Text="{Binding Name}" VerticalAlignment="Center" />
+                </StackPanel>
+              </DataTemplate>
+            </ComboBox.ItemTemplate>
+          </ComboBox>
+          <WrapPanel Grid.Row="4" Grid.Column="1">
+            <Button Classes="small" Content="◀" Command="{Binding MoveCommand}" CommandParameter="left" Margin="0,0,4,0" ToolTip.Tip="Naar links" />
+            <Button Classes="small" Content="▶" Command="{Binding MoveCommand}" CommandParameter="right" Margin="0,0,12,0" ToolTip.Tip="Naar rechts" />
+            <Button Classes="small" Content="Verwijderen" Command="{Binding RemoveCommand}" />
+          </WrapPanel>
+        </Grid>
+      </StackPanel>
+    </Border>
+
+    <TextBlock DockPanel.Dock="Top" Classes="muted" TextWrapping="Wrap" IsVisible="{Binding IsEmpty}"
+               Text="Nog geen knoppen. Klik op + Knop en kies een commando: een cart, de microfoon, een lamp via HTTP of OSC, de log opnieuw vullen…" />
+
+    <ScrollViewer HorizontalScrollBarVisibility="Disabled">
+      <ItemsControl ItemsSource="{Binding Buttons}">
+        <ItemsControl.ItemsPanel>
+          <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
+        </ItemsControl.ItemsPanel>
+        <ItemsControl.ItemTemplate>
+          <DataTemplate x:DataType="vm:CustomButtonVm">
+            <Button Width="150" MinHeight="96" Margin="0,0,8,8" Padding="10,8" VerticalContentAlignment="Stretch" HorizontalContentAlignment="Stretch"
+                    Background="{Binding Brush}" BorderThickness="3" Classes.chosen="{Binding IsSelected}"
+                    Command="{Binding $parent[UserControl].DataContext.PressCommand}" CommandParameter="{Binding}"
+                    ToolTip.Tip="{Binding Command}">
+              <Button.Styles>
+                <Style Selector="Button">
+                  <Setter Property="BorderBrush" Value="Transparent" />
+                </Style>
+                <Style Selector="Button.chosen">
+                  <Setter Property="BorderBrush" Value="White" />
+                </Style>
+                <Style Selector="Button:pointerover /template/ ContentPresenter">
+                  <Setter Property="Opacity" Value="0.88" />
+                </Style>
+              </Button.Styles>
+              <DockPanel>
+                <TextBlock DockPanel.Dock="Bottom" FontSize="12" FontWeight="Bold" Foreground="#11161D" Text="{Binding Result}"
+                           TextTrimming="CharacterEllipsis" Classes.failed="{Binding Failed}" />
+                <TextBlock DockPanel.Dock="Bottom" Classes="mono" FontSize="10" Foreground="#11161D" Opacity="0.7" Text="{Binding Command}"
+                           TextTrimming="CharacterEllipsis" />
+                <TextBlock Text="{Binding Label}" FontSize="15" FontWeight="Bold" Foreground="#11161D" TextWrapping="Wrap" MaxLines="3"
+                           TextTrimming="CharacterEllipsis" />
+              </DockPanel>
+            </Button>
+          </DataTemplate>
+        </ItemsControl.ItemTemplate>
+      </ItemsControl>
+    </ScrollViewer>
+  </DockPanel>
+</UserControl>

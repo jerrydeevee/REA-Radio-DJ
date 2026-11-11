@@ -1,0 +1,52 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="ReaRadioDj.Studio.Views.AboutWindow"
+        Title="Over REA-Radio-DJ"
+        Width="540" SizeToContent="Height" CanResize="False"
+        Icon="/Assets/rea.ico"
+        Background="{DynamicResource AppBrush}"
+        WindowStartupLocation="CenterScreen">
+  <!-- One card for both the start-up splash and Info › Over: who made the program and what it is built on. -->
+  <Border Background="{DynamicResource CardBrush}" BorderBrush="{DynamicResource AccentBrush}" BorderThickness="1" Padding="32,28">
+    <StackPanel Spacing="18">
+      <StackPanel Orientation="Horizontal" Spacing="18">
+        <Image Source="/Assets/rea.ico" Width="64" Height="64" VerticalAlignment="Center" />
+        <StackPanel VerticalAlignment="Center" Spacing="2">
+          <TextBlock Text="REA-Radio-DJ" FontSize="30" FontWeight="Bold" />
+          <TextBlock x:Name="VersionText" Classes="muted" FontSize="14" />
+        </StackPanel>
+      </StackPanel>
+
+      <TextBlock Text="Radio-automatisering en live-studio voor Radio Aa en Hunze" FontSize="15" TextWrapping="Wrap" />
+
+      <Border Background="{DynamicResource AppBrush}" CornerRadius="{DynamicResource Radius8}" Padding="18,14">
+        <StackPanel Spacing="2">
+          <TextBlock Classes="lbl" Text="GEMAAKT DOOR" />
+          <TextBlock Text="ICT Holland" FontSize="24" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}" />
+          <TextBlock Classes="muted" Text="DVC-it" FontSize="14" />
+        </StackPanel>
+      </Border>
+
+      <!-- splash only -->
+      <StackPanel x:Name="Loading" Spacing="6">
+        <ProgressBar IsIndeterminate="True" MinHeight="4" Height="4" Foreground="{DynamicResource AccentBrush}" />
+        <TextBlock Classes="muted" FontSize="12" Text="Studio wordt gestart…" />
+      </StackPanel>
+
+      <!-- Info › Over only -->
+      <StackPanel x:Name="Details" Spacing="10">
+        <TextBlock Classes="muted" FontSize="13" TextWrapping="Wrap"
+                   Text="Vrije software onder de GNU General Public License versie 3 of later: je mag het gebruiken, verspreiden en aanpassen." />
+        <TextBlock Classes="muted" FontSize="13" TextWrapping="Wrap"
+                   Text="Audio met BASS van un4seen developments (gratis voor niet-commercieel gebruik, anders met een licentie van un4seen). Scherm met Avalonia en Dock. Alle onderdelen en hun licenties staan in NOTICE.md." />
+        <WrapPanel Margin="0,6,0,0">
+          <Button x:Name="SourceButton" Content="Broncode op GitHub" Margin="0,0,8,0" MinHeight="40" />
+          <Button x:Name="LicenseButton" Content="Licentie en onderdelen" Margin="0,0,8,0" MinHeight="40" />
+          <Button x:Name="CloseButton" Classes="primary" Content="Sluiten" MinWidth="100" MinHeight="40" IsDefault="True" IsCancel="True" />
+        </WrapPanel>
+      </StackPanel>
+
+      <TextBlock x:Name="CopyrightText" Classes="muted" FontSize="12" />
+    </StackPanel>
+  </Border>
+</Window>
