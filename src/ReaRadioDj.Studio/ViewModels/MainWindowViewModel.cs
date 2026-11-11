@@ -25,6 +25,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
         var args = Environment.GetCommandLineArgs();
         int pa = Array.IndexOf(args, "--profile");
         if (pa >= 0 && pa + 1 < args.Length) StudioSettings.FolderOverride = Path.GetFullPath(args[pa + 1]);
+        if (args.Contains("--dock-log")) StartDockLog();
         _settings = StudioSettings.Load();
         Appearance.Apply(_settings);
         int ea = Array.IndexOf(args, "--engine");
@@ -204,6 +205,30 @@ public sealed partial class MainWindowViewModel : ObservableObject
         _factory.SetActiveDockable(dockable);
         _factory.SetFocusedDockable(dock, dockable);
         return null;
+    }
+
+    /// <summary>
+    /// --dock-log: the docking library writes why it accepts or refuses a drop (which target, which operation) to
+    /// dock-log.txt in the settings folder, to find out why a window lands somewhere else than aimed at.
+    /// </summary>
+    private static void StartDockLog()
+    {
+        var path = Path.Combine(StudioSettings.Folder, "dock-log.txt");
+        var gate = new object();
+        string? last = null;
+        try { Directory.CreateDirectory(StudioSettings.Folder); File.WriteAllText(path, $"dock-log {DateTime.Now:yyyy-MM-dd HH:mm:ss}{Environment.NewLine}"); }
+        catch (IOException) { return; }
+        Dock.Settings.DockSettings.DiagnosticsLogHandler = message =>
+        {
+            lock (gate)
+            {
+                if (message == last) return;   // the same line on every mouse move while dragging
+                last = message;
+                try { File.AppendAllText(path, $"{DateTime.Now:HH:mm:ss.fff} {message}{Environment.NewLine}"); }
+                catch (IOException) { }
+            }
+        };
+        Dock.Settings.DockSettings.EnableDiagnosticsLogging = true;
     }
 
     private bool IsInLayout(IDockable d) => Layout is not null && (ReferenceEquals(d, Layout) || _factory.FindDockable(Layout, x => ReferenceEquals(x, d)) is not null);
