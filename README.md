@@ -89,6 +89,10 @@ Elk venster is te verslepen, te docken of los te laten zweven, ook op een tweede
 - Tekst via elk OpenAI-compatibel endpoint (bijv. Ollama) of ingebouwde sjablonen, stem via Higgs TTS 3 of
   Windows-spraak. Breaks worden vooraf gemaakt; de uitzending wacht nooit op de AI.
 - Een creatieve presentator die de plaatjes aan elkaar praat, ook met denkende taalmodellen.
+- **AI-nieuws en weerbericht** als vast nieuwsblok: landelijke (bv. de NOS) en regionale bronnen (bv. RTV Drenthe),
+  door het lokale taalmodel herschreven tot een bulletin met bronvermelding, of een weerbericht voor een gekozen plaats.
+  Eigen stem, nieuwstune eronder, opener en sluiter; bv. regionaal op :30 en landelijk op :00. Noemt het taalmodel
+  iets dat niet in de bron staat (een getal), dan worden de koppen letterlijk voorgelezen.
 
 ### Bediening en hardware
 - Alles als tekstcommando: via HTTP, TCP, UDP, OSC, sneltoetsen (ook buiten de studio), eigen knoppen, de planner

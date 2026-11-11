@@ -349,11 +349,12 @@ public sealed record VoiceTrackStartRequest(long BeforeId, double Preroll, int? 
 
 /// <summary>
 /// A news block. Timing "hard" or "soft"; Source "folder" (newest file in Folder, at most MaxAgeMinutes old),
-/// "category" or "headlines" (Feeds, one URL per line, read out by the AI voice). When and Next are filled in by the engine.
+/// "category", "headlines" (Feeds, one URL per line, read out by the AI voice), "ainews" (national Feeds and regional
+/// feeds rewritten by the language model) or "weather" (a weather report for Ai.Place). When and Next are filled in by the engine.
 /// </summary>
 public sealed record NewsBlockDto(long Id, string Name, bool Enabled, int Days, string Hours, int Minute, int Second, string Timing,
     long? OpenerId, long? CloserId, string Source, string Folder, int MaxAgeMinutes, long? CategoryId, string Feeds, int MaxHeadlines,
-    string? When = null, DateTime? Next = null);
+    string? When = null, DateTime? Next = null, NewsAiOptionsDto? Ai = null);
 
 /// <summary>A hardware device. Kind "midi", "serial", "livewire", "ember" or "mackie" (Mackie Control surface); Port is the MIDI name, COM port or host[:port].</summary>
 public sealed record HwDeviceDto(long Id, string Name, bool Enabled, string Kind, string Port, int Baud, string Password,
@@ -483,7 +484,21 @@ public sealed record AdPlayDto(long Id, string Advertiser, string Campaign, stri
 public sealed record AdPreviewDto(List<string> Lines, double Seconds, string? Problem);
 
 /// <summary>What a news block would play now: the parts in order, or the problem that would make it skip.</summary>
-public sealed record NewsCheckDto(bool Ok, List<string> Parts, string? Problem, string? Script);
+public sealed record NewsCheckDto(bool Ok, List<string> Parts, string? Problem, string? Script, string? Note = null, double? Seconds = null);
+
+/// <summary>
+/// AI news and weather settings of a news block. RegionalFeeds: one URL per line (national ones are in Feeds);
+/// Words: length of the bulletin; BedId: a library item under the voice; VoiceId: a voice profile (null = default).
+/// </summary>
+public sealed record NewsAiOptionsDto(string RegionalFeeds = "", int RegionalCount = 3, bool RegionalFirst = false, int Words = 120,
+    bool Attribution = true, int MaxAgeHours = 6, long? BedId = null, long? VoiceId = null, string Place = "", double Latitude = 0,
+    double Longitude = 0);
+
+/// <summary>A place found by name (for the weather report).</summary>
+public sealed record PlaceDto(string Name, string Region, double Latitude, double Longitude);
+
+/// <summary>Try a news block: Speak renders it with the voice and loads it into PFL (Play: and starts it).</summary>
+public sealed record NewsTryRequest(NewsBlockDto Block, bool Speak = false, bool Play = false);
 
 /// <summary>Transition editor: a point on a volume line (seconds in the item's own time, linear gain 0..1.5).</summary>
 public sealed record EnvelopePointDto(double Seconds, double Gain);

@@ -39,6 +39,7 @@ In drie dagen zijn er 51 commits gemaakt. Er zijn 226 geautomatiseerde tests, en
 | ✅ | Programmalog die een herstart overleeft (ook na een harde crash: zelfde items, zelfde volgorde) |
 | ✅ | Overgangseditor: twee golfvormen, startpunt slepen, volumelijnen, jingle als insert, beluisteren op PFL |
 | ✅ | Nieuwsblokken op een vaste tijd (opener, bulletin uit een map, categorie of RSS, sluiter) |
+| 🟡 | AI-nieuws (landelijk + regionaal, herschreven door het lokale taalmodel) en AI-weerbericht als nieuwsblok, met eigen stem en tune; nog niet beluisterd op de zender |
 | ✅ | Reclame: adverteerders, campagnes, blokken, bewijs van uitzending |
 | ✅ | Logs importeren uit een externe muziekplanner, bibliotheek exporteren, ODBC-bronnen, metadata opzoeken |
 | ✅ | Spotify-wensenlijst (alleen gegevens, nooit audio) gekoppeld aan de bibliotheek |
