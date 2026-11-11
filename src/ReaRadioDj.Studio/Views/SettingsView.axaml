@@ -420,6 +420,10 @@
           <TextBlock Classes="field" Text="Laatste meldingen van de bewaking" />
           <TextBox Text="{Binding WatchdogLog}" IsReadOnly="True" Background="{DynamicResource CardBrush}" Foreground="{DynamicResource TextBrush}" FontFamily="Consolas" FontSize="11" Height="110" TextWrapping="NoWrap" />
 
+          <TextBlock Classes="title" Text="Nieuwe versies" Margin="0,24,0,4" />
+          <CheckBox Content="Eén keer per dag op GitHub kijken of er een nieuwere versie is" IsChecked="{Binding CheckUpdates}" />
+          <TextBlock Classes="help" Text="Geldt voor deze studio en meteen. Er wordt niets gedownload of geïnstalleerd: een nieuwere versie verschijnt als knop rechts onderin, die de pagina van de uitgave opent. Zelf zoeken kan via Info › Zoeken naar updates." />
+
           <TextBlock Classes="title" Text="Reservekopie" Margin="0,24,0,4" />
           <TextBlock Classes="help" Text="Eén bestand met alle instellingen, klokken, planning, gebeurtenissen, cartwalls, hardware, reclame, nieuws, presentatoren en de cuepunten van de bibliotheek. De audiobestanden zelf zitten er niet in. Terugzetten vervangt alles; wat er stond, blijft bewaard in een map in de datamap." />
           <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,10,0,0">

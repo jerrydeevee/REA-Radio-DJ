@@ -117,6 +117,19 @@ public sealed partial class SettingsTool : StudioTool
     [ObservableProperty] private string _soloistKey = "";
     [ObservableProperty] private string _soloistKeyHint = "";
     [ObservableProperty] private bool _soloistStartWithStudio;
+
+    /// <summary>Instellingen › Systeem › Nieuwe versies: a studio setting, saved at once.</summary>
+    public bool CheckUpdates
+    {
+        get => Hub.Settings.CheckUpdates;
+        set
+        {
+            if (Hub.Settings.CheckUpdates == value) return;
+            Hub.Settings.CheckUpdates = value;
+            Hub.Settings.Save();
+            OnPropertyChanged();
+        }
+    }
     [ObservableProperty] private bool _soloistAutoConnect = true;
     [ObservableProperty] private string _soloistStatus = "";
     [ObservableProperty] private bool _soloistRunning;

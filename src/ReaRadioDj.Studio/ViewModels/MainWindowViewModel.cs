@@ -35,6 +35,8 @@ public sealed partial class MainWindowViewModel : ObservableObject
         Hub.StateReceived += OnState;
         Hub.StateReceived += CheckSetup;
         _forceSetup = args.Contains("--setup");   // --setup: open the setup helper at start (also for screenshots)
+        // --check-updates: ask GitHub right away, whatever the last check was (for testing).
+        _ = StartUpdateCheckAsync(args.Contains("--check-updates"));
         Hub.PropertyChanged += (_, e) => { if (e.PropertyName is nameof(StudioHub.Status) or nameof(StudioHub.ConnectionText)) OnPropertyChanged(nameof(StatusLine)); };
         Hub.EditCuesRequested += id => ShowWindow("cues");
         Hub.TransitionRequested += _ => ShowWindow("transition");
@@ -322,6 +324,64 @@ public sealed partial class MainWindowViewModel : ObservableObject
     private Task SetMode(string? mode) => (mode == "auto") == AutoPlay
         ? Task.CompletedTask
         : Hub.Client.PostAsync("/api/transport/autoplay", new SwitchRequest(mode == "auto"));
+
+    // ------------------------------------------------------------ newer version
+
+    /// <summary>Shown in the status bar when GitHub has a newer release; a click opens its page.</summary>
+    [ObservableProperty] private string _updateText = "";
+    private string _updateUrl = UpdateChecker.Repo + "/releases";
+    public bool HasUpdate => UpdateText.Length > 0;
+    partial void OnUpdateTextChanged(string value) => OnPropertyChanged(nameof(HasUpdate));
+
+    /// <summary>At start: the notice from the last check, and a new check when the last one is a day old.</summary>
+    private async Task StartUpdateCheckAsync(bool force)
+    {
+        ShowRelease(_settings.LatestTag, _settings.LatestUrl);
+        if (!force && (!_settings.CheckUpdates || _settings.LastUpdateCheck is { } last && DateTime.UtcNow - last < TimeSpan.FromHours(20))) return;
+        await Task.Delay(force ? 3000 : 20000);   // let the studio settle first
+        await CheckNowAsync(force);
+    }
+
+    /// <summary>Info › Zoeken naar updates: asks GitHub now and says what came back.</summary>
+    [RelayCommand]
+    private Task CheckUpdates() => CheckNowAsync(true);
+
+    private async Task CheckNowAsync(bool report)
+    {
+        if (report) Hub.Status = "Zoeken naar een nieuwere versie…";
+        var (release, error) = await UpdateChecker.CheckAsync();
+        if (release is null)
+        {
+            if (report) Hub.Status = "Zoeken naar updates lukte niet: " + error;
+            return;
+        }
+        _settings.LastUpdateCheck = DateTime.UtcNow;
+        _settings.LatestTag = release.Tag;
+        _settings.LatestUrl = release.Url;
+        _settings.Save();
+        var newer = ShowRelease(release.Tag, release.Url);
+        if (report)
+            Hub.Status = newer
+                ? $"Versie {release.Version} is uit (je hebt {UpdateChecker.CurrentVersion})."
+                : $"Je hebt de nieuwste versie ({UpdateChecker.CurrentVersion}; nieuwste uitgave {release.Version}).";
+    }
+
+    private bool ShowRelease(string? tag, string? url)
+    {
+        var latest = ReleaseVersion.Parse(tag);
+        var current = ReleaseVersion.Parse(UpdateChecker.CurrentVersion);
+        var newer = latest is not null && current is not null && latest > current;
+        if (newer && url is not null && url.StartsWith(UpdateChecker.Repo, StringComparison.OrdinalIgnoreCase)) _updateUrl = url;
+        UpdateText = newer ? $"Nieuwe versie {latest} beschikbaar" : "";
+        return newer;
+    }
+
+    [RelayCommand]
+    private void OpenUpdate()
+    {
+        try { System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(_updateUrl) { UseShellExecute = true }); }
+        catch (Exception ex) when (ex is System.ComponentModel.Win32Exception or InvalidOperationException) { }
+    }
 
     // ------------------------------------------------------------ setup helper
 

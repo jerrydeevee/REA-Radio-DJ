@@ -82,6 +82,7 @@
           </MenuItem>
           <MenuItem Header="I_nfo">
             <MenuItem Header="Over REA-Radio-DJ…" Click="OnAbout" />
+            <MenuItem Header="Zoeken naar updates…" Command="{Binding CheckUpdatesCommand}" />
             <Separator />
             <MenuItem Header="Broncode op GitHub" Click="OnSource" />
             <MenuItem Header="Licentie en onderdelen" Click="OnLicense" />
@@ -120,6 +121,8 @@
           <TextBox Text="{Binding NewLayoutName}" Watermark="naam nieuwe indeling" Width="170" FontSize="12" MinHeight="24" Padding="4,2" />
           <Button Classes="small" Content="Opslaan" Command="{Binding SaveLayoutCommand}" />
         </StackPanel>
+        <Button DockPanel.Dock="Right" Classes="small primary" Content="{Binding UpdateText}" Command="{Binding OpenUpdateCommand}" IsVisible="{Binding HasUpdate}"
+                Margin="0,0,12,0" ToolTip.Tip="Opent de pagina van deze uitgave op GitHub. Er wordt niets vanzelf gedownload of geïnstalleerd." />
         <TextBlock Classes="muted" Text="{Binding StatusLine}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
       </DockPanel>
     </Border>
