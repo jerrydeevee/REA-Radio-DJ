@@ -56,7 +56,11 @@ public static class HardwareApi
         g.MapGet("/mackie", (MackieService s, HardwareStore store, HardwareService service) => Mackie(s, store, service));
         g.MapPut("/mackie", (MackieSettingsDto d, MackieService s, HardwareStore store, HardwareService service) =>
         {
-            s.SetSettings(new MackieSettings { MasterStrip = d.MasterStrip ?? "", Transport = d.Transport, Meters = d.Meters });
+            s.SetSettings(new MackieSettings
+            {
+                MasterStrip = d.MasterStrip ?? "", Transport = d.Transport, Meters = d.Meters,
+                Extenders = d.Extenders ?? [.. s.Settings.Extenders], ExtendersLeft = d.ExtendersLeft,
+            });
             return Mackie(s, store, service);
         });
         g.MapPost("/mackie/simulate", (MackieSimulateRequest r, MackieService s, HardwareStore store, HardwareService service) =>
@@ -95,12 +99,12 @@ public static class HardwareApi
     }
 
     private static MackieDto Mackie(MackieService s, HardwareStore store, HardwareService service) => new(
-        new MackieSettingsDto(s.Settings.MasterStrip, s.Settings.Transport, s.Settings.Meters),
+        new MackieSettingsDto(s.Settings.MasterStrip, s.Settings.Transport, s.Settings.Meters, [.. s.Settings.Extenders], s.Settings.ExtendersLeft),
         s.Channels.Select(c => new MackieChannelDto(c.Id, c.Name)).ToList(),
         store.Devices().Where(d => d.Kind == HwKind.Mackie).Select(d =>
         {
             var (connected, status) = service.StatusOf(d.Id);
-            return new MackieDeviceDto(d.Id, d.Name, d.Port, connected, d.Enabled ? status : "uit", s.BankOf(d.Id));
+            return new MackieDeviceDto(d.Id, d.Name, d.Port, connected, d.Enabled ? status : "uit", s.BankOf(d.Id), s.Settings.Extenders.Contains(d.Id));
         }).ToList(),
         s.Recent);
 

@@ -373,14 +373,17 @@ public sealed record HwEmberItemDto(string Path, string Identifier, string Descr
 
 public sealed record HwPortsDto(List<string> Midi, List<string> Serial);
 
-/// <summary>Choices for Mackie Control surfaces: the channel on the master fader ("" = none), transport buttons, meters.</summary>
-public sealed record MackieSettingsDto(string MasterStrip, bool Transport, bool Meters);
+/// <summary>
+/// Choices for Mackie Control surfaces: the channel on the master fader ("" = none), transport buttons, meters, which
+/// devices are extenders (eight strips more, e.g. iCON V1-X) and whether those stand left of the main panel.
+/// </summary>
+public sealed record MackieSettingsDto(string MasterStrip, bool Transport, bool Meters, List<long>? Extenders = null, bool ExtendersLeft = false);
 
 /// <summary>A mixer channel a Mackie surface can show, in strip order.</summary>
 public sealed record MackieChannelDto(string Id, string Name);
 
 /// <summary>A Mackie Control surface: whether it is connected and which channels are on its strips (Bank = first, from 0).</summary>
-public sealed record MackieDeviceDto(long Id, string Name, string Port, bool Connected, string Status, int Bank);
+public sealed record MackieDeviceDto(long Id, string Name, string Port, bool Connected, string Status, int Bank, bool Extender = false);
 
 /// <summary>The Mackie Control set-up and what happened lately (newest first).</summary>
 public sealed record MackieDto(MackieSettingsDto Settings, IReadOnlyList<MackieChannelDto> Channels, IReadOnlyList<MackieDeviceDto> Devices,

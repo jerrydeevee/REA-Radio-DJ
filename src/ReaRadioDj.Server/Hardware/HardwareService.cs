@@ -80,7 +80,7 @@ public sealed class HardwareService(HardwareStore store, CommandBus bus, Playout
             catch (Exception ex) { logger.LogError(ex, "Hardware check failed"); }
             try { await Task.Delay(200, ct); } catch (OperationCanceledException) { break; }
         }
-        foreach (var (id, c) in _open) { if (c is MackieConnection) mackie.Detach(id); c.Dispose(); }
+        foreach (var (id, c) in _open) { if (c is MackieConnection m) mackie.Detach(id, m.Send); c.Dispose(); }
         _open.Clear();
     }
 
@@ -98,7 +98,7 @@ public sealed class HardwareService(HardwareStore store, CommandBus bus, Playout
         foreach (var (id, c) in _open)
         {
             if (devices.TryGetValue(id, out var d) && d == c.Device && (c.Alive || c.Status == "verbinden…")) continue;
-            if (c is MackieConnection) mackie.Detach(id);
+            if (c is MackieConnection m) mackie.Detach(id, m.Send);
             c.Dispose();
             _open.TryRemove(id, out _);
         }

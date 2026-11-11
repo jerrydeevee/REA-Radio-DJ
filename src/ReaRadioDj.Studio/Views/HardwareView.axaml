@@ -58,6 +58,10 @@
                   <TextBlock Classes="muted" FontSize="11" TextWrapping="Wrap"
                              Text="Acht strips volgen de mengkanalen. Fader = volume (de motor volgt de studio), draaiknop = balans (indrukken = midden), MUTE = dempen, REC = opnemen, SELECT = naar de zender aan of uit. Het display toont naam en stand, de meters het niveau. SOLO doet niets." />
                   <TextBlock Classes="muted" FontSize="11" TextWrapping="Wrap" Text="{Binding MackieChannels}" />
+                  <CheckBox Content="Dit paneel is een uitbreiding (8 faders erbij, bijv. iCON V1-X)" IsChecked="{Binding MackieExtender}" IsEnabled="{Binding Id, Converter={x:Static vm:Brushes.Positive}}" />
+                  <CheckBox Content="Uitbreidingen staan links van het hoofdpaneel" IsChecked="{Binding MackieExtendersLeft}" />
+                  <TextBlock Classes="muted" FontSize="11" TextWrapping="Wrap"
+                             Text="Hoofdpaneel en uitbreidingen staan naast elkaar: samen tonen ze 16 (of meer) kanalen op een rij, en Bank op elk paneel schuift ze allemaal. Een uitbreiding heeft geen masterfader en geen transportknoppen. Elk paneel is een eigen apparaat met zijn eigen MIDI-poort; sla het eerst op." />
                   <TextBlock Classes="field" Text="Masterfader" />
                   <ComboBox ItemsSource="{Binding MackieMasters}" SelectedItem="{Binding MackieMaster}" HorizontalAlignment="Stretch" />
                   <CheckBox Content="Transportknoppen bedienen de uitzending (Play = volgende, Stop = stoppen, Cycle = automatisch)" IsChecked="{Binding MackieTransport}" />

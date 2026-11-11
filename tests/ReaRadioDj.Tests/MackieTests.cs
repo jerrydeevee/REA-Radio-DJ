@@ -193,4 +193,65 @@ public class MackieTests
         surface.Settings = new MackieSettings { Meters = false };
         Assert.Empty(surface.Meters());
     }
+
+    private static (FakeMixer Mixer, MackieSurface Main, MackieSurface Xt) Pair(int channels, bool extenderLeft)
+    {
+        var mixer = new FakeMixer();
+        mixer.List = Enumerable.Range(1, channels).Select(i => new MackieStripState($"s{i}", $"K{i}", 1f, false, 0, true, false, 0)).ToList();
+        var bank = new MackieBank { Width = 16 };
+        var settings = new MackieSettings { Transport = true, MasterStrip = "s1" };
+        var main = new MackieSurface(mixer, settings, bank) { Offset = extenderLeft ? 8 : 0 };
+        var xt = new MackieSurface(mixer, settings, bank) { Offset = extenderLeft ? 0 : 8, Extender = true };
+        return (mixer, main, xt);
+    }
+
+    [Fact]
+    public void An_extender_takes_the_next_eight_channels()
+    {
+        var (mixer, main, xt) = Pair(20, extenderLeft: false);
+        xt.Handle(Bend(0, 0));      // first fader of the extender = channel 9
+        Assert.Equal(0f, mixer.List[8].Volume);
+        Assert.Equal(1f, mixer.List[0].Volume);
+        Assert.Equal(new byte[] { 0xF0, 0x00, 0x00, 0x66, 0x15, 0x12, 0 }, xt.Refresh().First(o => o.SysEx is not null).SysEx![..7]);
+        Assert.Equal(0x14, main.Refresh().First(o => o.SysEx is not null).SysEx![4]);
+    }
+
+    [Fact]
+    public void An_extender_on_the_left_comes_first()
+    {
+        var (mixer, main, xt) = Pair(20, extenderLeft: true);
+        main.Handle(Bend(0, 0));    // first fader of the main panel = channel 9
+        xt.Handle(Bend(7, 0));      // last fader of the extender = channel 8
+        Assert.Equal(0f, mixer.List[8].Volume);
+        Assert.Equal(0f, mixer.List[7].Volume);
+    }
+
+    [Fact]
+    public void Bank_on_either_panel_moves_both()
+    {
+        var (mixer, main, xt) = Pair(20, extenderLeft: false);
+        main.Refresh(); xt.Refresh();
+        Assert.Equal("kanalen 5-20", xt.Handle(Note(Mackie.BankRight, true)));   // 16 further, but never past the last channel
+        Assert.Equal(4, main.Bank);
+        Assert.Equal(12, xt.Bank);
+        // both panels show their new channels again
+        Assert.Contains(main.Refresh(), o => o.SysEx is not null);
+        Assert.Contains(xt.Refresh(), o => o.SysEx is not null);
+        main.Handle(Note(Mackie.ChannelLeft, true));
+        Assert.Equal(3, main.Bank);
+        Assert.Equal(11, xt.Bank);
+    }
+
+    [Fact]
+    public void An_extender_has_no_master_fader_or_transport()
+    {
+        var (mixer, main, xt) = Pair(20, extenderLeft: false);
+        xt.Handle(Note(Mackie.Stop, true));
+        xt.Handle(Bend(8, 0));
+        Assert.Empty(mixer.Commands);
+        Assert.Equal(1f, mixer.List[0].Volume);
+        Assert.DoesNotContain(xt.Refresh(), o => (o.Short & 0xFF) == 0xE8 || o.Short == Mackie.Led(Mackie.Play, false).Short);
+        main.Handle(Bend(8, 0));
+        Assert.Equal(0f, mixer.List[0].Volume);
+    }
 }

@@ -4,7 +4,8 @@ namespace ReaRadioDj.Core.Hardware;
 
 // Mackie Control (MCU) over MIDI, written from the public description of the protocol. The surface has eight
 // channel strips (motor fader with touch sensing, rotary encoder with LED ring, REC / SOLO / MUTE / SELECT buttons,
-// a level meter and 2 x 7 characters of display) plus a master fader and transport buttons. Everything is on MIDI
+// a level meter and 2 x 7 characters of display) plus a master fader and transport buttons. An extender (XT) has only
+// the eight strips, on a MIDI port of its own, and a display of its own (SysEx device 0x15 instead of 0x14). Everything is on MIDI
 // channel 1 except the faders, which use pitch bend on channels 1-8 (strips) and 9 (master).
 // Not yet checked against a real controller: see docs/WERKLIJST.md.
 
@@ -98,10 +99,12 @@ public static class Mackie
         return steps.Count(s => db >= s);
     }
 
+    public const byte MainDisplay = 0x14, ExtenderDisplay = 0x15;
+
     /// <summary>Text on the display from a position (0-55 top row, 56-111 bottom row); plain ASCII only.</summary>
-    public static MackieOutput Display(int offset, string text)
+    public static MackieOutput Display(int offset, string text, bool extender = false)
     {
-        var bytes = new List<byte> { 0xF0, 0x00, 0x00, 0x66, 0x14, 0x12, (byte)Math.Clamp(offset, 0, 111) };
+        var bytes = new List<byte> { 0xF0, 0x00, 0x00, 0x66, extender ? ExtenderDisplay : MainDisplay, 0x12, (byte)Math.Clamp(offset, 0, 111) };
         bytes.AddRange(Ascii(text));
         bytes.Add(0xF7);
         return new MackieOutput(0, [.. bytes]);
@@ -159,6 +162,43 @@ public sealed record MackieSettings
     public bool Transport { get; init; }
     /// <summary>Level meters on the surface.</summary>
     public bool Meters { get; init; } = true;
+    /// <summary>Devices that are an extender (eight strips more, no master fader or transport), e.g. an iCON V1-X.</summary>
+    public IReadOnlyList<long> Extenders { get; init; } = [];
+    /// <summary>The extenders stand left of the main panel (their strips come first).</summary>
+    public bool ExtendersLeft { get; init; }
+}
+
+/// <summary>
+/// Where the panels stand together: the first mixer channel on the leftmost strip, and how many strips there are in
+/// all. Shared by a main panel and its extenders, so Bank on one panel moves them all.
+/// </summary>
+public sealed class MackieBank
+{
+    private readonly object _gate = new();
+    public int First { get; private set; }
+    /// <summary>Strips of all panels together (8 per panel).</summary>
+    public int Width { get; set; } = Mackie.Strips;
+    /// <summary>Goes up on every move, so each panel knows it has to show everything again.</summary>
+    public int Version { get; private set; }
+
+    public void Move(int by, int channels)
+    {
+        lock (_gate)
+        {
+            First = Math.Clamp(First + by, 0, Math.Max(0, channels - Width));
+            Version++;
+        }
+    }
+
+    /// <summary>Keeps the bank inside the channels (when channels come and go).</summary>
+    public void Fit(int channels)
+    {
+        lock (_gate)
+        {
+            int f = Math.Clamp(First, 0, Math.Max(0, channels - Width));
+            if (f != First) { First = f; Version++; }
+        }
+    }
 }
 
 /// <summary>
@@ -166,20 +206,26 @@ public sealed record MackieSettings
 /// sends into mixer changes, and works out what to send back (fader positions, lamps, rings, meters, display) so the
 /// surface follows the studio. Only changes are sent; <see cref="Refresh"/> with force sends everything again.
 /// </summary>
-public sealed class MackieSurface(IMackieMixer mixer, MackieSettings settings)
+public sealed class MackieSurface(IMackieMixer mixer, MackieSettings settings, MackieBank? bank = null)
 {
     private readonly bool[] _touched = new bool[Mackie.Strips + 1];
     private readonly Dictionary<string, uint> _sent = [];
     private readonly Dictionary<int, string> _display = [];
-    private int _bank;
+    private int _version = -1;
 
     public MackieSettings Settings { get; set; } = settings;
-    /// <summary>The first mixer channel on strip 1 (0-based).</summary>
-    public int Bank => _bank;
+    /// <summary>The bank shared with the other panels of this group.</summary>
+    public MackieBank Group { get; } = bank ?? new MackieBank();
+    /// <summary>The first strip of this panel within the group (0, 8, 16 …).</summary>
+    public int Offset { get; set; }
+    /// <summary>An extender: no master fader, no transport, its own display address.</summary>
+    public bool Extender { get; set; }
+    /// <summary>The first mixer channel on strip 1 of this panel (0-based).</summary>
+    public int Bank => Group.First + Offset;
 
     /// <summary>The channel on a strip (0-7), or null for an empty strip.</summary>
     public MackieStripState? StripAt(IReadOnlyList<MackieStripState> all, int strip) =>
-        _bank + strip < all.Count ? all[_bank + strip] : null;
+        Bank + strip < all.Count ? all[Bank + strip] : null;
 
     /// <summary>Handles a message from the surface; returns what it did (for the hardware event list), or null.</summary>
     public string? Handle(uint message)
@@ -193,7 +239,7 @@ public sealed class MackieSurface(IMackieMixer mixer, MackieSettings settings)
                 if (!t.Touched) _sent.Remove(FaderKey(t.Strip));   // let go: put the motor where the channel really is
                 return null;
             case MackieFader f when f.Strip == Mackie.MasterFader:
-                if (Master(all) is not { } master) return null;
+                if (Extender || Master(all) is not { } master) return null;
                 mixer.SetVolume(master.Id, Mackie.Volume(f.Position));
                 _sent[FaderKey(f.Strip)] = (uint)f.Position;
                 return null;
@@ -232,24 +278,21 @@ public sealed class MackieSurface(IMackieMixer mixer, MackieSettings settings)
         }
         switch (note)
         {
-            case Mackie.BankLeft: return MoveBank(-Mackie.Strips, all);
-            case Mackie.BankRight: return MoveBank(Mackie.Strips, all);
+            case Mackie.BankLeft: return MoveBank(-Group.Width, all);
+            case Mackie.BankRight: return MoveBank(Group.Width, all);
             case Mackie.ChannelLeft: return MoveBank(-1, all);
             case Mackie.ChannelRight: return MoveBank(1, all);
-            case Mackie.Play when Settings.Transport: mixer.Run("NEXT"); return "NEXT";
-            case Mackie.Stop when Settings.Transport: mixer.Run("STOP"); return "STOP";
-            case Mackie.Cycle when Settings.Transport: mixer.Run("AUTO TOGGLE"); return "AUTO TOGGLE";
+            case Mackie.Play when Settings.Transport && !Extender: mixer.Run("NEXT"); return "NEXT";
+            case Mackie.Stop when Settings.Transport && !Extender: mixer.Run("STOP"); return "STOP";
+            case Mackie.Cycle when Settings.Transport && !Extender: mixer.Run("AUTO TOGGLE"); return "AUTO TOGGLE";
         }
         return null;
     }
 
     private string MoveBank(int by, IReadOnlyList<MackieStripState> all)
     {
-        int last = Math.Max(0, all.Count - Mackie.Strips);
-        _bank = Math.Clamp(_bank + by, 0, last);
-        _sent.Clear();
-        _display.Clear();
-        return $"kanalen {_bank + 1}-{Math.Min(all.Count, _bank + Mackie.Strips)}";
+        Group.Move(by, all.Count);
+        return $"kanalen {Group.First + 1}-{Math.Min(all.Count, Group.First + Group.Width)}";
     }
 
     private MackieStripState? Master(IReadOnlyList<MackieStripState> all) =>
@@ -260,9 +303,9 @@ public sealed class MackieSurface(IMackieMixer mixer, MackieSettings settings)
     /// <summary>What to send so the surface shows the mixer as it is now (only changes, unless forced).</summary>
     public List<MackieOutput> Refresh(bool force = false)
     {
-        if (force) { _sent.Clear(); _display.Clear(); }
         var all = mixer.Strips();
-        _bank = Math.Clamp(_bank, 0, Math.Max(0, all.Count - Mackie.Strips));
+        Group.Fit(all.Count);
+        if (force || _version != Group.Version) { _sent.Clear(); _display.Clear(); _version = Group.Version; }
         var outs = new List<MackieOutput>();
         void Send(string key, MackieOutput o, uint value)
         {
@@ -283,14 +326,17 @@ public sealed class MackieSurface(IMackieMixer mixer, MackieSettings settings)
             var ring = s is null ? new MackieOutput((uint)(0xB0 | ((Mackie.RingCc + i) << 8))) : Mackie.PanRing(i, s.Pan);
             Send("ring" + i, ring, ring.Short);
         }
-        var master = Master(all);
-        if (!_touched[Mackie.MasterFader])
+        var master = Extender ? null : Master(all);
+        if (!_touched[Mackie.MasterFader] && !Extender)
         {
             int mp = master is null ? 0 : Mackie.Position(master.Volume);
             Send(FaderKey(Mackie.MasterFader), Mackie.Fader(Mackie.MasterFader, mp), (uint)mp);
         }
-        Lamp(Mackie.Play, Settings.Transport && mixer.Playing);
-        Lamp(Mackie.Cycle, Settings.Transport && mixer.AutoPlay);
+        if (!Extender)
+        {
+            Lamp(Mackie.Play, Settings.Transport && mixer.Playing);
+            Lamp(Mackie.Cycle, Settings.Transport && mixer.AutoPlay);
+        }
 
         // Display: names on top, the fader in percent (or DEMP when muted) below.
         var top = new StringBuilder();
@@ -305,7 +351,7 @@ public sealed class MackieSurface(IMackieMixer mixer, MackieSettings settings)
         {
             if (_display.TryGetValue(offset, out var was) && was == text) continue;
             _display[offset] = text;
-            outs.Add(Mackie.Display(offset, text));
+            outs.Add(Mackie.Display(offset, text, Extender));
         }
         return outs;
     }

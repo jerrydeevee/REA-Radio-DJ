@@ -25,6 +25,8 @@ public static class Brushes
     public static readonly IValueConverter TransportHeight = new FuncValueConverter<bool, double>(compact => compact ? 40 : 50);
     public static readonly IValueConverter TempoFaderHeight = new FuncValueConverter<bool, double>(compact => compact ? 56 : 80);
     public static readonly IValueConverter Negate = new FuncValueConverter<double, double>(v => -v);
+    /// <summary>True for an id above zero (a saved item).</summary>
+    public static readonly IValueConverter Positive = new FuncValueConverter<long, bool>(v => v > 0);
     public static readonly IValueConverter Active = new FuncValueConverter<bool, IBrush>(on => on ? Green : Off);
     public static readonly IValueConverter Highlight = new FuncValueConverter<bool, IBrush>(on => on ? new SolidColorBrush(Color.Parse("#1F3A2C")) : Transparent);
 

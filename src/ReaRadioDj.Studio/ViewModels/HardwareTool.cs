@@ -194,6 +194,9 @@ public sealed partial class HardwareTool : StudioTool
         Baud = value.Baud;
         Password = value.Password;
         DeviceStatus = StatusText(value);
+        _mackieLoading = true;
+        MackieExtender = _mackieExtenders.Contains(value.Id);
+        _mackieLoading = false;
         EmberItems.Clear();
         EmberPath = "";
         EmberProblem = null;
@@ -241,6 +244,10 @@ public sealed partial class HardwareTool : StudioTool
     [ObservableProperty] private HwMackieChoice? _mackieMaster;
     [ObservableProperty] private bool _mackieTransport;
     [ObservableProperty] private bool _mackieMeters = true;
+    /// <summary>The selected device is an extender (eight strips more, e.g. iCON V1-X).</summary>
+    [ObservableProperty] private bool _mackieExtender;
+    [ObservableProperty] private bool _mackieExtendersLeft;
+    private List<long> _mackieExtenders = [];
     [ObservableProperty] private string _mackieChannels = "";
     [ObservableProperty] private string _mackieRecent = "";
     [ObservableProperty] private string _mackieTest = "";
@@ -261,18 +268,30 @@ public sealed partial class HardwareTool : StudioTool
         MackieMaster = MackieMasters.FirstOrDefault(c => c.Id == m.Settings.MasterStrip) ?? MackieMasters[0];
         MackieTransport = m.Settings.Transport;
         MackieMeters = m.Settings.Meters;
+        _mackieExtenders = m.Settings.Extenders ?? [];
+        MackieExtender = _mackieExtenders.Contains(Id);
+        MackieExtendersLeft = m.Settings.ExtendersLeft;
         _mackieLoading = false;
     }
 
     partial void OnMackieMasterChanged(HwMackieChoice? value) => _ = SaveMackieAsync();
     partial void OnMackieTransportChanged(bool value) => _ = SaveMackieAsync();
     partial void OnMackieMetersChanged(bool value) => _ = SaveMackieAsync();
+    partial void OnMackieExtendersLeftChanged(bool value) => _ = SaveMackieAsync();
+
+    partial void OnMackieExtenderChanged(bool value)
+    {
+        if (_mackieLoading || Id <= 0) return;
+        _mackieExtenders.Remove(Id);
+        if (value) _mackieExtenders.Add(Id);
+        _ = SaveMackieAsync();
+    }
 
     private async Task SaveMackieAsync()
     {
         if (_mackieLoading) return;
         if (await Hub.Client.SendForAsync<MackieDto>(HttpMethod.Put, "/api/hardware/mackie",
-                new MackieSettingsDto(MackieMaster?.Id ?? "", MackieTransport, MackieMeters)) is { } m)
+                new MackieSettingsDto(MackieMaster?.Id ?? "", MackieTransport, MackieMeters, [.. _mackieExtenders], MackieExtendersLeft)) is { } m)
             ShowMackie(m, settings: false);
     }
 

@@ -12,6 +12,7 @@ namespace ReaRadioDj.Server.Hardware;
 /// Mackie Control surfaces on the mixer: one <see cref="MackieSurface"/> per device of the kind Mackie Control. What a
 /// surface sends changes the mixer; every 40 ms the surface gets what changed (faders, lamps, rings, display) and
 /// every 100 ms the meters. The settings (master fader, transport, meters) are kept in the station database.
+/// A main panel and its extenders (e.g. iCON V1-M and V1-X) share one bank: their strips stand side by side.
 /// </summary>
 public sealed class MackieService : BackgroundService
 {
@@ -21,6 +22,7 @@ public sealed class MackieService : BackgroundService
     private readonly EngineMackieMixer _mixer;
     private readonly ConcurrentDictionary<long, (MackieSurface Surface, Action<MackieOutput> Send)> _surfaces = new();
     private readonly ConcurrentQueue<string> _recent = new();
+    private readonly MackieBank _bank = new();
     private MackieSettings _settings;
 
     public MackieService(StationDb db, AudioRouter router, CommandBus bus, PlayoutEngine engine, ReaRadioDjOptions options,
@@ -36,9 +38,28 @@ public sealed class MackieService : BackgroundService
 
     public void SetSettings(MackieSettings settings)
     {
-        _settings = settings with { MasterStrip = settings.MasterStrip?.Trim() ?? "" };
+        _settings = settings with { MasterStrip = settings.MasterStrip?.Trim() ?? "", Extenders = settings.Extenders?.Distinct().ToList() ?? [] };
         _db.SetSetting(SettingsKey, JsonSerializer.Serialize(_settings, JsonSerializerOptions.Web));
         foreach (var (s, _) in _surfaces.Values) s.Settings = _settings;
+        Regroup();
+    }
+
+    /// <summary>Puts the panels side by side: main panels and extenders in the order of the settings, eight strips each.</summary>
+    private void Regroup()
+    {
+        var ids = _surfaces.Keys.Order().ToList();
+        var main = ids.Where(id => !_settings.Extenders.Contains(id));
+        var ext = ids.Where(id => _settings.Extenders.Contains(id));
+        var order = (_settings.ExtendersLeft ? ext.Concat(main) : main.Concat(ext)).ToList();
+        _bank.Width = Math.Max(1, order.Count) * Mackie.Strips;
+        for (int i = 0; i < order.Count; i++)
+            if (_surfaces.TryGetValue(order[i], out var s))
+                lock (s.Surface)
+                {
+                    s.Surface.Offset = i * Mackie.Strips;
+                    s.Surface.Extender = _settings.Extenders.Contains(order[i]);
+                }
+        _bank.Move(0, _mixer.Strips().Count);   // everything shown again on every panel
     }
 
     private MackieSettings? Read()
@@ -56,12 +77,17 @@ public sealed class MackieService : BackgroundService
     /// <summary>A surface came up: it gets everything at once.</summary>
     public void Attach(long deviceId, Action<MackieOutput> send)
     {
-        var surface = new MackieSurface(_mixer, _settings);
+        var surface = new MackieSurface(_mixer, _settings, _bank);
         _surfaces[deviceId] = (surface, send);
+        Regroup();
         lock (surface) foreach (var o in surface.Refresh(force: true)) send(o);
     }
 
-    public void Detach(long deviceId) => _surfaces.TryRemove(deviceId, out _);
+    /// <summary>A connection went away: its surface goes too (not one attached since, such as the virtual one for trying out).</summary>
+    public void Detach(long deviceId, Action<MackieOutput> send)
+    {
+        if (_surfaces.TryGetValue(deviceId, out var s) && s.Send.Equals(send) && _surfaces.TryRemove(deviceId, out _)) Regroup();
+    }
 
     /// <summary>A message from a surface (MIDI short message, status in the low byte).</summary>
     public void Received(long deviceId, uint message)
