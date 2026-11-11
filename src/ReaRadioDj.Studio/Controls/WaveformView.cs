@@ -73,6 +73,20 @@ public sealed class WaveformView : Control
         InvalidateVisual();
     }
 
+    private static readonly Color Background = Color.Parse("#0E1218");
+
+    protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
+    {
+        base.OnAttachedToVisualTree(e);
+        Services.Appearance.LookChanged += InvalidateVisual;
+    }
+
+    protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
+    {
+        Services.Appearance.LookChanged -= InvalidateVisual;
+        base.OnDetachedFromVisualTree(e);
+    }
+
     private double X(double seconds) => (seconds - _viewStart) / _viewLength * Bounds.Width;
     private double Seconds(double x) => _viewStart + x / Math.Max(1, Bounds.Width) * _viewLength;
 
@@ -80,7 +94,7 @@ public sealed class WaveformView : Control
     {
         var w = Bounds.Width;
         var h = Bounds.Height;
-        ctx.FillRectangle(new SolidColorBrush(Color.Parse("#0E1218")), new Rect(Bounds.Size));
+        ctx.FillRectangle(new SolidColorBrush(Background), new Rect(Bounds.Size));
         var peaks = Peaks;
         if (peaks is null || peaks.Length == 0 || w < 2)
         {
@@ -91,19 +105,18 @@ public sealed class WaveformView : Control
         }
 
         double mid = h / 2;
-        var wave = new Pen(new SolidColorBrush(Color.Parse("#3FA7FF")), 1);
-        var dim = new Pen(new SolidColorBrush(Color.Parse("#2A4A66")), 1);
-        for (int x = 0; x < (int)w; x++)
+        var amps = new double[(int)w];
+        for (int x = 0; x < amps.Length; x++)
         {
             double s0 = Seconds(x), s1 = Seconds(x + 1);
             int b0 = Math.Clamp((int)(s0 / BlockSeconds), 0, peaks.Length - 1);
             int b1 = Math.Clamp((int)Math.Ceiling(s1 / BlockSeconds), b0 + 1, peaks.Length);
             ushort max = 0;
             for (int b = b0; b < b1; b++) if (peaks[b] > max) max = peaks[b];
-            double amp = max / 65535.0 * (mid - 4);
-            bool inside = s0 >= CueIn && s0 <= CueOut;
-            ctx.DrawLine(inside ? wave : dim, new Point(x + 0.5, mid - amp), new Point(x + 0.5, mid + amp));
+            amps[x] = max / 65535.0;
         }
+        // Outside cue in and cue out the wave is dimmed.
+        WavePaint.Draw(ctx, amps, x => Seconds(x) >= CueIn && Seconds(x) <= CueOut, mid, mid - 4, Services.Appearance.WaveColor, Background, 0.4);
 
         // Time ruler
         var tick = new Pen(new SolidColorBrush(Color.Parse("#2A3240")), 1);

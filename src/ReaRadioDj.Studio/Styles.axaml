@@ -131,7 +131,7 @@
     <Setter Property="CornerRadius" Value="{DynamicResource Radius8}" />
     <Setter Property="FontSize" Value="14" />
     <Setter Property="FontWeight" Value="SemiBold" />
-    <Setter Property="Background" Value="{DynamicResource ControlBrush}" />
+    <Setter Property="Background" Value="{DynamicResource BarButtonBrush}" />
     <Setter Property="BorderBrush" Value="{DynamicResource ControlBorderBrush}" />
     <Setter Property="BorderThickness" Value="1" />
     <Setter Property="VerticalContentAlignment" Value="Center" />
@@ -140,19 +140,19 @@
     <Setter Property="MinHeight" Value="56" />
     <Setter Property="Padding" Value="24,0" />
     <Setter Property="FontSize" Value="16" />
-    <Setter Property="Background" Value="{DynamicResource PrimaryBrush}" />
+    <Setter Property="Background" Value="{DynamicResource PrimaryButtonBrush}" />
     <Setter Property="BorderBrush" Value="{DynamicResource PrimaryBrush}" />
     <Setter Property="Foreground" Value="White" />
   </Style>
   <Style Selector="Button.bar.primary:pointerover /template/ ContentPresenter">
-    <Setter Property="Background" Value="#3B76F0" />
+    <Setter Property="Background" Value="{DynamicResource PrimaryHoverBrush}" />
     <Setter Property="Foreground" Value="White" />
   </Style>
   <Style Selector="Button.bar.primary Border.key">
-    <Setter Property="BorderBrush" Value="#6E9BF5" />
+    <Setter Property="BorderBrush" Value="#66FFFFFF" />
   </Style>
   <Style Selector="Button.bar.primary Border.key > TextBlock">
-    <Setter Property="Foreground" Value="#DCE7FF" />
+    <Setter Property="Foreground" Value="#E6FFFFFF" />
   </Style>
   <Style Selector="Button.bar.danger">
     <Setter Property="BorderBrush" Value="{DynamicResource OnAirBrush}" />
@@ -274,14 +274,14 @@
 
   <!-- One filled main button per area (design rule 2) -->
   <Style Selector="Button.primary">
-    <Setter Property="Background" Value="{DynamicResource PrimaryBrush}" />
+    <Setter Property="Background" Value="{DynamicResource PrimaryButtonBrush}" />
     <Setter Property="BorderBrush" Value="{DynamicResource PrimaryBrush}" />
     <Setter Property="Foreground" Value="White" />
     <Setter Property="FontWeight" Value="SemiBold" />
     <Setter Property="VerticalContentAlignment" Value="Center" />
   </Style>
   <Style Selector="Button.primary:pointerover /template/ ContentPresenter">
-    <Setter Property="Background" Value="#3B76F0" />
+    <Setter Property="Background" Value="{DynamicResource PrimaryHoverBrush}" />
     <Setter Property="Foreground" Value="White" />
   </Style>
   <!-- A player in its last 10 seconds: the border flashes -->
@@ -294,5 +294,29 @@
   </Style>
   <Style Selector="ListBoxItem:pointerover StackPanel.rowactions, ListBoxItem:selected StackPanel.rowactions">
     <Setter Property="Opacity" Value="1" />
+  </Style>
+  <!-- Overlay playing: a purple pill in the on-air bar, whatever the layout; click = stop all overlays -->
+  <Style Selector="Button.overlaypill">
+    <Setter Property="Background" Value="#7C3AED" />
+    <Setter Property="BorderBrush" Value="#A78BFA" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="Foreground" Value="White" />
+    <Setter Property="FontSize" Value="13" />
+    <Setter Property="Padding" Value="12,4" />
+    <Setter Property="MinHeight" Value="30" />
+    <Setter Property="CornerRadius" Value="{DynamicResource Radius12}" />
+    <Setter Property="VerticalContentAlignment" Value="Center" />
+  </Style>
+  <Style Selector="Button.overlaypill:pointerover /template/ ContentPresenter">
+    <Setter Property="Background" Value="#8B5CF6" />
+    <Setter Property="Foreground" Value="White" />
+  </Style>
+  <Style Selector="Ellipse.pulse">
+    <Style.Animations>
+      <Animation Duration="0:0:1.2" IterationCount="Infinite" PlaybackDirection="Alternate">
+        <KeyFrame Cue="0%"><Setter Property="Opacity" Value="1" /></KeyFrame>
+        <KeyFrame Cue="100%"><Setter Property="Opacity" Value="0.25" /></KeyFrame>
+      </Animation>
+    </Style.Animations>
   </Style>
 </Styles>

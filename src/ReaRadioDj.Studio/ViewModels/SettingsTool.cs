@@ -157,6 +157,24 @@ public sealed partial class SettingsTool : StudioTool
     partial void OnCornerIndexChanged(int value) { if (value >= 0) { Hub.Settings.Corners = Appearance.Corners[value].Key; ApplyLook(); } }
     partial void OnScaleIndexChanged(int value) { if (value >= 0) { Hub.Settings.ScalePercent = Appearance.Scales[value]; ApplyLook(); } }
 
+    // Accent and waveform colours: "Van de stijl" (empty) or one of the kind colours.
+    public IReadOnlyList<LookColorChoice> AccentChoices { get; } =
+        [new LookColorChoice("Van de stijl", "", Avalonia.Media.Brushes.Transparent), .. Appearance.KindColors.Select(c => new LookColorChoice(c.Name, c.Hex, Brushes.FromHex(c.Hex)))];
+    public IReadOnlyList<string> ButtonStyleNames { get; } = [.. Appearance.ButtonStyles.Select(b => b.Name)];
+    public IReadOnlyList<string> WaveStyleNames { get; } = [.. Appearance.WaveStyles.Select(w => w.Name)];
+    [ObservableProperty] private int _accentIndex = ChoiceIndex(StudioHub.Current.Settings.Accent);
+    [ObservableProperty] private int _waveColorIndex = ChoiceIndex(StudioHub.Current.Settings.WaveColor);
+    [ObservableProperty] private int _buttonStyleIndex = Math.Max(0, Array.FindIndex(Appearance.ButtonStyles, b => b.Key == StudioHub.Current.Settings.ButtonStyle));
+    [ObservableProperty] private int _waveStyleIndex = Math.Max(0, Array.FindIndex(Appearance.WaveStyles, w => w.Key == StudioHub.Current.Settings.WaveStyle));
+
+    private static int ChoiceIndex(string hex) =>
+        string.IsNullOrWhiteSpace(hex) ? 0 : Array.FindIndex(Appearance.KindColors, c => string.Equals(c.Hex, hex, StringComparison.OrdinalIgnoreCase)) + 1;
+
+    partial void OnAccentIndexChanged(int value) { if (value >= 0) { Hub.Settings.Accent = AccentChoices[value].Hex; ApplyLook(); } }
+    partial void OnWaveColorIndexChanged(int value) { if (value >= 0) { Hub.Settings.WaveColor = AccentChoices[value].Hex; ApplyLook(); } }
+    partial void OnButtonStyleIndexChanged(int value) { if (value >= 0) { Hub.Settings.ButtonStyle = Appearance.ButtonStyles[value].Key; ApplyLook(); } }
+    partial void OnWaveStyleIndexChanged(int value) { if (value >= 0) { Hub.Settings.WaveStyle = Appearance.WaveStyles[value].Key; ApplyLook(); } }
+
     [ObservableProperty] private bool _touchMode = StudioHub.Current.Settings.Touch;
     partial void OnTouchModeChanged(bool value) { Hub.Settings.Touch = value; ApplyLook(); }
 
@@ -845,3 +863,6 @@ public sealed partial class KindColorRow : ObservableObject
 }
 
 public sealed record KindColorChoice(string Name, Avalonia.Media.IBrush Brush);
+
+/// <summary>A colour for the accent or the waveform; an empty Hex means "the style's own".</summary>
+public sealed record LookColorChoice(string Name, string Hex, Avalonia.Media.IBrush Brush);

@@ -18,6 +18,14 @@ public sealed class StudioSettings
     public int ScalePercent { get; set; } = 100;
     /// <summary>Touch mode: buttons, list rows, tabs and scroll bars big enough for a finger.</summary>
     public bool Touch { get; set; }
+    /// <summary>Accent colour (hex) instead of the style's own; empty = the style's.</summary>
+    public string Accent { get; set; } = "";
+    /// <summary>Button look: flat, raised or outline.</summary>
+    public string ButtonStyle { get; set; } = "flat";
+    /// <summary>Waveform look: classic, gradient, bars, neon or energy.</summary>
+    public string WaveStyle { get; set; } = "classic";
+    /// <summary>Waveform colour (hex) in the cue editor and players; empty = blue.</summary>
+    public string WaveColor { get; set; } = "";
     /// <summary>The buttons of the Eigen knoppen window, in order.</summary>
     public List<CustomButton> CustomButtons { get; set; } = CustomButton.Defaults();
     /// <summary>Colour per kind of item (song, jingle, voice, other) in the log, as-run and library.</summary>

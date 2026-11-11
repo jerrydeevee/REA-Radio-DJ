@@ -35,12 +35,16 @@ public sealed class DjTwinWave : Control
     {
         base.OnAttachedToVisualTree(e);
         _animating = true;
+        Services.Appearance.LookChanged += InvalidateVisual;
         Tick(TimeSpan.Zero);
     }
+
+    private static readonly Color Background = Color.Parse("#0B0F14");
 
     protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
     {
         _animating = false;
+        Services.Appearance.LookChanged -= InvalidateVisual;
         base.OnDetachedFromVisualTree(e);
     }
 
@@ -62,7 +66,7 @@ public sealed class DjTwinWave : Control
     public override void Render(DrawingContext ctx)
     {
         double w = Bounds.Width, h = Bounds.Height;
-        ctx.FillRectangle(new SolidColorBrush(Color.Parse("#0B0F14")), new Rect(0, 0, w, h));
+        ctx.FillRectangle(new SolidColorBrush(Background), new Rect(0, 0, w, h));
         if (Decks is not { Count: > 0 } decks || w < 20 || h < 20) return;
         int n = Math.Clamp(Count, 1, decks.Count);
         double laneH = h / n, mid = w / 2, pxPerSec = w / VisibleSeconds;
@@ -83,10 +87,9 @@ public sealed class DjTwinWave : Control
             // waveform: one line per pixel column, the highest peak of the blocks under that column
             if (deck.Peaks is { Length: > 0 } peaks && deck.BlockSeconds > 0)
             {
-                var played = new Pen(new SolidColorBrush(deck.Color, 0.45), 1);
-                var ahead = new Pen(new SolidColorBrush(deck.Color), 1);
                 double secPerPx = rate / pxPerSec;
-                for (int x = 0; x < (int)w; x++)
+                var amps = new double[(int)w];
+                for (int x = 0; x < amps.Length; x++)
                 {
                     double s0 = fromSec + x * secPerPx, s1 = s0 + secPerPx;
                     if (s1 < 0 || s0 > peaks.Length * deck.BlockSeconds) continue;
@@ -94,9 +97,10 @@ public sealed class DjTwinWave : Control
                     int b1 = Math.Clamp((int)Math.Ceiling(s1 / deck.BlockSeconds), b0 + 1, peaks.Length);
                     ushort max = 0;
                     for (int b = b0; b < b1; b++) if (peaks[b] > max) max = peaks[b];
-                    double amp = Math.Max(0.5, max / 65535.0 * half);
-                    ctx.DrawLine(x < mid ? played : ahead, new Point(x + 0.5, centre - amp), new Point(x + 0.5, centre + amp));
+                    amps[x] = max / 65535.0;
                 }
+                // The played part (left of the playhead) is dimmed; bars move along with the music.
+                WavePaint.Draw(ctx, amps, x => x >= mid, centre, half, deck.Color, Background, 0.45, fromSec / secPerPx);
             }
 
             // beat grid: thin per beat, strong per bar of four

@@ -15,9 +15,30 @@ public static class Appearance
     [
         ("dark", "Studio donker"), ("night", "Nacht (gedimd, voor een donkere studio)"),
         ("light", "Licht (overdag, veel daglicht)"), ("contrast", "Hoog contrast"),
+        ("ocean", "Oceaan (diep blauw met turkoois)"), ("forest", "Bos (donkergroen)"), ("sunset", "Zonsondergang (warm rood en oranje)"),
+        ("graphite", "Grafiet (neutraal grijs, zonder kleur)"), ("neon", "Neon (paars en roze, voor de avond)"),
     ];
 
-    public static readonly (string Key, string Name)[] Corners = [("square", "Recht"), ("normal", "Normaal"), ("round", "Rond")];
+    public static readonly (string Key, string Name)[] Corners =
+        [("square", "Recht"), ("normal", "Normaal"), ("round", "Rond"), ("pill", "Extra rond (pilvormige knoppen)")];
+
+    public static readonly (string Key, string Name)[] ButtonStyles =
+        [("flat", "Vlak"), ("raised", "Reliëf (met verloop en diepte)"), ("outline", "Omlijnd (alleen een rand)")];
+
+    public static readonly (string Key, string Name)[] WaveStyles =
+    [
+        ("classic", "Klassiek"), ("gradient", "Verloop met spiegeling"), ("bars", "Staafjes"),
+        ("neon", "Neon-gloed"), ("energy", "Energie (kleur loopt op met het volume)"),
+    ];
+
+    /// <summary>How waveforms are drawn (one of <see cref="WaveStyles"/>).</summary>
+    public static string WaveStyle { get; private set; } = "classic";
+
+    /// <summary>The waveform colour of the cue editor and players.</summary>
+    public static Color WaveColor { get; private set; } = Color.Parse("#3FA7FF");
+
+    /// <summary>Raised after every change of the look; drawn controls (waveforms) redraw.</summary>
+    public static event Action? LookChanged;
 
     public static readonly int[] Scales = [80, 90, 100, 110, 125, 150];
 
@@ -42,6 +63,16 @@ public static class Appearance
                      "#EEF1F5", "#B9C2CE", "#DCE6F5", "#4F5A69", "#FFFFFF", "#D5DBE3", "#5F6B7A"],
         ["contrast"] = ["#FF2D2D", "#FFD400", "#0050C8", "#FFD400", "#3CFF6B", "#FFFFFF", "#000000", "#000000",
                         "#000000", "#FFFFFF", "#1A3A6B", "#D9D9D9", "#0A0A0A", "#FFFFFF", "#1A1A1A"],
+        ["ocean"] = ["#F05D5E", "#2EC4D6", "#0E8FA8", "#F5B841", "#34D399", "#E3F2F7", "#06141C", "#0A1D28",
+                     "#12293A", "#24465C", "#16405A", "#8DB3C4", "#0C2130", "#1D3A4E", "#1D3A4E"],
+        ["forest"] = ["#E5534B", "#5BD68A", "#23864F", "#E9B949", "#7ADF8C", "#E4EFE6", "#0A120D", "#0F1A13",
+                      "#18261C", "#2E4535", "#21402B", "#93A99A", "#122017", "#25382B", "#25382B"],
+        ["sunset"] = ["#FF4D5E", "#FF8A3D", "#D9562F", "#FFC145", "#5CCB7A", "#F6EAE4", "#170E12", "#1F1218",
+                      "#2A1A21", "#4A2E38", "#45232D", "#B49AA3", "#21141A", "#3A2530", "#3A2530"],
+        ["graphite"] = ["#E5484D", "#B0BAC6", "#4B5563", "#F5A524", "#3FB950", "#ECECEC", "#121212", "#181818",
+                        "#232323", "#3A3A3A", "#333333", "#9B9B9B", "#1B1B1B", "#2E2E2E", "#2E2E2E"],
+        ["neon"] = ["#FF3B6B", "#C77DFF", "#7C3AED", "#FFD166", "#3CF0A0", "#F1E9FF", "#0B0614", "#120A1F",
+                    "#1C1230", "#3B2763", "#2E1D52", "#A897C9", "#150D25", "#2C1E4A", "#2C1E4A"],
     };
 
     /// <summary>The corner radii the styles use (Radius2 … Radius12), per corner shape.</summary>
@@ -92,12 +123,81 @@ public static class Appearance
         for (int i = 0; i < Keys.Length; i++) app.Resources[Keys[i]] = new SolidColorBrush(Color.Parse(colors[i]));
         app.RequestedThemeVariant = theme == "light" ? ThemeVariant.Light : ThemeVariant.Dark;
 
-        double factor = s.Corners switch { "square" => 0, "round" => 1.75, _ => 1 };
+        // Own accent colour: the accent itself, and a deeper shade of it for the filled main buttons.
+        Color primary = Color.Parse(colors[2]);
+        if (!string.IsNullOrWhiteSpace(s.Accent) && Color.TryParse(s.Accent, out var accent))
+        {
+            app.Resources["AccentBrush"] = new SolidColorBrush(accent);
+            primary = Mix(accent, Colors.Black, 0.28);
+            app.Resources["PrimaryBrush"] = new SolidColorBrush(primary);
+        }
+        app.Resources["PrimaryHoverBrush"] = new SolidColorBrush(Mix(primary, Colors.White, 0.15));
+        ApplyButtons(app, s.ButtonStyle, Color.Parse(colors[8]), Color.Parse(colors[9]), primary);
+
+        WaveStyle = WaveStyles.Any(w => w.Key == s.WaveStyle) ? s.WaveStyle : "classic";
+        WaveColor = !string.IsNullOrWhiteSpace(s.WaveColor) && Color.TryParse(s.WaveColor, out var wc) ? wc : Color.Parse("#3FA7FF");
+
+        double factor = s.Corners switch { "square" => 0, "round" => 1.75, "pill" => 3, _ => 1 };
         foreach (var r in Radii) app.Resources[$"Radius{r}"] = new CornerRadius(Math.Round(r * factor));
         app.Resources["ControlCornerRadius"] = new CornerRadius(Math.Round(4 * factor));
         app.Resources["OverlayCornerRadius"] = new CornerRadius(Math.Round(8 * factor));
 
         double scale = Scales.Contains(s.ScalePercent) ? s.ScalePercent / 100.0 : 1;
         if (Math.Abs(scale - Scale) > 0.001) { Scale = scale; ScaleChanged?.Invoke(); }
+        LookChanged?.Invoke();
+    }
+
+    // Fluent's own button colours that the button look replaces (flat = the theme's own, so they are removed).
+    private static readonly string[] FluentButtonKeys =
+        ["ButtonBackground", "ButtonBorderBrush", "ToggleButtonBackground", "ToggleButtonBorderBrush", "RepeatButtonBackground"];
+
+    /// <summary>
+    /// The button look: BarButtonBrush and PrimaryButtonBrush are used by the bar and main buttons; ordinary buttons
+    /// follow through Fluent's own resource keys.
+    /// </summary>
+    private static void ApplyButtons(Application app, string style, Color control, Color border, Color primary)
+    {
+        foreach (var k in FluentButtonKeys) app.Resources.Remove(k);
+        switch (style)
+        {
+            case "raised":
+                var face = Vertical(Mix(control, Colors.White, 0.10), Mix(control, Colors.Black, 0.18));
+                app.Resources["BarButtonBrush"] = face;
+                app.Resources["PrimaryButtonBrush"] = Vertical(Mix(primary, Colors.White, 0.22), Mix(primary, Colors.Black, 0.12));
+                app.Resources["ButtonBackground"] = face;
+                app.Resources["ToggleButtonBackground"] = face;
+                app.Resources["RepeatButtonBackground"] = face;
+                app.Resources["ButtonBorderBrush"] = new SolidColorBrush(Mix(border, Colors.White, 0.08));
+                app.Resources["ToggleButtonBorderBrush"] = new SolidColorBrush(Mix(border, Colors.White, 0.08));
+                break;
+            case "outline":
+                app.Resources["BarButtonBrush"] = Brushes.Transparent;
+                app.Resources["PrimaryButtonBrush"] = new SolidColorBrush(primary);
+                app.Resources["ButtonBackground"] = Brushes.Transparent;
+                app.Resources["ToggleButtonBackground"] = Brushes.Transparent;
+                app.Resources["RepeatButtonBackground"] = Brushes.Transparent;
+                app.Resources["ButtonBorderBrush"] = new SolidColorBrush(Mix(border, Colors.White, 0.2));
+                app.Resources["ToggleButtonBorderBrush"] = new SolidColorBrush(Mix(border, Colors.White, 0.2));
+                break;
+            default:
+                app.Resources["BarButtonBrush"] = new SolidColorBrush(control);
+                app.Resources["PrimaryButtonBrush"] = new SolidColorBrush(primary);
+                break;
+        }
+    }
+
+    private static LinearGradientBrush Vertical(Color top, Color bottom) => new()
+    {
+        StartPoint = new RelativePoint(0, 0, RelativeUnit.Relative),
+        EndPoint = new RelativePoint(0, 1, RelativeUnit.Relative),
+        GradientStops = { new GradientStop(top, 0), new GradientStop(bottom, 1) },
+    };
+
+    /// <summary>Mixes two colours: 0 = a, 1 = b.</summary>
+    public static Color Mix(Color a, Color b, double t)
+    {
+        t = Math.Clamp(t, 0, 1);
+        byte L(byte x, byte y) => (byte)Math.Round(x + (y - x) * t);
+        return Color.FromArgb(L(a.A, b.A), L(a.R, b.R), L(a.G, b.G), L(a.B, b.B));
     }
 }

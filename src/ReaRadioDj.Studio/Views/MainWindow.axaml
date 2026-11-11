@@ -24,6 +24,7 @@
             <Separator />
             <MenuItem Header="AI-break als volgende" Command="{Binding AddBreakCommand}" />
             <MenuItem Header="Alle carts stoppen" Command="{Binding StopCartsCommand}" />
+            <MenuItem Header="Alle overlays stoppen" Command="{Binding StopOverlaysCommand}" />
             <Separator />
             <MenuItem Header="Instellingen…" Command="{Binding ShowWindowCommand}" CommandParameter="settings" />
         <MenuItem Header="Bediening en sneltoetsen…" Command="{Binding ShowWindowCommand}" CommandParameter="control" />
@@ -127,6 +128,20 @@
         </Border>
         <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="6" ClipToBounds="True">
           <DockPanel>
+            <Button DockPanel.Dock="Right" Classes="overlaypill" Margin="12,0,0,0" VerticalAlignment="Center"
+                    IsVisible="{Binding OverlayOn}" Command="{Binding StopOverlaysCommand}" ToolTip.Tip="{Binding OverlayTip}">
+              <StackPanel Orientation="Horizontal" Spacing="8">
+                <Ellipse Classes="pulse" Width="8" Height="8" Fill="White" VerticalAlignment="Center" />
+                <TextBlock Text="OVERLAY" FontWeight="Bold" LetterSpacing="1" VerticalAlignment="Center" />
+                <TextBlock Text="{Binding OverlayText}" MaxWidth="260" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                <Border Background="#33FFFFFF" CornerRadius="{DynamicResource Radius4}" Padding="6,1">
+                  <StackPanel Orientation="Horizontal" Spacing="4">
+                    <Border Width="8" Height="8" Background="White" CornerRadius="1" VerticalAlignment="Center" />
+                    <TextBlock Text="Stop" FontWeight="Bold" VerticalAlignment="Center" />
+                  </StackPanel>
+                </Border>
+              </StackPanel>
+            </Button>
             <Border DockPanel.Dock="Right" Background="{DynamicResource WarnBrush}" CornerRadius="{DynamicResource Radius4}" Padding="8,1" Margin="12,0,0,0" VerticalAlignment="Center"
                     IsVisible="{Binding IntroText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" ToolTip.Tip="Tijd tot de zang begint: zolang kun je praten">
               <TextBlock Text="{Binding IntroText}" Foreground="#1A1206" FontWeight="Bold" Classes="mono" />

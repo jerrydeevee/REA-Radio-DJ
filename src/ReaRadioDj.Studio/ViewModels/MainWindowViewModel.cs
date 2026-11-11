@@ -217,6 +217,15 @@ public sealed partial class MainWindowViewModel : ObservableObject
             NowTitle = NowLabel; NowSub = s.Clock is null ? "" : $"klok {s.Clock}";
             NowPos = 0; IntroMark = -1; MixMark = -1; IntroState = ""; MixText = "";
         }
+        // Overlays play on top of everything; show them in the on-air bar so a stray one is never hidden in a tab.
+        OverlayOn = s.Overlays.Count > 0;
+        OverlayText = s.Overlays.Count switch
+        {
+            0 => "",
+            1 => $"{s.Overlays[0].Label}  -{StudioHub.Time(s.Overlays[0].Length - s.Overlays[0].Position)}",
+            int n2 => $"{n2} overlays · {s.Overlays[0].Label}",
+        };
+        OverlayTip = "Overlay speelt over het programma: " + string.Join(", ", s.Overlays.Select(o => o.Label)) + ". Klik om alle overlays te stoppen.";
         NextLabel = s.Upcoming.FirstOrDefault() is { } n ? $"Straks: {n.Label}" : "";
         NextEvent = s.Events.FirstOrDefault() is { } e ? $"{e.Name} over {StudioHub.Time((e.At - s.Time).TotalSeconds)}" : "";
     }
@@ -230,6 +239,11 @@ public sealed partial class MainWindowViewModel : ObservableObject
     [RelayCommand] private Task ToggleMic() => Hub.Client.PostAsync("/api/mixer/mic/toggle");
     [RelayCommand] private Task AddBreak() => Hub.Client.PostAsync("/api/log/break", new AddBreakRequest(0));
     [RelayCommand] private Task StopCarts() => Hub.Client.PostAsync("/api/carts/stop");
+    [RelayCommand] private Task StopOverlays() => Hub.Client.PostAsync("/api/overlays/stop");
+
+    [ObservableProperty] private bool _overlayOn;
+    [ObservableProperty] private string _overlayText = "";
+    [ObservableProperty] private string _overlayTip = "";
 
     [RelayCommand]
     private Task PflToggle() => Hub.PlayerCommand("pfl", "toggle");
