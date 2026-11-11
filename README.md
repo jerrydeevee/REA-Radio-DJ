@@ -8,6 +8,21 @@ VoIP-kanalen voor bellers en verslaggevers, en bediening via MIDI, Livewire, Emb
 > Status: in ontwikkeling (proof of concept). Nog niet bedoeld voor een echte zender. Wat klaar is en wat nog
 > open staat, staat in [docs/WERKLIJST.md](docs/WERKLIJST.md).
 
+## Schermafdrukken
+
+![De werkruimte Live: aan-de-luchtbalk, bibliotheek, live-decks, programmalog, cartwall en mixer](docs/screenshots/live.png)
+
+| | |
+|---|---|
+| ![DJ-modus met twee decks, mengpaneel en automix](docs/screenshots/dj-modus.png) | ![Automatisering met de programmalog, klok en berichten](docs/screenshots/automatisering.png) |
+| **DJ-modus**: decks met golfvorm en beatstrepen, mengpaneel en automix | **Automatisering**: programmalog met AI-presentator, klok en berichten |
+| ![Productie met bibliotheek, cue-editor en voicetracking](docs/screenshots/productie.png) | ![Planning met de planner, reclame en programmalog](docs/screenshots/planning.png) |
+| **Productie**: bibliotheek, cue-editor, voicetracking en PFL | **Planning**: dag, week, klokken en vaste tijden, reclamecampagnes |
+| ![Rapportage met as-run, muziekrapport, stream en regiekamer](docs/screenshots/rapportage.png) | |
+| **Rapportage**: as-run, muziekrapport (CSV en PDF), stream en regiekamer | |
+
+Elk venster is te verslepen, te docken of los te laten zweven, ook op een tweede scherm.
+
 ## Wat het kan
 
 ### Uitzending en bedrijfszekerheid
