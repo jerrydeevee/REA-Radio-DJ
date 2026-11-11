@@ -6,7 +6,7 @@ using ReaRadioDj.Core.Data;
 namespace ReaRadioDj.Core.Hardware;
 
 /// <summary>How a device is connected.</summary>
-public enum HwKind { Midi = 0, Serial = 1, Livewire = 2, Ember = 3 }
+public enum HwKind { Midi = 0, Serial = 1, Livewire = 2, Ember = 3, Mackie = 4 }
 
 /// <summary>
 /// A piece of hardware. <see cref="Port"/> is the MIDI device name, the COM port, or the host name (with an optional
@@ -17,7 +17,7 @@ public sealed record HwDevice(long Id, string Name, bool Enabled, HwKind Kind, s
 {
     public HwDevice Checked() => this with
     {
-        Name = string.IsNullOrWhiteSpace(Name) ? Kind switch { HwKind.Midi => "MIDI", HwKind.Serial => "Serieel", HwKind.Ember => "Ember+", _ => "Livewire" } : Name.Trim(),
+        Name = string.IsNullOrWhiteSpace(Name) ? Kind switch { HwKind.Midi => "MIDI", HwKind.Serial => "Serieel", HwKind.Ember => "Ember+", HwKind.Mackie => "Mackie Control", _ => "Livewire" } : Name.Trim(),
         Port = Port?.Trim() ?? "",
         Baud = Baud is >= 300 and <= 921600 ? Baud : 9600,
         Password = Password ?? "",

@@ -355,7 +355,7 @@ public sealed record NewsBlockDto(long Id, string Name, bool Enabled, int Days, 
     long? OpenerId, long? CloserId, string Source, string Folder, int MaxAgeMinutes, long? CategoryId, string Feeds, int MaxHeadlines,
     string? When = null, DateTime? Next = null);
 
-/// <summary>A hardware device. Kind "midi", "serial", "livewire" or "ember"; Port is the MIDI name, COM port or host[:port].</summary>
+/// <summary>A hardware device. Kind "midi", "serial", "livewire", "ember" or "mackie" (Mackie Control surface); Port is the MIDI name, COM port or host[:port].</summary>
 public sealed record HwDeviceDto(long Id, string Name, bool Enabled, string Kind, string Port, int Baud, string Password,
     bool Connected = false, string Status = "");
 
@@ -372,6 +372,22 @@ public sealed record HwEventDto(DateTime Time, long DeviceId, string Device, str
 public sealed record HwEmberItemDto(string Path, string Identifier, string Description, bool IsNode, string Value, string Type, bool Writable);
 
 public sealed record HwPortsDto(List<string> Midi, List<string> Serial);
+
+/// <summary>Choices for Mackie Control surfaces: the channel on the master fader ("" = none), transport buttons, meters.</summary>
+public sealed record MackieSettingsDto(string MasterStrip, bool Transport, bool Meters);
+
+/// <summary>A mixer channel a Mackie surface can show, in strip order.</summary>
+public sealed record MackieChannelDto(string Id, string Name);
+
+/// <summary>A Mackie Control surface: whether it is connected and which channels are on its strips (Bank = first, from 0).</summary>
+public sealed record MackieDeviceDto(long Id, string Name, string Port, bool Connected, string Status, int Bank);
+
+/// <summary>The Mackie Control set-up and what happened lately (newest first).</summary>
+public sealed record MackieDto(MackieSettingsDto Settings, IReadOnlyList<MackieChannelDto> Channels, IReadOnlyList<MackieDeviceDto> Devices,
+    IReadOnlyList<string> Recent);
+
+/// <summary>Messages as if a surface sent them: hex bytes, several separated by commas ("90 10 7F, E0 00 40").</summary>
+public sealed record MackieSimulateRequest(long DeviceId, string Messages);
 
 /// <summary>A DJ function a controller can operate. Kind: button, absolute (fader, knob) or relative (jog wheel).</summary>
 public sealed record DjMidiControlDto(string Id, string Name, string Group, string Kind);

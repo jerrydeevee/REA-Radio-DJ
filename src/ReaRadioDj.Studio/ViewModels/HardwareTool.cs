@@ -11,6 +11,12 @@ public sealed record HwDeviceChoice(long Id, string Name)
     public override string ToString() => Name;
 }
 
+/// <summary>A mixer channel to pick for the master fader of a Mackie Control panel ("" = none).</summary>
+public sealed record HwMackieChoice(string Id, string Name)
+{
+    public override string ToString() => Name;
+}
+
 /// <summary>A button mapping as shown in the list.</summary>
 public sealed record HwInputRow(HwInputDto Input, string Device)
 {
@@ -52,8 +58,8 @@ public sealed partial class HardwareTool : StudioTool
 {
     public HardwareTool() : base("hardware", "Hardware") { }
 
-    public static readonly string[] KindNames = ["MIDI", "Serieel (COM-poort)", "Livewire (GPIO via LWRP)", "Ember+ (Lawo-mengtafel e.a.)"];
-    private static readonly string[] KindValues = ["midi", "serial", "livewire", "ember"];
+    public static readonly string[] KindNames = ["MIDI", "Serieel (COM-poort)", "Livewire (GPIO via LWRP)", "Ember+ (Lawo-mengtafel e.a.)", "Mackie Control (bedieningspaneel met motorfaders)"];
+    private static readonly string[] KindValues = ["midi", "serial", "livewire", "ember", "mackie"];
     public static readonly string[] StateNames = ["Microfoon open", "ON AIR (er speelt iets)", "Automatisch",
         "VoIP 1 gaat over", "VoIP 1 verbonden", "VoIP 2 gaat over", "VoIP 2 verbonden"];
     private static readonly string[] StateValues = ["mic", "onair", "auto", "voip1-ringing", "voip1-connected", "voip2-ringing", "voip2-connected"];
@@ -104,6 +110,7 @@ public sealed partial class HardwareTool : StudioTool
         Selected = Devices.FirstOrDefault(d => d.Id == keep) ?? Devices.FirstOrDefault();
         if (Selected is null) NewDevice();
         ShowStates(o.States);
+        if (await Hub.Client.GetAsync<MackieDto>("/api/hardware/mackie") is { } m) ShowMackie(m, settings: true);
     }
 
     /// <summary>Connection status, studio states and the latest signals, every second.</summary>
@@ -114,6 +121,7 @@ public sealed partial class HardwareTool : StudioTool
             ShowStates(o.States);
             if (Selected is { } s && o.Devices.FirstOrDefault(d => d.Id == s.Id) is { } now) DeviceStatus = StatusText(now);
         }
+        if (IsMackie && await Hub.Client.GetAsync<MackieDto>("/api/hardware/mackie") is { } m) ShowMackie(m, settings: false);
         if (await Hub.Client.GetAsync<List<HwEventDto>>("/api/hardware/events") is { } events
             && (events.Count != Events.Count || (events.Count > 0 && events[0] != Events[0].E)))
         {
@@ -146,13 +154,15 @@ public sealed partial class HardwareTool : StudioTool
     public bool IsSerial => Kind == 1;
     public bool IsLivewire => Kind == 2;
     public bool IsEmber => Kind == 3;
-    public bool HasPortList => Kind < 2;
+    public bool IsMackie => Kind == 4;
+    public bool HasPortList => Kind is 0 or 1 or 4;
     public bool CanBrowseEmber => IsEmber && Id > 0;
     public string PortHint => Kind switch
     {
         0 => "naam van het MIDI-apparaat (kies hieronder)",
         1 => "COM-poort, bijv. COM3 (kies hieronder)",
         2 => "IP-adres of naam van de Livewire-node (poort 93)",
+        4 => "naam van het MIDI-apparaat; zet het paneel zelf in de Mackie Control-modus (kies hieronder)",
         _ => "IP-adres van het apparaat, bijv. 192.168.1.50 (poort 9000, anders :poort erachter)",
     };
 
@@ -161,11 +171,12 @@ public sealed partial class HardwareTool : StudioTool
         OnPropertyChanged(nameof(IsSerial));
         OnPropertyChanged(nameof(IsLivewire));
         OnPropertyChanged(nameof(IsEmber));
+        OnPropertyChanged(nameof(IsMackie));
         OnPropertyChanged(nameof(HasPortList));
         OnPropertyChanged(nameof(CanBrowseEmber));
         OnPropertyChanged(nameof(PortHint));
         Ports.Clear();
-        foreach (var p in value switch { 0 => _ports?.Midi ?? [], 1 => _ports?.Serial ?? [], _ => [] }) Ports.Add(p);
+        foreach (var p in value switch { 0 or 4 => _ports?.Midi ?? [], 1 => _ports?.Serial ?? [], _ => [] }) Ports.Add(p);
     }
 
     [ObservableProperty] private string? _pickPort;
@@ -221,6 +232,57 @@ public sealed partial class HardwareTool : StudioTool
         await Hub.Client.DeleteAsync($"/api/hardware/devices/{Id}");
         Selected = null;
         await LoadAsync();
+    }
+
+    // ---------------------------------------------------------------- Mackie Control
+
+    /// <summary>The channel on the master fader: "" = none.</summary>
+    public ObservableCollection<HwMackieChoice> MackieMasters { get; } = [];
+    [ObservableProperty] private HwMackieChoice? _mackieMaster;
+    [ObservableProperty] private bool _mackieTransport;
+    [ObservableProperty] private bool _mackieMeters = true;
+    [ObservableProperty] private string _mackieChannels = "";
+    [ObservableProperty] private string _mackieRecent = "";
+    [ObservableProperty] private string _mackieTest = "";
+    private bool _mackieLoading;
+
+    private void ShowMackie(MackieDto m, bool settings)
+    {
+        var bank = m.Devices.FirstOrDefault(d => d.Id == Id)?.Bank ?? 0;
+        var on = m.Channels.Skip(bank).Take(8).Select((c, i) => $"{i + 1} {c.Name}");
+        MackieChannels = m.Channels.Count == 0 ? "De engine heeft (nog) geen mengkanalen." : "Op de strips: " + string.Join(" · ", on)
+            + (m.Channels.Count > 8 ? $". Met Bank en Channel schuif je over alle {m.Channels.Count} kanalen." : ".");
+        MackieRecent = string.Join("\n", m.Recent.Take(14));
+        if (!settings) return;
+        _mackieLoading = true;
+        MackieMasters.Clear();
+        MackieMasters.Add(new HwMackieChoice("", "Niets (de masterfader doet niets)"));
+        foreach (var c in m.Channels) MackieMasters.Add(new HwMackieChoice(c.Id, c.Name));
+        MackieMaster = MackieMasters.FirstOrDefault(c => c.Id == m.Settings.MasterStrip) ?? MackieMasters[0];
+        MackieTransport = m.Settings.Transport;
+        MackieMeters = m.Settings.Meters;
+        _mackieLoading = false;
+    }
+
+    partial void OnMackieMasterChanged(HwMackieChoice? value) => _ = SaveMackieAsync();
+    partial void OnMackieTransportChanged(bool value) => _ = SaveMackieAsync();
+    partial void OnMackieMetersChanged(bool value) => _ = SaveMackieAsync();
+
+    private async Task SaveMackieAsync()
+    {
+        if (_mackieLoading) return;
+        if (await Hub.Client.SendForAsync<MackieDto>(HttpMethod.Put, "/api/hardware/mackie",
+                new MackieSettingsDto(MackieMaster?.Id ?? "", MackieTransport, MackieMeters)) is { } m)
+            ShowMackie(m, settings: false);
+    }
+
+    /// <summary>Sends messages as if the panel sent them (hex bytes), to try the set-up without the panel.</summary>
+    [RelayCommand]
+    private async Task MackieSimulate()
+    {
+        if (Id <= 0 || MackieTest.Trim().Length == 0) return;
+        if (await Hub.Client.SendForAsync<MackieDto>(HttpMethod.Post, "/api/hardware/mackie/simulate", new MackieSimulateRequest(Id, MackieTest)) is { } m)
+            ShowMackie(m, settings: false);
     }
 
     // ---------------------------------------------------------------- Ember+ tree

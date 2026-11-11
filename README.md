@@ -95,6 +95,9 @@ Elk venster is te verslepen, te docken of los te laten zweven, ook op een tweede
   en gebeurtenissen (start van een item, microfoon open, stream weg).
 - **Hardware**: MIDI, seriële poorten, Livewire-GPIO en Ember+, voor knoppen, lampjes en tallies.
   *Ember+ is nog niet tegen een echt apparaat getest.*
+- **Mackie Control**: een bedieningspaneel met motorfaders (bijv. iCON V1-M) bedient het mengpaneel: volume,
+  balans, dempen, opnemen en naar de zender per kanaal, met display en meters; de faders volgen de studio.
+  *Nog niet tegen een echt paneel getest.*
 
 ### De studio
 - Een inrichthulp bij de eerste start: stationsnaam, kleurstijl, muziek- en jinglemap en geluidskaarten in vier

@@ -21,7 +21,7 @@ public static class HardwareApi
 
         g.MapPost("/devices", (HwDeviceDto d, HardwareStore store, HardwareService service) =>
         {
-            var kind = d.Kind switch { "serial" => HwKind.Serial, "livewire" => HwKind.Livewire, "ember" => HwKind.Ember, _ => HwKind.Midi };
+            var kind = d.Kind switch { "serial" => HwKind.Serial, "livewire" => HwKind.Livewire, "ember" => HwKind.Ember, "mackie" => HwKind.Mackie, _ => HwKind.Midi };
             long id = store.Save(new HwDevice(d.Id, d.Name, d.Enabled, kind, d.Port, d.Baud, d.Password ?? ""));
             return Results.Ok(Dto(store.Devices().First(x => x.Id == id), service));
         });
@@ -51,6 +51,18 @@ public static class HardwareApi
         g.MapDelete("/outputs/{id:long}", (long id, HardwareStore store) => store.DeleteOutput(id) ? Results.Ok() : Results.NotFound());
         g.MapPost("/devices/{id:long}/simulate", (long id, string trigger, int value, HardwareService service) =>
             service.Simulate(id, trigger, value) ? Results.Ok(service.Recent.FirstOrDefault()) : Results.BadRequest(new { error = "bijv. ch1 note 11 of ch1 cc 7" }));
+
+        // ---- Mackie Control surfaces on the mixer
+        g.MapGet("/mackie", (MackieService s, HardwareStore store, HardwareService service) => Mackie(s, store, service));
+        g.MapPut("/mackie", (MackieSettingsDto d, MackieService s, HardwareStore store, HardwareService service) =>
+        {
+            s.SetSettings(new MackieSettings { MasterStrip = d.MasterStrip ?? "", Transport = d.Transport, Meters = d.Meters });
+            return Mackie(s, store, service);
+        });
+        g.MapPost("/mackie/simulate", (MackieSimulateRequest r, MackieService s, HardwareStore store, HardwareService service) =>
+            store.Devices().All(d => d.Id != r.DeviceId || d.Kind != HwKind.Mackie) ? Results.BadRequest(new { error = "kies een apparaat van de soort Mackie Control" })
+            : s.Simulate(r.DeviceId, r.Messages ?? "") is null ? Results.BadRequest(new { error = "hexadecimale bytes, bijv. 90 10 7F (meerdere met komma's)" })
+            : Results.Ok(Mackie(s, store, service)));
 
         // ---- DJ controller: what each control does, learning, presets
         var m = api.MapGroup("/dj/midi");
@@ -82,6 +94,16 @@ public static class HardwareApi
             service.Test(id, on) ? Results.Ok() : Results.Conflict(new { error = "apparaat niet verbonden" }));
     }
 
+    private static MackieDto Mackie(MackieService s, HardwareStore store, HardwareService service) => new(
+        new MackieSettingsDto(s.Settings.MasterStrip, s.Settings.Transport, s.Settings.Meters),
+        s.Channels.Select(c => new MackieChannelDto(c.Id, c.Name)).ToList(),
+        store.Devices().Where(d => d.Kind == HwKind.Mackie).Select(d =>
+        {
+            var (connected, status) = service.StatusOf(d.Id);
+            return new MackieDeviceDto(d.Id, d.Name, d.Port, connected, d.Enabled ? status : "uit", s.BankOf(d.Id));
+        }).ToList(),
+        s.Recent);
+
     private static DjMidiBindingDto Binding(DjMidiBinding b) => new(b.Control, b.DeviceId, b.Trigger, b.Invert);
 
     private static DjMidiDto Midi(DjMidiService s, HardwareStore store)
@@ -98,7 +120,7 @@ public static class HardwareApi
     private static HwDeviceDto Dto(HwDevice d, HardwareService service)
     {
         var (connected, status) = service.StatusOf(d.Id);
-        return new HwDeviceDto(d.Id, d.Name, d.Enabled, d.Kind switch { HwKind.Serial => "serial", HwKind.Livewire => "livewire", HwKind.Ember => "ember", _ => "midi" },
+        return new HwDeviceDto(d.Id, d.Name, d.Enabled, d.Kind switch { HwKind.Serial => "serial", HwKind.Livewire => "livewire", HwKind.Ember => "ember", HwKind.Mackie => "mackie", _ => "midi" },
             d.Port, d.Baud, d.Password, connected, d.Enabled ? status : "uit");
     }
 }

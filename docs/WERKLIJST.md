@@ -20,7 +20,7 @@ Legenda: ✅ klaar · 🟡 deels · ⬜ open
 | Onderdeel | Stand |
 |---|---|
 | Automatisering, planner, log, spelers, cartwalls, mixer, stream, AI-presentator, voicetracking, nieuws, reclame, rapportage | ✅ (zie ROADMAP, blok Klaar en rondes 2 en 3) |
-| Hardware: MIDI, serieel, Livewire, Ember+ (op nummer of naam) | ✅, Ember+ nog niet tegen een echt apparaat getest |
+| Hardware: MIDI, serieel, Livewire, Ember+ (op nummer of naam), Mackie Control | ✅, Ember+ en Mackie Control nog niet tegen een echt apparaat getest |
 | Nieuwe bovenbalken (app-balk en aan-de-luchtbalk) | ✅ |
 | DJ-modus: vier decks, mengpaneel, werkruimte, overnemen van de automatisering | 🟡 werkt, nog niet beluisterd |
 | Venster Instellingen | ✅ zeven tabbladen |
@@ -274,6 +274,7 @@ Wat het onderzoek naar volwaardige playout-pakketten noemde en wij nog niet hebb
 | ⬜ | USB-GPIO-kaarten, joystickpoort, tweede Ember+- en Livewire-apparaat als reserve |
 | ⬜ | Mengtafels: eerst D&R Airence en D&R Webstation, via een algemene laag zodat AxelTech, Wheatstone en andere fabrikanten erbij kunnen; elk met het openbare protocol van de fabrikant |
 | 🟡 | Ember+ testen tegen LUCI Studio en een Lawo-tafel |
+| 🟡 | Bedieningspaneel met motorfaders via Mackie Control (MCU), bijv. iCON V1-M — gebouwd: apparaatsoort "Mackie Control" in Hardware. Acht strips volgen de mengkanalen (Automatisering, Standby, Cartwall, Overlay, DJ, Microfoon, VoIP 1 en 2, daarna de ingangen; Bank en Channel schuiven): fader = volume met motor die de studio volgt (niet terwijl je hem vasthoudt), draaiknop = balans (indrukken = midden), MUTE = dempen, REC = opnemen, SELECT = naar de zender; lampjes, display (naam en stand) en niveaumeters volgen de mixer. Masterfader op een te kiezen kanaal en transportknoppen (Play = volgende, Stop, Cycle = automatisch) staan standaard uit. Geschreven naar de openbare beschrijving van het protocol; getest met unit tests en nagebootste berichten op een testengine. **Nog te doen:** proef met een echt paneel (iCON V1-M in Mackie-modus): faders, aanraken, display en meters nalopen. HUI niet gebouwd (alleen nodig voor oudere panelen) |
 
 Vraag bij stap 8:
 

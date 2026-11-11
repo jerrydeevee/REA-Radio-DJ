@@ -52,6 +52,27 @@
               <TextBlock Text="{Binding DeviceStatus}" TextWrapping="Wrap" />
               <TextBlock Classes="muted" FontSize="11" TextWrapping="Wrap"
                          Text="De engine houdt elk actief apparaat verbonden en probeert het elke 5 seconden opnieuw als de verbinding wegvalt." />
+              <Border Classes="card" IsVisible="{Binding IsMackie}">
+                <StackPanel Spacing="6">
+                  <TextBlock Text="Mackie Control op het mengpaneel" FontWeight="SemiBold" />
+                  <TextBlock Classes="muted" FontSize="11" TextWrapping="Wrap"
+                             Text="Acht strips volgen de mengkanalen. Fader = volume (de motor volgt de studio), draaiknop = balans (indrukken = midden), MUTE = dempen, REC = opnemen, SELECT = naar de zender aan of uit. Het display toont naam en stand, de meters het niveau. SOLO doet niets." />
+                  <TextBlock Classes="muted" FontSize="11" TextWrapping="Wrap" Text="{Binding MackieChannels}" />
+                  <TextBlock Classes="field" Text="Masterfader" />
+                  <ComboBox ItemsSource="{Binding MackieMasters}" SelectedItem="{Binding MackieMaster}" HorizontalAlignment="Stretch" />
+                  <CheckBox Content="Transportknoppen bedienen de uitzending (Play = volgende, Stop = stoppen, Cycle = automatisch)" IsChecked="{Binding MackieTransport}" />
+                  <TextBlock Classes="muted" FontSize="11" TextWrapping="Wrap"
+                             Text="Staat standaard uit: een per ongeluk ingedrukte knop mag de zender niet stilzetten. Geldt voor alle Mackie-panelen en meteen." />
+                  <CheckBox Content="Niveaumeters op het paneel" IsChecked="{Binding MackieMeters}" />
+                  <TextBlock Classes="field" Text="Uitproberen zonder paneel" />
+                  <DockPanel>
+                    <Button DockPanel.Dock="Right" Classes="small" Content="Versturen" Command="{Binding MackieSimulateCommand}" Margin="6,0,0,0" />
+                    <TextBox Text="{Binding MackieTest}" FontFamily="Consolas" Watermark="bijv. 90 10 7F (MUTE strip 1) of E0 00 40 (fader 1 half)" />
+                  </DockPanel>
+                  <TextBox Text="{Binding MackieRecent}" IsReadOnly="True" FontFamily="Consolas" FontSize="11" Height="140" TextWrapping="NoWrap"
+                           Background="{DynamicResource CardBrush}" Foreground="{DynamicResource TextBrush}" />
+                </StackPanel>
+              </Border>
               <Border Classes="card" IsVisible="{Binding CanBrowseEmber}">
                 <StackPanel Spacing="5">
                   <DockPanel>
