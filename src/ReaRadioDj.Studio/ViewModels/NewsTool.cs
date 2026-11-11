@@ -287,10 +287,10 @@ public sealed partial class NewsTool : StudioTool
         try
         {
             var (r, error) = await Hub.Client.SendWithErrorAsync<NewsCheckDto>(HttpMethod.Post, "/api/news/try",
-                new NewsTryRequest(Current(), Speak: speak, Play: false));
+                new NewsTryRequest(Current(), Speak: speak, Play: speak));   // with the voice: load and play it on PFL
             if (r is null) { CheckText = ""; CheckProblem = error ?? "Proef mislukt: engine niet bereikbaar?"; return; }
             Show(r);
-            if (r.Seconds is double s) CheckText += $"\n• ingesproken: {s:0} seconden, staat klaar in PFL";
+            if (r.Seconds is double s) CheckText += $"\n• ingesproken: {s:0} seconden, speelt op PFL (niet op de lucht)";
         }
         finally { Busy = false; }
     }
