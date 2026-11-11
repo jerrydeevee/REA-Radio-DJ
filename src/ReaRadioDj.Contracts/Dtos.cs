@@ -341,7 +341,10 @@ public sealed record MetaProposalDto(long MediaId, string Song, string Source, s
 
 /// <summary>The state of the metadata lookup; AcoustId = recognition by sound is set up, BySound = songs recognised that way.</summary>
 public sealed record MetaStatusDto(bool Running, int Done, int Total, string Current, int NotFound, int NothingNew, bool Spotify,
-    List<MetaProposalDto> Proposals, bool AcoustId = false, int BySound = 0);
+    List<MetaProposalDto> Proposals, bool AcoustId = false, int BySound = 0, bool AutoOnPlay = false, int AutoDone = 0, string AutoLast = "");
+
+/// <summary>Whether songs are completed automatically the first time they go on air.</summary>
+public sealed record MetaAutoDto(bool Enabled);
 
 /// <summary>AcoustID: whether a key is set (never the key itself), whether fpcalc is there, and where to register an application.</summary>
 public sealed record AcoustIdSettingsDto(bool KeySet, string KeyHint, bool FpcalcFound, bool Usable, string RegisterUrl);

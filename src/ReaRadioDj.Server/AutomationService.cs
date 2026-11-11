@@ -26,6 +26,7 @@ public sealed class AutomationService(
     StreamGroup streamer,
     MessageCenter messages,
     PlayoutOutputs outputs,
+    MetadataService metadata,
     IServiceProvider services,
     ILogger<AutomationService> logger) : BackgroundService, IEventSink
 {
@@ -225,7 +226,12 @@ public sealed class AutomationService(
     {
         try { _asRunIds[key] = asRun.Begin(source, type, media, planned, ai, note); }
         catch (Exception ex) { logger.LogError(ex, "As-run write failed"); }
-        if (media.Id > 0 && media.Kind == MediaKind.Song) library.MarkPlayed(media.Id);
+        if (media.Id > 0 && media.Kind == MediaKind.Song)
+        {
+            library.MarkPlayed(media.Id);
+            try { metadata.OnPlayed(media); } // first time on air: complete its metadata in the background
+            catch (Exception ex) { logger.LogWarning(ex, "Automatic metadata lookup could not start"); }
+        }
         // Program log as text, and the title (stream, file, web address). Only the log changes the title: a jingle
         // from the cartwall or an overlay over a song leaves the song title alone.
         try

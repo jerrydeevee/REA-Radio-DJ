@@ -320,6 +320,29 @@ public sealed class MetadataTests
     }
 
     [Fact]
+    public void A_simpler_search_uses_the_main_artist_and_the_bare_title()
+    {
+        Assert.Equal(("Kygo", "Stole The Show"), MetadataMatch.Simplified("Kygo feat. Parson James", "Stole The Show (feat. Parson James)"));
+        Assert.Equal(("Calvin Harris", "Pray to God"), MetadataMatch.Simplified("Calvin Harris & HAIM", "Pray to God - Radio Edit"));
+        Assert.Null(MetadataMatch.Simplified("Adele", "Hello")); // nothing simpler to try
+    }
+
+    [Fact]
+    public void The_cover_is_looked_for_on_the_own_album_before_compilations()
+    {
+        const string json = """
+            {"recordings":[{"id":"b6227eda-6baf-4f45-b352-9e4f1cfd8fe7","score":100,"title":"Riva","releases":[
+              {"title":"Topmodel Hits","status":"Official","date":"2015-01-01","release-group":{"id":"cf2250b8-17f0-42cc-bf12-91036d0f7f29","primary-type":"Album","secondary-types":["Compilation"]}},
+              {"title":"Riva","status":"Official","date":"2015-02-01","release-group":{"id":"22222222-2222-2222-2222-222222222222","primary-type":"Single"}},
+              {"title":"The Album","status":"Official","date":"2016-03-01","release-group":{"id":"33333333-3333-3333-3333-333333333333","primary-type":"Album"}}]}]}
+            """;
+        var c = MetadataMatch.ParseMusicBrainz(json)[0];
+        Assert.Equal("The Album", c.Album); // the artist's own album, not the earlier compilation
+        Assert.Equal(new[] { "33333333-3333-3333-3333-333333333333", "22222222-2222-2222-2222-222222222222", "cf2250b8-17f0-42cc-bf12-91036d0f7f29" },
+            c.CoverCandidates);
+    }
+
+    [Fact]
     public void Search_addresses_quote_the_title_and_artist()
     {
         var url = Uri.UnescapeDataString(MetadataMatch.MusicBrainzUrl("Guns N' Roses", "Sweet \"Child\""));

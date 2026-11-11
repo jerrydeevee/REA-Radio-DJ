@@ -169,6 +169,15 @@ public sealed partial class SourcesTool : StudioTool
     [ObservableProperty] private bool _metaRunning;
     [ObservableProperty] private decimal? _metaLimit = 50;
     [ObservableProperty] private string _spotifyNote = "";
+    [ObservableProperty] private bool _metaAuto;
+    [ObservableProperty] private string _metaAutoNote = "";
+    private bool _metaAutoLoading;
+
+    partial void OnMetaAutoChanged(bool value)
+    {
+        if (_metaAutoLoading) return;
+        _ = Hub.Client.SendForAsync<MetaAutoDto>(HttpMethod.Put, "/api/metadata/auto", new MetaAutoDto(value));
+    }
 
     private async Task PollMetaAsync()
     {
@@ -183,7 +192,12 @@ public sealed partial class SourcesTool : StudioTool
     {
         if (await Hub.Client.GetAsync<MetaStatusDto>("/api/metadata/status") is not { } s) return;
         MetaRunning = s.Running;
-        SpotifyNote = s.Spotify ? "MusicBrainz, en Spotify als aanvulling." : "MusicBrainz. (Spotify doet mee zodra de Spotify-sleutels zijn ingevuld.)";
+        SpotifyNote = (s.Spotify ? "MusicBrainz, en Spotify als aanvulling" : "MusicBrainz (Spotify doet mee zodra de Spotify-sleutels zijn ingevuld)")
+            + (s.AcoustId ? "; niet gevonden nummers worden op geluid herkend (AcoustID)." : "; herkennen op geluid kan met een AcoustID-sleutel (Instellingen → AcoustID).");
+        _metaAutoLoading = true;
+        MetaAuto = s.AutoOnPlay;
+        _metaAutoLoading = false;
+        MetaAutoNote = s.AutoDone > 0 ? $"Sinds de start {s.AutoDone} nummers aangevuld bij eerste keer draaien; laatste: {s.AutoLast}" : "";
         MetaStatus = s.Running
             ? $"Bezig: {s.Done} van {s.Total} · {s.Current}"
             : s.Total > 0 ? $"Klaar: {s.Total} nummers bekeken · {s.Proposals.Count} met aanvullingen · {s.NothingNew} al compleet · {s.NotFound} niet gevonden" : "";

@@ -11,7 +11,11 @@ namespace ReaRadioDj.Core.Library;
 /// </summary>
 public sealed record MetaCandidate(string Source, string Artist, string Title, string Album, int? Year, string Isrc, string Label,
     double? Length, int Score, string Link = "", string RecordingId = "", string ReleaseGroupId = "", string ArtistId = "",
-    string Genre = "", string Composer = "", string CoverUrl = "");
+    string Genre = "", string Composer = "", string CoverUrl = "", IReadOnlyList<string>? CoverGroups = null)
+{
+    /// <summary>Release groups to try for a cover, best first (own album, single, EP, then compilations).</summary>
+    public IReadOnlyList<string> CoverCandidates => CoverGroups is { Count: > 0 } g ? g : ReleaseGroupId.Length > 0 ? [ReleaseGroupId] : [];
+}
 
 /// <summary>
 /// What a lookup would add to a library item: only fields that are empty now. <see cref="Mbid"/> (the MusicBrainz
@@ -49,6 +53,23 @@ public static partial class MetadataMatch
     [GeneratedRegex(@"[\(\[][^\)\]]*[\)\]]")] private static partial Regex Bracketed();
     [GeneratedRegex(@"\s-\s.*(edit|mix|version|remaster|live|mono|stereo).*$", RegexOptions.IgnoreCase)] private static partial Regex EditSuffix();
     [GeneratedRegex(@"\s(feat\.?|ft\.?|featuring|met|with)\s.*$", RegexOptions.IgnoreCase)] private static partial Regex Featuring();
+
+    /// <summary>
+    /// A simpler search for when the exact one finds nothing: the main artist (without "feat. …", "&amp; …", ", …") and the
+    /// title without "(…)", "[…]" and "- Radio Edit". Null when that is the same as what was searched.
+    /// </summary>
+    public static (string Artist, string Title)? Simplified(string artist, string title)
+    {
+        string a = Featuring().Replace(artist, "");
+        a = MoreArtists().Replace(a, "").Trim();
+        string t = EditSuffix().Replace(Bracketed().Replace(title, " "), " ");
+        t = Spaces().Replace(t, " ").Trim();
+        if (t.Length == 0) return null;
+        return a == artist.Trim() && t == title.Trim() ? null : (a.Length > 0 ? a : artist.Trim(), t);
+    }
+
+    [GeneratedRegex(@"\s*(&|,|\bx\b|\bvs\.?|\band\b|\ben\b).*$", RegexOptions.IgnoreCase)] private static partial Regex MoreArtists();
+    [GeneratedRegex(@"\s{2,}")] private static partial Regex Spaces();
 
     /// <summary>True when the titles are the same and one artist is part of the other ("Calvin Harris" in "Calvin Harris & HAIM").</summary>
     public static bool SameSong(string artist, string title, MetaCandidate c)
@@ -131,27 +152,35 @@ public static partial class MetadataMatch
             if (r.TryGetProperty("artist-credit", out var cr) && cr.GetArrayLength() > 0 && cr[0].TryGetProperty("artist", out var a0))
                 artistId = Str(a0, "id");
             string album = "", group = "";
+            List<string> covers = [];
             string? firstDate = Str(r, "first-release-date") is { Length: > 0 } f ? f : null;
             if (r.TryGetProperty("releases", out var releases))
             {
                 var ordered = releases.EnumerateArray()
                     .Select(x => (Title: Str(x, "title"), Date: Str(x, "date"), Status: Str(x, "status"),
                         Type: x.TryGetProperty("release-group", out var g) ? Str(g, "primary-type") : "",
-                        Group: x.TryGetProperty("release-group", out var g2) ? Str(g2, "id") : ""))
+                        Group: x.TryGetProperty("release-group", out var g2) ? Str(g2, "id") : "",
+                        Compilation: x.TryGetProperty("release-group", out var g3) && g3.TryGetProperty("secondary-types", out var st)
+                            && st.ValueKind == JsonValueKind.Array && st.EnumerateArray().Any(s => s.GetString() == "Compilation")))
                     .OrderBy(x => x.Date.Length == 0 ? "9999" : x.Date, StringComparer.Ordinal)
                     .ToList();
-                var pick = ordered.FirstOrDefault(x => x.Type == "Album" && x.Status is "Official" or "")
-                    is { Title.Length: > 0 } a ? a : ordered.FirstOrDefault();
+                // The album: the artist's own album first, then any album, then the earliest release.
+                var pick = ordered.FirstOrDefault(x => x.Type == "Album" && !x.Compilation && x.Status is "Official" or "") is { Title.Length: > 0 } own ? own
+                    : ordered.FirstOrDefault(x => x.Type == "Album" && x.Status is "Official" or "") is { Title.Length: > 0 } a ? a : ordered.FirstOrDefault();
                 album = pick.Title ?? "";
                 group = pick.Group ?? "";
                 firstDate ??= ordered.FirstOrDefault(x => x.Date.Length > 0).Date;
+                covers = ordered.Where(x => IsMbid(x.Group))
+                    .OrderBy(x => x.Compilation ? 3 : x.Type switch { "Album" => 0, "Single" => 1, "EP" => 2, _ => 3 })
+                    .Select(x => x.Group).Distinct().Take(4).ToList();
             }
             string isrc = r.TryGetProperty("isrcs", out var isrcs) && isrcs.GetArrayLength() > 0 ? isrcs[0].GetString() ?? "" : "";
             double? length = r.TryGetProperty("length", out var len) && len.ValueKind == JsonValueKind.Number ? len.GetDouble() / 1000 : null;
             int score = r.TryGetProperty("score", out var sc) && sc.ValueKind == JsonValueKind.Number ? sc.GetInt32() : 0;
             string id = Str(r, "id");
             list.Add(new MetaCandidate("MusicBrainz", artist.ToString(), title, album, Year(firstDate), isrc, "", length, score,
-                "https://musicbrainz.org/recording/" + id, IsMbid(id) ? id : "", IsMbid(group) ? group : "", IsMbid(artistId) ? artistId : ""));
+                "https://musicbrainz.org/recording/" + id, IsMbid(id) ? id : "", IsMbid(group) ? group : "", IsMbid(artistId) ? artistId : "",
+                CoverGroups: covers));
         }
         return list;
     }

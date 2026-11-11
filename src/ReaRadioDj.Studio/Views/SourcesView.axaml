@@ -76,8 +76,11 @@
     <TabItem Header="Metadata">
       <DockPanel Margin="2,4,2,2">
         <StackPanel DockPanel.Dock="Top" Spacing="5">
-          <TextBlock TextWrapping="Wrap" Text="Zoekt ontbrekend album, jaar, ISRC en label op voor nummers waar iets van mist. Er verandert niets tot je voorstellen toepast, en dan worden alleen lege velden gevuld." />
+          <TextBlock TextWrapping="Wrap" Text="Zoekt ontbrekend album, jaar, ISRC, label, genre, componist/auteur en hoes op voor nummers waar iets van mist. Er verandert niets tot je voorstellen toepast, en dan worden alleen lege velden gevuld. Een hoes wordt alleen voorgesteld als het nummer er nog geen heeft." />
           <TextBlock Classes="muted" FontSize="11" TextWrapping="Wrap" Text="{Binding SpotifyNote}" />
+          <CheckBox IsChecked="{Binding MetaAuto}" Content="Automatisch aanvullen als een nummer voor het eerst draait"
+                    ToolTip.Tip="Het nummer wordt op de achtergrond opgezocht en lege velden (ook de hoes) worden direct gevuld; elk nummer één keer. Het afspelen wacht er niet op." />
+          <TextBlock Classes="muted" FontSize="11" TextWrapping="Wrap" Text="{Binding MetaAutoNote}" IsVisible="{Binding MetaAutoNote, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
           <WrapPanel>
             <TextBlock Text="hoogstens" VerticalAlignment="Center" Margin="0,0,6,4" />
             <NumericUpDown Value="{Binding MetaLimit}" Minimum="1" Maximum="1000" Increment="25" FormatString="0" Width="110" Margin="0,0,6,4" />
