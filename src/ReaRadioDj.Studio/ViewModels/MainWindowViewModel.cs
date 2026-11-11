@@ -33,6 +33,8 @@ public sealed partial class MainWindowViewModel : ObservableObject
         Hub = StudioHub.Start(_settings);
         if (_settings.StartEngine) _ = EnsureEngineAsync();
         Hub.StateReceived += OnState;
+        Hub.StateReceived += CheckSetup;
+        _forceSetup = args.Contains("--setup");   // --setup: open the setup helper at start (also for screenshots)
         Hub.PropertyChanged += (_, e) => { if (e.PropertyName is nameof(StudioHub.Status) or nameof(StudioHub.ConnectionText)) OnPropertyChanged(nameof(StatusLine)); };
         Hub.EditCuesRequested += id => ShowWindow("cues");
         Hub.TransitionRequested += _ => ShowWindow("transition");
@@ -320,6 +322,41 @@ public sealed partial class MainWindowViewModel : ObservableObject
     private Task SetMode(string? mode) => (mode == "auto") == AutoPlay
         ? Task.CompletedTask
         : Hub.Client.PostAsync("/api/transport/autoplay", new SwitchRequest(mode == "auto"));
+
+    // ------------------------------------------------------------ setup helper
+
+    public SetupWizardVm Setup { get; } = new();
+    private readonly bool _forceSetup;
+    private bool _setupChecked;
+
+    [RelayCommand] private Task OpenSetup() => Setup.OpenAsync();
+
+    /// <summary>Once, at the first state from the engine: open the setup helper on a new installation (nothing in the library yet).</summary>
+    private void CheckSetup(StateDto _)
+    {
+        if (_setupChecked) return;
+        _setupChecked = true;
+        Hub.StateReceived -= CheckSetup;
+        Dispatcher.UIThread.Post(async () =>
+        {
+            if (_forceSetup)
+            {
+                await Setup.OpenAsync();
+                // --setup-step <1-4>: show that step (for screenshots without a mouse)
+                var a = Environment.GetCommandLineArgs();
+                int si = Array.IndexOf(a, "--setup-step");
+                if (si >= 0 && si + 1 < a.Length && int.TryParse(a[si + 1], out int step))
+                    Setup.Step = Math.Clamp(step - 1, 0, SetupWizardVm.Steps - 1);
+                return;
+            }
+            if (_settings.SetupDone) return;
+            var folders = await Hub.Client.GetAsync<List<LibraryFolderDto>>("/api/library/folders");
+            if (folders is null) return;
+            bool empty = folders.All(f => f.Fixed) && folders.All(f => (f.Files ?? 0) == 0);
+            if (empty) await Setup.OpenAsync();
+            else { _settings.SetupDone = true; _settings.Save(); }   // an existing station: never ask
+        });
+    }
 
     private void OnState(StateDto s)
     {

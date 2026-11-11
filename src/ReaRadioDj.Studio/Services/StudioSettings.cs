@@ -10,6 +10,8 @@ public sealed class StudioSettings
     public string? EnginePath { get; set; }
     public string? EngineWorkingDirectory { get; set; }
     public bool StartEngine { get; set; } = true;
+    /// <summary>The setup helper was finished or skipped, so it does not open by itself again.</summary>
+    public bool SetupDone { get; set; }
     /// <summary>Colour style: regiekamer, daglicht, dark, night, light, contrast … (see Appearance).</summary>
     public string Theme { get; set; } = "regiekamer";
     /// <summary>Corner shape: square, normal or round.</summary>

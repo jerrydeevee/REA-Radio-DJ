@@ -2,6 +2,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:ReaRadioDj.Studio.ViewModels"
         xmlns:ctl="using:ReaRadioDj.Studio.Controls"
+        xmlns:views="using:ReaRadioDj.Studio.Views"
         x:Class="ReaRadioDj.Studio.Views.MainWindow"
         x:DataType="vm:MainWindowViewModel"
         Title="{Binding Station, StringFormat='{}{0} · Studio'}"
@@ -33,6 +34,7 @@
             <Separator />
             <MenuItem Header="Ga naar venster…" InputGesture="Ctrl+K" Command="{Binding OpenGoToCommand}" />
             <MenuItem Header="Instellingen…" Command="{Binding ShowWindowCommand}" CommandParameter="settings" />
+            <MenuItem Header="Inrichthulp…" Command="{Binding OpenSetupCommand}" />
         <MenuItem Header="Bediening en sneltoetsen…" Command="{Binding ShowWindowCommand}" CommandParameter="control" />
           </MenuItem>
           <MenuItem Header="_Vensters" ItemsSource="{Binding WindowMenu}" Command="{x:Null}" CommandParameter="{x:Null}">
@@ -297,6 +299,9 @@
       </StackPanel>
     </StackPanel>
   </Border>
+
+  <!-- First start: the setup helper over the whole studio. -->
+  <views:SetupView DataContext="{Binding Setup}" IsVisible="{Binding IsOpen}" />
   </Panel>
   </LayoutTransformControl>
   </Panel>

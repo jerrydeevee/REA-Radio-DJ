@@ -292,7 +292,7 @@ Vraag bij stap 8:
 
 | Status | Werk |
 |---|---|
-| ⬜ | Inrichthulp bij de eerste start |
+| ✅ | Inrichthulp bij de eerste start — opent vanzelf bij een nieuwe installatie (nog geen muziek in de bibliotheek), en altijd via Studio › Inrichthulp. Vier stappen: stationsnaam en kleurstijl (meteen te zien), muziek- en jinglemap met Bladeren, geluidskaart voor uitzending en voorluisteren met testtoon, en automatisch starten met een overzicht. Verandert alleen wat het laat zien; wachtwoorden blijven bewaard. Een bestaand station met muziek krijgt de hulp nooit vanzelf. Getest op een lege en een gevulde test-engine (opslaan, testtoon, wel of niet openen); doorklikken met de muis nog niet |
 | 🟡 | Installatieprogramma, controle op nieuwe versies, pagina Over — pagina Over klaar: opstartscherm en Info › Over REA-Radio-DJ (gemaakt door ICT Holland, DVC-it; versie, licentie, BASS, broncode). Installatieprogramma en versiecontrole nog open |
 | ⬜ | Handleiding voor de studio en voor de beheerder |
 

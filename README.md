@@ -97,6 +97,8 @@ Elk venster is te verslepen, te docken of los te laten zweven, ook op een tweede
   *Ember+ is nog niet tegen een echt apparaat getest.*
 
 ### De studio
+- Een inrichthulp bij de eerste start: stationsnaam, kleurstijl, muziek- en jinglemap en geluidskaarten in vier
+  stappen (later terug te vinden onder *Studio › Inrichthulp*).
 - Werkruimtes Live, DJ, Automatisering, Productie, Planning en Rapportage, met werkbladen per scherm.
 - Meerdere thema's (donker, licht en meer), instelbare lettergrootte en schaal, een aanraakmodus en kleuren per
   soort item.
@@ -131,7 +133,7 @@ categorie) en jingles in `media\jingles`, naast de plek waar je de engine start,
 - Slepen vanuit de bibliotheek naar log, speler of cartknop; dubbelklik = voorbeluisteren (PFL).
 - Sneltoetsen: F5 volgende, F6 automatisch/assist, F8 microfoon, F9 stop.
 - Opties: `--engine <url>`, `--no-engine`, `--profile <map>` (eigen instellingenmap), `--show <venster>`,
-  `--float <venster>`.
+  `--float <venster>`, `--workspace <live|dj|auto|prod|plan|report>`, `--setup` (inrichthulp openen).
 
 ## Instellingen
 
