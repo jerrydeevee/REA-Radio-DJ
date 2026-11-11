@@ -317,7 +317,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
     // ------------------------------------------------------------ windows and layouts
 
     [RelayCommand]
-    private void ShowWindow(string id)
+    public void ShowWindow(string id)
     {
         if (Layout is null) return;
         var existing = FindAnywhere(d => d.Id == id);

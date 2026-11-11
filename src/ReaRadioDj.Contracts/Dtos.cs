@@ -449,6 +449,17 @@ public sealed record SpotifyTestDto(bool Ok, string Message);
 
 public sealed record MusicReportSummaryDto(int Tracks, double Seconds, int WithoutIsrc, int WithoutComposer);
 
+/// <summary>Broadcast statistics of a period (from the as-run log). Seconds are rounded.</summary>
+public sealed record AirStatsDto(DateOnly From, DateOnly To, int Items, int Songs, double MusicSeconds, double SpeechSeconds,
+    double JingleSeconds, double OtherSeconds, List<AirStatsCountDto> TopTracks, List<AirStatsCountDto> TopArtists,
+    List<AirStatsRotationDto> Rotation, List<int> SongsPerHour, int IdleDays, List<AirStatsIdleDto> Idle);
+
+public sealed record AirStatsCountDto(string Name, string Detail, int Plays, double Seconds);
+
+public sealed record AirStatsRotationDto(string Category, int Plays, int Tracks, double Seconds);
+
+public sealed record AirStatsIdleDto(long MediaId, string Artist, string Title, string Category, DateTime? LastPlayed);
+
 /// <summary>AI presenter settings changed in the studio. ApiKey comes back masked; sending the mask keeps the stored key.</summary>
 public sealed record PresenterSettingsDto(bool Enabled, string PresenterName, string Persona, int MaxWords, string LlmBaseUrl,
     string LlmModel, string LlmApiKey, double Temperature, bool RequireApproval, bool PostProcess, long? BedCategoryId = null);

@@ -109,6 +109,13 @@ public partial class MainWindow : Window
             Width = ww;
             Height = wh;
         }
+        // --show <window id>: brings one window to the front after start (screenshots of a window that is a tab).
+        int si = Array.IndexOf(args, "--show");
+        if (si >= 0 && si + 1 < args.Length)
+        {
+            string id = args[si + 1];
+            Opened += (_, _) => DispatcherTimer.RunOnce(() => (DataContext as ViewModels.MainWindowViewModel)?.ShowWindow(id), TimeSpan.FromSeconds(1));
+        }
         int i = Array.IndexOf(args, "--screenshot");
         if (i >= 0 && i + 1 < args.Length)
         {

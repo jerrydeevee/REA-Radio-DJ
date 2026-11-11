@@ -112,6 +112,7 @@ builder.Services.AddSingleton(sp => new CreativePicker(sp.GetRequiredService<IHt
 // Wish list (Spotify metadata only) and the music report for Buma/Stemra and Sena.
 builder.Services.AddSingleton<ReaRadioDj.Core.Library.Wishlist>();
 builder.Services.AddSingleton<ReaRadioDj.Core.Studio.MusicReport>();
+builder.Services.AddSingleton<ReaRadioDj.Core.Studio.AirStats>();
 builder.Services.AddSingleton<SpotifyService>();
 builder.Services.AddSingleton<AcoustIdService>();
 builder.Services.AddSingleton(sp =>

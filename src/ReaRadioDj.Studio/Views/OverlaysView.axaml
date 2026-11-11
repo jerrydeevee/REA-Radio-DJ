@@ -4,10 +4,11 @@
              x:Class="ReaRadioDj.Studio.Views.OverlaysView"
              x:DataType="vm:OverlaysTool">
   <DockPanel Margin="6">
-    <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="6" Margin="0,0,0,6">
+    <!-- wraps in a narrow panel instead of cutting off "Alles stop" -->
+    <WrapPanel DockPanel.Dock="Top" ItemSpacing="6" LineSpacing="6" Margin="0,0,0,6">
       <Button Content="Speel selectie als overlay" Command="{Binding PlaySelectedCommand}" />
       <Button Content="Alles stop" Command="{Binding StopAllCommand}" />
-    </StackPanel>
+    </WrapPanel>
     <TextBlock DockPanel.Dock="Bottom" Classes="muted" TextWrapping="Wrap" Margin="0,6,0,0"
                Text="Een overlay speelt bovenop de automatisering; die dimt zolang de overlay loopt. Vaste tijden kunnen ook als overlay starten." />
     <ItemsControl ItemsSource="{Binding Active}">

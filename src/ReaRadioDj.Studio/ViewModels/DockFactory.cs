@@ -32,6 +32,7 @@ public sealed class DockFactory : Factory
         ("mixer", "Mixer en routing", () => new MixerTool()),
         ("planner", "Planner", () => new PlannerTool()),
         ("asrun", "As-run", () => new AsRunTool()),
+        ("airstats", "Uitzendstatistiek", () => new AirStatsTool()),
         ("wishlist", "Wensenlijst (Spotify)", () => new WishlistTool()),
         ("clock", "Tijd", () => new ClockTool()),
         ("presenter", "AI-presentator", () => new PresenterTool()),
@@ -105,7 +106,7 @@ public sealed class DockFactory : Factory
         if (Workspace == "report")
             // Reports and technique: what went out, the music report, the stream, hardware and control.
             return Root(Row("main",
-                Column("r-left", 0.58, Tools("dock-asrun", "asrun", "log")),
+                Column("r-left", 0.58, Tools("dock-asrun", "asrun", "airstats", "log")),
                 Column("r-right", 0.42, Sized(0.6, "dock-tech", "stream", "hardware", "control"), Sized(0.4, "dock-status", "regie", "messages", "clock"))));
 
         if (Workspace == "dj")

@@ -319,6 +319,15 @@ public static class StudioApi
             var csv = System.Text.Encoding.UTF8.GetPreamble().Concat(System.Text.Encoding.UTF8.GetBytes(AsRunLog.ToCsv(a.Day(d)))).ToArray();
             return Results.File(csv, "text/csv", $"asrun-{d:yyyy-MM-dd}.csv");
         });
+        // Broadcast statistics: from and to are days, to included; idle = songs not played for that many days.
+        api.MapGet("/reports/airstats", (AirStats st, DateOnly from, DateOnly to, int? top, int? idle) => AirStatsOf(st, from, to, top, idle));
+        api.MapGet("/reports/airstats.csv", (AirStats st, DateOnly from, DateOnly to, int? top, int? idle) =>
+        {
+            var (summary, list) = AirStatsData(st, from, to, top, idle);
+            var csv = System.Text.Encoding.UTF8.GetPreamble()
+                .Concat(System.Text.Encoding.UTF8.GetBytes(AirStats.Csv(summary, list, options.StationName, from, to))).ToArray();
+            return Results.File(csv, "text/csv", $"uitzendstatistiek-{from:yyyy-MM-dd}-{to:yyyy-MM-dd}.csv");
+        });
         api.MapGet("/messages", (MessageCenter m, long? since) => m.Since(since ?? 0).Select(x => new MessageDto(x.Id, x.Time, x.Level, x.Text)));
 
         api.MapPost("/stream/start", (StreamGroup s, PlayoutEngine e) => { s.Start(e.MixerHandle); return Results.Ok(s.GetStatus()); });
@@ -343,6 +352,27 @@ public static class StudioApi
 
     private static RoutingDto Routing(RoutingSettings s) =>
         new(s.OutputDevice, s.PreviewDevice, s.MicEnabled, s.MicDevice, s.MicDuckLevel, s.OverlayDuckLevel);
+
+    private static (AirStatsSummary Summary, IReadOnlyList<AirStatsIdle> Idle) AirStatsData(AirStats st, DateOnly from, DateOnly to, int? top, int? idle)
+    {
+        if (to < from) (from, to) = (to, from);
+        int days = Math.Clamp(idle ?? 60, 1, 3650);
+        var end = to.AddDays(1).ToDateTime(TimeOnly.MinValue);
+        return (st.Summary(from.ToDateTime(TimeOnly.MinValue), end, Math.Clamp(top ?? 20, 1, 200)), st.Idle(end.AddDays(-days)));
+    }
+
+    private static AirStatsDto AirStatsOf(AirStats st, DateOnly from, DateOnly to, int? top, int? idle)
+    {
+        var (s, list) = AirStatsData(st, from, to, top, idle);
+        return new AirStatsDto(from <= to ? from : to, from <= to ? to : from, s.Items, s.Songs, s.MusicSeconds, s.SpeechSeconds,
+            s.JingleSeconds, s.OtherSeconds,
+            s.TopTracks.Select(x => new AirStatsCountDto(x.Name, x.Detail, x.Plays, x.Seconds)).ToList(),
+            s.TopArtists.Select(x => new AirStatsCountDto(x.Name, x.Detail, x.Plays, x.Seconds)).ToList(),
+            s.Rotation.Select(x => new AirStatsRotationDto(x.Category, x.Plays, x.Tracks, x.Seconds)).ToList(),
+            s.SongsPerHour.ToList(), Math.Clamp(idle ?? 60, 1, 3650),
+            list.Select(x => new AirStatsIdleDto(x.MediaId, x.Artist, x.Title, x.Category, x.LastPlayed)).ToList());
+    }
+
 }
 
 public sealed record PlayerCommand(long? MediaId, double? Seconds);

@@ -1,0 +1,108 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:ReaRadioDj.Studio.ViewModels"
+             xmlns:ctl="using:ReaRadioDj.Studio.Controls"
+             x:Class="ReaRadioDj.Studio.Views.AirStatsView"
+             x:DataType="vm:AirStatsTool">
+  <UserControl.Resources>
+    <!-- one line of a list: place, name with detail, value, and a thin bar against the first line -->
+    <DataTemplate x:Key="StatRow" x:DataType="vm:AirStatsRow">
+      <Grid ColumnDefinitions="26,*,Auto" RowDefinitions="Auto,Auto" Margin="0,0,0,6">
+        <TextBlock Grid.RowSpan="2" Classes="mono muted" FontSize="12" Text="{Binding Place}" VerticalAlignment="Top" Margin="0,2,0,0" />
+        <StackPanel Grid.Column="1" Margin="0,0,8,0">
+          <TextBlock Text="{Binding Name}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+          <TextBlock Classes="muted" FontSize="11" Text="{Binding Detail}" TextTrimming="CharacterEllipsis"
+                     IsVisible="{Binding Detail, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+        </StackPanel>
+        <TextBlock Grid.Column="2" Classes="mono" FontSize="12" Text="{Binding Value}" VerticalAlignment="Top" Margin="0,2,0,0" />
+        <ProgressBar Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="2" Value="{Binding Bar}" Maximum="100" Height="3" MinHeight="3" MinWidth="0"
+                     Margin="0,3,0,0" Foreground="{DynamicResource AccentBrush}" IsVisible="{Binding HasBar}" />
+      </Grid>
+    </DataTemplate>
+  </UserControl.Resources>
+
+  <DockPanel Margin="6" ctl:WidthClasses.Track="True">
+    <WrapPanel DockPanel.Dock="Top" ItemSpacing="6" LineSpacing="6" Margin="0,0,0,6">
+      <ComboBox ItemsSource="{Binding PeriodNames}" SelectedIndex="{Binding Period}" MinWidth="100" />
+      <Button Classes="small" Content="◀" Command="{Binding PreviousCommand}" ToolTip.Tip="Vorige periode" VerticalAlignment="Center" />
+      <CalendarDatePicker SelectedDate="{Binding Day}" />
+      <Button Classes="small" Content="▶" Command="{Binding NextCommand}" ToolTip.Tip="Volgende periode" VerticalAlignment="Center" />
+      <Button Classes="small" Content="Vernieuwen" Command="{Binding LoadCommand}" VerticalAlignment="Center" />
+      <Button Classes="small" x:Name="Export" Content="Exporteer CSV…" VerticalAlignment="Center"
+              ToolTip.Tip="Alle lijsten van deze periode in één bestand, voor een spreadsheet" />
+    </WrapPanel>
+
+    <ScrollViewer HorizontalScrollBarVisibility="Disabled">
+      <StackPanel Spacing="8">
+        <!-- totals and the share of music against speech -->
+        <Border Classes="card">
+          <StackPanel Spacing="4">
+            <TextBlock Classes="h" Text="{Binding PeriodText}" TextTrimming="CharacterEllipsis" />
+            <TextBlock Classes="muted" Text="{Binding Totals}" TextWrapping="Wrap" IsVisible="{Binding HasData}" />
+            <Grid ColumnDefinitions="*" Height="10" Margin="0,4,0,0" IsVisible="{Binding HasData}">
+              <ProgressBar Value="{Binding MusicShare}" Maximum="100" Height="10" MinHeight="10" MinWidth="0"
+                           Foreground="{DynamicResource AccentBrush}" ToolTip.Tip="Aandeel muziek in de zendtijd" />
+            </Grid>
+            <TextBlock Classes="muted" FontSize="12" Text="{Binding ShareText}" TextWrapping="Wrap" />
+          </StackPanel>
+        </Border>
+
+        <!-- songs per hour of the day -->
+        <Border Classes="card" IsVisible="{Binding HasData}">
+          <StackPanel Spacing="4">
+            <TextBlock FontWeight="SemiBold" Text="Nummers per uur van de dag" />
+            <ItemsControl ItemsSource="{Binding Hours}">
+              <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate><UniformGrid Rows="1" /></ItemsPanelTemplate>
+              </ItemsControl.ItemsPanel>
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="vm:AirStatsHour">
+                  <StackPanel Margin="1,0" ToolTip.Tip="{Binding Tip}">
+                    <Panel Height="62">
+                      <Border VerticalAlignment="Bottom" Height="{Binding Height}" Background="{DynamicResource AccentBrush}"
+                              CornerRadius="{DynamicResource Radius2}" />
+                    </Panel>
+                    <TextBlock Classes="mono muted" FontSize="10" Text="{Binding Label}" HorizontalAlignment="Center" />
+                  </StackPanel>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </StackPanel>
+        </Border>
+
+        <!-- the lists: two columns when there is room, one when narrow (see the code-behind) -->
+        <UniformGrid x:Name="Lists" Columns="2">
+          <Border Classes="card" Margin="0,0,8,8">
+            <StackPanel>
+              <TextBlock FontWeight="SemiBold" Text="Meest gedraaide nummers" Margin="0,0,0,6" />
+              <TextBlock Classes="muted" Text="Nog niets gedraaid." IsVisible="{Binding !HasData}" />
+              <ItemsControl ItemsSource="{Binding TopTracks}" ItemTemplate="{StaticResource StatRow}" />
+            </StackPanel>
+          </Border>
+          <Border Classes="card" Margin="0,0,8,8">
+            <StackPanel>
+              <TextBlock FontWeight="SemiBold" Text="Meest gedraaide artiesten" Margin="0,0,0,6" />
+              <TextBlock Classes="muted" Text="Nog niets gedraaid." IsVisible="{Binding !HasData}" />
+              <ItemsControl ItemsSource="{Binding TopArtists}" ItemTemplate="{StaticResource StatRow}" />
+            </StackPanel>
+          </Border>
+          <Border Classes="card" Margin="0,0,8,8">
+            <StackPanel>
+              <TextBlock FontWeight="SemiBold" Text="Rotatie per categorie" Margin="0,0,0,6" />
+              <TextBlock Classes="muted" Text="Nog niets gedraaid." IsVisible="{Binding !HasData}" />
+              <ItemsControl ItemsSource="{Binding Rotation}" ItemTemplate="{StaticResource StatRow}" />
+            </StackPanel>
+          </Border>
+          <Border Classes="card" Margin="0,0,8,8">
+            <StackPanel>
+              <TextBlock FontWeight="SemiBold" Text="{Binding IdleTitle}" Margin="0,0,0,4" />
+              <ComboBox ItemsSource="{Binding IdleNames}" SelectedIndex="{Binding IdleIndex}" MinWidth="140" Margin="0,0,0,6"
+                        ToolTip.Tip="Muzieknummers in de bibliotheek die zo lang niet op de zender zijn geweest (nooit gedraaid eerst)" />
+              <ItemsControl ItemsSource="{Binding Idle}" ItemTemplate="{StaticResource StatRow}" />
+            </StackPanel>
+          </Border>
+        </UniformGrid>
+      </StackPanel>
+    </ScrollViewer>
+  </DockPanel>
+</UserControl>
