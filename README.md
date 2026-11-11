@@ -103,7 +103,23 @@ Elk venster is te verslepen, te docken of los te laten zweven, ook op een tweede
 - Meerdere thema's (donker, licht en meer), instelbare lettergrootte en schaal, een aanraakmodus en kleuren per
   soort item.
 
-## Snel starten (Windows 10/11, x64)
+## Installeren (Windows 10/11, x64)
+
+Bij elke [uitgave](https://github.com/jerrydeevee/REA-Radio-DJ/releases) staat een zip; vanaf 1.1.0 ook een
+setup (`REA-Radio-DJ-<versie>-setup.exe`). .NET hoeft niet apart geïnstalleerd te worden.
+
+- De setup installeert voor de eigen gebruiker, zonder beheerdersrechten, in `%LocalAppData%\Programs\REA-Radio-DJ`.
+  De engine bewaart zijn database, muziek en opnamen naast zichzelf (`engine\data`, `engine\media`).
+- De setup zet REA-Radio-DJ in het Startmenu (studio, engine en web-interface). Een snelkoppeling op het
+  bureaublad en het starten van de engine bij aanmelden zijn keuzes in de setup.
+- Een nieuwere setup installeert over de oude heen. Verwijderen gaat via Windows-instellingen › Apps: de
+  engine wordt gestopt, en `engine\data` en `engine\media` blijven staan.
+- De studio meldt een nieuwere uitgave rechts onderin (Info › Zoeken naar updates).
+
+Een setup bouwen kan met [Inno Setup 6](https://jrsoftware.org/isinfo.php):
+`powershell -ExecutionPolicy Bypass -File scripts\build-installer.ps1` (BASS moet in `native\` staan).
+
+## Snel starten vanuit de broncode
 
 1. Installeer de [.NET 9 SDK](https://dotnet.microsoft.com/download).
 2. Haal BASS op (komt niet mee in de repository):
@@ -185,6 +201,7 @@ src/ReaRadioDj.Server     de engine-service: REST, WebSocket, server-sent events
 src/ReaRadioDj.Studio     de desktop-studio (Avalonia + Dock): dokbare en zwevende vensters
 tests/ReaRadioDj.Tests    unit tests en audiotests (draaien op het "no sound"-apparaat van BASS)
 scripts/fetch-bass.ps1   downloadt BASS naar /native
+scripts/build-installer.ps1, installer/   bouwen de Windows-setup (Inno Setup 6)
 ```
 
 De mixer bestaat uit geneste BASS-mixers: uitgangen (uitzending, PFL) → kanalen → bronnen. Een controlelus van
