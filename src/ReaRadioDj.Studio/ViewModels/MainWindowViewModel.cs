@@ -795,6 +795,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
         else { window.X = 100; window.Y = 100; window.Width = 1200; window.Height = 800; }
         _factory.AddWindow(Layout, window);
         window.Present(false);
+        EnsureWindowFocus();
         if (screen is not null) PlaceOnScreen(window, screen, maximize: true);
         Hub.Status = $"Werkblad {n} geopend{(entry is null ? "" : $" op scherm {entry.Index + 1}")}: sleep er vensters heen of kies ze op het werkblad";
     }
@@ -850,8 +851,29 @@ public sealed partial class MainWindowViewModel : ObservableObject
     /// <summary>After a layout opens: workbenches go back to their screen (or the main screen when it is gone) and size.</summary>
     private void RestoreWindowsSoon() => DispatcherTimer.RunOnce(RestoreWindows, TimeSpan.FromMilliseconds(400));
 
+    /// <summary>
+    /// Gives every floating window and workbench a focused window. The docking library shows the drop targets at the
+    /// edges of the main window (a full-height column, a full-width row) for a dragged window only when that window
+    /// has one; without it only the targets of the panel under the mouse appear, so "left" lands next to that panel.
+    /// A workbench (made with CreateWindowFrom) and a window restored from a layout file can have none.
+    /// </summary>
+    private void EnsureWindowFocus()
+    {
+        foreach (var w in FloatingWindows)
+            if (w.Layout is { FocusedDockable: null } root && FirstTool(root) is { Owner: IDock owner } tool)
+                _factory.SetFocusedDockable(owner, tool);
+    }
+
+    private static IDockable? FirstTool(IDock dock)
+    {
+        if (dock.ActiveDockable is ITool active) return active;
+        if (dock.VisibleDockables is not { } children) return null;
+        return children.FirstOrDefault(c => c is ITool) ?? children.OfType<IDock>().Select(FirstTool).FirstOrDefault(t => t is not null);
+    }
+
     private void RestoreWindows()
     {
+        EnsureWindowFocus();
         var screens = SortedScreens();
         if (screens.Count == 0) return;
         foreach (var w in FloatingWindows.ToList())
