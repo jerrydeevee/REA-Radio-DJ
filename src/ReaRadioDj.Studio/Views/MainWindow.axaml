@@ -9,11 +9,13 @@
         Icon="/Assets/rea.ico"
         Background="{DynamicResource AppBrush}"
         WindowStartupLocation="CenterScreen">
-  <LayoutTransformControl x:Name="Zoom">
   <Panel>
   <DockPanel>
+    <!-- The size setting scales the bars and every window's contents, but not the docking area itself: Dock works out
+         its drop targets without transforms (see ScaledContent). -->
+    <LayoutTransformControl x:Name="Zoom" DockPanel.Dock="Top">
     <!-- App bar: name, menu, workspaces, layout and engine state -->
-    <Border DockPanel.Dock="Top" Padding="16,6" Background="{DynamicResource BarBrush}" BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="0,0,0,1">
+    <Border Padding="16,6" Background="{DynamicResource BarBrush}" BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="0,0,0,1">
       <!-- Narrower windows: the name, the connection text and the layout choice drop off first (all three are also
            elsewhere: window title, status dot with tooltip, Indeling menu); below 1100 px the workspaces get their own row. -->
       <Grid x:Name="AppBar" ColumnDefinitions="Auto,Auto,Auto,*,Auto,Auto" RowDefinitions="Auto,Auto">
@@ -106,9 +108,11 @@
         </StackPanel>
       </Grid>
     </Border>
+    </LayoutTransformControl>
 
     <!-- Status bar -->
-    <Border DockPanel.Dock="Bottom" Padding="16,3" Background="{DynamicResource BarBrush}">
+    <LayoutTransformControl x:Name="ZoomStatus" DockPanel.Dock="Bottom">
+    <Border Padding="16,3" Background="{DynamicResource BarBrush}">
       <DockPanel>
         <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="6">
           <TextBox Text="{Binding NewLayoutName}" Watermark="naam nieuwe indeling" Width="170" FontSize="12" MinHeight="24" Padding="4,2" />
@@ -117,9 +121,11 @@
         <TextBlock Classes="muted" Text="{Binding StatusLine}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
       </DockPanel>
     </Border>
+    </LayoutTransformControl>
 
     <!-- On-air bar: always visible, whatever the layout -->
-    <Border DockPanel.Dock="Top" Padding="24,12" Background="{DynamicResource BarBrush}" BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="0,0,0,1">
+    <LayoutTransformControl x:Name="ZoomOnAir" DockPanel.Dock="Top">
+    <Border Padding="24,12" Background="{DynamicResource BarBrush}" BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="0,0,0,1">
       <Grid x:Name="OnAirGrid" ColumnDefinitions="Auto,*,Auto,Auto,Auto,Auto" RowDefinitions="Auto,Auto">
         <Border Grid.Column="0" CornerRadius="{DynamicResource Radius8}" Padding="12,8" Margin="0,0,24,0" VerticalAlignment="Center"
                 Background="{Binding OnAir, Converter={x:Static vm:Brushes.OnAir}}">
@@ -234,8 +240,13 @@
       </Grid>
     </Border>
 
+    </LayoutTransformControl>
+
     <DockControl Layout="{Binding Layout}" Margin="2" />
   </DockPanel>
+
+  <LayoutTransformControl x:Name="ZoomOver">
+  <Panel>
 
   <!-- Ctrl+K: go to a window by name. Over everything, near the top, closed with Esc or by picking a window. -->
   <Border IsVisible="{Binding GoToOpen}" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,96,0,0" Width="520"
@@ -288,4 +299,5 @@
   </Border>
   </Panel>
   </LayoutTransformControl>
+  </Panel>
 </Window>

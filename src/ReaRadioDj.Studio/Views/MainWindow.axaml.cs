@@ -16,8 +16,13 @@ public partial class MainWindow : Window
         ViewModels.Hotkeys.Changed += ApplyHotkeys;
         Closed += (_, _) => { ViewModels.Hotkeys.Changed -= ApplyHotkeys; _global?.Dispose(); };
         Opened += (_, _) => ApplyHotkeys();
-        // The size setting (Instellingen › Uiterlijk) scales everything in the window.
-        void Rescale() => Zoom.LayoutTransform = new Avalonia.Media.ScaleTransform(Services.Appearance.Scale, Services.Appearance.Scale);
+        // The size setting (Instellingen › Uiterlijk) scales the bars and overlays here; the windows in the docking
+        // area scale their own contents (ScaledContent), so the docking area itself has no transform.
+        void Rescale()
+        {
+            foreach (var zoom in new[] { Zoom, ZoomStatus, ZoomOnAir, ZoomOver })
+                zoom.LayoutTransform = new Avalonia.Media.ScaleTransform(Services.Appearance.Scale, Services.Appearance.Scale);
+        }
         Rescale();
         Services.Appearance.ScaleChanged += Rescale;
         Closed += (_, _) => Services.Appearance.ScaleChanged -= Rescale;
