@@ -14,6 +14,9 @@ public sealed class ViewLocator : IDataTemplate
         var type = Type.GetType(name);
         // scaled per window, not around the docking area (see ScaledContent)
         Control view = type is null ? new TextBlock { Text = $"Geen weergave voor {name}" } : (Control)Activator.CreateInstance(type)!;
+        // A window that needs a role gets a cover for users without it.
+        int rank = Services.StudioHub.RequiredRank((data as StudioTool)?.Id);
+        if (rank > 0) view = new Controls.RoleGate(view, rank);
         return new Controls.ScaledContent { Child = view };
     }
 

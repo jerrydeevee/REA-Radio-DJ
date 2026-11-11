@@ -12,6 +12,8 @@
       </StackPanel>
       <StackPanel Orientation="Horizontal" Spacing="8">
         <CalendarDatePicker SelectedDate="{Binding Day}" />
+        <ComboBox ItemsSource="{Binding Presenters}" SelectedItem="{Binding Presenter}" MinWidth="170"
+                  ToolTip.Tip="Wie was aangemeld in de studio toen het item uitgezonden werd" />
         <TextBlock Classes="muted" Text="{Binding Summary}" VerticalAlignment="Center" />
       </StackPanel>
     </DockPanel>
@@ -38,14 +40,15 @@
     <ListBox ItemsSource="{Binding Entries}">
       <ListBox.ItemTemplate>
         <DataTemplate x:DataType="c:AsRunDto">
-          <Grid ColumnDefinitions="70,90,64,*,Auto">
+          <Grid ColumnDefinitions="70,90,64,*,Auto,Auto">
             <TextBlock Grid.Column="0" Classes="mono" Text="{Binding Started, StringFormat='{}{0:HH:mm:ss}'}" />
             <TextBlock Grid.Column="1" Classes="muted" Text="{Binding Source}" TextTrimming="CharacterEllipsis" />
             <TextBlock Grid.Column="2" Text="{Binding Type}" Foreground="{Binding Type, Converter={x:Static vm:Brushes.TypeColor}}" />
             <TextBlock Grid.Column="3" TextTrimming="CharacterEllipsis">
               <Run Text="{Binding Artist}" /><Run Text=" - " /><Run Text="{Binding Title}" />
             </TextBlock>
-            <TextBlock Grid.Column="4" Classes="mono muted" Text="{Binding Played, StringFormat='{}{0:0}s'}" Margin="6,0,0,0" />
+            <TextBlock Grid.Column="4" Classes="muted" Text="{Binding Presenter}" Margin="8,0,0,0" MaxWidth="120" TextTrimming="CharacterEllipsis" />
+            <TextBlock Grid.Column="5" Classes="mono muted" Text="{Binding Played, StringFormat='{}{0:0}s'}" Margin="6,0,0,0" />
           </Grid>
         </DataTemplate>
       </ListBox.ItemTemplate>

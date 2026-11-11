@@ -106,6 +106,10 @@ Elk venster is te verslepen, te docken of los te laten zweven, ook op een tweede
 - Werkruimtes Live, DJ, Automatisering, Productie, Planning en Rapportage, met werkbladen per scherm.
 - Meerdere thema's (donker, licht en meer), instelbare lettergrootte en schaal, een aanraakmodus en kleuren per
   soort item.
+- **Gebruikers en rechten**: aanmelden met een eigen naam en pincode, rollen presentator, technicus en beheerder
+  (*Instellingen › Gebruikers*); de instellingen zijn dan alleen voor beheerders. *Studio › Studio vergrendelen*
+  (Ctrl+L) houdt de uitzending gaande en de studio dicht tot de pincode; de as-run laat per presentator zien wat er
+  is uitgezonden. Pincode kwijt: start de engine op die computer met `--users-off`.
 
 ## Installeren (Windows 10/11, x64)
 

@@ -323,7 +323,7 @@ public sealed record CommandResultDto(bool Ok, string Text);
 // ---------------------------------------------------------------- reporting
 
 public sealed record AsRunDto(long Id, DateTime Started, DateTime? Ended, string Source, string Type, long? MediaId, string? Path,
-    string? Artist, string? Title, string? Category, double? Planned, double? Played, bool Ai, string? Note);
+    string? Artist, string? Title, string? Category, double? Planned, double? Played, bool Ai, string? Note, string Presenter = "");
 
 public sealed record MessageDto(long Id, DateTime Time, string Level, string Text);
 

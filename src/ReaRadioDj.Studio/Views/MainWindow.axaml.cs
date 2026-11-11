@@ -66,7 +66,28 @@ public partial class MainWindow : Window
                 e.Handled = true;
             }
             else if (vm.GoToOpen && e.Key == Avalonia.Input.Key.Escape) { vm.GoToOpen = false; e.Handled = true; }
+            else if (e.Key == Avalonia.Input.Key.L && e.KeyModifiers == Avalonia.Input.KeyModifiers.Control)
+            {
+                vm.Session.LockCommand.Execute(null);
+                e.Handled = true;
+            }
+            else if (vm.Session.Open && e.Key == Avalonia.Input.Key.Escape) { vm.Session.CloseCommand.Execute(null); e.Handled = true; }
         }, RoutingStrategies.Tunnel);
+        // The sign-in screen and the lock: the PIN box gets the focus, and the other studio windows (workbenches,
+        // floating windows) wait as well.
+        DataContextChanged += (_, _) =>
+        {
+            if (DataContext is not ViewModels.MainWindowViewModel vm) return;
+            vm.Session.PropertyChanged += (_, e) =>
+            {
+                if (e.PropertyName != nameof(ViewModels.SessionVm.Open)) return;
+                bool open = vm.Session.Open;
+                if (open) Dispatcher.UIThread.Post(() => PinBox.Focus(), DispatcherPriority.Input);
+                if (Avalonia.Application.Current?.ApplicationLifetime is Avalonia.Controls.ApplicationLifetimes.IClassicDesktopStyleApplicationLifetime life)
+                    foreach (var w in life.Windows)
+                        if (w != this) w.IsEnabled = !open;
+            };
+        };
         GoToBox.KeyDown += (_, e) =>
         {
             if (DataContext is not ViewModels.MainWindowViewModel vm) return;

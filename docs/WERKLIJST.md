@@ -284,7 +284,7 @@ Vraag bij stap 8:
 
 | Status | Werk |
 |---|---|
-| ⬜ | Gebruikers, rollen en rechten; studio vergrendelen; instellingen alleen voor beheerders |
+| ✅ | Gebruikers, rollen en rechten; studio vergrendelen; instellingen alleen voor beheerders. Aanmelden met naam en pincode (PBKDF2-hash, nooit leesbaar opgeslagen; na 5 fouten 30 s wachten). Rollen presentator (alles in de uitzending), technicus (ook geluid, routing, hardware, streams, planning) en beheerder (ook instellingen, gebruikers, systeem, reservekopie); de engine controleert elke wijziging per API-pad, lezen en de uitzending blijven open (browserstudio, Stream Deck, hardware). De eerste gebruiker is een beheerder en er blijft er altijd een over; zonder gebruikers werkt alles als voorheen. Studio › Vergrendelen (Ctrl+L): de uitzending loopt door, knoppen en sneltoetsen wachten op de pincode. De as-run noteert wie aangemeld was (kolom presentator, ook in de CSV) en is per presentator te filteren. Herstel: engine starten met `--users-off`. |
 | ⬜ | Multi-studio met hartslag en automatische overname |
 | ⬜ | Voicetracking op afstand |
 | ⬜ | Remote-app voor tablet (bedienen) en telefoon (bewaken) |

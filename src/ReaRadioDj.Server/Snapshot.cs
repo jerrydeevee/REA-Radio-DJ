@@ -161,5 +161,5 @@ public static class Snapshot
         w.Enabled, (w.Url ?? "").Trim(), w.Days, w.Hours ?? "*", Parse(w.Mode, WatchMode.Takeover), w.CheckSeconds);
 
     public static AsRunDto AsRun(AsRunEntry e) => new(e.Id, e.Started, e.Ended, e.Source, e.Type, e.MediaId, e.Path, e.Artist, e.Title,
-        e.Category, e.Planned, e.Played, e.Ai, e.Note);
+        e.Category, e.Planned, e.Played, e.Ai, e.Note, e.Presenter);
 }

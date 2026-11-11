@@ -25,7 +25,7 @@ if (args.Contains("--watchdog")) return Watchdog.Run(args.Where(a => a != "--wat
 // working directory. "--demo" is our own switch and is kept away from the configuration parser.
 var builder = WebApplication.CreateBuilder(new WebApplicationOptions
 {
-    Args = args.Where(a => a is not "--demo" and not "--no-tray").ToArray(),
+    Args = args.Where(a => a is not "--demo" and not "--no-tray" and not "--users-off").ToArray(),
     ContentRootPath = AppContext.BaseDirectory,
 });
 var options = builder.Configuration.GetSection("ReaRadioDj").Get<ReaRadioDjOptions>() ?? new ReaRadioDjOptions();
@@ -100,6 +100,8 @@ builder.Services.AddSingleton(sp => new VoiceTracker(sp.GetRequiredService<Playo
     Path.Combine(options.DataFolder, "voicetracks"), options.Routing.MicDevice));
 builder.Services.AddSingleton<Cartwall>();
 builder.Services.AddSingleton<AsRunLog>();
+builder.Services.AddSingleton<ReaRadioDj.Core.Users.UserStore>();
+builder.Services.AddSingleton(new ReaRadioDj.Core.Users.SessionStore());
 builder.Services.AddSingleton<PlayoutEngine>();
 builder.Services.AddSingleton(sp => new IcecastStreamer(options.Stream, options.StationName, sp.GetService<ILogger<IcecastStreamer>>()));
 builder.Services.AddSingleton(sp => new StreamGroup(sp.GetRequiredService<IcecastStreamer>(), options.StationName, sp.GetService<ILoggerFactory>()));
@@ -186,6 +188,10 @@ app.Use(async (http, next) =>
     }
     await next();
 });
+// Users and rights: changes to the sound, the programming and the settings need a signed-in user with that role.
+UsersApi.UseAccessCheck(app, args.Contains("--users-off"));
+if (args.Contains("--users-off"))
+    app.Services.GetRequiredService<MessageCenter>().Warning("Gestart met --users-off: aanmelden en rechten worden niet gecontroleerd.");
 app.UseDefaultFiles();
 // The browser studio changes with the code; always let the browser revalidate it.
 app.UseStaticFiles(new StaticFileOptions { OnPrepareResponse = c => c.Context.Response.Headers.CacheControl = "no-cache" });
@@ -195,6 +201,7 @@ json.Converters.Add(new JsonStringEnumConverter(JsonNamingPolicy.CamelCase));
 
 var api = app.MapGroup("/api");
 StudioApi.Map(api, options);
+UsersApi.Map(api);
 DjApi.Map(api);
 SystemApi.Map(api, options, args);
 OutputsApi.Map(api, options);

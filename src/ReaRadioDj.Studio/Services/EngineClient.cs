@@ -24,6 +24,13 @@ public sealed class EngineClient : IDisposable
 
     public Uri BaseUri { get; }
 
+    /// <summary>The session of the signed-in user, sent with every request (empty = nobody signed in).</summary>
+    public void SetSession(string? token)
+    {
+        _http.DefaultRequestHeaders.Remove(UserRoles.SessionHeader);
+        if (!string.IsNullOrEmpty(token)) _http.DefaultRequestHeaders.Add(UserRoles.SessionHeader, token);
+    }
+
     /// <summary>Raised on a background thread for every state frame.</summary>
     public event Action<StateDto>? StateReceived;
     /// <summary>Raised on a background thread: connected yes/no and a short text.</summary>

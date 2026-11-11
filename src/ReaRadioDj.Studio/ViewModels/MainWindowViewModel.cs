@@ -31,6 +31,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
         if (ea >= 0 && ea + 1 < args.Length) _settings.SessionEngineUrl = args[ea + 1];
         if (args.Contains("--no-engine")) _settings.StartEngine = false;
         Hub = StudioHub.Start(_settings);
+        Session = new SessionVm(Hub);
         if (_settings.StartEngine) _ = EnsureEngineAsync();
         Hub.StateReceived += OnState;
         Hub.StateReceived += CheckSetup;
@@ -72,6 +73,8 @@ public sealed partial class MainWindowViewModel : ObservableObject
     }
 
     public StudioHub Hub { get; }
+    /// <summary>Signing in, signing out and the studio lock.</summary>
+    public SessionVm Session { get; }
     public IReadOnlyList<WindowEntry> WindowMenu { get; } = DockFactory.Windows.Select(w => new WindowEntry(w.Id, w.Name)).ToList();
 
     // ---- Ctrl+K: go to a window by typing part of its name
@@ -494,6 +497,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
     private async Task RunEngineCommand(string? text)
     {
         if (string.IsNullOrWhiteSpace(text)) return;
+        if (Session.Blocks) { Hub.Status = "De studio is vergrendeld: sneltoetsen werken na het ontgrendelen."; return; }
         var r = await Hub.Client.RunCommandAsync(text);
         if (!r.Ok) Hub.Status = $"{text}: {r.Text}";
     }

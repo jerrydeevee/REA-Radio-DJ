@@ -204,7 +204,10 @@ public sealed partial class SettingsTool : StudioTool
     }
     [ObservableProperty] private bool _startEngine;
 
-    protected override void OnFirstShow() => _ = LoadAsync();
+    protected override void OnFirstShow() { _ = LoadAsync(); _ = Users.LoadAsync(); }
+
+    /// <summary>Instellingen › Gebruikers.</summary>
+    public UsersPanelVm Users { get; } = new();
 
     // ---- mixing desk or software
     [ObservableProperty] private bool _deskMode;
