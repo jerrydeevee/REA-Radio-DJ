@@ -234,6 +234,9 @@ public sealed record CategoryDto(long Id, string Name, string Kind, string Color
 /// <summary>Waveform: one linear peak (0..65535) per block, little-endian UInt16, base64.</summary>
 public sealed record PeaksDto(int BlockMs, string Data);
 
+/// <summary>Makes an item music ("song") or a jingle by hand; CategoryId = where it goes (null = a fitting one).</summary>
+public sealed record MediaKindRequest(string Kind, long? CategoryId = null);
+
 public sealed record MediaUpdateRequest(long? CategoryId, bool Enabled, DateTime? ValidFrom, DateTime? ValidUntil);
 
 public sealed record CategoryRequest(string Name, string Kind, string? Color);

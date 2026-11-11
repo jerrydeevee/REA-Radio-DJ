@@ -160,6 +160,29 @@
                         IsVisible="{Binding Cover, Converter={x:Static ObjectConverters.IsNotNull}}">
                   <Image Source="{Binding Cover}" Stretch="UniformToFill" />
                 </Border>
+                <!-- Standard cover of a jingle without a picture: a speaker with sound waves on the jingle colour. -->
+                <Border DockPanel.Dock="Left" Width="84" Height="84" CornerRadius="{DynamicResource Radius4}" ClipToBounds="True" Margin="0,0,10,0"
+                        IsVisible="{Binding ShowJingleCover}" ToolTip.Tip="Standaardhoes voor een jingle zonder eigen afbeelding">
+                  <Border.Background>
+                    <LinearGradientBrush StartPoint="0%,0%" EndPoint="100%,100%">
+                      <GradientStop Color="#F7C948" Offset="0" />
+                      <GradientStop Color="#F0B429" Offset="0.45" />
+                      <GradientStop Color="#A16207" Offset="1" />
+                    </LinearGradientBrush>
+                  </Border.Background>
+                  <Grid RowDefinitions="*,Auto">
+                    <Viewbox Margin="14,10,14,0">
+                      <Canvas Width="64" Height="48">
+                        <Path Fill="#1A1206" Data="M4,17 L14,17 L27,5 L27,43 L14,31 L4,31 Z" />
+                        <Path Stroke="#1A1206" StrokeThickness="4.5" StrokeLineCap="Round" Data="M35,16 Q41,24 35,32" />
+                        <Path Stroke="#1A1206" StrokeThickness="4.5" StrokeLineCap="Round" Data="M43,9 Q54,24 43,39" />
+                        <Path Fill="#FFF6D6" Data="M56,2 L58,7 L63,9 L58,11 L56,16 L54,11 L49,9 L54,7 Z" />
+                      </Canvas>
+                    </Viewbox>
+                    <TextBlock Grid.Row="1" Text="JINGLE" FontSize="11" FontWeight="Bold" LetterSpacing="2"
+                               Foreground="#1A1206" HorizontalAlignment="Center" Margin="0,2,0,7" />
+                  </Grid>
+                </Border>
                 <StackPanel Spacing="2">
                   <TextBlock Classes="h" Text="{Binding Media.Title}" TextWrapping="Wrap" />
                   <TextBlock Text="{Binding Media.Artist}" TextWrapping="Wrap" />
@@ -210,6 +233,8 @@
                         ToolTip.Tip="Cues, beatgrid en BPM nu in de tags van dit bestand zetten" />
                 <Button Classes="small" Content="Alle tags in het bestand" Command="{Binding WriteAllTagsCommand}" Margin="0,0,4,4"
                         ToolTip.Tip="Artiest, titel, album, genre, jaar, taal, sfeer, waardering, BPM, toonsoort, ISRC, componist, label en ReplayGain in het bestand zetten" />
+                <Button Classes="small" Content="{Binding KindButtonText}" Command="{Binding ToggleKindCommand}" Margin="0,0,4,4"
+                        ToolTip.Tip="{Binding KindTip}" />
                 <Button Classes="small" Content="Hoes kiezen…" Click="ChooseCover" Margin="0,0,4,4"
                         ToolTip.Tip="Een afbeelding (JPEG, PNG) als hoes in het bestand zetten" />
                 <Button Classes="small" Content="Hoes weghalen" Command="{Binding RemoveCoverCommand}" Margin="0,0,4,4"
@@ -247,6 +272,7 @@
           <Separator />
           <MenuItem Header="Cues bewerken" Command="{Binding CuesCommand}" />
           <MenuItem Header="Aan / uit (niet meer inplannen)" Command="{Binding ToggleEnabledCommand}" />
+          <MenuItem Header="Muziek ↔ jingle omzetten" Command="{Binding ToggleKindCommand}" />
         </ContextMenu>
       </ListBox.ContextMenu>
       <ListBox.ItemTemplate>

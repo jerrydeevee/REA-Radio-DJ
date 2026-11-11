@@ -478,7 +478,7 @@ public sealed class MediaLibrary
                        $hi, $ho, $manual, $added, 0, $genre, $aa, $bpm, $fb, $ei, $eo, $energy, $measured, 0,
                        $clip, $lang, $mood, $rating, $key, $keyTried)
                 ON CONFLICT(path) DO UPDATE SET
-                    kind = excluded.kind, artist = excluded.artist, title = excluded.title, album = excluded.album,
+                    kind = CASE WHEN media.kind_manual = 1 THEN media.kind ELSE excluded.kind END, artist = excluded.artist, title = excluded.title, album = excluded.album,
                     size = excluded.size, modified = excluded.modified, duration = excluded.duration, lufs = excluded.lufs,
                     category_id = COALESCE(media.category_id, excluded.category_id), missing = 0, retired = 0,
                     genre = excluded.genre, album_artist = excluded.album_artist,
@@ -671,7 +671,7 @@ public sealed class MediaLibrary
                     _db.Transaction((c, tx) =>
                     {
                         using var cmd = StationDb.Command(c, """
-                            UPDATE media SET source = $s, missing = 0, kind = $k,
+                            UPDATE media SET source = $s, missing = 0, kind = CASE WHEN kind_manual = 1 THEN kind ELSE $k END,
                                 artist = COALESCE($a, artist), title = COALESCE($t, title), album = COALESCE($al, album),
                                 category_id = CASE WHEN $hascat = 1 OR category_id IS NULL THEN $cat ELSE category_id END
                             WHERE path = $p;
@@ -934,6 +934,32 @@ public sealed class MediaLibrary
     }
 
     /// <summary>
+    /// Makes an item music or a jingle by hand; a later scan of its folder keeps that. When its category is of the
+    /// other kind it moves to <paramref name="categoryId"/>, or else to the first category of the new kind
+    /// ("Jingles" or "Muziek" when there is one), so it shows up where it belongs.
+    /// </summary>
+    public bool SetKind(long id, MediaKind kind, long? categoryId = null)
+    {
+        if (GetDetails(id) is not { } before) return false;
+        if (kind is not (MediaKind.Song or MediaKind.Jingle)) return false;
+        Remember([id], $"{(kind == MediaKind.Jingle ? "jingle maken" : "muziek maken")} van {Label(before)}");
+        long? cat = before.Media.CategoryId;
+        bool fits = cat is long c0 && _categories.FirstOrDefault(c => c.Id == c0) is { } cur && cur.Kind == kind;
+        if (categoryId is long chosen && _categories.Any(c => c.Id == chosen)) cat = chosen;
+        else if (!fits)
+        {
+            var same = _categories.Where(c => c.Kind == kind).ToList();
+            string preferred = kind == MediaKind.Jingle ? "Jingles" : "Muziek";
+            cat = (same.FirstOrDefault(c => string.Equals(c.Name, preferred, StringComparison.OrdinalIgnoreCase)) ?? same.FirstOrDefault())?.Id ?? cat;
+        }
+        int n = _db.Execute("UPDATE media SET kind = $k, kind_manual = 1, category_id = $c WHERE id = $id",
+            ("$k", (int)kind), ("$c", cat), ("$id", id));
+        Reload();
+        Changed?.Invoke();
+        return n > 0;
+    }
+
+    /// <summary>
     /// Changes several items at once (null = leave as it is). Returns how many were changed. One reload at the end, so
     /// moving hundreds of tracks to another category stays quick.
     /// </summary>
@@ -1178,7 +1204,7 @@ public sealed class MediaLibrary
     private sealed record UndoRow(long Id, long? Category, bool Enabled, string? ValidFrom, string? ValidUntil,
         string Artist, string Title, string Album, string Genre, string Language, string Mood, int? Rating, int? EnergyLevel,
         double CueIn, double? FullLevel, double? Intro, double? Intro2, double? Outro, double? FadeOut, double Mix, double CueOut,
-        double? HookIn, double? HookOut, bool Manual, int? Year);
+        double? HookIn, double? HookOut, bool Manual, int? Year, int? Kind = null, bool? KindManual = null);
 
     private static string Label(MediaDetails d) => d.Media.Artist.Length > 0 ? $"{d.Media.Artist} - {d.Media.Title}" : d.Media.Title;
 
@@ -1192,14 +1218,14 @@ public sealed class MediaLibrary
             rows.AddRange(_db.Query($"""
                 SELECT m.id, m.category_id, m.enabled, m.valid_from, m.valid_until, m.artist, m.title, m.album, m.genre,
                        m.language, m.mood, m.rating, m.energy_level, m.cue_in, m.full_level, m.intro, m.intro2, m.outro,
-                       m.fade_out, m.mix, m.cue_out, m.hook_in, m.hook_out, m.cues_manual, r.year
+                       m.fade_out, m.mix, m.cue_out, m.hook_in, m.hook_out, m.cues_manual, r.year, m.kind, m.kind_manual
                 FROM media m LEFT JOIN media_rights r ON r.media_id = m.id WHERE m.id IN ({string.Join(',', chunk)})
                 """, r => new UndoRow(r.GetInt64(0), r.GetInt64OrNull(1), r.GetInt64(2) != 0, r.GetStringOrNull(3), r.GetStringOrNull(4),
                     r.GetString(5), r.GetString(6), r.GetString(7), r.GetString(8), r.GetString(9), r.GetString(10),
                     r.GetInt64OrNull(11) is long a ? (int)a : null, r.GetInt64OrNull(12) is long b ? (int)b : null,
                     r.GetDouble(13), r.GetDoubleOrNull(14), r.GetDoubleOrNull(15), r.GetDoubleOrNull(16), r.GetDoubleOrNull(17),
                     r.GetDoubleOrNull(18), r.GetDouble(19), r.GetDouble(20), r.GetDoubleOrNull(21), r.GetDoubleOrNull(22),
-                    r.GetInt64(23) != 0, r.GetInt64OrNull(24) is long y ? (int)y : null)));
+                    r.GetInt64(23) != 0, r.GetInt64OrNull(24) is long y ? (int)y : null, (int)r.GetInt64(25), r.GetInt64(26) != 0)));
         }
         if (rows.Count == 0) return;
         _db.Execute("INSERT INTO media_undo(time, label, items, rows) VALUES($t, $l, $n, $r)",
@@ -1227,7 +1253,8 @@ public sealed class MediaLibrary
                     UPDATE media SET category_id = $cat, enabled = $en, valid_from = $vf, valid_until = $vu,
                         artist = $a, title = $t, album = $al, genre = $g, language = $l, mood = $mo, rating = $ra, energy_level = $el,
                         cue_in = $in, full_level = $fl, intro = $i1, intro2 = $i2, outro = $ou, fade_out = $fo, mix = $mix,
-                        cue_out = $out, hook_in = $hi, hook_out = $ho, cues_manual = $man
+                        cue_out = $out, hook_in = $hi, hook_out = $ho, cues_manual = $man,
+                        kind = COALESCE($k, kind), kind_manual = COALESCE($km, kind_manual)
                     WHERE id = $id;
                     INSERT INTO media_rights(media_id, year) VALUES($id, $y) ON CONFLICT(media_id) DO UPDATE SET year = excluded.year;
                     """,
@@ -1235,7 +1262,8 @@ public sealed class MediaLibrary
                     ("$t", u.Title), ("$al", u.Album), ("$g", u.Genre), ("$l", u.Language), ("$mo", u.Mood), ("$ra", u.Rating),
                     ("$el", u.EnergyLevel), ("$in", u.CueIn), ("$fl", u.FullLevel), ("$i1", u.Intro), ("$i2", u.Intro2), ("$ou", u.Outro),
                     ("$fo", u.FadeOut), ("$mix", u.Mix), ("$out", u.CueOut), ("$hi", u.HookIn), ("$ho", u.HookOut),
-                    ("$man", u.Manual ? 1 : 0), ("$id", u.Id), ("$y", u.Year));
+                    ("$man", u.Manual ? 1 : 0), ("$id", u.Id), ("$y", u.Year), ("$k", u.Kind),
+                    ("$km", u.KindManual is bool km ? (km ? 1 : 0) : null));
                 cmd.Transaction = tx;
                 cmd.ExecuteNonQuery();
             }

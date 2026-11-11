@@ -10,7 +10,7 @@ namespace ReaRadioDj.Core.Data;
 /// </summary>
 public sealed class StationDb
 {
-    public const int SchemaVersion = 20;
+    public const int SchemaVersion = 21;
     private readonly string _connectionString;
 
     public StationDb(string path)
@@ -108,7 +108,7 @@ public sealed class StationDb
         {
             cmd.Transaction = tx;
             // Each step brings the database one version further; a new database runs them all.
-            cmd.CommandText = (version < 1 ? SchemaV1 : "") + (version < 2 ? SchemaV2 : "") + (version < 3 ? SchemaV3 : "") + (version < 4 ? SchemaV4 : "") + (version < 5 ? SchemaV5 : "") + (version < 6 ? SchemaV6 : "") + (version < 7 ? SchemaV7 : "") + (version < 8 ? SchemaV8 : "") + (version < 9 ? SchemaV9 : "") + (version < 10 ? SchemaV10 : "") + (version < 11 ? SchemaV11 : "") + (version < 12 ? SchemaV12 : "") + (version < 13 ? SchemaV13 : "") + (version < 14 ? SchemaV14 : "") + (version < 15 ? SchemaV15 : "") + (version < 16 ? SchemaV16 : "") + (version < 17 ? SchemaV17 : "") + (version < 18 ? SchemaV18 : "") + (version < 19 ? SchemaV19 : "") + (version < 20 ? SchemaV20 : "") + $"PRAGMA user_version = {SchemaVersion};";
+            cmd.CommandText = (version < 1 ? SchemaV1 : "") + (version < 2 ? SchemaV2 : "") + (version < 3 ? SchemaV3 : "") + (version < 4 ? SchemaV4 : "") + (version < 5 ? SchemaV5 : "") + (version < 6 ? SchemaV6 : "") + (version < 7 ? SchemaV7 : "") + (version < 8 ? SchemaV8 : "") + (version < 9 ? SchemaV9 : "") + (version < 10 ? SchemaV10 : "") + (version < 11 ? SchemaV11 : "") + (version < 12 ? SchemaV12 : "") + (version < 13 ? SchemaV13 : "") + (version < 14 ? SchemaV14 : "") + (version < 15 ? SchemaV15 : "") + (version < 16 ? SchemaV16 : "") + (version < 17 ? SchemaV17 : "") + (version < 18 ? SchemaV18 : "") + (version < 19 ? SchemaV19 : "") + (version < 20 ? SchemaV20 : "") + (version < 21 ? SchemaV21 : "") + $"PRAGMA user_version = {SchemaVersion};";
             cmd.ExecuteNonQuery();
         }
         tx.Commit();
@@ -127,6 +127,11 @@ public sealed class StationDb
     /// </summary>
     /// <summary>When the metadata of a library item was last looked up (empty = never; then its first play looks it up).</summary>
     /// <summary>Events at places in a track (volume changes, commands), as JSON; '' = none.</summary>
+    /// <summary>Music or jingle set by hand: a scan of the folder no longer changes it.</summary>
+    private const string SchemaV21 = """
+        ALTER TABLE media ADD COLUMN kind_manual INTEGER NOT NULL DEFAULT 0;
+        """;
+
     /// <summary>Settings of the AI news and the weather report per news block (JSON).</summary>
     private const string SchemaV20 = """
         ALTER TABLE news_blocks ADD COLUMN options TEXT NOT NULL DEFAULT '';

@@ -50,6 +50,15 @@ public sealed partial class MediaDetailVm : ObservableObject
     [ObservableProperty] private string _saveText = "";
     [ObservableProperty] private ushort[]? _peaks;
     [ObservableProperty] private Avalonia.Media.Imaging.Bitmap? _cover;
+
+    /// <summary>A jingle without a picture of its own gets the standard jingle cover.</summary>
+    public bool ShowJingleCover => Cover is null && IsJingle;
+    public bool IsJingle => Media.Kind == "jingle";
+    public string KindButtonText => IsJingle ? "Maak er muziek van" : "Maak er een jingle van";
+    public string KindTip => IsJingle
+        ? "Dit is nu een jingle (gele streep). Zet het om naar muziek (blauw), in een muziekcategorie; een nieuwe scan houdt dat vast."
+        : "Dit is nu muziek (blauwe streep). Zet het om naar een jingle (geel), in de categorie Jingles; een nieuwe scan houdt dat vast.";
+    partial void OnCoverChanged(Avalonia.Media.Imaging.Bitmap? value) => OnPropertyChanged(nameof(ShowJingleCover));
     /// <summary>Position on PFL while this item is pre-listened; -1 otherwise.</summary>
     [ObservableProperty] private double _playhead = -1;
 
@@ -142,6 +151,21 @@ public sealed partial class MediaDetailVm : ObservableObject
     }
 
     [RelayCommand] private void EditCues() => StudioHub.Current.RequestCueEditor(Id);
+
+    /// <summary>Music becomes a jingle or the other way round; it moves to a category of that kind when needed.</summary>
+    [RelayCommand]
+    private async Task ToggleKind()
+    {
+        var r = await StudioHub.Current.Client.SendForAsync<MediaDto>(HttpMethod.Put, $"/api/media/{Id}/kind",
+            new MediaKindRequest(IsJingle ? "song" : "jingle"));
+        if (r is null) { SaveText = "Omzetten lukte niet."; return; }
+        Media = r;
+        foreach (var name in new[] { nameof(IsJingle), nameof(KindButtonText), nameof(KindTip), nameof(ShowJingleCover), nameof(Facts) })
+            OnPropertyChanged(name);
+        SaveText = r.Kind == "jingle" ? $"Nu een jingle, in {r.Category}." : $"Nu muziek, in {r.Category}.";
+        _owner.Refresh();
+        _ = _owner.LoadUndoAsync();
+    }
 
     private sealed record WrittenDto(bool Written);
 

@@ -220,4 +220,30 @@ public class LibraryListsAndUndoTests : IDisposable
         Assert.All(ids, id => Assert.Equal(pop, library.GetDetails(id)!.Media.CategoryId));
         Assert.Null(library.Undo());
     }
+
+    [BassFact]
+    public async Task Music_made_a_jingle_by_hand_stays_one_after_a_scan_and_can_be_undone()
+    {
+        var library = Library();
+        Write(Path.Combine(_dir, "music", "Pop", "A - Sting.wav"), seed: 1);
+        Write(Path.Combine(_dir, "jingles", "Jingles", "Opener.wav"), seed: 2);
+        await library.ScanAsync();
+        long pop = library.Categories.Single(c => c.Name == "Pop").Id;
+        long jingles = library.Categories.Single(c => c.Name == "Jingles").Id;
+        long id = library.Search("sting").Single().Media.Id;
+
+        // Music → jingle: it moves into the jingle category, and a new scan of the music folder keeps it a jingle.
+        Assert.True(library.SetKind(id, MediaKind.Jingle));
+        Assert.Equal((MediaKind.Jingle, (long?)jingles), (library.Get(id)!.Kind, library.Get(id)!.CategoryId));
+        Assert.Equal(2, library.Search(null, jingles).Count);
+        await library.ScanAsync();
+        Assert.Equal(MediaKind.Jingle, library.Get(id)!.Kind);
+
+        // Undo puts back music in Pop; the other way round works too.
+        Assert.StartsWith("jingle maken van", library.Undo()!.Label);
+        Assert.Equal((MediaKind.Song, (long?)pop), (library.Get(id)!.Kind, library.Get(id)!.CategoryId));
+        long opener = library.Search("opener").Single().Media.Id;
+        Assert.True(library.SetKind(opener, MediaKind.Song, pop));
+        Assert.Equal((MediaKind.Song, (long?)pop), (library.Get(opener)!.Kind, library.Get(opener)!.CategoryId));
+    }
 }

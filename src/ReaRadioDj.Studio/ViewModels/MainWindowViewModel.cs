@@ -68,6 +68,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
                 Hub.Status = PlaceDockable(pw, pt == "*" ? WholeArea : pt, ps,
                     double.Parse(share, System.Globalization.CultureInfo.InvariantCulture)) ?? $"geplaatst: {pw}";
             else if (args[i] == "--workbench" && int.TryParse(args[i + 1], out var screen)) _startWorkbenches.Add(screen - 1);
+            else if (args[i] == "--library") LibraryTool.StartSearch = args[i + 1];   // search and select the first row
         int ca = Array.IndexOf(args, "--cues");
         if (ca >= 0 && ca + 1 < args.Length && long.TryParse(args[ca + 1], out var cueId))
             _ = Task.Delay(1500).ContinueWith(_ => Avalonia.Threading.Dispatcher.UIThread.Post(() => Hub.RequestCueEditor(cueId)));
