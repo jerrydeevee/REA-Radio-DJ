@@ -199,7 +199,7 @@
       <TabItem Header="Opnemen">
         <ScrollViewer><StackPanel Classes="page">
           <TextBlock Classes="title" Text="Uitzending en microfoon opnemen" />
-          <TextBlock Classes="help" Text="De engine neemt zelf op wat er ON AIR gaat (met de microfoon erin), in één MP3-bestand per klokuur, en desgewenst elke keer dat de microfoon open is apart. Opnamen ouder dan de bewaartermijn worden vanzelf weggehaald; andere bestanden in de map blijven staan. Losse kanalen opnemen kan met REC in de mixer." />
+          <TextBlock Classes="help" Text="De engine neemt zelf op wat er ON AIR gaat (met de microfoon erin), in één MP3-bestand per klokuur, en desgewenst elke keer dat de microfoon open is apart. Opnamen ouder dan de bewaartermijn worden vanzelf weggehaald, ook de gespreksopnamen van VoIP 1 en 2 (map Gesprekken); andere bestanden in de map blijven staan. Losse kanalen opnemen kan met REC in de mixer." />
           <CheckBox Content="Uitzending opnemen (per uur)" IsChecked="{Binding RecProgram}" Margin="0,12,0,0" />
           <CheckBox Content="Microfoon apart opnemen (per keer dat hij open is)" IsChecked="{Binding RecMic}" />
           <CheckBox Content="Microfoonopnamen direct in de bibliotheek (categorie Opnamen, als jingle)" IsChecked="{Binding RecMicToLibrary}"

@@ -37,9 +37,11 @@ public sealed record RecordingSettings
 public sealed class AirRecorder : IDisposable
 {
     public const string ProgramPrefix = "uitzending-", MicPrefix = "microfoon-";
+    /// <summary>The VoIP channels whose call recordings (WAV in Gesprekken) fall under the same retention time.</summary>
+    public static readonly string[] CallPrefixes = [AudioRouter.Voip1Strip + "-", AudioRouter.Voip2Strip + "-"];
 
     private readonly AudioRouter _router;
-    private readonly string _defaultFolder;
+    private readonly string _defaultFolder, _callFolder;
     private readonly ILogger _log;
     private readonly object _gate = new();
     private RecordingSettings _settings = new();
@@ -52,6 +54,7 @@ public sealed class AirRecorder : IDisposable
     {
         _router = router;
         _defaultFolder = Path.GetFullPath(Path.Combine(options.RecordingPath, "Uitzending"));
+        _callFolder = Path.GetFullPath(Path.Combine(options.RecordingPath, "Gesprekken"));
         _log = (ILogger?)logger ?? NullLogger.Instance;
     }
 
@@ -148,26 +151,38 @@ public sealed class AirRecorder : IDisposable
         r = null;
     }
 
-    /// <summary>Removes this recorder's own files that are older than the retention time.</summary>
+    /// <summary>
+    /// Removes this recorder's own files that are older than the retention time: the program and microphone MP3s,
+    /// and the call recordings of the VoIP channels (WAV in Gesprekken). Other files stay.
+    /// </summary>
     public int Cleanup(DateTime now, RecordingSettings s)
     {
-        if (s.KeepDays <= 0 || !Directory.Exists(Folder)) return 0;
-        int removed = 0;
+        if (s.KeepDays <= 0) return 0;
         var limit = now.AddDays(-s.KeepDays);
+        int removed = RemoveOld(Folder, "*.mp3", [ProgramPrefix, MicPrefix], limit, _log)
+                    + RemoveOld(_callFolder, "*.wav", CallPrefixes, limit, _log);
+        if (removed > 0) _log.LogInformation("Removed {Count} recordings older than {Days} days", removed, s.KeepDays);
+        return removed;
+    }
+
+    /// <summary>Deletes the files in a folder (and its subfolders) that match the pattern, start with one of the prefixes and were last written before the limit; then removes empty subfolders.</summary>
+    public static int RemoveOld(string folder, string pattern, IReadOnlyList<string> prefixes, DateTime limit, ILogger? log = null)
+    {
+        if (!Directory.Exists(folder)) return 0;
+        int removed = 0;
         try
         {
-            foreach (var f in Directory.EnumerateFiles(Folder, "*.mp3", SearchOption.AllDirectories))
+            foreach (var f in Directory.EnumerateFiles(folder, pattern, SearchOption.AllDirectories))
             {
                 var name = Path.GetFileName(f);
-                if (!name.StartsWith(ProgramPrefix, StringComparison.OrdinalIgnoreCase) && !name.StartsWith(MicPrefix, StringComparison.OrdinalIgnoreCase)) continue;
+                if (!prefixes.Any(p => name.StartsWith(p, StringComparison.OrdinalIgnoreCase))) continue;
                 if (File.GetLastWriteTime(f) >= limit) continue;
                 try { File.Delete(f); removed++; } catch (IOException) { } catch (UnauthorizedAccessException) { }
             }
-            foreach (var d in Directory.EnumerateDirectories(Folder))
+            foreach (var d in Directory.EnumerateDirectories(folder))
                 if (!Directory.EnumerateFileSystemEntries(d).Any()) try { Directory.Delete(d); } catch (IOException) { }
         }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { _log.LogWarning(ex, "Could not clean up {Folder}", Folder); }
-        if (removed > 0) _log.LogInformation("Removed {Count} recordings older than {Days} days", removed, s.KeepDays);
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { log?.LogWarning(ex, "Could not clean up {Folder}", folder); }
         return removed;
     }
 

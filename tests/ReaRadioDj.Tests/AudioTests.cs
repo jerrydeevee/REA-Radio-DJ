@@ -220,6 +220,31 @@ public sealed class AudioTests : IDisposable
         Assert.True(File.Exists(other));
     }
 
+    [Fact]
+    public void Old_call_recordings_are_removed_but_other_files_stay()
+    {
+        var dir = Path.Combine(_dir, "Gesprekken");
+        Directory.CreateDirectory(dir);
+        var now = new DateTime(2026, 11, 11, 12, 0, 0);
+        string Make(string name, int daysOld)
+        {
+            var f = Path.Combine(dir, name);
+            File.WriteAllBytes(f, [1]);
+            File.SetLastWriteTime(f, now.AddDays(-daysOld));
+            return f;
+        }
+        var old1 = Make("voip1-20260101-100000.wav", 40);
+        var old2 = Make("VOIP2-20260101-100000.wav", 31);
+        var fresh = Make("voip2-20261110-100000.wav", 1);
+        var other = Make("interview.wav", 40);
+        var mp3 = Make("voip1-oud.mp3", 40);
+        Assert.Equal(2, AirRecorder.RemoveOld(dir, "*.wav", AirRecorder.CallPrefixes, now.AddDays(-30)));
+        Assert.False(File.Exists(old1));
+        Assert.False(File.Exists(old2));
+        Assert.True(File.Exists(fresh) && File.Exists(other) && File.Exists(mp3));
+        Assert.Equal(0, AirRecorder.RemoveOld(Path.Combine(_dir, "bestaat-niet"), "*.wav", AirRecorder.CallPrefixes, now));
+    }
+
     [BassFact]
     public async Task A_cut_rule_plays_a_song_to_its_end_before_the_next_starts()
     {
