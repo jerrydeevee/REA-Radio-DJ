@@ -55,7 +55,10 @@ public sealed record JitterDto(long Received, long Played, long Lost, long Late,
 /// <summary>One VoIP channel and its line. Level = the channel's own level (what comes in), 0..1.</summary>
 public sealed record VoipLineDto(string Id, string Name, bool Connected, string State, string Codec, int? LocalPort, string? Remote,
     long Sent, JitterDto Jitter, double SecondsSinceAudio, DateTime? OpenedUtc, string? Error, bool Pfl, bool OnAir, float Level,
-    VoipConnectRequest Settings);
+    VoipConnectRequest Settings, bool Recording = false, double RecordSeconds = 0);
+
+/// <summary>Auto = every call or line is recorded (what comes in) from the moment it has audio until it goes quiet.</summary>
+public sealed record VoipRecordDto(bool Auto);
 
 public sealed record CodecDto(string Name, string Description);
 

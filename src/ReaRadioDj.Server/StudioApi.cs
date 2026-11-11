@@ -44,6 +44,10 @@ public static class StudioApi
         api.MapPost("/voip/{id}/station/{station}", (string id, string station, Voip.VoipService v) =>
             v.UseStation(id, station) is { } error ? Results.BadRequest(new { error }) : Results.Ok());
         api.MapGet("/voip/signals", (Voip.VoipService v) => v.Signals());
+        api.MapGet("/voip/record", (Voip.VoipService v) => v.RecordSettings());
+        api.MapPut("/voip/record", (VoipRecordDto r, Voip.VoipService v) => { v.SaveRecordSettings(r); return Results.Ok(v.RecordSettings()); });
+        api.MapPost("/voip/{id}/record", (string id, SwitchRequest r, Voip.VoipService v) =>
+            v.Record(id, r.On) is { } error ? Results.BadRequest(new { error }) : Results.Ok());
         api.MapPut("/voip/signals", (VoipSignalsDto s, Voip.VoipService v) => { v.SaveSignals(s); return Results.Ok(v.Signals()); });
         api.MapPost("/transport/stop", (PlayoutEngine e) => { e.Stop(); return Results.Ok(); });
         api.MapPost("/transport/next", (PlayoutEngine e) => { e.Next(); return Results.Ok(); });

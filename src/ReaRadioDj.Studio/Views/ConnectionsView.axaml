@@ -9,6 +9,8 @@
                Text="Live audio op de twee VoIP-kanalen: bellen via SIP, of een vaste RTP-lijn. De overkant hoort de uitzending zonder zichzelf. Laat bij een vaste lijn het adres leeg om te wachten tot de overkant naar jouw poort stuurt." />
     <DockPanel DockPanel.Dock="Top" Margin="0,0,0,6">
       <ToggleButton DockPanel.Dock="Right" Classes="small" Content="SIP-account" IsChecked="{Binding ShowAccount}" ToolTip.Tip="Account bij de VoIP-provider instellen" />
+      <CheckBox DockPanel.Dock="Right" Content="Gesprekken opnemen" IsChecked="{Binding AutoRecord}" Margin="0,0,8,0" FontSize="12"
+                ToolTip.Tip="Elk gesprek en elke lijn automatisch opnemen zodra er geluid binnenkomt, tot het weer stil is (WAV in Opnamen\Gesprekken)" />
       <ToggleButton DockPanel.Dock="Right" Classes="small" Content="Adresboek" IsChecked="{Binding ShowBook}" Margin="0,0,4,0"
                     ToolTip.Tip="Vaste stations (verslaggevers, andere studio's) en de signalen bij overgaan en verbinden" />
       <TextBlock FontSize="11" Text="⚠" Foreground="{DynamicResource WarnBrush}" IsVisible="{Binding SipWarning}" VerticalAlignment="Center" Margin="0,0,4,0" />
@@ -149,6 +151,9 @@
                 <StackPanel Spacing="4">
                   <DockPanel>
                     <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="4">
+                      <TextBlock FontSize="11" Foreground="{DynamicResource WarnBrush}" Text="{Binding RecordText}" VerticalAlignment="Center" Margin="0,0,4,0" />
+                      <ToggleButton Classes="small" Content="REC" IsChecked="{Binding Recording}"
+                                    ToolTip.Tip="Opnemen wat er binnenkomt (na de kanaalinstellingen, voor de fader); WAV in Opnamen\Gesprekken" />
                       <ToggleButton Classes="small" Content="PFL" IsChecked="{Binding Pfl}" ToolTip.Tip="Voorluisteren op de PFL-uitgang" />
                       <ToggleButton Classes="small" Content="Op de zender" IsChecked="{Binding OnAir}" ToolTip.Tip="Het kanaal in de uitzending (fader in de mixer)" />
                     </StackPanel>

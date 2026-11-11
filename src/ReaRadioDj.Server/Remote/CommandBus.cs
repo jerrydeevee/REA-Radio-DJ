@@ -69,6 +69,7 @@ public sealed class CommandBus(
         new("VOIP <1|2> HANGUP", "Ophangen, weigeren of de lijn sluiten", "Verbindingen"),
         new("VOIP <1|2> ONAIR ON|OFF|TOGGLE", "Het VoIP-kanaal op de zender", "Verbindingen"),
         new("VOIP <1|2> PFL ON|OFF|TOGGLE", "Het VoIP-kanaal voorbeluisteren", "Verbindingen"),
+        new("VOIP <1|2> RECORD ON|OFF|TOGGLE", "Opnemen wat er binnenkomt op het VoIP-kanaal (map Opnamen\\Gesprekken)", "Verbindingen"),
         new("VOIP STATUS", "Wat de VoIP-kanalen doen en of SIP is aangemeld", "Verbindingen"),
         new("STREAM START|STOP", "Icecast-uitzending starten of stoppen", "Stream"),
         new("SCAN", "Bibliotheek opnieuw inlezen", "Bibliotheek"),
@@ -261,8 +262,14 @@ public sealed class CommandBus(
                     on => ChannelsApi.SetOnAir(router, services.GetRequiredService<Core.Data.StationDb>(), options, id, on), $"{id} op de zender");
             case "PFL":
                 return Switch(arg, router.Voip(id).Pfl, on => voip.SetPfl(id, on), $"{id} voorbeluisteren");
+            case "RECORD":
+            {
+                bool? want = arg switch { "ON" or "1" or "AAN" => true, "OFF" or "0" or "UIT" => false, "TOGGLE" or "" => !voip.IsRecording(id), _ => null };
+                if (want is not bool on) return CommandResult.Fail("ON, OFF of TOGGLE");
+                return Result(voip.Record(id, on), $"{id} opnemen {(on ? "aan" : "uit")}");
+            }
         }
-        return CommandResult.Fail("VOIP <1|2> DIAL <nummer>, STATION <naam>, ANSWER, HANGUP, ONAIR ON|OFF|TOGGLE, PFL ON|OFF|TOGGLE");
+        return CommandResult.Fail("VOIP <1|2> DIAL <nummer>, STATION <naam>, ANSWER, HANGUP, ONAIR, PFL of RECORD ON|OFF|TOGGLE");
     }
 
     /// <summary>The DJ desk: a deck action, the crossfader, the cue mix, on air and automix.</summary>

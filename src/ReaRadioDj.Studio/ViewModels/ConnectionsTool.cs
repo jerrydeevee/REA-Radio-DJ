@@ -1,4 +1,4 @@
-﻿using System.Collections.ObjectModel;
+using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using ReaRadioDj.Contracts;
@@ -27,6 +27,8 @@ public sealed partial class VoipLineVm(string id, string name) : ObservableObjec
     [ObservableProperty] private double _level;
     [ObservableProperty] private bool _pfl;
     [ObservableProperty] private bool _onAir;
+    [ObservableProperty] private bool _recording;
+    [ObservableProperty] private string _recordText = "";
     [ObservableProperty] private string _result = "";
 
     // SIP: a call on this channel
@@ -73,10 +75,10 @@ public sealed partial class VoipLineVm(string id, string name) : ObservableObjec
         CallText = call.State switch
         {
             "gaat over" when call.Incoming => $"Inkomend gesprek van {who}",
-            "gaat over" => $"Gaat over bij {who}Ã¢â‚¬Â¦",
-            "belt" => $"Bellen naar {who}Ã¢â‚¬Â¦",
-            "in gesprek" => $"In gesprek met {who}" + (call.AnsweredUtc is DateTime a ? $" Ã‚Â· {StudioHub.Time((DateTime.UtcNow - a).TotalSeconds)}" : "") +
-                            (call.Codec is { } c ? $" Ã‚Â· {c.ToUpperInvariant()}" : ""),
+            "gaat over" => $"Gaat over bij {who}…",
+            "belt" => $"Bellen naar {who}…",
+            "in gesprek" => $"In gesprek met {who}" + (call.AnsweredUtc is DateTime a ? $" · {StudioHub.Time((DateTime.UtcNow - a).TotalSeconds)}" : "") +
+                            (call.Codec is { } c ? $" · {c.ToUpperInvariant()}" : ""),
             _ => $"Gesprek met {who} afgelopen" + (call.Reason is { } r ? $": {r}" : ""),
         };
     }
@@ -116,14 +118,16 @@ public sealed partial class VoipLineVm(string id, string name) : ObservableObjec
             _updating = true;
             Pfl = d.Pfl;
             OnAir = d.OnAir;
+            Recording = d.Recording;
             _updating = false;
         }
+        RecordText = d.Recording ? $"● opname {StudioHub.Time(d.RecordSeconds)}" : "";
         if (!d.Connected) { Detail = ""; Quality = ""; Warning = false; return; }
         var j = d.Jitter;
         string since = d.OpenedUtc is DateTime o ? StudioHub.Time((DateTime.UtcNow - o).TotalSeconds) : "";
-        Detail = $"{d.Codec.ToUpperInvariant()} Ã‚Â· poort {d.LocalPort} Ã‚Â· {(d.Remote ?? "wacht tot de overkant belt")} Ã‚Â· {since}";
-        Quality = $"in {j.Received} Ã‚Â· uit {d.Sent} Ã‚Â· verlies {j.LossPercent:0.##}% Ã‚Â· jitter {j.JitterMs:0.#} ms Ã‚Â· buffer {j.BufferMs:0} / {j.TargetMs:0} ms" +
-                  (j.Underruns > 0 ? $" Ã‚Â· {j.Underruns}Ãƒâ€” leeg" : "") + (d.Error is { Length: > 0 } e ? $" Ã‚Â· {e}" : "");
+        Detail = $"{d.Codec.ToUpperInvariant()} · poort {d.LocalPort} · {(d.Remote ?? "wacht tot de overkant belt")} · {since}";
+        Quality = $"in {j.Received} · uit {d.Sent} · verlies {j.LossPercent:0.##}% · jitter {j.JitterMs:0.#} ms · buffer {j.BufferMs:0} / {j.TargetMs:0} ms" +
+                  (j.Underruns > 0 ? $" · {j.Underruns}× leeg" : "") + (d.Error is { Length: > 0 } e ? $" · {e}" : "");
         Warning = d.State != "verbonden" || j.LossPercent > 2 || j.Underruns > 5;
     }
 
@@ -154,6 +158,19 @@ public sealed partial class VoipLineVm(string id, string name) : ObservableObjec
         if (!_filled || _updating) return;
         _touched = DateTime.Now;
         _ = StudioHub.Current.Client.PostAsync($"/api/voip/{Id}/pfl", new SwitchRequest(value));
+    }
+
+    partial void OnRecordingChanged(bool value)
+    {
+        if (!_filled || _updating) return;
+        _touched = DateTime.Now;
+        _ = RecordAsync(value);
+    }
+
+    private async Task RecordAsync(bool on)
+    {
+        var (_, error) = await StudioHub.Current.Client.SendWithErrorAsync<object>(HttpMethod.Post, $"/api/voip/{Id}/record", new SwitchRequest(on));
+        Result = error is null ? "" : "Niet gelukt: " + ErrorText(error);
     }
 
     partial void OnOnAirChanged(bool value)
@@ -251,7 +268,7 @@ public sealed partial class StationVm : ObservableObject
     partial void OnKindChanged(string value) { OnPropertyChanged(nameof(IsSip)); OnPropertyChanged(nameof(IsRtp)); }
 
     /// <summary>What a channel's station list shows.</summary>
-    public override string ToString() => Name.Length == 0 ? "(zonder naam)" : Kind == "sip" ? $"{Name} Ã‚Â· {Target}" : $"{Name} Ã‚Â· vaste lijn";
+    public override string ToString() => Name.Length == 0 ? "(zonder naam)" : Kind == "sip" ? $"{Name} · {Target}" : $"{Name} · vaste lijn";
 
     public static StationVm From(VoipStationDto d) => new()
     {
@@ -320,7 +337,7 @@ public sealed partial class ConnectionsTool : StudioTool
     public ObservableCollection<VoipLineVm> Lines { get; } = [];
     public IReadOnlyList<string> Codecs { get; } = ["pcma", "pcmu", "l16"];
     [ObservableProperty] private string _codecHelp =
-        "pcma / pcmu = G.711 (8 kHz, telefoon) Ã‚Â· l16 = lineair 16 bit 48 kHz mono (studiokwaliteit, ruim 0,8 Mbit/s)";
+        "pcma / pcmu = G.711 (8 kHz, telefoon) · l16 = lineair 16 bit 48 kHz mono (studiokwaliteit, ruim 0,8 Mbit/s)";
     [ObservableProperty] private bool _empty = true;
     public SipAccountVm Sip { get; } = new();
     [ObservableProperty] private string _sipState = "SIP staat uit";
@@ -328,20 +345,37 @@ public sealed partial class ConnectionsTool : StudioTool
     [ObservableProperty] private bool _showAccount;
     public StationBookVm Book { get; } = new();
     [ObservableProperty] private bool _showBook;
+    [ObservableProperty] private bool _autoRecord;
+    private bool _recordLoaded, _recordFilling;
+
+    partial void OnAutoRecordChanged(bool value)
+    {
+        if (_recordFilling) return;
+        _ = StudioHub.Current.Client.SendWithErrorAsync<VoipRecordDto>(HttpMethod.Put, "/api/voip/record", new VoipRecordDto(value));
+    }
+
+    private async Task LoadRecord()
+    {
+        if (await StudioHub.Current.Client.GetAsync<VoipRecordDto>("/api/voip/record") is not { } r) { _recordLoaded = false; return; }
+        _recordFilling = true;
+        AutoRecord = r.Auto;
+        _recordFilling = false;
+    }
     private bool _loading, _bookLoading;
 
     protected override void OnState(StateDto s)
     {
         if (!Sip.Loaded && !_loading) { _loading = true; _ = Sip.LoadAsync().ContinueWith(_ => _loading = false); }
         if (!Book.Loaded && !_bookLoading) { _bookLoading = true; _ = LoadBook(); }
+        if (!_recordLoaded) { _recordLoaded = true; _ = LoadRecord(); }
         var sip = s.Sip;
         SipState = sip switch
         {
             null or { Enabled: false } => "SIP staat uit",
-            { Registration: "aangemeld" } => $"Aangemeld als {sip.Account}" + (sip.RegisteredUntilUtc is DateTime u ? $" Ã‚Â· tot {u.ToLocalTime():HH:mm}" : "") +
-                                             (sip.PublicAddress is { } p ? $" Ã‚Â· publiek {p}" : ""),
+            { Registration: "aangemeld" } => $"Aangemeld als {sip.Account}" + (sip.RegisteredUntilUtc is DateTime u ? $" · tot {u.ToLocalTime():HH:mm}" : "") +
+                                             (sip.PublicAddress is { } p ? $" · publiek {p}" : ""),
             { Registration: "niet aanmelden" } => $"SIP aan zonder aanmelden ({sip.Account})",
-            _ => $"SIP: {sip.Registration}" + (sip.Error is { } e ? $" Ã‚Â· {e}" : ""),
+            _ => $"SIP: {sip.Registration}" + (sip.Error is { } e ? $" · {e}" : ""),
         };
         SipWarning = sip is { Enabled: true } && sip.Registration is not ("aangemeld" or "niet aanmelden");
         var list = s.Voip ?? [];

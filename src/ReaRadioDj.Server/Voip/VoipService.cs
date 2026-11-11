@@ -20,6 +20,8 @@ public sealed class VoipService(AudioRouter router, StationDb db, MessageCenter 
     public const string SipKey = "sip-account";
     public const string StationsKey = "voip-stations";
     public const string SignalsKey = "voip-signals";
+    public const string RecordKey = "voip-record";
+    private readonly HashSet<string> _autoRecording = []; // channels whose recording the service started itself
     private readonly Dictionary<string, string> _phase = []; // channel → "stil", "gaat over", "verbonden"
     private Timer? _watch;
     private readonly object _gate = new();
@@ -51,12 +53,12 @@ public sealed class VoipService(AudioRouter router, StationDb db, MessageCenter 
         var (l, r) = s.Levels();
         if (c.Line is not { } line)
             return new VoipLineDto(c.Id, s.Name, false, "niet verbonden", settings.Codec, null, null, 0, new JitterDto(0, 0, 0, 0, 0, 0, 0, 0, 0, settings.JitterMs, 0),
-                -1, null, null, c.Pfl, s.OnAir, Math.Max(l, r), settings);
+                -1, null, null, c.Pfl, s.OnAir, Math.Max(l, r), settings, s.Recorder.IsRecording, Math.Round(s.Recorder.Seconds, 1));
         var st = line.Status();
         var j = st.Jitter;
         return new VoipLineDto(c.Id, s.Name, true, st.State, st.Codec, st.LocalPort, st.Remote, st.Sent,
             new JitterDto(j.Received, j.Played, j.Lost, j.Late, j.Duplicates, j.Underruns, j.Skipped, j.JitterMs, j.BufferMs, j.TargetMs, j.LossPercent),
-            st.SecondsSinceAudio, st.OpenedUtc, st.Error, c.Pfl, s.OnAir, Math.Max(l, r), settings);
+            st.SecondsSinceAudio, st.OpenedUtc, st.Error, c.Pfl, s.OnAir, Math.Max(l, r), settings, s.Recorder.IsRecording, Math.Round(s.Recorder.Seconds, 1));
     }
 
     /// <summary>Opens a line on a channel (an open line there is hung up first). Returns an error text or null.</summary>
@@ -112,6 +114,60 @@ public sealed class VoipService(AudioRouter router, StationDb db, MessageCenter 
             line.Dispose();
             logger.LogInformation("VoIP {Channel}: hung up", id);
             return true;
+        }
+    }
+
+    // ------------------------------------------------------------------ recording calls
+
+    public VoipRecordDto RecordSettings()
+    {
+        if (db.GetSetting(RecordKey) is { } json)
+            try { if (JsonSerializer.Deserialize<VoipRecordDto>(json, JsonSerializerOptions.Web) is { } r) return r; }
+            catch (JsonException) { }
+        return new VoipRecordDto(false);
+    }
+
+    public void SaveRecordSettings(VoipRecordDto r) => db.SetSetting(RecordKey, JsonSerializer.Serialize(r, JsonSerializerOptions.Web));
+
+    /// <summary>The folder for call recordings: Gesprekken in the recording folder.</summary>
+    public string RecordFolder => Path.Combine(services.GetRequiredService<Core.ReaRadioDjOptions>().RecordingPath, "Gesprekken");
+
+    /// <summary>Starts or stops recording what comes in on a channel (after its strip, before the fader). Returns an error text or null.</summary>
+    public string? Record(string id, bool on)
+    {
+        if (!AudioRouter.IsVoip(id)) return $"{id} is geen VoIP-kanaal";
+        if (!router.IsStarted) return "de audio van de engine is niet gestart";
+        var strip = router.Strip(id);
+        lock (_gate) _autoRecording.Remove(id);
+        if (on)
+        {
+            if (strip.Recorder.IsRecording) return null;
+            try { strip.Recorder.Start(RecordFolder, id); }
+            catch (Exception ex) when (ex is BassException or IOException or UnauthorizedAccessException) { return $"opname niet gestart: {ex.Message}"; }
+            messages.Info($"Opname van {strip.Name} gestart");
+            return null;
+        }
+        if (strip.Recorder.Stop() is { } file)
+            messages.Info($"Opname van {strip.Name} opgeslagen: {Path.GetFileName(file)} ({TimeSpan.FromSeconds(Math.Round(strip.Recorder.Seconds)):m\\:ss})");
+        return null;
+    }
+
+    public bool IsRecording(string id) => router.IsStarted && AudioRouter.IsVoip(id) && router.Strip(id).Recorder.IsRecording;
+
+    /// <summary>With automatic recording: start when a channel gets audio, stop (only what it started itself) when it goes quiet.</summary>
+    private void AutoRecord(string id, string phase)
+    {
+        if (phase == "verbonden")
+        {
+            if (!RecordSettings().Auto || IsRecording(id)) return;
+            if (Record(id, true) is { } error) { logger.LogWarning("VoIP {Channel}: {Error}", id, error); return; }
+            lock (_gate) _autoRecording.Add(id);
+        }
+        else if (phase == "stil")
+        {
+            bool mine;
+            lock (_gate) mine = _autoRecording.Contains(id);
+            if (mine) Record(id, false);
         }
     }
 
@@ -363,6 +419,7 @@ public sealed class VoipService(AudioRouter router, StationDb db, MessageCenter 
                 string before = _phase.GetValueOrDefault(c.Id, "stil");
                 if (now == before) continue;
                 _phase[c.Id] = now;
+                AutoRecord(c.Id, now);
                 string command = now switch { "gaat over" => signals.Ringing, "verbonden" => signals.Connected, _ => signals.Ended };
                 if (command.Length == 0) continue;
                 var bus = services.GetRequiredService<Remote.CommandBus>();
