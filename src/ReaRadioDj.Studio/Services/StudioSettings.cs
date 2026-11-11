@@ -12,6 +12,8 @@ public sealed class StudioSettings
     public bool StartEngine { get; set; } = true;
     /// <summary>The setup helper was finished or skipped, so it does not open by itself again.</summary>
     public bool SetupDone { get; set; }
+    /// <summary>The DJ mixer shows four decks instead of two.</summary>
+    public bool DjFourDecks { get; set; }
     /// <summary>Colour style: regiekamer, daglicht, dark, night, light, contrast … (see Appearance).</summary>
     public string Theme { get; set; } = "regiekamer";
     /// <summary>Corner shape: square, normal or round.</summary>

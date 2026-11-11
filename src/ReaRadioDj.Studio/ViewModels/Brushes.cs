@@ -20,7 +20,10 @@ public static class Brushes
     public static readonly IValueConverter WarnOrOk = new FuncValueConverter<bool, IBrush>(warn => warn ? Amber : Green);
     public static readonly IValueConverter Connection =new FuncValueConverter<bool, IBrush>(ok => ok ? Ok : Amber);
     public static readonly IValueConverter BoldIf = new FuncValueConverter<bool, Avalonia.Media.FontWeight>(b => b ? Avalonia.Media.FontWeight.SemiBold : Avalonia.Media.FontWeight.Normal);
-    public static readonly IValueConverter TwinWaveHeight = new FuncValueConverter<int, double>(n => n >= 4 ? 180 : 110);
+    public static readonly IValueConverter TwinWaveHeight = new FuncValueConverter<int, double>(n => n >= 4 ? 140 : 110);
+    /// <summary>Height of the transport buttons of a deck: lower in the compact (four-deck) view.</summary>
+    public static readonly IValueConverter TransportHeight = new FuncValueConverter<bool, double>(compact => compact ? 40 : 50);
+    public static readonly IValueConverter TempoFaderHeight = new FuncValueConverter<bool, double>(compact => compact ? 56 : 80);
     public static readonly IValueConverter Negate = new FuncValueConverter<double, double>(v => -v);
     public static readonly IValueConverter Active = new FuncValueConverter<bool, IBrush>(on => on ? Green : Off);
     public static readonly IValueConverter Highlight = new FuncValueConverter<bool, IBrush>(on => on ? new SolidColorBrush(Color.Parse("#1F3A2C")) : Transparent);

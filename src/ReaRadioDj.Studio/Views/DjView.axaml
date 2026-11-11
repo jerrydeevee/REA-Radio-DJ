@@ -65,6 +65,8 @@
                       ToolTip.Tip="Golfvormen van de decks met beatstrepen (dik = elke vierde tel). Draai aan het muiswiel om in of uit te zoomen." />
     </Border>
 
+    <!-- With four decks everything is scaled down a little when needed, so it fits without scrolling (down to 70 %). -->
+    <ctl:FitToHeight Enabled="{Binding FourDecks}" MinScale="0.7">
     <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
       <Grid ColumnDefinitions="*,8,Auto,8,*" RowDefinitions="Auto,Auto">
         <v:DjDeckView Grid.Row="0" Grid.Column="0" DataContext="{Binding A}" />
@@ -75,13 +77,16 @@
         <!-- Mixer -->
         <Border Grid.Row="0" Grid.RowSpan="2" Grid.Column="2" Classes="card" Padding="14,12" CornerRadius="{DynamicResource Radius10}" VerticalAlignment="Top">
           <StackPanel Spacing="12">
-            <Grid ColumnDefinitions="220,16,220">
+            <Grid ColumnDefinitions="220,16,220" IsVisible="{Binding !FourDecks}">
               <v:DjStripView Grid.Column="0" DataContext="{Binding A}" />
               <v:DjStripView Grid.Column="2" DataContext="{Binding B}" />
             </Grid>
-            <Grid ColumnDefinitions="220,16,220" IsVisible="{Binding FourDecks}">
+            <!-- Four decks: the strips side by side as on a four-deck controller, C A | B D (left of the crossfader A and C) -->
+            <Grid ColumnDefinitions="214,10,214,16,214,10,214" IsVisible="{Binding FourDecks}">
               <v:DjStripView Grid.Column="0" DataContext="{Binding C}" />
-              <v:DjStripView Grid.Column="2" DataContext="{Binding D}" />
+              <v:DjStripView Grid.Column="2" DataContext="{Binding A}" />
+              <v:DjStripView Grid.Column="4" DataContext="{Binding B}" />
+              <v:DjStripView Grid.Column="6" DataContext="{Binding D}" />
             </Grid>
             <StackPanel Spacing="4">
               <Grid ColumnDefinitions="Auto,Auto,*,Auto,Auto">
@@ -116,5 +121,6 @@
         </Border>
       </Grid>
     </ScrollViewer>
+    </ctl:FitToHeight>
   </DockPanel>
 </UserControl>
