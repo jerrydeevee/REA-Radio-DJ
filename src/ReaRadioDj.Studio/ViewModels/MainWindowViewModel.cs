@@ -56,6 +56,11 @@ public sealed partial class MainWindowViewModel : ObservableObject
                 ShowWindow(parts[0]);
             }
             else if (args[i] == "--float") FloatWindow(args[i + 1]);
+            else if (args[i] == "--place-dialog") OpenPlace();
+            // --place log:library:rechts:0.67 (target "*" = the whole main window), for testing Venster plaatsen
+            else if (args[i] == "--place" && args[i + 1].Split(':') is [var pw, var pt, var ps, var share])
+                Hub.Status = PlaceDockable(pw, pt == "*" ? WholeArea : pt, ps,
+                    double.Parse(share, System.Globalization.CultureInfo.InvariantCulture)) ?? $"geplaatst: {pw}";
             else if (args[i] == "--workbench" && int.TryParse(args[i + 1], out var screen)) _startWorkbenches.Add(screen - 1);
         int ca = Array.IndexOf(args, "--cues");
         if (ca >= 0 && ca + 1 < args.Length && long.TryParse(args[ca + 1], out var cueId))
@@ -101,6 +106,108 @@ public sealed partial class MainWindowViewModel : ObservableObject
         GoToOpen = false;
         if (entry is not null) ShowWindow(entry.Id);
     }
+    // ---- Venster plaatsen: put a window exactly where you want it, without aiming at drop targets
+    public const string WholeArea = "";
+    [ObservableProperty] private bool _placeOpen;
+    [ObservableProperty] private WindowEntry? _placeWindow;
+    [ObservableProperty] private WindowEntry? _placeTarget;
+    [ObservableProperty] private string _placeSide = "onder";
+    [ObservableProperty] private string _placeSize = "1/2";
+    [ObservableProperty] private string _placeResult = "";
+    public ObservableCollection<WindowEntry> PlaceTargets { get; } = [];
+    public IReadOnlyList<string> PlaceSides { get; } = ["links", "rechts", "boven", "onder", "als tabblad"];
+    public IReadOnlyList<string> PlaceSizes { get; } = ["1/4", "1/3", "1/2", "2/3", "3/4"];
+    public bool PlaceSizeUsed => PlaceSide != "als tabblad";
+    partial void OnPlaceSideChanged(string value) => OnPropertyChanged(nameof(PlaceSizeUsed));
+
+    [RelayCommand]
+    private void OpenPlace()
+    {
+        PlaceTargets.Clear();
+        PlaceTargets.Add(new WindowEntry(WholeArea, "het hele hoofdvenster"));
+        foreach (var w in WindowMenu)
+            if (Layout is not null && _factory.FindDockable(Layout, d => d.Id == w.Id) is not null) PlaceTargets.Add(w);
+        PlaceTarget ??= PlaceTargets[0];
+        if (PlaceTarget is { } t && !PlaceTargets.Contains(t)) PlaceTarget = PlaceTargets[0];
+        PlaceWindow ??= WindowMenu.FirstOrDefault();
+        PlaceResult = "";
+        PlaceOpen = true;
+    }
+
+    [RelayCommand] private void ClosePlace() => PlaceOpen = false;
+
+    [RelayCommand]
+    private void Place()
+    {
+        if (PlaceWindow is not { } what || PlaceTarget is not { } where) { PlaceResult = "kies een venster en een plek"; return; }
+        var error = PlaceDockable(what.Id, where.Id, PlaceSide, PlaceSize switch { "1/4" => 0.25, "1/3" => 1 / 3.0, "2/3" => 2 / 3.0, "3/4" => 0.75, _ => 0.5 });
+        if (error is not null) { PlaceResult = error; return; }
+        PlaceOpen = false;
+        Hub.Status = $"{what.Name} staat nu {(PlaceSide == "als tabblad" ? "als tabblad bij" : PlaceSide + " van")} {where.Name}";
+    }
+
+    /// <summary>
+    /// Moves a window (from wherever it is: docked, floating or closed) next to another window in the main window, or
+    /// along an edge of the whole main window, taking <paramref name="share"/> of the space. Returns an error text or null.
+    /// </summary>
+    public string? PlaceDockable(string id, string targetId, string side, double share)
+    {
+        if (Layout is null) return "geen indeling";
+        if (id == targetId) return "kies een ander venster als plek";
+        IDock? target;
+        if (targetId == WholeArea)
+        {
+            target = Layout.VisibleDockables?.OfType<IDock>().FirstOrDefault();
+            if (target is null) return "het hoofdvenster is leeg";
+        }
+        else
+        {
+            if (_factory.FindDockable(Layout, d => d.Id == targetId) is not { Owner: IDock owner }) return "dat venster staat niet in het hoofdvenster";
+            target = owner;
+        }
+        var dockable = FindAnywhere(d => d.Id == id);
+        if (dockable is not null && ReferenceEquals(dockable.Owner, target) && side != "als tabblad" && target.VisibleDockables?.Count == 1)
+            return "dit venster staat daar al alleen; kies een ander venster als plek";
+        if (dockable is null) dockable = DockFactory.Create(id);
+        else if (side == "als tabblad" && ReferenceEquals(dockable.Owner, target)) { _factory.SetActiveDockable(dockable); return null; }
+        else _factory.RemoveDockable(dockable, true);
+        CloseEmptyWindows();
+
+        if (side == "als tabblad")
+        {
+            if (target is not IToolDock) return "als tabblad kan alleen bij een venster, niet bij het hele hoofdvenster";
+            _factory.AddDockable(target, dockable);
+            _factory.SetActiveDockable(dockable);
+            _factory.SetFocusedDockable(target, dockable);
+            return null;
+        }
+        var op = side switch { "links" => DockOperation.Left, "rechts" => DockOperation.Right, "boven" => DockOperation.Top, _ => DockOperation.Bottom };
+        var dock = new Dock.Model.Mvvm.Controls.ToolDock
+        {
+            Id = "dock-" + id + "-" + Guid.NewGuid().ToString("N")[..6], Title = id, VisibleDockables = _factory.CreateList(dockable),
+            ActiveDockable = dockable, Alignment = Alignment.Unset,
+        };
+        // the target may have been removed with the window (it was its last one): then use the whole main window
+        if (target.Owner is null || !IsInLayout(target)) target = Layout.VisibleDockables?.OfType<IDock>().FirstOrDefault();
+        if (target is null) return "geen plek gevonden";
+        _factory.SplitToDock(target, dock, op);
+        share = Math.Clamp(share, 0.1, 0.9);
+        dock.Proportion = share;
+        target.Proportion = 1 - share;
+        _factory.SetActiveDockable(dockable);
+        _factory.SetFocusedDockable(dock, dockable);
+        return null;
+    }
+
+    private bool IsInLayout(IDockable d) => Layout is not null && (ReferenceEquals(d, Layout) || _factory.FindDockable(Layout, x => ReferenceEquals(x, d)) is not null);
+
+    /// <summary>A floating window whose last studio window moved out is closed.</summary>
+    private void CloseEmptyWindows()
+    {
+        foreach (var w in FloatingWindows.ToList())
+            if (w.Layout is not { } l || _factory.FindDockable(l, d => d is StudioTool) is null) w.Exit();
+    }
+
     public ObservableCollection<string> LayoutNames { get; } = [];
 
     [ObservableProperty] private IRootDock? _layout;

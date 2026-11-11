@@ -72,6 +72,7 @@
               </MenuItem.Styles>
             </MenuItem>
             <MenuItem Header="Opslaan" Command="{Binding SaveLayoutCommand}" />
+            <MenuItem Header="Venster plaatsen…" Command="{Binding OpenPlaceCommand}" />
             <MenuItem Header="Standaardindeling herstellen" Command="{Binding ResetLayoutCommand}" />
             <MenuItem Header="Alle werkbladen sluiten" Command="{Binding CloseWorkbenchesCommand}" />
           </MenuItem>
@@ -250,6 +251,39 @@
           </DataTemplate>
         </ListBox.ItemTemplate>
       </ListBox>
+    </StackPanel>
+  </Border>
+
+  <!-- Indeling › Venster plaatsen: a window exactly next to another one, without aiming at drop targets. -->
+  <Border IsVisible="{Binding PlaceOpen}" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,96,0,0" Width="560"
+          Background="{DynamicResource CardBrush}" BorderBrush="{DynamicResource AccentBrush}" BorderThickness="1"
+          CornerRadius="{DynamicResource Radius10}" Padding="12" BoxShadow="0 12 32 0 #66000000">
+    <StackPanel Spacing="8">
+      <TextBlock FontWeight="SemiBold" Text="Venster plaatsen" />
+      <TextBlock Classes="muted" FontSize="12" TextWrapping="Wrap"
+                 Text="Zet een venster precies waar je het wilt: naast een ander venster of langs een rand van het hoofdvenster, met de grootte die je kiest. Een zwevend venster komt zo ook terug." />
+      <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto,Auto,Auto" ColumnSpacing="8" RowSpacing="6">
+        <TextBlock Grid.Row="0" Classes="muted" Text="Venster" VerticalAlignment="Center" />
+        <ComboBox Grid.Row="0" Grid.Column="1" ItemsSource="{Binding WindowMenu}" SelectedItem="{Binding PlaceWindow}" HorizontalAlignment="Stretch">
+          <ComboBox.ItemTemplate><DataTemplate x:DataType="vm:WindowEntry"><TextBlock Text="{Binding Name}" /></DataTemplate></ComboBox.ItemTemplate>
+        </ComboBox>
+        <TextBlock Grid.Row="1" Classes="muted" Text="Kant" VerticalAlignment="Center" />
+        <ComboBox Grid.Row="1" Grid.Column="1" ItemsSource="{Binding PlaceSides}" SelectedItem="{Binding PlaceSide}" MinWidth="140" />
+        <TextBlock Grid.Row="2" Classes="muted" Text="Van" VerticalAlignment="Center" />
+        <ComboBox Grid.Row="2" Grid.Column="1" ItemsSource="{Binding PlaceTargets}" SelectedItem="{Binding PlaceTarget}" HorizontalAlignment="Stretch">
+          <ComboBox.ItemTemplate><DataTemplate x:DataType="vm:WindowEntry"><TextBlock Text="{Binding Name}" /></DataTemplate></ComboBox.ItemTemplate>
+        </ComboBox>
+        <TextBlock Grid.Row="3" Classes="muted" Text="Grootte" VerticalAlignment="Center" IsVisible="{Binding PlaceSizeUsed}" />
+        <StackPanel Grid.Row="3" Grid.Column="1" Orientation="Horizontal" Spacing="6" IsVisible="{Binding PlaceSizeUsed}">
+          <ComboBox ItemsSource="{Binding PlaceSizes}" SelectedItem="{Binding PlaceSize}" MinWidth="80" />
+          <TextBlock Classes="muted" Text="van de ruimte" VerticalAlignment="Center" />
+        </StackPanel>
+      </Grid>
+      <StackPanel Orientation="Horizontal" Spacing="6">
+        <Button Content="Plaatsen" Command="{Binding PlaceCommand}" Classes="accent" />
+        <Button Content="Sluiten" Command="{Binding ClosePlaceCommand}" />
+        <TextBlock Foreground="{DynamicResource WarnBrush}" Text="{Binding PlaceResult}" VerticalAlignment="Center" TextWrapping="Wrap" />
+      </StackPanel>
     </StackPanel>
   </Border>
   </Panel>
