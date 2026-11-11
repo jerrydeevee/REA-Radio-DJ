@@ -12,6 +12,47 @@ public static class MediaDrag
     public const string Format = "application/x-rea-media";
     /// <summary>An audio file by its path on the engine machine (from the Verkenner).</summary>
     public const string FileFormat = "application/x-rea-file";
+    /// <summary>Which window a drag comes from ("log", "clipboard"), so a window can ignore its own items.</summary>
+    public const string SourceFormat = "application/x-rea-source";
+
+    /// <summary>The window a drag started in, or null.</summary>
+    public static string? SourceOf(DragEventArgs e) => e.Data.Get(SourceFormat) as string;
+
+    /// <summary>Drags a library item by its id.</summary>
+    public static async Task StartAsync(PointerEventArgs e, long mediaId, string text, string? source = null)
+    {
+        var data = new DataObject();
+        data.Set(Format, mediaId.ToString(System.Globalization.CultureInfo.InvariantCulture));
+        data.Set(DataFormats.Text, text);
+        if (source is not null) data.Set(SourceFormat, source);
+        await DragDrop.DoDragDrop(e, data, DragDropEffects.Copy);
+    }
+
+    /// <summary>
+    /// Makes a control a drag source: with the left button held, after 8 pixels of movement it drags the library item
+    /// that <paramref name="pick"/> finds for the pressed element's data context (null = nothing to drag).
+    /// </summary>
+    public static void DragSource(Control control, Func<object?, (long Id, string Text)?> pick, string? source = null)
+    {
+        Point? pressed = null;
+        (long Id, string Text)? item = null;
+        control.AddHandler(InputElement.PointerPressedEvent, (_, e) =>
+        {
+            if (!e.GetCurrentPoint(control).Properties.IsLeftButtonPressed) return;
+            item = pick((e.Source as StyledElement)?.DataContext);
+            pressed = item is null ? null : e.GetPosition(control);
+        }, handledEventsToo: true);
+        control.AddHandler(InputElement.PointerMovedEvent, async (_, e) =>
+        {
+            if (pressed is not Point p || item is not { } it) return;
+            var now = e.GetPosition(control);
+            if (Math.Abs(now.X - p.X) + Math.Abs(now.Y - p.Y) < 8) return;
+            pressed = null;
+            item = null;
+            await StartAsync(e, it.Id, it.Text, source);
+        }, handledEventsToo: true);
+        control.AddHandler(InputElement.PointerReleasedEvent, (_, _) => { pressed = null; item = null; }, handledEventsToo: true);
+    }
 
     /// <summary>Drags a file; a file that is in the library also drags as a library item, so every target accepts it.</summary>
     public static async Task StartFileAsync(PointerEventArgs e, string path, long? mediaId)

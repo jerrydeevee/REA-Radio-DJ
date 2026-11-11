@@ -21,6 +21,9 @@ public sealed class StudioSettings
 
     /// <summary>Calmer, less saturated colours for kinds of items and waveforms.</summary>
     public bool CalmColors { get; set; }
+
+    /// <summary>Ids of the tracks on the clipboard, newest first.</summary>
+    public List<long> Clipboard { get; set; } = [];
     /// <summary>Accent colour (hex) instead of the style's own; empty = the style's.</summary>
     public string Accent { get; set; } = "";
     /// <summary>Button look: flat, raised or outline.</summary>

@@ -28,6 +28,7 @@ public sealed class DockFactory : Factory
         ("djmidi", "DJ-controller", () => new DjMidiTool()),
         ("soloist", "Soloist (ontwikkeltest)", () => new SoloistTool()),
         ("library", "Bibliotheek", () => new LibraryTool()),
+        ("clipboard", "Klembord", () => new ClipboardTool()),
         ("cues", "Cue-editor", () => new CueEditorTool()),
         ("mixer", "Mixer en routing", () => new MixerTool()),
         ("planner", "Planner", () => new PlannerTool()),
@@ -93,7 +94,7 @@ public sealed class DockFactory : Factory
         if (Workspace == "prod")
             // Production: a big library, the cue editor and the voice windows; PFL to listen without going on air.
             return Root(Row("main",
-                Column("p-left", 0.34, Tools("dock-library", "library", "explorer", "wishlist")),
+                Column("p-left", 0.34, Tools("dock-library", "library", "explorer", "clipboard", "wishlist")),
                 Column("p-center", 0.42, Sized(0.55, "dock-editor", "cues"), Sized(0.45, "dock-voice", "voicetrack", "voice", "presenter", "transition", "news")),
                 Column("p-right", 0.24, Sized(0.5, "dock-pfl", "pfl", "item", "standby"), Sized(0.5, "dock-side", "overlays", "messages"))));
 
@@ -120,7 +121,7 @@ public sealed class DockFactory : Factory
             {
                 Id = "dj-bottom", Proportion = 0.26, Orientation = Orientation.Horizontal,
                 VisibleDockables = CreateList<IDockable>(
-                    Tools("dock-library", "library", "log", "asrun"),
+                    Tools("dock-library", "library", "clipboard", "log", "asrun"),
                     new ProportionalDockSplitter(),
                     Tools("dock-side", "automix", "sampler", "cart1", "cart2", "djmidi", "mixer", "pfl", "clock", "messages")),
             };
@@ -157,7 +158,7 @@ public sealed class DockFactory : Factory
         {
             Id = "left", Proportion = 0.27, Orientation = Orientation.Vertical,
             VisibleDockables = CreateList<IDockable>(
-                Tools("dock-library", "library", "wishlist"),
+                Tools("dock-library", "library", "clipboard", "wishlist"),
                 new ProportionalDockSplitter(),
                 Tools("dock-players", "standby", "pfl")),
         };

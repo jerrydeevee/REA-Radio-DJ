@@ -145,6 +145,8 @@ public sealed partial class LibraryTool : StudioTool
         BulkText = "";
     }
 
+    [RelayCommand] private Task ToClipboard() => Services.MediaClipboard.AddAsync(SelectedIds);
+
     private IReadOnlyList<long> SelectedIds => _selection.Count > 0 ? _selection.Select(m => m.Id).ToList() : Selected is { } s ? [s.Id] : [];
 
     private async Task Bulk(MediaBulkRequest r, string done)

@@ -133,6 +133,9 @@ public sealed partial class DjDeckVm : ObservableObject
     private Task<bool> Post(string action, DjCommand? body = null) => Hub.Client.PostAsync($"/api/dj/decks/{Id}/{action}", body ?? new DjCommand());
 
     public Task Load(long mediaId) => Post("load", new DjCommand(MediaId: mediaId));
+
+    /// <summary>The library item on this deck, or null.</summary>
+    public long? MediaId => Loaded ? _waveFor : null;
     public Task SeekTo(double seconds) => Post("seek", new DjCommand(Value: seconds));
 
     [RelayCommand] private Task Toggle() => Post("toggle");

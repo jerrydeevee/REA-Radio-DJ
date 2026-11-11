@@ -11,6 +11,7 @@ public partial class DjDeckView : UserControl
     {
         InitializeComponent();
         MediaDrag.AcceptDrops(this, (id, _) => DataContext is DjDeckVm deck ? deck.Load(id) : Task.CompletedTask);
+        MediaDrag.DragSource(TitleArea, dc => dc is DjDeckVm { MediaId: long id } d ? (id, d.Title) : null, "deck");
         Wave.Clicked += seconds => { if (DataContext is DjDeckVm { Loaded: true } deck) _ = deck.SeekTo(seconds); };
 
         // Roll buttons work while held: pressed = roll on, released (or the pointer lost) = roll off.

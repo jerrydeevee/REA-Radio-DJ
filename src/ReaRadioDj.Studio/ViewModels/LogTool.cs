@@ -14,6 +14,7 @@ public sealed partial class LogRow : ObservableObject
     public string? Detail { get; init; }
     public required string Origin { get; init; }
     public string? Error { get; init; }
+    public long? MediaId { get; init; }
     public string TypeText => Type switch { "song" => "Muziek", "jingle" => "Jingle", "aiBreak" => "AI", _ => Type };
     [ObservableProperty] private string _startsAt = "";
     [ObservableProperty] private string _length = "";
@@ -103,6 +104,7 @@ public sealed partial class LogTool : StudioTool
         Detail = u.Type == "aiBreak" ? u.Script : string.Join(" · ", new[] { u.Artist, u.Category }.Where(x => !string.IsNullOrWhiteSpace(x))),
         Origin = (u.UseHook ? u.Origin + " · hook" : u.Origin) + (u.HandMadeMix ? " · eigen overgang" : ""),
         Error = u.Error,
+        MediaId = u.MediaId,
         Length = StudioHub.Time(u.Length),
     };
 

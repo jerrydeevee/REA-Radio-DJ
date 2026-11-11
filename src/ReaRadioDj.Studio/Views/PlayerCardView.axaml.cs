@@ -11,6 +11,7 @@ public partial class PlayerCardView : UserControl
     {
         InitializeComponent();
         MediaDrag.AcceptDrops(this, (id, _) => DataContext is PlayerCard p ? p.Drop(id) : Task.CompletedTask);
+        MediaDrag.DragSource(TitleText, dc => dc is PlayerCard { MediaId: long id } p ? (id, p.Title) : null, "player");
         Wave.Clicked += seconds => { if (DataContext is PlayerCard p && p.MediaId is not null) _ = p.SeekTo(seconds); };
         Bar.PointerPressed += (_, e) =>
         {

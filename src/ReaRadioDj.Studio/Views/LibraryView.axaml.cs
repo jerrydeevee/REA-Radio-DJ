@@ -56,6 +56,7 @@ public partial class LibraryView : UserControl
             bool ctrl = e.KeyModifiers.HasFlag(KeyModifiers.Control);
             switch (e.Key)
             {
+                case Key.C when ctrl && e.KeyModifiers.HasFlag(KeyModifiers.Shift): t.ToClipboardCommand.Execute(null); e.Handled = true; break;
                 case Key.Enter when ctrl: t.EndCommand.Execute(null); e.Handled = true; break;
                 case Key.Enter: t.NextCommand.Execute(null); e.Handled = true; break;
                 case Key.Space: t.PflCommand.Execute(null); e.Handled = true; break;

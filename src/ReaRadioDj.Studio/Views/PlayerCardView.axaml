@@ -33,7 +33,7 @@
       </DockPanel>
 
       <StackPanel Spacing="2">
-        <TextBlock Text="{Binding Title}" FontSize="17" FontWeight="Bold" TextTrimming="CharacterEllipsis"
+        <TextBlock x:Name="TitleText" Text="{Binding Title}" FontSize="17" FontWeight="Bold" TextTrimming="CharacterEllipsis" Background="Transparent"
                    Classes.muted="{Binding !Loaded}" />
         <TextBlock Classes="muted" Text="{Binding Sub}" FontSize="13" TextTrimming="CharacterEllipsis"
                    IsVisible="{Binding Sub, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
