@@ -10,7 +10,7 @@ namespace ReaRadioDj.Server;
 /// starts the automation again. The first seconds after the engine starts do not count (the library may still be read).
 /// </summary>
 public sealed class SilenceWatch(ReaRadioDjOptions options, AudioRouter router, PlayoutEngine engine, MessageCenter messages,
-    MediaLibrary library, ILogger<SilenceWatch> logger) : BackgroundService
+    MediaLibrary library, StandbyFlag standby, ILogger<SilenceWatch> logger) : BackgroundService
 {
     public const string Warn = "warn", AutoPlay = "autoplay", Category = "category", Random = "random";
     private static readonly TimeSpan StartGrace = TimeSpan.FromSeconds(30);
@@ -37,7 +37,8 @@ public sealed class SilenceWatch(ReaRadioDjOptions options, AudioRouter router, 
     private void Check(DateTime now)
     {
         var s = options.Silence;
-        if (!s.Enabled || !router.IsStarted) { _detector.Reset(); return; }
+        // a backup studio without the air is quiet on purpose
+        if (!s.Enabled || !router.IsStarted || standby.Standby) { _detector.Reset(); return; }
         var (left, right) = router.Program.Levels();
         bool alarm = _detector.Update(SilenceDetector.ToDb(Math.Max(left, right)), s.ThresholdDb, s.Seconds, now, out bool returned);
         if (returned) messages.Info("Er is weer geluid op de zender");

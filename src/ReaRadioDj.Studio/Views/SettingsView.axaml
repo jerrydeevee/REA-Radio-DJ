@@ -454,6 +454,52 @@
         </StackPanel></ScrollViewer>
       </TabItem>
 
+      <TabItem Header="Reservestudio">
+        <ScrollViewer><StackPanel Classes="page" DataContext="{Binding Failover}" x:DataType="vm:FailoverVm">
+          <TextBlock Classes="title" Text="Hoofd- en reservestudio" />
+          <TextBlock Classes="help" Text="Twee engines die op elkaar letten, elk met een eigen geluidskaart naar de zender of de stream. De reservestudio vraagt de hoofdstudio om de paar seconden hoe het gaat. Antwoordt die te lang niet (of is het daar stil, als je dat kiest), dan start de reservestudio zijn eigen automatisering. Speelt de hoofdstudio weer, dan geeft de reservestudio de uitzending terug: vanzelf na de gekozen tijd, of met de knop. Tijdens die tijd spelen beide; laat de mengtafel of de streamserver de juiste kiezen." />
+          <Border Classes="card" Padding="10,8" Margin="0,12,0,0" IsVisible="{Binding IsOn}">
+            <StackPanel Spacing="4">
+              <DockPanel>
+                <TextBlock DockPanel.Dock="Right" Text="OP DE LUCHT" FontWeight="Bold" Foreground="{DynamicResource WarnBrush}" IsVisible="{Binding HasAir}" VerticalAlignment="Center" />
+                <TextBlock FontWeight="SemiBold" Text="{Binding State}" TextWrapping="Wrap" />
+              </DockPanel>
+              <TextBlock Classes="help" Text="{Binding PartnerText}" />
+              <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,6,0,0" IsVisible="{Binding IsBackup}">
+                <Button Classes="bar danger" Content="Nu overnemen" Command="{Binding TakeOverCommand}" IsVisible="{Binding !HasAir}"
+                        ToolTip.Tip="De reservestudio start meteen, ook al antwoordt de hoofdstudio nog" />
+                <Button Classes="bar primary" Content="Teruggeven aan de hoofdstudio" Command="{Binding GiveBackCommand}" IsVisible="{Binding HasAir}"
+                        ToolTip.Tip="De automatisering hier stopt met uitfaden" />
+              </StackPanel>
+              <TextBlock Classes="help" Foreground="{DynamicResource WarnBrush}" Text="{Binding Result}" IsVisible="{Binding Result, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+            </StackPanel>
+          </Border>
+          <TextBlock Classes="field" Text="Deze engine is" />
+          <ComboBox ItemsSource="{Binding Roles}" SelectedItem="{Binding Role}" MinWidth="150" IsEnabled="{Binding Loaded}"
+                    ToolTip.Tip="uit = let niet op een andere studio · hoofd = toont of de reserve paraat is · reserve = neemt over als de hoofdstudio wegvalt" />
+          <StackPanel IsVisible="{Binding IsOn}">
+            <TextBlock Classes="field" Text="Adres van de andere engine" />
+            <TextBox Text="{Binding Partner}" Watermark="http://studio1:8600" />
+            <TextBlock Classes="help" Text="De andere engine moet op het netwerk luisteren (niet alleen 127.0.0.1)." />
+            <TextBlock Classes="field" Text="Vragen elke (seconden)" />
+            <NumericUpDown Value="{Binding IntervalSeconds}" Minimum="1" Maximum="30" Increment="1" FormatString="0" />
+            <TextBlock Classes="field" Text="Overnemen als de hoofdstudio zo lang niet antwoordt (seconden)" />
+            <NumericUpDown Value="{Binding LostSeconds}" Minimum="3" Maximum="600" Increment="1" FormatString="0" />
+            <CheckBox Content="Ook overnemen bij stilte op de zender van de hoofdstudio" IsChecked="{Binding TakeOverOnSilence}" Margin="0,10,0,0"
+                      ToolTip.Tip="Gebruikt de stiltebewaking van de hoofdstudio (tabblad Bewaking daar)" />
+            <CheckBox Content="Vanzelf teruggeven als de hoofdstudio weer speelt" IsChecked="{Binding GiveBackAutomatically}" Margin="0,6,0,0" />
+            <TextBlock Classes="field" Text="Teruggeven nadat de hoofdstudio zo lang weer speelt (seconden)" IsVisible="{Binding GiveBackAutomatically}" />
+            <NumericUpDown Value="{Binding GiveBackSeconds}" Minimum="5" Maximum="3600" Increment="5" FormatString="0" IsVisible="{Binding GiveBackAutomatically}" />
+            <CheckBox Content="Bij overnemen ook de stream starten (en bij teruggeven weer stoppen)" IsChecked="{Binding StartStream}" Margin="0,10,0,0" />
+            <TextBlock Classes="field" Text="Commando's bij overnemen" />
+            <TextBox Text="{Binding OnTakeOver}" Watermark="bijv. ALERT Reservestudio op de lucht; OSC 192.168.1.20:8000 /licht/reserve 1" />
+            <TextBlock Classes="field" Text="Commando's bij teruggeven" />
+            <TextBox Text="{Binding OnGiveBack}" Watermark="bijv. OSC 192.168.1.20:8000 /licht/reserve 0" />
+            <TextBlock Classes="help" Text="Commando's van de commandobus (venster Bediening), meerdere gescheiden door een puntkomma. Actief na Opslaan." />
+          </StackPanel>
+        </StackPanel></ScrollViewer>
+      </TabItem>
+
       <TabItem Header="Gebruikers">
         <ScrollViewer><StackPanel Classes="page" MaxWidth="760" DataContext="{Binding Users}" x:DataType="vm:UsersPanelVm">
           <TextBlock Classes="title" Text="Gebruikers en rechten" />

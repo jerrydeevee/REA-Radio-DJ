@@ -332,6 +332,9 @@ public sealed partial class SettingsTool : StudioTool
 
     [RelayCommand] private Task Reload() => LoadAsync();
 
+    /// <summary>Settings › Reservestudio.</summary>
+    public FailoverVm Failover { get; } = new();
+
     private async Task LoadAsync()
     {
         Status = "lezen…";
@@ -350,6 +353,7 @@ public sealed partial class SettingsTool : StudioTool
         Show(s);
         await LoadRulesAsync();
         await LoadSystemAsync();
+        await Failover.LoadAsync();
         await LoadOutputsAsync();
         await LoadDeskModeAsync();
         await LoadAudioAsync();
@@ -530,6 +534,8 @@ public sealed partial class SettingsTool : StudioTool
         if (AcoustIdLoaded && AcoustIdKey.Trim().Length > 0) await SaveAcoustIdAsync();
         StoreSoloist();
 
+        string? failoverError = await Failover.SaveAsync();
+
         if (SystemLoaded)
         {
             var sys = await Hub.Client.SendForAsync<SystemDto>(HttpMethod.Put, "/api/system", new SystemSettingsRequest(AutoStart, DetailedLog));
@@ -547,6 +553,7 @@ public sealed partial class SettingsTool : StudioTool
         if (!routed) notes.Add("De geluidskaarten zijn niet gewisseld (kaart niet beschikbaar?).");
         if (saved.Rescanning) notes.Add("De bibliotheek wordt opnieuw ingelezen uit de nieuwe mappen.");
         if (saved.NeedsRestart.Count > 0) notes.Add("Actief na een herstart van de engine: " + string.Join(", ", saved.NeedsRestart) + ".");
+        if (failoverError is not null) notes.Add(failoverError + ".");
         Status = string.Join(" ", notes);
     }
 

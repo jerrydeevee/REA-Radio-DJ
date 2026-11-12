@@ -34,6 +34,7 @@ public static class AccessRules
         ("/api/sources", UserRole.Admin),
         ("/api/stream/targets", UserRole.Admin),
         ("/api/sip/account", UserRole.Admin),
+        ("/api/failover/settings", UserRole.Admin),
         ("/api/library/folders", UserRole.Admin),
         ("/api/library/relocate", UserRole.Admin),
         ("/api/vst/folders", UserRole.Admin),

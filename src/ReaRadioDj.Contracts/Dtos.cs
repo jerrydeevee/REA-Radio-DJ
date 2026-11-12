@@ -691,3 +691,14 @@ public sealed record AdReportLineDto(string Advertiser, string Campaign, int Pla
 {
     public string Text => $"{Aired}× uitgezonden ({Complete} volledig){(Missed > 0 ? $", {Missed} gemist" : "")} · {SecondsOnAir / 60:0.0} min";
 }
+
+// ---------------------------------------------------------------- main and backup studio
+
+/// <summary>What an engine tells the other studio: healthy, something playing, silence on air, and whether it took the air over.</summary>
+public sealed record FailoverBeatDto(string Station, string Role, bool Healthy, bool Playing, bool Silent, bool HasAir, DateTime TimeUtc);
+
+/// <summary>Role "uit", "hoofd" or "reserve"; State in words; Partner = what the other engine said last (null = no answer).</summary>
+public sealed record FailoverStatusDto(string Role, string PartnerUrl, string State, bool HasAir, DateTime? LastAnswerUtc, FailoverBeatDto? Partner, string? Error);
+
+public sealed record FailoverSettingsDto(string Role, string Partner, int IntervalSeconds, int LostSeconds, bool TakeOverOnSilence,
+    bool GiveBackAutomatically, int GiveBackSeconds, bool StartStream, string OnTakeOver, string OnGiveBack);

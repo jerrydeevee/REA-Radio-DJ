@@ -92,9 +92,12 @@ builder.Services.AddSingleton<StudioPlayers>();
 builder.Services.AddSingleton(new DjStore(Path.Combine(options.DataFolder, "dj.json")));
 builder.Services.AddSingleton<DjMixer>();
 builder.Services.AddSingleton<DjHandover>();
+builder.Services.AddSingleton<StandbyFlag>();
 builder.Services.AddSingleton<SilenceWatch>();
 builder.Logging.AddProvider(SystemLog.Instance);
 builder.Services.AddHostedService(sp => sp.GetRequiredService<SilenceWatch>());
+builder.Services.AddSingleton<FailoverService>();
+builder.Services.AddHostedService(sp => sp.GetRequiredService<FailoverService>());
 builder.Services.AddSingleton(sp => new VoiceTracker(sp.GetRequiredService<PlayoutLog>(), new BassVoiceCapture(),
     new PflVoicePreview(sp.GetRequiredService<StudioPlayers>()), path => sp.GetRequiredService<MediaLibrary>().Load(path, ReaRadioDj.Core.Model.MediaKind.Voice),
     Path.Combine(options.DataFolder, "voicetracks"), options.Routing.MicDevice));
