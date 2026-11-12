@@ -8,7 +8,8 @@ De lijst is een **functielijst**, geen bouwtekening. Bronnen:
 
 - de openbare gebruikershandleiding van een volwaardig commercieel playout-pakket (versie 4.x, 336 pagina's);
 - de bestandsnamen in de installatiemap van dat pakket (welke hulpprogramma's en modules er zijn);
-- voor onderdeel 14: de openbare helpsite van een mediabeheer- en workflowplatform voor video en tv (versie rond 2021–2022; de site wordt niet meer bijgehouden).
+- voor onderdeel 14: de openbare helpsite van een mediabeheer- en workflowplatform voor video en tv (versie rond 2021–2022; de site wordt niet meer bijgehouden);
+- voor onderdeel 15: de openbare artikelen op de supportsite van dezelfde leverancier, over zijn radio- en nieuwsproducten. Het meeste staat achter een klantenlogin; alleen de openbare artikelen zijn gelezen (13 november 2026).
 
 Er is **niets gedecompileerd, uitgepakt of uit programmacode gehaald**. De licentie van dat pakket verbiedt reverse-engineeren, en het past bij onze eigen clean-room-afspraak. Daaruit volgt:
 
@@ -233,6 +234,47 @@ Het tweede platform is een systeem voor **mediabeheer en workflows voor video en
 | ➖ | Meerdere omroepen in één installatie (multi-tenant) | niet nodig | — |
 | ➖ | Video: montagepanelen, videoproxy's, IMF/AS-02, video-CDN's | geen video | — |
 
+### 15. Radio- en nieuwsproductie bij een grote omroepleverancier (derde bron)
+
+De openbare artikelen geven vooral een beeld van **hoe een groot radiosysteem is opgedeeld**, plus één uitgebreide handleiding van een audio/video-montageprogramma in de browser. Het meeste (handleidingen, release notes van het radioproduct) staat achter een klantenlogin en is dus niet gelezen.
+
+**Opbouw van het radiosysteem** (uit de lijst met ondersteunde geluidskaarten):
+
+- **Op de lucht:** een uitzendspeler met carts, en daaronder een aparte uitzendserver per studio.
+- **Productie:** montage met één spoor en met meerdere sporen, een trimmer en markeerprogramma, een cue-editor, een klembord, voorluisteren en een handmatige recorder.
+- **Centrale opname:** geplande opnames van binnenkomende lijnen ("ingest-tijdlijn"), een **noodrecorder** (direct opnemen met één knop), en een **doorlopende opname** waaruit je achteraf een stuk knipt.
+- **Hardware:** per geluidskaart staat getest wat er werkt (opnemen, productie, uitzenden, doorlopend opnemen, ASIO). Eis bij uitzenden: ten minste 4 stereo-uitgangen per uitzendserver, 48–96 kHz.
+
+**Montage in de browser** (uit de handleiding van de editor):
+
+- Tijdlijn met meerdere audiosporen plus een apart voice-over-spoor.
+- Inspreken direct op de tijdlijn.
+- **Automatisch dempen** van de andere sporen onder de voice-over, met in te stellen niveau en fades (standaard -15 dB).
+- Volume-omhullende met punten.
+- **Stilte aan begin en eind wegknippen** op een drempel (standaard -40 dB).
+- Knippen, plakken, groeperen, rimpel- en vastklikmodus, in- en uitpunten in een trimmer.
+- Bediening met J/K/L (achteruit, stop, vooruit, sneller), zelf in te stellen sneltoetsen, automatisch opslaan.
+
+**Nieuws en verbinding:**
+
+- Een nieuwsredactiesysteem in de cloud.
+- Een netwerkgateway die de cloud en de studio veilig koppelt: VPN (IPsec, WireGuard of OpenVPN), dubbel uitgevoerd voor uitval.
+
+| | Functie | Stand bij ons | Prio |
+|---|---|---|---|
+| ✅ | Uitzendspeler met carts; engine als aparte uitzenddienst | engine + studio | — |
+| ✅ | Cue-editor, voorluisteren, klembord | | — |
+| 🟡 | Handmatige recorder en voicetrack-opname | opnemen naar de bibliotheek is er; een losse recorder met trimmen ontbreekt | M |
+| ⬜ | **Doorlopende opname waaruit je achteraf een stuk knipt** (bijv. een interview van 10 minuten geleden als item in de bibliotheek zetten) | uuropnames bestaan; knippen naar de bibliotheek ontbreekt | H |
+| ⬜ | **Noodrecorder**: één knop die direct opneemt wat er binnenkomt (telefoon, lijn, microfoon) | ontbreekt | M |
+| ⬜ | **Geplande opnames van een ingang of stream** (bijv. elke dag om 12:00 het regionale nieuws opnemen en klaarzetten) | ontbreekt | H |
+| ⬜ | **Montageprogramma met meerdere sporen**: voice-over-spoor, automatisch dempen, volume-omhullende, stilte wegknippen, knippen en plakken, J/K/L | ontbreekt; hoort bij de bouwsteen tijdlijn | M |
+| ⬜ | **Lijst met geteste apparatuur**: per geluidskaart en per functie (uitzenden, opnemen, ASIO) wat werkt | ontbreekt; geheugen-regel: tests alleen met apparaat 0 | M |
+| ⬜ | Kleine nieuwsredactie: berichten met tekst en geluid, een draaiboek voor het bulletin, leesscherm (prompter) | nieuwsblokken bestaan; berichten en draaiboek ontbreken | M |
+| ⬜ | Veilige toegang van buiten (thuisstudio, voicetracking op afstand) via een VPN zoals WireGuard, in plaats van poorten openzetten | advies en documentatie | M |
+| ➖ | Cloud-gateway met BGP/OSPF, dubbel uitgevoerd | te groot voor een lokale omroep | — |
+| ➖ | Centrale SQL Server-database | wij gebruiken SQLite; bij de centrale bibliotheek (fase E) opnieuw bekijken | — |
+
 ### Wat REA-Radio-DJ al heeft en dat pakket niet
 
 - AI-presentator met lokaal taalmodel en eigen stem, met een spraakcontrole.
@@ -369,13 +411,28 @@ Zonder dit heeft uitbreiden geen zin.
 | 8. Zoektaal: OF, haakjes, vergelijkingen; resultaat exporteren | — | S | `genre:(pop OF rock) jaar:>2000` werkt |
 | 9. Archief naar NAS of cloud met terughalen | engine-rollen | L | opnames ouder dan een maand staan op de NAS en zijn terug te halen |
 
+### Fase H — Opnemen en produceren (uit onderdeel 15)
+
+| Werk | Bouwsteen | Grootte | Klaar als |
+|---|---|---|---|
+| 1. **Doorlopende opname met terugknippen**: in de opname van de afgelopen uren een stuk aanwijzen (golfvorm, tijd) en als item in de bibliotheek zetten | tijdlijn | M | het interview van 10 minuten geleden staat binnen een minuut als item klaar |
+| 2. **Geplande opnames** van een ingang, VoIP-lijn of stream, met een categorie als bestemming | agenda | M | het regionale nieuws van 12:00 staat elke dag vanzelf klaar |
+| 3. **Noodrecorder**: één knop (ook als commando en op de hardware) die direct opneemt wat er binnenkomt | — | S | een onverwacht telefoontje staat volledig in de opname |
+| 4. **Montageprogramma met meerdere sporen**: voice-over-spoor met inspreken, automatisch dempen, omhullende, stilte wegknippen, knippen/plakken, J/K/L | tijdlijn | L | een nieuwsitem met intro, interview en muziekbed maken zonder ander programma |
+| 5. **Lijst met geteste apparatuur** in de documentatie, bijgehouden bij elke test | — | S | de beheerder weet vooraf welke kaart werkt |
+| 6. Kleine nieuwsredactie: berichten met tekst en geluid, draaiboek voor het bulletin, leesscherm | webpagina's | M | de nieuwslezer leest van het scherm en start de geluidsfragmenten vanuit het draaiboek |
+| 7. Handleiding voor veilige toegang van buiten via WireGuard | — | S | voicetracking op afstand werkt zonder open poorten |
+
 ### Volgorde en afhankelijkheden
 
 ```
 A ──► B ──► C ──► E
       │     │
-      └──► D┘     F en G (lopen parallel zodra A klaar is)
+      └──► D┘     F, G en H (lopen parallel zodra A klaar is)
 ```
+
+- **H1 en H4** gebruiken dezelfde tijdlijn als de overgangseditor (**B1**). Bouw de tijdlijn één keer, met plek voor meerdere sporen.
+- **H2** past in de agenda-laag van **C1**.
 
 - **G** hangt voor de webpagina's (3, 4) samen met **E3**: dezelfde webbasis. G1 (takenoverzicht) is klein en helpt meteen bij de bedrijfszekerheid uit A.
 
