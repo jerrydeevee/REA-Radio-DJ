@@ -67,6 +67,28 @@ public sealed class DjMathTests
         }
         finally { File.Delete(file); }
     }
+
+    [Fact]
+    public void Desk_settings_are_kept_next_to_the_tempo_file()
+    {
+        string file = Path.Combine(Path.GetTempPath(), $"rea-dj-{Guid.NewGuid():N}.json");
+        string desk = Path.Combine(Path.GetTempPath(), Path.GetFileNameWithoutExtension(file) + "-desk.json");
+        try
+        {
+            Assert.False(new DjStore(file).Desk.Quantize);                    // nothing saved yet: the defaults
+            Assert.True(new DjStore(file).Desk.Limiter);
+            new DjStore(file).SaveDesk(new DjDeskSettings { Quantize = true, CueMix = 0.75, Limiter = false, LimiterDb = -3, Curve = DjMixer.Sharp });
+            var again = new DjStore(file).Desk;
+            Assert.True(again.Quantize);
+            Assert.Equal(0.75, again.CueMix);
+            Assert.False(again.Limiter);
+            Assert.Equal(-3, again.LimiterDb);
+            Assert.Equal(DjMixer.Sharp, again.Curve);
+            File.WriteAllText(desk, "{kapot");
+            Assert.Equal(DjMixer.Smooth, new DjStore(file).Desk.Curve);       // a damaged file gives the defaults
+        }
+        finally { File.Delete(file); File.Delete(desk); }
+    }
 }
 
 [Collection("bass")]
@@ -113,16 +135,37 @@ public sealed class DjDeckTests : IDisposable
         return new MediaItem { Id = 0, Path = path, Kind = MediaKind.Song, Title = name, Duration = seconds, Cues = new CueSet { CueOut = seconds, Mix = seconds } };
     }
 
-    private DjMixer Desk()
+    private DjMixer Desk(DjStore? store = null)
     {
         var options = new ReaRadioDjOptions { OutputDevice = 0 };
         options.Routing.PreviewDevice = 0;
         options.Routing.MicEnabled = false;
         var router = new AudioRouter(options);
         _cleanup.Add(router);
-        var desk = new DjMixer(router, options, new DjStore());
+        var desk = new DjMixer(router, options, store ?? new DjStore());
         _cleanup.Add(desk);
         return desk;
+    }
+
+    [BassFact]
+    public void The_desk_starts_with_the_settings_of_last_time()
+    {
+        string file = Path.Combine(_dir, "dj.json");
+        var first = Desk(new DjStore(file));
+        first.SetQuantize(true);
+        first.SetCueMix(0.3);
+        first.SetLimiter(true, -2);
+        first.SetCurve(DjMixer.Sharp);
+        first.Dispose();
+        _cleanup.Remove(first);
+
+        var desk = Desk(new DjStore(file));
+        Assert.True(desk.Quantize);
+        Assert.True(desk.Decks.All(d => d.Quantize));
+        Assert.Equal(0.3, desk.CueMix, 3);
+        Assert.Equal(-2, desk.Info.LimiterDb, 3);
+        Assert.True(desk.Info.Limiter);
+        Assert.Equal(DjMixer.Sharp, desk.Curve);
     }
 
     [BassFact]
