@@ -1,244 +1,354 @@
 # Functiedekking en plan naar een volwaardige playout
 
-*Opgesteld 12 november 2026.*
+*Versie 2, 12 november 2026. Versie 1 was een eerste overzicht; deze versie is uitgewerkt per onderdeel, de open punten zijn in de code nagelopen, en het plan is uitgebreid met architectuur, opleveringen en controlepunten.*
 
 ## Waar deze lijst vandaan komt
 
-De lijst is opgesteld als **functielijst**. Bronnen:
+De lijst is een **functielijst**, geen bouwtekening. Bronnen:
 
-- de openbare gebruikershandleiding van een volwaardig commercieel playout-pakket (versie 4.x);
-- de namen van de hulpprogramma's in de installatiemap van dat pakket.
+- de openbare gebruikershandleiding van een volwaardig commercieel playout-pakket (versie 4.x, 336 pagina's);
+- de bestandsnamen in de installatiemap van dat pakket (welke hulpprogramma's en modules er zijn).
 
-Er is **niets gedecompileerd of uit programmacode gehaald**. De licentie van dat pakket verbiedt reverse-engineeren (art. 5.2). Dat past ook bij onze eigen clean-room-afspraak.
+Er is **niets gedecompileerd, uitgepakt of uit programmacode gehaald**. De licentie van dat pakket verbiedt reverse-engineeren, en het past bij onze eigen clean-room-afspraak. Daaruit volgt:
 
-Daaruit volgt:
+- Alles hieronder staat in eigen woorden. We nemen geen namen, schermen, teksten, commandonamen of bestandsformaten over.
+- Waar we iets inlezen voor overstappers, gebruiken we alleen openbare of open formaten (M3U, PLS, XSPF, BWF/CART, ID3, CSV).
+- "Rebuild" betekent hier: **dezelfde functies afdekken met onze eigen architectuur en ons eigen ontwerp**, niet het pakket namaken.
 
-- Alles hieronder is in eigen woorden beschreven. We nemen geen namen, schermen, teksten of bestandsformaten over.
-- Waar we iets inlezen voor overstappers, gebruiken we alleen openbare of open formaten (M3U, PLS, XSPF, BWF/CART, ID3).
+**Legenda:** ✅ REA-Radio-DJ heeft het · 🟡 gedeeltelijk of nog niet getest · ⬜ ontbreekt · ➖ bewust niet
 
-**Legenda:**
-
-- ✅ REA-Radio-DJ heeft het;
-- 🟡 gedeeltelijk, of nog niet getest;
-- ⬜ ontbreekt;
-- ➖ bewust niet (zie onderaan);
-- *(na te gaan)*: de stand is niet zeker, eerst in de code of de studio controleren.
+Het belang staat in de kolom **Prio** voor Radio Aa en Hunze: **H** hoog, **M** middel, **L** laag.
 
 ---
 
-## 1. Geluidsengine en formaten
+## Deel 1 — Functielijst per onderdeel
 
-| | Functie | Stand bij ons |
+### 1. Geluidsengine en formaten
+
+| | Functie | Stand bij ons | Prio |
+|---|---|---|---|
+| ✅ | 24/7-bedrijf, 32-bit float-verwerking | engine (BASS) los van de studio, met watchdog | — |
+| 🟡 | WDM/WASAPI en ASIO 2.0, meerkanaalskaarten | ASIO per uitgang gebouwd; een stuurprogramma dat niet start wordt nog niet opgevangen met een terugval | H |
+| ✅ | Afspelen van MP1/2/3, WAV, OGG, FLAC, AAC/M4A, Opus, WMA, APE, MPC, internetstreams | via BASS en plug-ins | — |
+| ⬜ | Broadcast Wave: BEXT- en CART-gegevens lezen **en schrijven**, RF64 (wav boven 4 GB) | niet in de code gevonden | M |
+| ✅ | ReplayGain (piek en waargenomen luidheid), LUFS, BPM, toonsoort | bij het inlezen | — |
+| ✅ | Tags lezen en schrijven (ID3v1/v2, Vorbis, APE, MP4, RIFF), hoezen | detailpaneel; ook in het bestand | — |
+| ✅ | Metagegevens in een apart bestand naast de audio (bron niet aanraken) | sidecar-bestanden | — |
+| ⬜ | Opnemen/transcoderen via een vrij in te stellen opdrachtregel-encoder | wij hebben vaste encoders | L |
+| ➖ | Audio-cd rippen en branden | zie "Bewust niet" | — |
+
+### 2. Mengpaneel en routering
+
+| | Functie | Stand bij ons | Prio |
+|---|---|---|---|
+| ✅ | Kanaalstrip: gain, balans, 10-bands EQ, compressor/begrenzer, automatische niveauregeling, dempen | Mixer › ⚙ | — |
+| ✅ | VST-effecten per kanaal | drie plekken per kanaal | — |
+| ✅ | Uitgang per kanaal; werkwijze "mengtafel" of "software" | Instellingen › Geluid | — |
+| ✅ | Spreken over muziek: microfoon of overlay dempt de muziek | dempniveau per strip (talkover/ducking) | — |
+| ⬜ | **Vrij aantal in- en uitgangskanalen** en **subgroepen** (som van een paar spelers, groepsbus, luidsprekertoewijzing per kanaal) | onze kanalen liggen vast | M |
+| ⬜ | **Profielen met presets**: hele mengpanelinstelling of alleen EQ/gain/pan wisselen met één klik | ontbreekt | M |
+| ⬜ | "Talk to user": een tweede spreekcircuit naar één bepaalde uitgang (bijv. de beller of de tweede studio), los van de zender | deels via de VoIP-terugweg | L |
+| ⬜ | **Bewaking van de geluidskaart**: melden of terugzetten als Windows of een ander programma het volume of de demping van het apparaat verandert | ontbreekt | H |
+| ⬜ | Inrichthulp voor het mengpaneel: in een paar stappen kanalen, uitgangen en routering kiezen | onze inrichthulp doet alleen de basis | L |
+| ✅ | Gesynchroniseerde PFL op elke bron, plus een PFL-speler die vooruit luistert | PFL-speler | — |
+| ⬜ | Volumeregeling van een externe tafel of kaart vanuit het programma (uitgangsniveau van het apparaat) | ontbreekt | L |
+
+### 3. Spelers
+
+| | Functie | Stand bij ons | Prio |
+|---|---|---|---|
+| ✅ | Automatiseringsdecks bij de log, met aftellen tot mix, uit en volgende | Live-decks | — |
+| 🟡 | DJ-spelers: golfvorm, hot cues, loops, sampler, tempo/pitch met vaste toonhoogte, achteruit, backspin, effecten | DJ-modus gebouwd, luistertest nog te doen | M |
+| ✅ | Standby-spelers met stapel (meerdere items achter elkaar) | twee standby-spelers | — |
+| ⬜ | **Vrij aantal standby-spelers** | wij hebben er twee | L |
+| ✅ | Twee onafhankelijke cartwalls met pagina's; meerdere carts tegelijk of na elkaar; faden en herhalen | Cartwall 1 en 2, Sampler | — |
+| ✅ | Overlayspeler boven het programma | overlays | — |
+| ✅ | Externe stream bewaken en bij signaal het programma onderbreken of erover leggen | streambewaking | — |
+| ⬜ | Snelle voorluisterspeler in de verkenner (één klik, zonder de PFL-speler te bezetten) | PFL-knop per regel; een aparte speler ontbreekt | L |
+
+### 4. Cues, golfvorm en overgangen
+
+| | Functie | Stand bij ons | Prio |
+|---|---|---|---|
+| ✅ | Cue-editor: in, vol niveau, intro, outro, mix (volgende), fade-uit, uit; hookpunten | cue-editor | — |
+| ✅ | Automatisch cues bepalen op drempels (dB voor in, volgende en uit; min/max fadelengtes) | bij het inlezen | — |
+| ✅ | Mengregels per soort item en per nummer | overgangsregels per soort | — |
+| ⬜ | **Maximale speelduur per soort** (bijv. jingles nooit langer dan 30 s) en **korte items niet faden** | na te bouwen in de overgangsregels | M |
+| 🟡 | Gebeurtenissen op een plek in een nummer: volume-omhullende of opdracht | in de cue-editor | — |
+| ⬜ | **Inzet-overgang**: een kort item (bijv. een station-ID) automatisch over het einde of het begin van een nummer leggen, met demping, tot een maximale lengte | ontbreekt | M |
+| ⬜ | **Overgangseditor met twee sporen**: einde van A en begin van B onder elkaar, B verslepen, een voice-over ertussen leggen of direct inspreken, automatische demping, tempo aanpassen | **grootste ontbrekende stuk in de bediening** | H |
+| ✅ | Hooks afspelen (alleen een fragment) in de planning | klokregel "Hook" | — |
+| ⬜ | Hook-container met eigen opener, scheider en afsluiter (een "teaser" van komende nummers) | ontbreekt | M |
+| ⬜ | Presentatortekst per item (wat je bij dit nummer of deze reclame zegt), groot in beeld tijdens het afspelen | er zijn alleen notities voor de AI-presentator | M |
+
+### 5. Bibliotheek en metagegevens
+
+| | Functie | Stand bij ons | Prio |
+|---|---|---|---|
+| ✅ | Mappen als bibliotheek, automatisch bijwerken, ook op shares | Bibliotheek › Beheer | — |
+| ✅ | Externe database als bron (SQL) | Databronnen | — |
+| ⬜ | **Een afspeellijst (M3U/PLS/XSPF) als vaste bron**, en als één doorlopend item in de log | niet in de code gevonden | M |
+| ⬜ | **Centrale bibliotheekdienst** voor meerdere studio's: één plek scant en meet, de studio's vragen op en halen het bestand over als het lokaal niet bereikbaar is | stap 7 | M |
+| ✅ | Snel zoeken met filters (artiest, jaar, BPM, energie, stemming, waardering, categorie) | zoektaal met chips | — |
+| 🟡 | Vergelijkbare nummers vinden | via toonsoort en BPM; echte gelijkenis ontbreekt | L |
+| ✅ | Uitgebreide tagvelden (componist, uitgever, ISRC, groepering, stemming, waardering) | detailpaneel | — |
+| ✅ | Bibliotheek exporteren naar CSV voor een muziekplanner | /api/library/export.csv | — |
+| ⬜ | Los tag-programma voor de redactie: tags, cues, volume-omhullende en inzetten vastleggen zonder de studio te openen | kan als webpagina op de engine | L |
+| ⬜ | Gebruikersgebonden bibliotheken en paden (een presentator ziet alleen zijn eigen map) | rollen bestaan; padbeperking niet | L |
+
+### 6. Automatisering en planning
+
+| | Functie | Stand bij ons | Prio |
+|---|---|---|---|
+| ✅ | Klokken met regels: willekeurig, op volgorde, hook; scheiding op artiest/titel; niet-na-regels | planner en klokken | — |
+| ✅ | Weekrooster: per dag en uur een klok | planner | — |
+| ✅ | Vaste tijden: hard (onderbreken), zacht (na het huidige item), overlay | vaste gebeurtenissen | — |
+| ✅ | Herinneringen, alarmen en commando's op tijd | vaste gebeurtenissen | — |
+| ⬜ | **Programma's op datum** (eenmalig of met herhaling, zoals in een agenda), met eindtijd | wij plannen per weekdag en uur | H |
+| ⬜ | **Maximale vertraging bij een zachte start**: is het huidige nummer bijna klaar, dan uitspelen; anders wegdraaien | zacht wacht nu altijd | M |
+| ⬜ | Overlay tot een eindtijd of één ronde, daarna gaat het onderbroken programma verder | overlay speelt één item of blok | M |
+| ⬜ | Handmatige start: het programma meldt zich op tijd, de presentator start het | ontbreekt | L |
+| ⬜ | Overlay laten uitstellen of overslaan door de presentator vóór de start | ontbreekt | M |
+| ⬜ | Mengtijd tussen twee programma's | ontbreekt | L |
+| ✅ | Live-assist ↔ automatisch; de automatisering loopt mee onder de DJ | | — |
+| ✅ | Containers (groep items als één regel) | klembord → container | — |
+| ✅ | Globale speelgeschiedenis voor rotatie | as-run | — |
+| 🟡 | Jingle of reclame automatisch na elke N–M nummers | met klokregels te maken, niet als instelling | L |
+| ⬜ | Script-opties: vast eerste item, terugloopregel, archieflijst van wat gespeeld is | deels via klokken; terugloop en archief ontbreken | L |
+| 🟡 | **Logs inlezen uit externe muziekplanners en traffic-systemen** | log-import met eigen veldindeling; koppelprofielen per leverancier volgen | M |
+
+### 7. Reclame en nieuws
+
+| | Functie | Stand bij ons | Prio |
+|---|---|---|---|
+| ✅ | Adverteerders, campagnes, blokken, uitzendbewijs per klant | Reclame | — |
+| ⬜ | **Meerdere regio's**: per regio andere reclame in hetzelfde blok, op een eigen uitgang of stream, met uitzendbewijs per regio | ontbreekt | L |
+| ⬜ | Reclamebeheer als losse werkplek voor de reclameafdeling, met facturatie-overzicht | kan als webpagina | M |
+| ✅ | Nieuwsblokken met opener en afsluiter; RSS en berichtencentrum | | — |
+| ✅ | AI-nieuws en AI-weerbericht | eigen uitbreiding | — |
+
+### 8. Uitzenden en opnemen
+
+| | Functie | Stand bij ons | Prio |
+|---|---|---|---|
+| ✅ | Meerdere streamservers tegelijk: Icecast, SHOUTcast v1/v2; MP3, AAC/HE-AAC, Ogg, Opus, FLAC; HLS | | — |
+| ✅ | Titelupdates met eigen opmaak, per soort uit te zetten | | — |
+| ⬜ | Hoes meesturen in de stream (in-stream artwork) | ontbreekt | L |
+| ⬜ | Zelf als lokale streamserver dienen (luisteren op het eigen netwerk zonder Icecast) | ontbreekt | L |
+| ✅ | Programma per uur opnemen met bewaartermijn; microfoon opnemen; gesprekken opnemen | | — |
+| ⬜ | **Opnemen met signaaldetectie** (alleen opnemen bij geluid boven een drempel, bijv. alleen de presentatorpraat als luistercontrole) | niet in de code gevonden | H |
+| ✅ | Direct inspreken naar de bibliotheek (voicetrack) | | — |
+
+### 9. Bediening op afstand en hardware
+
+| | Functie | Stand bij ons | Prio |
+|---|---|---|---|
+| ✅ | Commando's via HTTP, TCP, UDP en OSC; sneltoetsen die ook buiten de studio werken | commandobus | — |
+| 🟡 | MIDI met leren, serieel, Livewire, Ember+, Mackie Control | gebouwd; nog niet tegen echte apparaten getest | H |
+| 🟡 | **Commandotaal**: velden zoals {artiest} {titel} {tijd} zijn er; **voorwaarden, rekenen, tekstfuncties en datum/tijd-opmaak ontbreken** | EventRules en PlayoutOutputs | M |
+| ⬜ | Commandoschema met **gebeurtenissen per bron** (speler, mengkanaal, stream, MIDI, OSC, serieel met patroonherkenning) die elk hun eigen velden aanbieden | gebeurtenissen per soort item zijn er | M |
+| ⬜ | Commando's vanaf de opdrachtregel naar de engine sturen | klein programma op de bestaande TCP-poort | L |
+| ⬜ | USB-GPIO-kaarten (contactsluitingen), D&R Airence/Webstation | stap 8 | M |
+| ⬜ | GPIO als losse dienst op een andere pc (koppelt apparaten en praat met de engine via het netwerk) | onze hardwarelaag zit in de engine | L |
+| ⬜ | Toegangslimiet per afstandsbediener (welke commando's mag die client) | er is één wachtwoord | M |
+| ➖ | Joystickpoort | verouderd | — |
+
+### 10. Meerdere studio's en meekijken
+
+| | Functie | Stand bij ons | Prio |
+|---|---|---|---|
+| ✅ | Hoofd- en reservestudio met hartslag en automatische overname | reservestudio (fa3f799) | — |
+| ⬜ | **Studio's elkaar laten bedienen** (log, planner en mengkanalen van een andere studio) | ontbreekt | M |
+| ⬜ | **Meekijkscherm**: vorige/huidige/volgende, tijden en de stand van alle spelers, op een tweede plek of op afstand | samen met de remote-app | M |
+| ⬜ | **Voicetracking op afstand** (thuis inspreken) | stap 9 | M |
+
+### 11. Bedrijfszekerheid, logging en rapportage
+
+| | Functie | Stand bij ons | Prio |
+|---|---|---|---|
+| ✅ | Watchdog met herstart, stiltedetectie, as-run, systeemlog | | — |
+| ✅ | Programmalog als tekstbestand met eigen opmaak en bewaartermijn | | — |
+| ⬜ | Logopmaak met kop, regel en slot, filter per soort item, containers wel of niet uitklappen | eigen opmaak per regel is er | L |
+| ✅ | Uitzendstatistiek per dag, week en maand; rapport auteursrechten (CSV, PDF); reclamebewijs | | — |
+| ⬜ | **Vrije analyse**: draaitabel en grafieken over de hele geschiedenis | uitbreiding van de statistiek | L |
+| ⬜ | Log en planning afdrukken of exporteren (PDF/HTML) | alleen het muziekrapport heeft PDF | M |
+| ✅ | Reservekopie en terugzetten van instellingen | | — |
+| ⬜ | Eigen rapportsjablonen (opmaak zelf maken) | wij hebben vaste rapporten | L |
+
+### 12. Gebruikersomgeving
+
+| | Functie | Stand bij ons | Prio |
+|---|---|---|---|
+| ✅ | Dockbare vensters, meerdere schermen, werkbladen, indelingen bewaren | | — |
+| ✅ | Thema's, hoge DPI, aanraakmodus, grotere letters | | — |
+| ✅ | Gebruikers, rollen en rechten met pincode, studio vergrendelen | | — |
+| ⬜ | **Per gebruiker**: eigen indeling, eigen beginwerkruimte, zichtbare vensters, eigen knoppen | rechten per rol; indeling per gebruiker ontbreekt | M |
+| ✅ | Klok met kwartier- en uuraftelling; tijdcode (resterend tot mix, uit, intro, outro) | | — |
+| ⬜ | Grote losse klok voor in de studio (apart venster of scherm) | kan met een venster op een tweede scherm | L |
+| ⬜ | Stationsbeeld: logo, foto van de presentator, live spectrum | | L |
+| ⬜ | Ingebouwd webpaneel (eigen pagina's, luisteraarsinteractie) | WebView | L |
+| ⬜ | Online hulp per scherm en een handleiding | stap 10 | H |
+
+### 13. Hulpprogramma's naast de studio
+
+Het pakket levert naast de studio een aantal losse programma's. Bij ons horen die functies **in de engine of als webpagina van de engine**, niet als aparte installaties:
+
+| Functie in dat pakket | Onze vorm | Stand |
 |---|---|---|
-| ✅ | 24/7-bedrijf, 32-bit float-verwerking (BASS) | engine los van de studio, met een watchdog |
-| ✅/🟡 | WASAPI, DirectSound en ASIO per uitgang, buffer en samplerate | ASIO gebouwd; een stuurprogramma dat niet start, is nog niet goed opgevangen |
-| ✅ | Afspelen van MP3, WAV, OGG, FLAC, AAC/M4A, Opus en meer | via BASS met plug-ins |
-| 🟡 | Broadcast Wave: BEXT- en CART-chunks lezen en schrijven, RF64 | lezen is er; schrijven en RF64 *(na te gaan)* |
-| ⬜ | Exotische formaten: MIDI, MOD, audio-cd als bron | lage prioriteit |
-| ✅ | ReplayGain en loudness (LUFS), automatische BPM, toonsoort | in de bibliotheek |
-| ✅ | Tags lezen en schrijven (ID3, Vorbis, APE, MP4), hoezen | in het detailpaneel en in het bestand |
-| ✅ | Metagegevens in een apart bestand naast de audio | sidecar-bestanden |
+| Losse tag- en cue-editor voor de redactie | webpagina op de engine | ⬜ |
+| Centrale bibliotheekserver | engine in de rol "bibliotheekbron" | ⬜ |
+| Reclame- en nieuwsbeheer als losse werkplek | webpagina op de engine | ⬜ |
+| GPIO-dienst op een andere pc | engine in de rol "hardwarebrug" | ⬜ |
+| Statistiek en analyse | werkruimte Rapportage + export | 🟡 |
+| Meekijkprogramma | remote-app / meekijkscherm | ⬜ |
+| Bewaker die de studio herstart | watchdog | ✅ |
+| Losse studioklok | venster Klok | 🟡 |
+| Commando's vanaf de opdrachtregel | `rea-cmd` | ⬜ |
+| Afspeellijsten omzetten | import van open formaten | 🟡 |
 
-## 2. Mengpaneel en routering
+### Wat REA-Radio-DJ al heeft en dat pakket niet
 
-| | Functie | Stand bij ons |
-|---|---|---|
-| ✅ | Kanaalstrip: gain, balans, EQ, compressor, AGC, dempen, naar de zender, opnemen | Mixer › ⚙ |
-| ✅ | VST-effecten per kanaal | drie plekken per kanaal |
-| ✅ | Uitgang per kanaal; werkwijze "mengtafel" of "software" | Instellingen › Geluid |
-| ⬜ | **Vrij aantal in- en uitgangskanalen en subgroepen** (groepsbus, som van een paar spelers, vrije luidsprekertoewijzing) | onze kanalen liggen vast |
-| ⬜ | **Mengpanelprofielen en presets** (hele mixerinstelling of alleen EQ/gain met één klik wisselen) | ontbreekt |
-| 🟡 | Spreken over muziek (microfoon dempt de muziek automatisch) | *(na te gaan)* |
-| ⬜ | **Bewaking van de geluidskaart**: waarschuwen of terugzetten als een ander programma het volume of de demping van het apparaat verandert | ontbreekt |
-| ✅ | Gesynchroniseerde PFL, en een PFL-speler die vooruit kan luisteren | PFL-speler |
-
-## 3. Spelers
-
-| | Functie | Stand bij ons |
-|---|---|---|
-| ✅ | Automatiseringsdecks met log | Live-decks |
-| ✅/🟡 | DJ-spelers: golfvorm, hot cues, loops, tempo en pitch, achteruit, backspin, effecten | DJ-modus gebouwd, nog niet beluisterd |
-| ✅ | Standby-spelers met stapelmodus | twee standby-spelers |
-| ✅ | Twee cartwalls met pagina's, meerdere carts tegelijk of na elkaar, plus een sampler | Cartwall 1 en 2, Sampler (DJ) |
-| ✅ | Overlayspeler boven het programma | overlays |
-| ✅ | Externe stream bewaken en bij signaal het programma onderbreken of overleggen | commandobus, ronde 2a |
-
-## 4. Cues, golfvorm en overgangen
-
-| | Functie | Stand bij ons |
-|---|---|---|
-| ✅ | Cue-editor: in, intro, mix, uit, fade, hooks; automatisch berekend | cue-editor |
-| ✅/🟡 | Gebeurtenissen op een plek in een nummer (volumeomhullende, opdracht) | in de cue-editor |
-| ✅ | Mengregels per soort item (muziek, jingle, spraak) | *(fijnheid na te gaan)* |
-| ⬜ | **Overgangseditor met twee sporen**: de overgang van nummer A naar B visueel slepen, een voice-over ertussen leggen en direct inspreken, met automatische demping van de muziek | **grootste ontbrekende stuk in de bediening** |
-| ✅ | Uitlichtvenster voor de presentator: huidige en volgende titel met tijden | Live-balk en Itemgegevens *(een vrije presentatortekst per item na te gaan)* |
-
-## 5. Bibliotheek
-
-| | Functie | Stand bij ons |
-|---|---|---|
-| ✅ | Mappen als bibliotheek met automatisch bijwerken, ook op shares | Bibliotheek › Beheer |
-| ✅ | Externe database als bron | Databronnen |
-| 🟡 | Een afspeellijst (M3U, PLS, XSPF) als bibliotheek of als één doorlopend item | importeren *(als vaste bron na te gaan)* |
-| ⬜ | **Centrale bibliotheekserver voor meerdere studio's**: één plek scant en meet, de studio's vragen op en halen het bestand zo nodig over | staat op de werklijst (stap 7) |
-| ✅ | Snel zoeken met filters (jaar, BPM, energie, stemming en meer) | zoektaal met chips |
-| 🟡 | "Vergelijkbare nummers" zoeken | via toonsoort/BPM *(echte gelijkenis ontbreekt)* |
-| ✅ | Overstappen: cues en tags uit andere playouts inlezen | waar het om open formaten gaat |
-| 🟡 | Exporteren van de bibliotheek naar CSV of een database | *(na te gaan)* |
-
-## 6. Automatisering en planning
-
-| | Functie | Stand bij ons |
-|---|---|---|
-| ✅ | Klokken en scriptregels (rotatie, scheiding, niet-na-regels) | planner |
-| ✅ | Agenda met vaste of zachte starttijd, overlay of nieuw programma, herinneringen en alarmen | planner en commando's |
-| ✅ | Live-assist ↔ automatisch; de automatisering loopt mee onder de DJ | |
-| ✅ | Containers (groep items als één regel) | klembord → container |
-| ✅ | Overlay-afspeellijsten (reclame, nieuws, verkeer) op vaste tijden | |
-| 🟡 | **Logs inlezen uit externe muziekplanners en traffic-systemen** | er is een log-import; meer formaten en een koppelprofiel per leverancier volgen |
-| ✅ | Globale speelgeschiedenis voor rotatie | as-run |
-
-## 7. Reclame en nieuws
-
-| | Functie | Stand bij ons |
-|---|---|---|
-| ✅ | Adverteerders, campagnes, blokken, uitzendbewijs per klant | Reclame |
-| ⬜ | **Meerdere regio's**: per regio andere reclame in hetzelfde blok (aparte uitgang of stream) | ontbreekt |
-| ✅ | Nieuwsblokken, RSS en berichtencentrum; AI-nieuws en AI-weer | eigen uitbreiding |
-| ⬜ | Reclamebeheer als losse werkplek voor de reclameafdeling (zonder de studio) | kan later als webpagina |
-
-## 8. Uitzenden en opnemen
-
-| | Functie | Stand bij ons |
-|---|---|---|
-| ✅ | Meerdere streamservers tegelijk (Icecast, SHOUTcast v1/v2), MP3, AAC, Ogg, Opus, FLAC, HLS | |
-| ✅ | Encoderprofielen | |
-| ✅ | Programma per uur opnemen met bewaartermijn; microfoon opnemen | |
-| 🟡 | **Opnemen met signaaldetectie** (alleen opnemen bij geluid, bijv. alleen de presentatorpraat als luistercontrole) | *(na te gaan)* |
-| ✅ | Direct inspreken naar de bibliotheek (voicetrack) | |
-
-## 9. Bediening op afstand en hardware
-
-| | Functie | Stand bij ons |
-|---|---|---|
-| ✅ | Commando's via HTTP, TCP, UDP en OSC; sneltoetsen | commandobus |
-| ✅ | MIDI met "leren", serieel, Livewire, Ember+, Mackie Control | nog niet tegen echte apparaten getest |
-| 🟡 | **Commandotaal met variabelen, voorwaarden en functies** (titel, tijd, als-dan, tekst opmaken) in alle gebeurtenissen | basiscommando's zijn er; variabelen en voorwaarden *(na te gaan)* |
-| ⬜ | Commando's vanaf de opdrachtregel naar de engine sturen (voor andere software) | klein: een `rea-cmd.exe` op de bestaande TCP-poort |
-| ⬜ | USB-GPIO-kaarten, D&R Airence/Webstation | op de werklijst (stap 8) |
-| ➖ | Joystickpoort | verouderd |
-
-## 10. Meerdere studio's en meekijken
-
-| | Functie | Stand bij ons |
-|---|---|---|
-| ⬜ | **Studio's elkaar laten bedienen; hoofd- en reservestudio met overname** | stap 9 |
-| ⬜ | **Meekijkscherm**: vorige/huidige/volgende, tijden en de stand van alle spelers op een tweede plek of op afstand | samen met de remote-app |
-| ⬜ | Voicetracking op afstand (thuis inspreken) | stap 9 |
-
-## 11. Bedrijfszekerheid, logging en rapportage
-
-| | Functie | Stand bij ons |
-|---|---|---|
-| ✅ | Watchdog met herstart, stiltedetectie, as-run, uitgebreide logging | |
-| ✅ | Uitzendstatistiek per dag, week en maand | |
-| ⬜ | **Vrije analyse** (draaitabel en grafieken over de hele geschiedenis) | uitbreiding van de statistiek |
-| ✅ | Rapporten auteursrechten (CSV en PDF) | |
-| 🟡 | Afdrukken of exporteren van log en planning (PDF/HTML) | rapporten ja; log en planning *(na te gaan)* |
-
-## 12. Gebruikersomgeving
-
-| | Functie | Stand bij ons |
-|---|---|---|
-| ✅ | Dockbare vensters, meerdere schermen, werkbladen | |
-| ✅ | Thema's (donker, licht), hoge DPI, aanraakmodus | |
-| ✅ | Gebruikers, rollen en rechten met pincode, studio vergrendelen | |
-| ✅ | Klok met kwartier- en uuraftelling | |
-| ⬜ | Stationsbeeld: logo, foto van de presentator, live spectrum | klein |
-| ⬜ | Ingebouwd webpaneel (eigen pagina's, luisteraarsinteractie) | WebView, klein |
-
-## Wat REA-Radio-DJ al heeft en dat pakket niet
-
-- AI-presentator met lokaal taalmodel en eigen stem, en een spraakcontrole.
+- AI-presentator met lokaal taalmodel en eigen stem, met een spraakcontrole.
 - AI-nieuws en AI-weerbericht.
-- VoIP en SIP met twee mix-minuskanalen.
+- VoIP en SIP met twee mix-minuskanalen en gespreksopname.
 - DJ-modus met beatsync, automix en sampler.
 - Wensenlijst uit Spotify.
 - Bibliotheek met kwaliteitscontrole, herkenning van verplaatste nummers en ongedaan maken.
+- Engine en studio gescheiden, met een open API (studio, web en apps praten met dezelfde engine).
 - Open bron (GPL-3.0); geen licentiesleutel of dongle.
 
 ---
 
-## Plan
+## Deel 2 — Benadering voor de rebuild
 
-We bouwen **niet na**, maar dekken dezelfde functies af met onze eigen architectuur, die al staat:
+### Uitgangspunt
 
-- engine (ASP.NET + BASS) met API en commandobus;
-- studio (Avalonia) als client;
-- SQLite als stationsdatabase.
+We bouwen **geen kopie**. We gebruiken de lijst hierboven als checklist en vullen de gaten met de architectuur die er al staat en bewezen werkt:
 
-Het plan heeft vier fases. Elke fase levert een werkende, geteste versie op.
+```
+ studio (Avalonia)   webpagina's   remote-app   andere engines
+        \                |             |            /
+         └──────── HTTP-API + commandobus (TCP/UDP/OSC/MIDI) ────────┘
+                                 |
+                       engine (ASP.NET + BASS)
+         spelers · mixer · planner · bibliotheek · stream · opname · hardware
+                                 |
+                        SQLite-stationsdatabase
+```
+
+Vier principes voor alles wat erbij komt:
+
+1. **Eén engine, veel gezichten.** Nieuwe "losse programma's" worden een rol van de engine of een webpagina die de engine zelf serveert. Dan is er één installatie, één database en één plek voor rechten.
+2. **Alles via de API en de commandobus.** Elke functie die je in de studio kunt bedienen, is ook een commando. Zo werken hardware, afstandsbediening, planner en gebeurtenissen vanzelf mee.
+3. **Elke fase levert een werkende, geteste versie op**: unit-tests, een proef op de test-engine (apparaat 0) en screenshots. Daarna pas live, na akkoord.
+4. **Eigen ontwerp en open formaten.** Geen namen, schermen of formaten van dat pakket.
+
+### Bouwstenen die meerdere gaten tegelijk dichten
+
+Een paar gaten hangen samen. Door eerst een gedeelde bouwsteen te maken, worden de functies erboven klein:
+
+| Bouwsteen | Dicht | Waar |
+|---|---|---|
+| **Expressietaal voor commando's** (velden, voorwaarden, rekenen, tekst- en datumopmaak) | commandotaal, gebeurtenissen per bron, titelupdates, logopmaak, rapportsjablonen | Core/Remote |
+| **Flexibele mixergraaf** (kanalen en bussen als lijst in de database in plaats van vast) | vrije kanalen, subgroepen, presets/profielen, talk-to-user, regio-uitgangen voor reclame | Core/Audio |
+| **Agenda-laag boven het weekrooster** (programma's op datum met herhaling, start- en eindgedrag) | programma's op datum, maximale vertraging, overlay tot eindtijd, handmatige start, mengtijd | Core/Scheduling |
+| **Tweesporige tijdlijn** (twee items op één tijdas met omhullende en een opnamespoor) | overgangseditor, inzet-overgang, voicetracking (lokaal en op afstand) | Core/Audio + Studio |
+| **Engine-rollen** (studio, reserve, bibliotheekbron, hardwarebrug) met engine-tot-engine-API | centrale bibliotheek, studio's elkaar laten bedienen, GPIO op afstand, meekijken | Server |
+| **Webpagina's op de engine** (één klein webdeel met dezelfde rechten) | tag-editor, reclamebeheer, meekijkscherm, remote-app | Server/wwwroot |
+
+---
+
+## Deel 3 — Plan in fases
+
+Grootte: **S** = dagen · **M** = één tot twee weken · **L** = meerdere weken (indicatie, geen toezegging).
 
 ### Fase A — Wat er staat bedrijfszeker maken (eerst)
 
 Zonder dit heeft uitbreiden geen zin.
 
-- Luistertests:
-  - DJ-modus;
-  - AI-nieuws op de zender;
-  - opnemen met de bewaartermijn.
-- Testen tegen echte apparatuur:
-  - ASIO-stuurprogramma's, en een stuurprogramma dat niet start netjes opvangen;
-  - SIP bij de aanbieder;
-  - Ember+ tegen LUCI/Lawo;
-  - Mackie Control met een echt paneel.
-- De punten *(na te gaan)* uit de tabellen hierboven nalopen en de stand vastleggen.
-- De cosmetische ronde over de hele studio.
+| Werk | Grootte | Klaar als |
+|---|---|---|
+| Luistertests: DJ-modus, AI-nieuws op de zender, opnemen met bewaartermijn | S | bevindingen verwerkt, niets hoorbaar mis |
+| ASIO-stuurprogramma dat niet start: terugval naar WASAPI met melding | S | engine blijft spelen, studio toont de melding |
+| **Bewaking van de geluidskaart** (volume en demping van het apparaat) | S | ander programma zet de kaart zacht → melding en terugzetten |
+| **Opnemen met signaaldetectie** (drempel en nalooptijd) | S | alleen de presentatorpraat staat in de opname |
+| Testen tegen echte apparatuur: SIP bij de aanbieder, Ember+ tegen LUCI/Lawo, Mackie Control | M | elk apparaat werkt of heeft een bekende beperking op papier |
+| Cosmetische ronde over de hele studio | M | in een smal of laag paneel is alles vindbaar |
 
-### Fase B — De grote functionele gaten
+### Fase B — Bediening en geluid op niveau
 
-Op volgorde van belang voor Radio Aa en Hunze:
+| Werk | Bouwsteen | Grootte | Klaar als |
+|---|---|---|---|
+| 1. **Overgangseditor met twee sporen**, met voice-over-spoor, direct inspreken en automatische demping | tijdlijn | L | een voicetrack tussen twee nummers maken en beluisteren zonder de cue-editor |
+| 2. **Inzet-overgang** (station-ID over het einde van een nummer) en **maximale speelduur / niet faden per soort** | tijdlijn + overgangsregels | M | een ID valt automatisch over de outro, gedempt |
+| 3. **Presentatortekst per item**, groot in beeld tijdens het afspelen | — | S | tekst bij een reclame staat in de Live-balk zolang die speelt |
+| 4. **Flexibele mixergraaf**: vrij aantal kanalen, subgroepen, profielen met presets | mixergraaf | L | een extra microfoon en een groepsbus toevoegen zonder code; preset wisselen in één klik |
+| 5. Hook-container met opener, scheider en afsluiter | — | S | een "straks hoor je…"-teaser uit drie hooks |
+| 6. Indeling, beginwerkruimte en zichtbare vensters per gebruiker | — | M | elke presentator krijgt na aanmelden zijn eigen indeling |
 
-1. **Overgangseditor met twee sporen.** Je ziet het einde van A en het begin van B onder elkaar en sleept B. Daarbij:
-   - een voice-over-spoor, met inspreken op de plek zelf;
-   - automatische demping (een volumeomhullende op A en B);
-   - opslaan als de overgang van dit paar of als eigen cue.
-   - Bouwt voort op de cue-editor en de gebeurtenissen in een nummer.
-2. **Mengpaneel flexibel:**
-   - vrij aantal kanalen;
-   - subgroepen;
-   - profielen en presets (opslaan, laden, één klik);
-   - de microfoon dempt de muziek (als dat er nog niet is).
-3. **Reclame per regio.** Een blok krijgt per regio een eigen inhoud op een eigen uitgang of stream, met het uitzendbewijs per regio.
-4. **Commandotaal uitbreiden.** Variabelen (titel, artiest, tijd, speler), voorwaarden en een paar tekstfuncties, in alle gebeurtenissen:
-   - planner;
-   - cue-gebeurtenissen;
-   - MIDI, OSC en serieel;
-   - stream-gebeurtenissen.
-   - Plus een klein opdrachtregelprogramma om commando's te sturen.
-5. **Opnemen met signaaldetectie**, en de geluidskaart bewaken op volume en demping.
+### Fase C — Planning en automatisering volwassen
 
-### Fase C — Meerdere plekken
+| Werk | Bouwsteen | Grootte | Klaar als |
+|---|---|---|---|
+| 1. **Agenda-laag**: programma's op datum met herhaling en eindtijd boven het weekrooster | agenda | L | een eenmalige uitzending op 24 december verdringt die avond het rooster |
+| 2. Startgedrag: vast, zacht met maximale vertraging, handmatig; mengtijd tussen programma's | agenda | M | zacht start nooit meer dan N seconden te laat |
+| 3. Overlay tot eindtijd of één ronde; daarna verder met het onderbroken programma; uitstellen of overslaan vóór de start | agenda | M | nieuws onderbreekt en het programma loopt verder waar het was |
+| 4. **Afspeellijst als vaste bron** en als één doorlopend item | — | S | een M3U-map speelt als categorie |
+| 5. Koppelprofielen voor externe muziekplanners en traffic (eerst het formaat dat het station gebruikt) | — | M | een geïmporteerde dag speelt zonder handwerk |
+| 6. Log en planning afdrukken of exporteren (PDF/HTML) | — | S | het draaiboek van morgen ligt op papier |
 
-1. **Centrale bibliotheekdienst.** De engine kan als bibliotheekserver draaien. Andere engines vragen hun bibliotheek daar op en halen het bestand over als het lokaal niet bereikbaar is.
-2. **Meerdere studio's.** Een hoofd- en reservestudio met hartslag en automatische overname, en bediening van de andere studio.
-3. **Meekijkscherm en remote-app.** Eén weergave voor drie plekken: een tweede plek in de studio, de tablet (bedienen) en de telefoon (bewaken).
-4. **Voicetracking op afstand.** Thuis inspreken in de overgangseditor; de opname gaat naar de engine.
+### Fase D — Commando's en hardware
 
-### Fase D — Afwerking
+| Werk | Bouwsteen | Grootte | Klaar als |
+|---|---|---|---|
+| 1. **Expressietaal** met velden, voorwaarden en functies in alle gebeurtenissen en titelupdates | expressietaal | M | "als soort = jingle dan geen titelupdate" zonder code |
+| 2. Gebeurtenissen per bron: speler, mengkanaal, stream, MIDI, OSC, serieel met patroonherkenning | expressietaal | M | een fader-start op de tafel start de juiste speler |
+| 3. Toegangslimiet per afstandsbediener | — | S | de tablet mag geen instellingen wijzigen |
+| 4. `rea-cmd` op de opdrachtregel | — | S | een ander programma stuurt "NEXT" |
+| 5. USB-GPIO en D&R Airence/Webstation via de algemene hardwarelaag (alleen met het openbare protocol) | — | M | knoppen en lampjes werken op de echte tafel |
 
-- Logs van externe muziekplanners en traffic-systemen. Eerst de formaten die het station echt gebruikt, daarna per leverancier een koppelprofiel.
-- D&R Airence/Webstation en USB-GPIO via de algemene hardwarelaag (alleen met het openbare protocol van de fabrikant).
-- Vrije statistiekanalyse (draaitabel en grafieken).
-- Stationsbeeld, webpaneel, en log en planning afdrukken of exporteren.
-- BWF/CART-schrijven en RF64 controleren.
-- De handleiding voor de studio en voor de beheerder.
+### Fase E — Meerdere plekken
 
-### Bewust niet
+| Werk | Bouwsteen | Grootte | Klaar als |
+|---|---|---|---|
+| 1. **Centrale bibliotheekdienst** (engine-rol "bibliotheekbron"; bestand overhalen als het lokaal niet bereikbaar is) | engine-rollen | L | studio 2 zoekt en speelt uit de bibliotheek van studio 1 |
+| 2. Studio's elkaar laten bedienen (log, planner, mengkanalen) | engine-rollen | M | vanuit studio 2 de log van studio 1 aanpassen |
+| 3. **Meekijkscherm en remote-app** (tablet bedienen, telefoon bewaken) | webpagina's | M | op de telefoon zie je wat er speelt en wat er komt |
+| 4. **Voicetracking op afstand** (thuis inspreken in de overgangseditor via de webpagina) | tijdlijn + webpagina's | L | een presentator spreekt thuis een uur in |
+| 5. Hardwarebrug op een andere pc | engine-rollen | S | GPIO zit aan een pc in de technische ruimte |
+
+### Fase F — Redactie, reclame en afwerking
+
+| Werk | Grootte | Klaar als |
+|---|---|---|
+| Webpagina's voor de redactie: tags en cues zonder studio; reclamebeheer met facturatie-overzicht | M | de reclameafdeling werkt zonder de studio |
+| Reclame per regio (eigen uitgang of stream per regio, bewijs per regio) | M | alleen als het station het nodig heeft |
+| BWF/CART lezen en schrijven, RF64 | S | cue-gegevens uit omroepbestanden komen mee |
+| Vrije statistiekanalyse (draaitabel, grafieken) en eigen rapportsjablonen | M | eigen overzicht zonder Excel |
+| In-stream artwork, lokale streamserver, stationsbeeld, webpaneel, grote studioklok | M | — |
+| **Handleiding** voor de studio en de beheerder, met hulp per scherm | M | een nieuwe presentator kan zelf beginnen |
+
+### Volgorde en afhankelijkheden
+
+```
+A ──► B ──► C ──► E
+      │     │
+      └──► D┘     F (loopt parallel zodra A klaar is)
+```
+
+- **A** eerst: zonder bedrijfszekerheid geen uitbreiding.
+- **B1 (tijdlijn)** is nodig voor **E4** (voicetracking op afstand).
+- **D1 (expressietaal)** maakt **C** en de logopmaak in **F** kleiner; kan ook direct na A.
+- **F** kan per onderdeel tussendoor, als het station erom vraagt.
+
+---
+
+## Bewust niet
 
 | Wat | Waarom |
 |---|---|
-| Windows Media Server-streaming, joystickpoort | verouderd |
-| Cd's rippen en branden | staat al onder "Wat niet op de lijst staat" |
+| Windows Media-streaming en -server, joystickpoort | verouderd |
+| Cd's rippen en branden | staat al onder "Wat niet op de lijst staat" in de werklijst |
 | Registratie aan pc, harde schijf of USB-stick | REA-Radio-DJ is open bron |
-| Eigen afspeellijst- of databaseformaat van dat pakket | clean-room: alleen open formaten |
+| Eigen afspeellijst-, script- of databaseformaat van dat pakket, en zijn commandonamen | clean-room: alleen open formaten en eigen namen |
+| Inlezen van eigen formaten van andere commerciële playouts | alleen als het formaat openbaar beschreven is |
