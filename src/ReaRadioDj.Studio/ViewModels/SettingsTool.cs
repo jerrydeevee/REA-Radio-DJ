@@ -229,16 +229,39 @@ public sealed partial class SettingsTool : StudioTool
         : m.Direct.Count == 0 ? "Mengtafel, maar nog geen kanaal heeft een eigen uitgang: geef ze hieronder een uitgang."
         : $"Op vol naar de tafel: {string.Join(", ", m.Direct)}.";
 
+    // The two choices as their own properties that only ever switch ON. A radio button bound to "!DeskMode" wrote
+    // back when the group unchecked it while the look was applied again (a new button style re-templates every button):
+    // the two buttons then flipped DeskMode back and forth without end, froze the studio and flooded the engine.
+    public bool DeskSoftware { get => !DeskMode; set { if (value) DeskMode = false; } }
+    public bool DeskTable { get => DeskMode; set { if (value) DeskMode = true; } }
+
     partial void OnDeskModeChanged(bool value)
     {
+        OnPropertyChanged(nameof(DeskSoftware));
+        OnPropertyChanged(nameof(DeskTable));
         if (!_deskLoaded) return;
         _ = SaveDeskModeAsync(value);
     }
 
+    private bool _deskSending;
+    private bool? _deskWanted;
+
+    /// <summary>One request at a time; quick changes in between collapse into the last one.</summary>
     private async Task SaveDeskModeAsync(bool desk)
     {
-        var m = await Hub.Client.SendForAsync<MixingMode>(HttpMethod.Put, "/api/mixing-mode", new { desk });
-        DeskStatus = m is null ? "Omschakelen mislukt." : Describe(m);
+        _deskWanted = desk;
+        if (_deskSending) return;
+        _deskSending = true;
+        try
+        {
+            while (_deskWanted is bool want)
+            {
+                _deskWanted = null;
+                var m = await Hub.Client.SendForAsync<MixingMode>(HttpMethod.Put, "/api/mixing-mode", new { desk = want });
+                DeskStatus = m is null ? "Omschakelen mislukt." : Describe(m);
+            }
+        }
+        finally { _deskSending = false; }
     }
 
     // ---- the station's own recordings

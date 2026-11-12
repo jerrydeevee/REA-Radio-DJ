@@ -119,8 +119,8 @@
 
           <TextBlock Classes="title" Text="Werkwijze" Margin="0,24,0,4" />
           <StackPanel Orientation="Horizontal" Spacing="12">
-            <RadioButton GroupName="desk" Content="Software: de engine mengt" IsChecked="{Binding !DeskMode}" />
-            <RadioButton GroupName="desk" Content="Mengtafel: elk kanaal met een eigen uitgang op vol naar de tafel" IsChecked="{Binding DeskMode}" />
+            <RadioButton GroupName="desk" Content="Software: de engine mengt" IsChecked="{Binding DeskSoftware}" />
+            <RadioButton GroupName="desk" Content="Mengtafel: elk kanaal met een eigen uitgang op vol naar de tafel" IsChecked="{Binding DeskTable}" />
           </StackPanel>
           <TextBlock Classes="help" Text="Bij mengtafel doet de tafel het mengen: een kanaal met een eigen uitgang gaat op vol, en de fader, dempen en het automatisch zachter zetten onder de microfoon gelden er niet. Een kanaal uitzetten of de microfoon dichtdoen werkt wel. Omschakelen werkt meteen en blijft bewaard." />
           <TextBlock Classes="muted" Text="{Binding DeskStatus}" TextWrapping="Wrap" />
