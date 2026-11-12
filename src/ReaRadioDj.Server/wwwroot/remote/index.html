@@ -144,9 +144,14 @@
   <dialog id="login">
     <form method="dialog" id="loginForm">
       <h2>Aanmelden</h2>
-      <p class="hint">Deze handeling vraagt om een gebruiker van de studio.</p>
-      <label>Naam<input id="lName" autocomplete="username" required></label>
-      <label>Pincode<input id="lPin" type="password" inputmode="numeric" autocomplete="current-password" required></label>
+      <p class="hint" id="lHint">Deze handeling vraagt om een gebruiker van de studio.</p>
+      <div id="lUser">
+        <label>Naam<input id="lName" autocomplete="username"></label>
+        <label>Pincode<input id="lPin" type="password" inputmode="numeric" autocomplete="current-password"></label>
+      </div>
+      <div id="lKeyBox" hidden>
+        <label>Bedieningswachtwoord<input id="lKey" type="password" autocomplete="current-password"></label>
+      </div>
       <div class="err" id="lErr"></div>
       <div class="row"><button value="cancel" type="button" id="lCancel">Annuleren</button><button class="primary" id="lOk">Aanmelden</button></div>
     </form>
@@ -176,12 +181,14 @@ const typeName = { song: "Muziek", jingle: "Jingle", aiBreak: "AI-break", voiceT
 // ---- actions, with sign-in when the engine asks for it
 async function act(method, url, body) {
   const headers = {};
-  const token = store.get("rea-session");
+  const token = store.get("rea-session"), key = store.get("rea-key");
   if (token) headers["X-Rea-Session"] = token;
+  if (key) headers["X-Rea-Key"] = key;
   if (body !== undefined) headers["Content-Type"] = "application/json";
   const res = await fetch(url, { method, headers, body: body === undefined ? undefined : JSON.stringify(body) });
   if (res.status === 401) {
     store.set("rea-session", null);
+    store.set("rea-key", null);
     if (await signIn()) return act(method, url, body);
     return res;
   }
@@ -189,13 +196,29 @@ async function act(method, url, body) {
   return res;
 }
 
-function signIn() {
+async function signIn() {
+  // With users at the station: name and pin. Without: the control password from the remote-control settings.
+  const me = await fetch("/api/users/me").then((r) => r.ok ? r.json() : null).catch(() => null);
+  const users = !me || me.active;
+  $("lUser").hidden = !users;
+  $("lKeyBox").hidden = users;
+  $("lHint").textContent = users ? "Vanaf dit apparaat vraagt de engine om een gebruiker van de studio."
+    : "Vanaf dit apparaat vraagt de engine om het bedieningswachtwoord (Instellingen › Op afstand).";
   return new Promise((resolve) => {
     const d = $("login");
     $("lErr").textContent = "";
     $("lCancel").onclick = () => { d.close(); resolve(false); };
     $("loginForm").onsubmit = async (e) => {
       e.preventDefault();
+      if (!users) {
+        // Tried with the next action: a wrong password brings this question back.
+        store.set("rea-key", $("lKey").value);
+        $("lKey").value = "";
+        d.close();
+        showWho("met het bedieningswachtwoord");
+        resolve(true);
+        return;
+      }
       const res = await fetch("/api/users/login", { method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name: $("lName").value.trim(), pin: $("lPin").value }) });
       if (!res.ok) { $("lErr").textContent = (await res.json().catch(() => null)) || "Aanmelden lukt niet."; return; }
@@ -210,7 +233,7 @@ function signIn() {
   });
 }
 
-function showWho(name) { $("whoami").textContent = name ? `Aangemeld als ${name}.` : ""; }
+function showWho(name) { $("whoami").textContent = name ? `Aangemeld ${name.startsWith("met ") ? name : `als ${name}`}.` : ""; }
 
 let flashTimer;
 function flash(text) {

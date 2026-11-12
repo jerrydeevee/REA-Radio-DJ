@@ -100,6 +100,30 @@ public sealed class UserTests : IDisposable
     public void Changes_need_the_right_role(string method, string path, UserRole? role) =>
         Assert.Equal(role, AccessRules.Required(method, path));
 
+    [Theory]
+    // On the studio computer itself: nothing changes.
+    [InlineData(true, "POST", "/api/transport/next", false, null, "", false, NetworkAccess.Allowed)]
+    // From the network, reading stays open: a phone watching what is on air.
+    [InlineData(false, "GET", "/api/state", false, null, "", false, NetworkAccess.Allowed)]
+    [InlineData(false, "GET", "/api/events", false, null, "geheim", true, NetworkAccess.Allowed)]
+    [InlineData(false, "GET", "/remote/", false, null, "", false, NetworkAccess.Allowed)]
+    // Nothing set up: no buttons from the network at all.
+    [InlineData(false, "POST", "/api/transport/next", false, null, "", false, NetworkAccess.Refused)]
+    [InlineData(false, "POST", "/api/carts/1/5/press", false, null, "", false, NetworkAccess.Refused)]
+    [InlineData(false, "GET", "/api/do/next", false, null, "", false, NetworkAccess.Refused)]
+    // With a control password: the right one opens, a wrong or missing one asks again.
+    [InlineData(false, "POST", "/api/transport/next", false, "geheim", "geheim", false, NetworkAccess.Allowed)]
+    [InlineData(false, "POST", "/api/transport/next", false, "fout", "geheim", false, NetworkAccess.SignIn)]
+    [InlineData(false, "GET", "/api/do/next", false, null, "geheim", false, NetworkAccess.SignIn)]
+    // With users: a signed-in session opens (the role check follows), signing in itself is always possible.
+    [InlineData(false, "POST", "/api/transport/next", true, null, "", true, NetworkAccess.Allowed)]
+    [InlineData(false, "POST", "/api/transport/next", false, null, "", true, NetworkAccess.SignIn)]
+    [InlineData(false, "POST", "/api/users/login", false, null, "", true, NetworkAccess.Allowed)]
+    [InlineData(false, "POST", "/API/Users/Login/", false, null, "", false, NetworkAccess.Allowed)]
+    public void Actions_from_the_network_need_a_user_or_the_control_password(bool local, string method, string path, bool signedIn,
+        string? key, string password, bool usersActive, NetworkAccess expected) =>
+        Assert.Equal(expected, NetworkRules.Check(local, method, path, signedIn, key, password, usersActive));
+
     [Fact]
     public void Sessions_expire_and_renew()
     {

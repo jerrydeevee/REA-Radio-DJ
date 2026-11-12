@@ -20,6 +20,10 @@ public sealed class EngineClient : IDisposable
     {
         BaseUri = baseUri;
         _http = new HttpClient { BaseAddress = baseUri, Timeout = TimeSpan.FromSeconds(30) };
+        // A studio on another computer without users at the station: the control password from the environment
+        // (never on the command line, where every program can read it).
+        if (Environment.GetEnvironmentVariable("REA_ENGINE_KEY") is { Length: > 0 } key)
+            _http.DefaultRequestHeaders.Add("X-Rea-Key", key);
     }
 
     public Uri BaseUri { get; }

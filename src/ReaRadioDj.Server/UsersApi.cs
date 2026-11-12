@@ -22,6 +22,24 @@ public static class UsersApi
         Enforced = !usersOff;
         app.Use(async (http, next) =>
         {
+            // From another computer: every action needs a signed-in user or the control password.
+            if (Enforced && http.Request.Path.StartsWithSegments("/api"))
+            {
+                var ip = http.Connection.RemoteIpAddress;
+                string? key = http.Request.Headers[NetworkRules.KeyHeader].ToString() is { Length: > 0 } h ? h : http.Request.Query["key"].ToString();
+                var access = NetworkRules.Check(ip is null || System.Net.IPAddress.IsLoopback(ip), http.Request.Method, http.Request.Path.Value ?? "",
+                    http.RequestServices.GetRequiredService<SessionStore>().Get(http.Request.Headers[UserRoles.SessionHeader].ToString()) is not null,
+                    key, http.RequestServices.GetRequiredService<ReaRadioDj.Core.ReaRadioDjOptions>().Control.Password,
+                    http.RequestServices.GetRequiredService<UserStore>().Active);
+                if (access != NetworkAccess.Allowed)
+                {
+                    http.Response.StatusCode = access == NetworkAccess.SignIn ? StatusCodes.Status401Unauthorized : StatusCodes.Status403Forbidden;
+                    await http.Response.WriteAsJsonAsync(access == NetworkAccess.SignIn
+                        ? "Van een andere computer: meld je eerst aan of geef het bedieningswachtwoord."
+                        : "Bediening over het netwerk staat uit. Stel op de studio-pc een bedieningswachtwoord in (Instellingen › Op afstand) of maak gebruikers aan.");
+                    return;
+                }
+            }
             if (Enforced && http.Request.Path.StartsWithSegments("/api") &&
                 AccessRules.Required(http.Request.Method, http.Request.Path.Value ?? "") is UserRole needed &&
                 http.RequestServices.GetRequiredService<UserStore>().Active)

@@ -88,6 +88,49 @@ public static class AccessRules
         method.Equals("OPTIONS", StringComparison.OrdinalIgnoreCase);
 }
 
+/// <summary>What the engine does with a request from another computer.</summary>
+public enum NetworkAccess
+{
+    /// <summary>Go on (the role check still follows).</summary>
+    Allowed,
+    /// <summary>Sign in first, or give the control password (401).</summary>
+    SignIn,
+    /// <summary>Nothing set up to check who it is: control over the network is off (403).</summary>
+    Refused,
+}
+
+/// <summary>
+/// Control from another computer. On the studio computer itself nothing changes. From the network, reading stays open
+/// (a phone watching what is on air), but every action needs a signed-in user or the control password; with neither
+/// set up, actions from the network are refused, so opening the engine to the network never opens the buttons by itself.
+/// </summary>
+public static class NetworkRules
+{
+    /// <summary>Header (or ?key=) with the control password.</summary>
+    public const string KeyHeader = "X-Rea-Key";
+
+    public static NetworkAccess Check(bool local, string method, string path, bool signedIn, string? key, string? password, bool usersActive)
+    {
+        if (local) return NetworkAccess.Allowed;
+        path = path.TrimEnd('/').ToLowerInvariant();
+        if (!(path == "/api" || path.StartsWith("/api/", StringComparison.Ordinal))) return NetworkAccess.Allowed;
+        // /api/do runs a command on a GET (for a Stream Deck or a button box), so it counts as an action.
+        bool action = !IsRead(method) || path == "/api/do" || path.StartsWith("/api/do/", StringComparison.Ordinal);
+        if (!action) return NetworkAccess.Allowed;
+        if (path is "/api/users/login" or "/api/users/logout") return NetworkAccess.Allowed;
+        if (signedIn) return NetworkAccess.Allowed;
+        if (!string.IsNullOrEmpty(password) && SamePassword(key ?? "", password)) return NetworkAccess.Allowed;
+        return usersActive || !string.IsNullOrEmpty(password) ? NetworkAccess.SignIn : NetworkAccess.Refused;
+    }
+
+    public static bool SamePassword(string given, string expected) =>
+        CryptographicOperations.FixedTimeEquals(System.Text.Encoding.UTF8.GetBytes(given), System.Text.Encoding.UTF8.GetBytes(expected));
+
+    private static bool IsRead(string method) =>
+        method.Equals("GET", StringComparison.OrdinalIgnoreCase) || method.Equals("HEAD", StringComparison.OrdinalIgnoreCase) ||
+        method.Equals("OPTIONS", StringComparison.OrdinalIgnoreCase);
+}
+
 /// <summary>A signed-in studio: who, and until when (renewed with every request).</summary>
 public sealed record UserSession(string Token, long UserId, string Name, UserRole Role, DateTime Expires);
 

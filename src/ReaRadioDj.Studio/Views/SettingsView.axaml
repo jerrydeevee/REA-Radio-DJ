@@ -404,7 +404,7 @@
           <TextBox Text="{Binding ControlPassword}" PasswordChar="●" Watermark="nieuw wachtwoord" />
           <TextBlock Classes="help" Text="{Binding ControlPasswordHint}" />
           <CheckBox Content="Wachtwoord verwijderen" IsChecked="{Binding ClearControlPassword}" Margin="0,8,0,0" />
-          <TextBlock Classes="help" Text="Adres en poorten worden actief na een herstart van de engine. Zet een wachtwoord als je op het hele netwerk luistert." />
+          <TextBlock Classes="help" TextWrapping="Wrap" Text="Adres en poorten worden actief na een herstart van de engine. Zet een wachtwoord als je op het hele netwerk luistert. Het wachtwoord geldt ook voor de webpagina en de remote-app (/remote/): vanaf een andere computer vraagt elke handeling om dit wachtwoord of een aanmelding met pincode. Zonder wachtwoord en zonder gebruikers kan een andere computer alleen meekijken." />
         </StackPanel></ScrollViewer>
       </TabItem>
 
