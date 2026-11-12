@@ -1,6 +1,6 @@
 # Functiedekking en plan naar een volwaardige playout
 
-*Versie 2, 12 november 2026. Versie 1 was een eerste overzicht; deze versie is uitgewerkt per onderdeel, de open punten zijn in de code nagelopen, en het plan is uitgebreid met architectuur, opleveringen en controlepunten.*
+*Versie 2.1, 13 november 2026: onderdeel 16 en fase I toegevoegd. Versie 2 (12 november) Versie 1 was een eerste overzicht; deze versie is uitgewerkt per onderdeel, de open punten zijn in de code nagelopen, en het plan is uitgebreid met architectuur, opleveringen en controlepunten.*
 
 ## Waar deze lijst vandaan komt
 
@@ -10,6 +10,7 @@ De lijst is een **functielijst**, geen bouwtekening. Bronnen:
 - de bestandsnamen in de installatiemap van dat pakket (welke hulpprogramma's en modules er zijn);
 - voor onderdeel 14: de openbare helpsite van een mediabeheer- en workflowplatform voor video en tv (versie rond 2021–2022; de site wordt niet meer bijgehouden);
 - voor onderdeel 15: de openbare artikelen op de supportsite van dezelfde leverancier, over zijn radio- en nieuwsproducten. Het meeste staat achter een klantenlogin; alleen de openbare artikelen zijn gelezen (13 november 2026).
+- voor onderdeel 16: nog eens twaalf openbare artikelen van die supportsite (13 november 2026). Ze gaan over gebruikersbeheer, de gebruikershandleiding van het mediabeheer, de koppeling met een videomontageprogramma, ondertitels, databaseversies, geteste geluidskaarten, trainingen, certificaten, systeemaanbevelingen, Windows-instellingen, DCOM-beveiliging en de eisen voor eigen hosting. Het artikel over de technische opbouw bestaat alleen uit bijlagen (PDF); die zijn niet gedownload.
 
 Er is **niets gedecompileerd, uitgepakt of uit programmacode gehaald**. De licentie van dat pakket verbiedt reverse-engineeren, en het past bij onze eigen clean-room-afspraak. Daaruit volgt:
 
@@ -275,6 +276,61 @@ De openbare artikelen geven vooral een beeld van **hoe een groot radiosysteem is
 | ➖ | Cloud-gateway met BGP/OSPF, dubbel uitgevoerd | te groot voor een lokale omroep | — |
 | ➖ | Centrale SQL Server-database | wij gebruiken SQLite; bij de centrale bibliotheek (fase E) opnieuw bekijken | — |
 
+### 16. Beheer, beveiliging en kleine werkgemakken (vierde bron)
+
+Deze artikelen gaan minder over uitzenden en meer over **hoe een omroepsysteem beheerd, beveiligd en uitgerold wordt**. Daarnaast staan er een paar handige ideeën in uit de mediabeheer-handleiding. Alles over video, Premiere-projecten, renderservers en de cloud laten we weg.
+
+**Gebruikers en toegang**
+
+| | Functie | Stand bij ons | Prio |
+|---|---|---|---|
+| ✅ | Gebruikers met één rol, pincode, blokkeren na mislukte pogingen | 5 fouten → 30 s blokkade | — |
+| ⬜ | Blokkeerduur en aantal pogingen instelbaar; beheerder kan een blokkade opheffen | vaste waarden | L |
+| ⬜ | **Account met einddatum** (stagiair, gastpresentator, invaller) | ontbreekt | M |
+| ⬜ | **Uitschakelen in plaats van verwijderen**: oude gebruikers blijven zichtbaar in as-run en statistiek | ontbreekt | M |
+| ⬜ | **Activiteitenlog per gebruiker**: wie heeft wat gewijzigd (log, planning, bibliotheek, instellingen) | systeemlog zonder gebruiker per actie | M |
+| ⬜ | **Geschiedenis per item**: wie veranderde welk veld wanneer | ongedaan maken bestaat, maar zonder overzicht | L |
+| ⬜ | Beheerder kan "meekijken als" een gebruiker (zien wat die ziet), en dat wordt gelogd | ontbreekt | L |
+| ⬜ | Meldingen per niveau naar e-mail (bijv. stilte, engine herstart, opname mislukt) | alleen in de studio | M |
+| ⬜ | **Bewerkingsslot**: als iemand de log of planning van een dag open heeft, ziet een ander die alleen-lezen; de beheerder kan het slot opheffen | ontbreekt; nodig zodra meerdere plekken bewerken (fase E) | M |
+
+**Bibliotheek en werkgemak**
+
+| | Functie | Stand bij ons | Prio |
+|---|---|---|---|
+| ⬜ | **Plaatshouder**: een item zonder geluid, alvast in te plannen (reclame die nog binnen moet komen); waarschuwing als het geluid er op tijd niet is | ontbreekt | M |
+| ⬜ | **Markeringen met een tijdbereik** in een item (bijv. "vloek op 2:13", "goed citaat 4:00–4:20"), doorzoekbaar | cue-punten zijn er; vrije markeringen niet | L |
+| ⬜ | **Stuk uit een item als nieuw item** opslaan (in- en uitpunt) | samen met het terugknippen van fase H1 | M |
+| ⬜ | Kolomindelingen voor de bibliotheeklijst bewaren en delen | één vaste indeling | L |
+| ⬜ | Sorteren op twee kolommen | één kolom | L |
+| ⬜ | Snelle acties op een selectie (naar categorie slepen, velden in één keer zetten) | meervoudige selectie bestaat; bulk-bewerken beperkt | L |
+| ⬜ | Verwijderen met keuze: bestand weg maar gegevens houden (voor statistiek en rapporten) | ontbreekt | L |
+| ⬜ | Ondertitels en transcripties in- en uitvoeren als SRT/VTT (bij podcast en uitschrijven, fase G) | ontbreekt | L |
+| ⬜ | Zoeken op betekenis (lokaal, zonder cloud) naast gewoon zoeken | ontbreekt | L |
+
+**Uitrol, beveiliging en Windows** (vooral documentatie en een controlescherm)
+
+| | Functie | Stand bij ons | Prio |
+|---|---|---|---|
+| ⬜ | **Systeemcontrole**: één scherm dat de pc nakijkt (energiebeheer, samplefrequentie van de kaart, virusscanner op de muziekmap, vrije ruimte, klok gelijk, database in orde) | losse meldingen | M |
+| ⬜ | Advies om de virusscanner de muziek-, jingle- en datamap niet live te laten scannen (geeft vertraging en mislukte toegang) | ontbreekt | M |
+| ⬜ | Advies over Windows-updates: niet automatisch op de uitzend-pc; gepland en afgesproken, een week na de maandelijkse update | ontbreekt | M |
+| ⬜ | **Overzicht van alle poorten** die de engine gebruikt, plus een firewallregel uit het installatieprogramma voor alleen die poorten | poort 8600 bekend, geen overzicht | M |
+| ⬜ | Draaien zonder beheerdersrechten en zonder UAC uit te zetten (nagaan en vastleggen) | nog niet nagekeken | M |
+| ⬜ | Advies bij haperend geluid: ASIO-buffer, stroombesparing van de processor (C-states/SpeedStep) in het BIOS | ontbreekt | L |
+| ⬜ | Bij HTTPS voor toegang van buiten: volledige certificaatketen, en een controle die waarschuwt voor een verlopen of onvolledige keten | geen HTTPS | L |
+| ⬜ | Databasecontrole vóór een upgrade (integriteit, schemaversie, reservekopie) met een duidelijke melding | migraties bestaan; controle vooraf ontbreekt | M |
+| ⬜ | Handleiding per rol: presentator, superuser/eerste hulp, beheerder | stap 10 (handleiding) | M |
+| ⬜ | **Dagelijkse automatische reservekopie van de database** met bewaartermijn (bijv. 7 dagen) op een andere schijf of NAS; muziek en jingles apart | handmatige reservekopie van instellingen | H |
+| ⬜ | **Hulp op afstand die het station zelf aan- en uitzet**: een uitgaande, versleutelde verbinding (geen open poort), met een log van wie er wanneer in zat | ontbreekt; nu ad hoc | M |
+| ⬜ | Meetwaarden van de engine (buffer, CPU, stilte, streamstatus) als standaard-endpoint voor een monitoringpakket, en logs 30 dagen lokaal bewaren | `/api/health` en systeemlog | L |
+| ⬜ | Mailserver (SMTP) instellen voor meldingen, met een testknop | ontbreekt | M |
+| ⬜ | Afsprakenlijst wie wat doet: station (pc, netwerk, reservekopieën) en beheerder (updates, storingen) | ontbreekt | L |
+| ➖ | Netwerkkaart-tuning (offload uitzetten), DEP uitzetten, servicegebruikers met domeinrechten | oude Windows- en domeinadviezen; niet nodig voor onze opzet | — |
+| ➖ | Koppeling met een videomontageprogramma, renderservers, offline proxy's | geen video | — |
+
+**Les voor de architectuur:** dat systeem praat tussen machines nog deels via DCOM. Toen Microsoft DCOM strenger beveiligde, moesten alle installaties hun instellingen aanpassen, anders vielen koppelingen weg. Ze stappen nu over op gRPC. Dat bevestigt onze keuze voor **één HTTP-API voor alles**: geen afhankelijkheid van Windows-specifieke protocollen tussen machines.
+
 ### Wat REA-Radio-DJ al heeft en dat pakket niet
 
 - AI-presentator met lokaal taalmodel en eigen stem, met een spraakcontrole.
@@ -423,6 +479,21 @@ Zonder dit heeft uitbreiden geen zin.
 | 6. Kleine nieuwsredactie: berichten met tekst en geluid, draaiboek voor het bulletin, leesscherm | webpagina's | M | de nieuwslezer leest van het scherm en start de geluidsfragmenten vanuit het draaiboek |
 | 7. Handleiding voor veilige toegang van buiten via WireGuard | — | S | voicetracking op afstand werkt zonder open poorten |
 
+### Fase I — Beheer en beveiliging (uit onderdeel 16)
+
+| Werk | Bouwsteen | Grootte | Klaar als |
+|---|---|---|---|
+| 1. **Systeemcontrole-scherm** en een beheerdershandleiding (virusscanner, Windows-updates, poorten, ASIO/BIOS) | — | M | een nieuwe uitzend-pc is in een half uur nagekeken |
+| 2. Firewallregel in het installatieprogramma; draaien zonder beheerdersrechten nagaan | — | S | de engine is van buiten alleen bereikbaar op de poorten die nodig zijn |
+| 3. **Activiteitenlog per gebruiker** en geschiedenis per item | — | M | "wie heeft de log van vrijdag veranderd?" is te beantwoorden |
+| 4. Account met einddatum, uitschakelen in plaats van verwijderen, instelbare blokkade | — | S | een stagiair kan na zijn laatste dag niet meer inloggen |
+| 5. Meldingen per niveau naar e-mail | — | S | stilte 's nachts komt als mail binnen |
+| 6. **Plaatshouder** in de planning, met waarschuwing als het geluid ontbreekt | — | S | een ingeplande reclame zonder bestand geeft een dag vooraf een melding |
+| 7. **Bewerkingsslot** op log en planning | engine-rollen | M | twee plekken kunnen niet tegelijk dezelfde dag overschrijven |
+| 8. Databasecontrole vóór een upgrade | — | S | een upgrade begint niet zonder geslaagde controle en reservekopie |
+| 9. **Dagelijkse reservekopie van de database** met bewaartermijn en een terugzet-test | — | S | na een kapotte schijf staat de bibliotheek van gisteren binnen een uur terug |
+| 10. Hulp op afstand via een uitgaande verbinding die het station aan- en uitzet, met toegangslog | — | M | de beheerder kan helpen zonder open poort; het station ziet wie er was |
+
 ### Volgorde en afhankelijkheden
 
 ```
@@ -433,6 +504,7 @@ A ──► B ──► C ──► E
 
 - **H1 en H4** gebruiken dezelfde tijdlijn als de overgangseditor (**B1**). Bouw de tijdlijn één keer, met plek voor meerdere sporen.
 - **H2** past in de agenda-laag van **C1**.
+- **I7 (bewerkingsslot)** moet er zijn vóór **E2** (studio's elkaar laten bedienen). **I1–I2** passen goed bij **A** (bedrijfszeker).
 
 - **G** hangt voor de webpagina's (3, 4) samen met **E3**: dezelfde webbasis. G1 (takenoverzicht) is klein en helpt meteen bij de bedrijfszekerheid uit A.
 
