@@ -42,24 +42,9 @@
                       IsVisible="{Binding Hub.UserName, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
             <MenuItem Header="Studio vergrendelen" InputGesture="Ctrl+L" Command="{Binding Session.LockCommand}" />
           </MenuItem>
-          <MenuItem Header="_Vensters" ItemsSource="{Binding WindowMenu}" Command="{x:Null}" CommandParameter="{x:Null}">
-            <MenuItem.Styles>
-              <Style Selector="MenuItem" x:DataType="vm:WindowEntry">
-                <Setter Property="Header" Value="{Binding Name}" />
-                <Setter Property="Command" Value="{Binding $parent[Window].DataContext.ShowWindowCommand}" />
-                <Setter Property="CommandParameter" Value="{Binding Id}" />
-              </Style>
-            </MenuItem.Styles>
-          </MenuItem>
-          <MenuItem Header="_Zwevend" ItemsSource="{Binding WindowMenu}" Command="{x:Null}" CommandParameter="{x:Null}">
-            <MenuItem.Styles>
-              <Style Selector="MenuItem" x:DataType="vm:WindowEntry">
-                <Setter Property="Header" Value="{Binding Name}" />
-                <Setter Property="Command" Value="{Binding $parent[Window].DataContext.FloatWindowCommand}" />
-                <Setter Property="CommandParameter" Value="{Binding Id}" />
-              </Style>
-            </MenuItem.Styles>
-          </MenuItem>
+          <!-- Filled in code (MainWindow.axaml.cs) from DockFactory.Groups: one submenu per group. -->
+          <MenuItem x:Name="WindowsMenu" Header="_Vensters" />
+          <MenuItem x:Name="FloatMenu" Header="_Zwevend" ToolTip.Tip="Een venster als los, zwevend venster openen" />
           <MenuItem Header="_Werkbladen" ItemsSource="{Binding ScreenMenu}" Command="{x:Null}" CommandParameter="{x:Null}"
                     ToolTip.Tip="Een werkblad is een extra studiovenster op een scherm naar keuze; sleep er vensters heen. Het wordt bewaard met de indeling.">
             <MenuItem.Styles>

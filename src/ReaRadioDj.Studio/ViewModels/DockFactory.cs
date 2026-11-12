@@ -57,6 +57,37 @@ public sealed class DockFactory : Factory
         ("settings", "Instellingen", () => new SettingsTool()),
     ];
 
+    /// <summary>
+    /// The Vensters and Zwevend menus in groups, in this order (a window missing here lands in "Overig").
+    /// </summary>
+    public static readonly IReadOnlyList<(string Name, string[] Ids)> Groups =
+    [
+        ("Uitzending", ["regie", "decks", "log", "standby", "pfl", "cart1", "cart2", "overlays", "clock", "item"]),
+        ("Bibliotheek en productie", ["library", "clipboard", "explorer", "cues", "transition", "voicetrack"]),
+        ("Planning", ["planner", "ads", "news", "import", "sources", "wishlist"]),
+        ("AI-presentator en stemmen", ["presenter", "voice"]),
+        ("DJ", ["dj", "sampler", "automix", "djmidi", "soloist"]),
+        ("Geluid, verbindingen en hardware", ["mixer", "connections", "stream", "hardware", "buttons", "control"]),
+        ("Overzichten", ["asrun", "airstats", "messages"]),
+        ("Beheer", ["settings"]),
+    ];
+
+    /// <summary>The menu groups with their windows; every window appears exactly once.</summary>
+    public static IReadOnlyList<(string Name, IReadOnlyList<(string Id, string Name)> Items)> MenuGroups()
+    {
+        var byId = Windows.ToDictionary(w => w.Id, w => w.Name);
+        var used = new HashSet<string>();
+        var groups = new List<(string, IReadOnlyList<(string, string)>)>();
+        foreach (var (name, ids) in Groups)
+        {
+            var items = ids.Where(id => byId.ContainsKey(id) && used.Add(id)).Select(id => (id, byId[id])).ToList();
+            if (items.Count > 0) groups.Add((name, items));
+        }
+        var rest = Windows.Where(w => used.Add(w.Id)).Select(w => (w.Id, w.Name)).ToList();
+        if (rest.Count > 0) groups.Add(("Overig", rest));
+        return groups;
+    }
+
     public static StudioTool Create(string id) => Windows.First(w => w.Id == id).Create();
 
     /// <summary>
