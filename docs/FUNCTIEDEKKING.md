@@ -7,7 +7,8 @@
 De lijst is een **functielijst**, geen bouwtekening. Bronnen:
 
 - de openbare gebruikershandleiding van een volwaardig commercieel playout-pakket (versie 4.x, 336 pagina's);
-- de bestandsnamen in de installatiemap van dat pakket (welke hulpprogramma's en modules er zijn).
+- de bestandsnamen in de installatiemap van dat pakket (welke hulpprogramma's en modules er zijn);
+- voor onderdeel 14: de openbare helpsite van een mediabeheer- en workflowplatform voor video en tv (versie rond 2021–2022; de site wordt niet meer bijgehouden).
 
 Er is **niets gedecompileerd, uitgepakt of uit programmacode gehaald**. De licentie van dat pakket verbiedt reverse-engineeren, en het past bij onze eigen clean-room-afspraak. Daaruit volgt:
 
@@ -206,6 +207,32 @@ Het pakket levert naast de studio een aantal losse programma's. Bij ons horen di
 | Commando's vanaf de opdrachtregel | `rea-cmd` | ⬜ |
 | Afspeellijsten omzetten | import van open formaten | 🟡 |
 
+### 14. Mediabeheer en workflows (tweede bron)
+
+Het tweede platform is een systeem voor **mediabeheer en workflows voor video en tv**, geen playout. Het heeft geen log, planning of uitzendautomatisering en niets specifiek voor radio. De bruikbare ideeën zitten rond de bibliotheek: wat er gebeurt *vóórdat* iets op de lucht komt en *nadat* het gespeeld is. Video-onderdelen (montagepanelen, IMF/AS-02-pakketten, CDN- en sociale-media-koppelingen voor video, multi-tenant) laten we weg.
+
+| | Functie | Stand bij ons | Prio |
+|---|---|---|---|
+| ✅ | Mappen bewaken en nieuwe bestanden automatisch inlezen | mappen bewaken | — |
+| ✅ | Automatische controle bij binnenkomst (kwaliteit) | kwaliteitscontrole bij het inlezen | — |
+| ⬜ | **Inleesstraat met eigen stappen**: per map instellen wat er met een nieuw bestand gebeurt (normaliseren of omzetten naar een standaardformaat, categorie zetten, tags aanvullen, controleren, melden), met een overzicht van lopende en mislukte taken | stappen liggen nu vast in de scanner | M |
+| ⬜ | **Uploaden via een webpagina** voor mensen buiten de studio (reclamebureau, thuispresentator, verslaggever), ook grote bestanden | ontbreekt | M |
+| ⬜ | **Beoordelen en goedkeuren** vóór uitzending: een reclame, voicetrack of item krijgt de status "wacht op goedkeuring"; opmerkingen op een tijdstip in de golfvorm; pas na akkoord inplanbaar | alleen voor AI-teksten ("script eerst goedkeuren") | M |
+| 🟡 | Zoektaal met velden, uitsluiten en vaste woordgroepen | er is `veld:waarde`, `-woord` en `"woordgroep"`; **OF, haakjes en vergelijkingen op elk veld** ontbreken | L |
+| ✅ | Bewaarde en gedeelde zoekopdrachten | slimme lijsten | — |
+| ⬜ | Zoekresultaat exporteren (CSV/PDF) | alleen de hele bibliotheek als CSV | L |
+| ⬜ | **Eigen velden** per soort item (bijv. "sponsor", "programma", "rechtenvrij tot") zonder code, met keuzelijsten | vaste set tagvelden | M |
+| ⬜ | Trefwoordenlijsten (vaste lijst voor genre, stemming, onderwerp), zodat iedereen dezelfde termen gebruikt | vrije tekst | L |
+| ⬜ | **Uitgezonden uren uitschrijven** (spraak naar tekst) en daarin zoeken: "wanneer hadden we het over de N33?" | spraakcontrole (Whisper) is er al voor de AI-presentator; uitschrijven van opnames ontbreekt | M |
+| ⬜ | **Archief**: oude opnames naar goedkopere opslag (NAS of cloud) verplaatsen en op verzoek terughalen, ook een stuk op tijd | alleen een bewaartermijn (verwijderen) | L |
+| ⬜ | **Publiceren na de uitzending**: een opgenomen programma als podcast of "uitzending gemist" (RSS-feed met mp3), met titel en beschrijving uit de planning | ontbreekt | M |
+| ⬜ | Speler om in te sluiten op de website (live en uitzending gemist) | ontbreekt | L |
+| ⬜ | Takenoverzicht: lopende en mislukte achtergrondtaken (inlezen, meten, AI-teksten, opnames, uploads) met opnieuw proberen | losse statusregels | M |
+| ⬜ | Rapporten over gebruik en opslag (wie deed wat, hoeveel ruimte per map) | systeemlog en statistiek | L |
+| ➖ | Aanmelden via een organisatie-account (SSO) | te zwaar voor een lokale omroep; pincodes volstaan | — |
+| ➖ | Meerdere omroepen in één installatie (multi-tenant) | niet nodig | — |
+| ➖ | Video: montagepanelen, videoproxy's, IMF/AS-02, video-CDN's | geen video | — |
+
 ### Wat REA-Radio-DJ al heeft en dat pakket niet
 
 - AI-presentator met lokaal taalmodel en eigen stem, met een spraakcontrole.
@@ -328,13 +355,29 @@ Zonder dit heeft uitbreiden geen zin.
 | In-stream artwork, lokale streamserver, stationsbeeld, webpaneel, grote studioklok | M | — |
 | **Handleiding** voor de studio en de beheerder, met hulp per scherm | M | een nieuwe presentator kan zelf beginnen |
 
+### Fase G — Vóór en na de uitzending (uit onderdeel 14)
+
+| Werk | Bouwsteen | Grootte | Klaar als |
+|---|---|---|---|
+| 1. **Takenoverzicht** voor alle achtergrondtaken, met opnieuw proberen | — | S | een mislukte meting of upload is zichtbaar en opnieuw te starten |
+| 2. **Inleesstraat met stappen per map** (omzetten, categorie, tags, controle, melden) | expressietaal | M | een nieuwe reclame in de map "Reclame" staat genormaliseerd en gecontroleerd klaar |
+| 3. **Uploaden via een webpagina**, met de status "wacht op goedkeuring" | webpagina's | M | een reclamebureau levert een spot aan zonder de studio |
+| 4. **Beoordelen en goedkeuren** met opmerkingen op de golfvorm | webpagina's | M | een voicetrack wordt pas inplanbaar na akkoord |
+| 5. **Podcast / uitzending gemist**: opname van een programma als RSS-feed, titel uit de planning | — | M | het programma van gisteren staat vanzelf in de feed |
+| 6. **Opnames uitschrijven** (lokaal, met de Whisper-dienst die er al is) en doorzoeken | — | M | zoeken op een woord vindt het uur en de minuut |
+| 7. Eigen velden en trefwoordenlijsten | — | M | het veld "sponsor" staat in het detailpaneel en in de zoektaal |
+| 8. Zoektaal: OF, haakjes, vergelijkingen; resultaat exporteren | — | S | `genre:(pop OF rock) jaar:>2000` werkt |
+| 9. Archief naar NAS of cloud met terughalen | engine-rollen | L | opnames ouder dan een maand staan op de NAS en zijn terug te halen |
+
 ### Volgorde en afhankelijkheden
 
 ```
 A ──► B ──► C ──► E
       │     │
-      └──► D┘     F (loopt parallel zodra A klaar is)
+      └──► D┘     F en G (lopen parallel zodra A klaar is)
 ```
+
+- **G** hangt voor de webpagina's (3, 4) samen met **E3**: dezelfde webbasis. G1 (takenoverzicht) is klein en helpt meteen bij de bedrijfszekerheid uit A.
 
 - **A** eerst: zonder bedrijfszekerheid geen uitbreiding.
 - **B1 (tijdlijn)** is nodig voor **E4** (voicetracking op afstand).
