@@ -233,13 +233,15 @@ TransitionRulesApi.Map(api, app.Services.GetRequiredService<StationDb>(), app.Se
 api.MapGet("/recordings/settings", (AirRecorder r) => RecordingDto(r));
 api.MapPut("/recordings/settings", (ReaRadioDj.Contracts.RecordingSettingsDto d, RecordingService service, AirRecorder r) =>
 {
-    service.Save(new RecordingSettings { Program = d.Program, Mic = d.Mic, MicToLibrary = d.MicToLibrary, Bitrate = d.Bitrate, KeepDays = d.KeepDays, Folder = d.Folder });
+    service.Save(new RecordingSettings { Program = d.Program, Mic = d.Mic, MicToLibrary = d.MicToLibrary, Bitrate = d.Bitrate, KeepDays = d.KeepDays, Folder = d.Folder,
+        Speech = d.Speech, SpeechSource = d.SpeechSource, SpeechThresholdDb = d.SpeechThresholdDb, SpeechHangSeconds = d.SpeechHangSeconds });
     return RecordingDto(r);
 });
 static ReaRadioDj.Contracts.RecordingSettingsDto RecordingDto(AirRecorder r)
 {
-    var s = r.Settings; var st = r.Status;
-    return new(s.Program, s.Mic, s.MicToLibrary, s.Bitrate, s.KeepDays, s.Folder, r.Folder, st.Program, st.Mic, st.Error ?? "");
+    var s = r.Settings; var st = r.Status; var sp = r.Speech;
+    return new(s.Program, s.Mic, s.MicToLibrary, s.Bitrate, s.KeepDays, s.Folder, r.Folder, st.Program, st.Mic, st.Error ?? "",
+        s.Speech, s.SpeechThresholdDb, s.SpeechHangSeconds, sp.File, sp.Recording, sp.Takes, s.SpeechSource);
 }
 ChannelsApi.Map(api, options);
 VoiceApi.Map(api);

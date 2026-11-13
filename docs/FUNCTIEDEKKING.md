@@ -140,7 +140,7 @@ Het belang staat in de kolom **Prio** voor Radio Aa en Hunze: **H** hoog, **M** 
 | ⬜ | Hoes meesturen in de stream (in-stream artwork) | ontbreekt | L |
 | ⬜ | Zelf als lokale streamserver dienen (luisteren op het eigen netwerk zonder Icecast) | ontbreekt | L |
 | ✅ | Programma per uur opnemen met bewaartermijn; microfoon opnemen; gesprekken opnemen | | — |
-| ⬜ | **Opnemen met signaaldetectie** (alleen opnemen bij geluid boven een drempel, bijv. alleen de presentatorpraat als luistercontrole) | niet in de code gevonden | H |
+| ✅ | **Opnemen met signaaldetectie** (alleen opnemen bij geluid boven een drempel, bijv. alleen de presentatorpraat als luistercontrole) | Instellingen › Opnemen › "Alleen het praten opnemen": de microfoon (als hij open staat) of een ingang (als die naar de zender gaat), drempel in dBFS en nalooptijd; een halve seconde vóór de inzet gaat mee; één MP3 per klokuur met alleen de stukken met geluid, bewaartermijn als de andere opnamen. Getest op de testengine met een testtoon: twee keer 4 en 3 s → één bestand van 8 s | H |
 | ✅ | Direct inspreken naar de bibliotheek (voicetrack) | | — |
 
 ### 9. Bediening op afstand en hardware
@@ -438,7 +438,7 @@ Zonder dit heeft uitbreiden geen zin.
 | Luistertests: DJ-modus, AI-nieuws op de zender, opnemen met bewaartermijn | S | bevindingen verwerkt, niets hoorbaar mis |
 | ASIO-stuurprogramma dat niet start: terugval naar WASAPI met melding | S | engine blijft spelen, studio toont de melding |
 | **Bewaking van de geluidskaart** (volume en demping van het apparaat) | S | ander programma zet de kaart zacht → melding en terugzetten |
-| **Opnemen met signaaldetectie** (drempel en nalooptijd) | S | alleen de presentatorpraat staat in de opname |
+| ✅ **Opnemen met signaaldetectie** (drempel en nalooptijd) | S | alleen de presentatorpraat staat in de opname |
 | Testen tegen echte apparatuur: SIP bij de aanbieder, Ember+ tegen LUCI/Lawo, Mackie Control | M | elk apparaat werkt of heeft een bekende beperking op papier |
 | Cosmetische ronde over de hele studio | M | in een smal of laag paneel is alles vindbaar |
 

@@ -204,6 +204,27 @@
           <CheckBox Content="Microfoon apart opnemen (per keer dat hij open is)" IsChecked="{Binding RecMic}" />
           <CheckBox Content="Microfoonopnamen direct in de bibliotheek (categorie Opnamen, als jingle)" IsChecked="{Binding RecMicToLibrary}"
                     IsEnabled="{Binding RecMic}" Margin="24,0,0,0" />
+          <CheckBox Content="Alleen het praten opnemen (kanaal open en geluid, per uur)" IsChecked="{Binding RecSpeech}" Margin="0,6,0,0"
+                    ToolTip.Tip="Een luistercontrole van wat er gezegd is: alleen de stukken met geluid terwijl de microfoon open staat, zonder de muziek ertussen. Een halve seconde vóór de inzet gaat mee, zodat het eerste woord er helemaal in staat." />
+          <StackPanel Orientation="Horizontal" Spacing="16" Margin="24,2,0,0" IsEnabled="{Binding RecSpeech}">
+            <StackPanel>
+              <TextBlock Classes="field" Text="Kanaal" />
+              <ComboBox ItemsSource="{Binding RecSpeechSources}" SelectedItem="{Binding RecSpeechSource}" Width="180"
+                        ToolTip.Tip="De studiomicrofoon (telt als hij open staat) of een ingang, zoals een tweede microfoon op lijn-in (telt als die naar de zender gaat).">
+                <ComboBox.ItemTemplate><DataTemplate x:DataType="c:OutputChoiceDto"><TextBlock Text="{Binding Name}" /></DataTemplate></ComboBox.ItemTemplate>
+              </ComboBox>
+            </StackPanel>
+            <StackPanel>
+              <TextBlock Classes="field" Text="Drempel (dBFS)" />
+              <NumericUpDown Value="{Binding RecSpeechThreshold}" Minimum="-70" Maximum="-10" Increment="1" FormatString="0" Width="130"
+                             ToolTip.Tip="Geluid vanaf dit niveau telt als praten. Lager = gevoeliger; -40 past bij een gewone microfoon, hoger als er veel bijgeluid is." />
+            </StackPanel>
+            <StackPanel>
+              <TextBlock Classes="field" Text="Nalooptijd (s)" />
+              <NumericUpDown Value="{Binding RecSpeechHang}" Minimum="0.5" Maximum="30" Increment="0.5" FormatString="0.0" Width="130"
+                             ToolTip.Tip="Zo lang loopt de opname door na het laatste geluid, zodat korte pauzes tussen zinnen erin blijven." />
+            </StackPanel>
+          </StackPanel>
           <TextBlock Classes="field" Text="Kwaliteit (kbit/s MP3)" />
           <ComboBox ItemsSource="{Binding RecBitrates}" SelectedItem="{Binding RecBitrate}" Width="120" />
           <TextBlock Classes="field" Text="Bewaren (dagen, 0 = altijd)" />

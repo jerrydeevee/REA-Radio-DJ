@@ -92,6 +92,8 @@ Elk venster is te verslepen, te docken of los te laten zweven, ook op een tweede
 
 ### Opnemen, streamen en rapportage
 - De uitzending als MP3 per klokuur en de microfoon apart, optioneel direct in de bibliotheek, met bewaartermijn.
+- **Alleen het praten opnemen** als luistercontrole: de microfoon of een ingang, alleen zolang die open staat en er
+  geluid is (drempel en nalooptijd), met een halve seconde vóór de inzet; één MP3 per uur zonder de muziek ertussen.
 - **Streams** naar meerdere Icecast- en SHOUTcast-servers tegelijk, met titelupdates in een eigen opmaak.
 - **As-run** en een programmalog als tekstbestand per dag; rapportage auteursrechten (CSV en PDF),
   reclame-afspeelrapporten per adverteerder en uitzendstatistiek.

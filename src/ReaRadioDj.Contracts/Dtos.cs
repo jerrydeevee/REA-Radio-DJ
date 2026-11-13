@@ -227,7 +227,9 @@ public sealed record RelocateResultDto(int Changed, int Found);
 
 /// <summary>The station's own recordings: settings plus what is being recorded now.</summary>
 public sealed record RecordingSettingsDto(bool Program, bool Mic, bool MicToLibrary, int Bitrate, int KeepDays, string Folder,
-    string FolderInUse = "", string? ProgramFile = null, string? MicFile = null, string Error = "");
+    string FolderInUse = "", string? ProgramFile = null, string? MicFile = null, string Error = "",
+    bool Speech = false, double SpeechThresholdDb = -40, double SpeechHangSeconds = 2,
+    string? SpeechFile = null, bool SpeechRecording = false, long SpeechTakes = 0, string SpeechSource = "mic");
 
 public sealed record CategoryDto(long Id, string Name, string Kind, string Color);
 

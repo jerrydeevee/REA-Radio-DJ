@@ -272,6 +272,11 @@ public sealed partial class SettingsTool : StudioTool
     [ObservableProperty] private decimal _recKeepDays = 365;
     [ObservableProperty] private string _recFolder = "";
     [ObservableProperty] private string _recStatus = "";
+    [ObservableProperty] private bool _recSpeech;
+    [ObservableProperty] private decimal _recSpeechThreshold = -40;
+    [ObservableProperty] private decimal _recSpeechHang = 2;
+    [ObservableProperty] private List<OutputChoiceDto> _recSpeechSources = [new("mic", "Microfoon")];
+    [ObservableProperty] private OutputChoiceDto? _recSpeechSource;
     public int[] RecBitrates { get; } = [64, 96, 128, 160, 192, 256, 320];
 
     private async Task LoadRecordingAsync()
@@ -283,9 +288,21 @@ public sealed partial class SettingsTool : StudioTool
     {
         RecProgram = r.Program; RecMic = r.Mic; RecMicToLibrary = r.MicToLibrary; RecBitrate = r.Bitrate;
         RecKeepDays = r.KeepDays; RecFolder = r.Folder;
+        // the microphone and the input channels (a second microphone on a line input, say)
+        var sources = new List<OutputChoiceDto> { new("mic", "Microfoon") };
+        if (Hub.State is { } st)
+            sources.AddRange(st.Mixer.Strips.Where(x => x.Source is not null).Select(x => new OutputChoiceDto(x.Id, x.Name)));
+        if (sources.All(x => x.Id != r.SpeechSource)) sources.Add(new(r.SpeechSource, r.SpeechSource + " (niet gevonden)"));
+        RecSpeechSources = sources;
+        RecSpeechSource = sources.First(x => x.Id == r.SpeechSource);
+        RecSpeech = r.Speech; RecSpeechThreshold = (decimal)r.SpeechThresholdDb; RecSpeechHang = (decimal)r.SpeechHangSeconds;
         var now = new List<string>();
         if (r.ProgramFile is { } p) now.Add($"neemt nu op: {Path.GetFileName(p)}");
         if (r.MicFile is { } m) now.Add($"microfoon: {Path.GetFileName(m)}");
+        if (r.Speech)
+            now.Add(r.SpeechFile is { } sf
+                ? $"spraak: {Path.GetFileName(sf)}{(r.SpeechRecording ? " (neemt nu op)" : "")}, {r.SpeechTakes} keer"
+                : "spraak: wacht op de microfoon");
         RecStatus = (r.Error.Length > 0 ? r.Error + "  " : "") + $"Map: {r.FolderInUse}" + (now.Count > 0 ? "  ·  " + string.Join("  ·  ", now) : "");
     }
 
@@ -293,7 +310,8 @@ public sealed partial class SettingsTool : StudioTool
     private async Task SaveRecording()
     {
         var r = await Hub.Client.SendForAsync<RecordingSettingsDto>(HttpMethod.Put, "/api/recordings/settings",
-            new RecordingSettingsDto(RecProgram, RecMic, RecMicToLibrary, RecBitrate, (int)RecKeepDays, RecFolder.Trim()));
+            new RecordingSettingsDto(RecProgram, RecMic, RecMicToLibrary, RecBitrate, (int)RecKeepDays, RecFolder.Trim(),
+                Speech: RecSpeech, SpeechSource: RecSpeechSource?.Id ?? "mic", SpeechThresholdDb: (double)RecSpeechThreshold, SpeechHangSeconds: (double)RecSpeechHang));
         if (r is null) { RecStatus = "Opslaan mislukt."; return; }
         await Task.Delay(1500);   // the recorder starts on its next tick
         await LoadRecordingAsync();
