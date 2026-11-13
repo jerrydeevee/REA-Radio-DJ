@@ -275,8 +275,9 @@ public sealed partial class SettingsTool : StudioTool
     [ObservableProperty] private bool _recSpeech;
     [ObservableProperty] private decimal _recSpeechThreshold = -40;
     [ObservableProperty] private decimal _recSpeechHang = 2;
-    [ObservableProperty] private List<OutputChoiceDto> _recSpeechSources = [new("mic", "Microfoon")];
-    [ObservableProperty] private OutputChoiceDto? _recSpeechSource;
+    private static readonly OutputChoiceDto MicChoice = new("mic", "Microfoon");
+    [ObservableProperty] private List<OutputChoiceDto> _recSpeechSources = [MicChoice];
+    [ObservableProperty] private OutputChoiceDto? _recSpeechSource = MicChoice;
     public int[] RecBitrates { get; } = [64, 96, 128, 160, 192, 256, 320];
 
     private async Task LoadRecordingAsync()
@@ -289,7 +290,7 @@ public sealed partial class SettingsTool : StudioTool
         RecProgram = r.Program; RecMic = r.Mic; RecMicToLibrary = r.MicToLibrary; RecBitrate = r.Bitrate;
         RecKeepDays = r.KeepDays; RecFolder = r.Folder;
         // the microphone and the input channels (a second microphone on a line input, say)
-        var sources = new List<OutputChoiceDto> { new("mic", "Microfoon") };
+        var sources = new List<OutputChoiceDto> { MicChoice };
         if (Hub.State is { } st)
             sources.AddRange(st.Mixer.Strips.Where(x => x.Source is not null).Select(x => new OutputChoiceDto(x.Id, x.Name)));
         if (sources.All(x => x.Id != r.SpeechSource)) sources.Add(new(r.SpeechSource, r.SpeechSource + " (niet gevonden)"));
