@@ -156,6 +156,17 @@ public sealed partial class SettingsTool : StudioTool
     [ObservableProperty] private string _autoStartCommand = "";
     [ObservableProperty] private string _watchdogLog = "";
     [ObservableProperty] private string _backupStatus = "";
+    // the daily backup
+    [ObservableProperty] private bool _autoBackupLoaded;
+    [ObservableProperty] private bool _autoBackupEnabled;
+    [ObservableProperty] private string _autoBackupFolder = "";
+    [ObservableProperty] private string _autoBackupTime = "03:00";
+    [ObservableProperty] private decimal _autoBackupKeep = 7;
+    [ObservableProperty] private string _autoBackupInfo = "";
+    [ObservableProperty] private string _autoBackupFiles = "";
+    // ports
+    public ObservableCollection<PortDto> Ports { get; } = [];
+    [ObservableProperty] private string _firewallCommand = "";
     [ObservableProperty] private bool _showInfoLines;
     public ObservableCollection<SystemLogEntryDto> SystemLines { get; } = [];
 
@@ -568,6 +579,8 @@ public sealed partial class SettingsTool : StudioTool
             : "De engine draait zonder bewaking. Start hem met --watchdog (de studio doet dat zelf als zij de engine start), of zet hieronder starten bij aanmelden aan.";
         WatchdogLog = sys.WatchdogLog.Count == 0 ? "(nog niets)" : string.Join(Environment.NewLine, sys.WatchdogLog.Reverse());
         if (sys.RestorePending) BackupStatus = "Er staat een reservekopie klaar die bij de volgende start van de engine wordt teruggezet.";
+        ShowAutoBackup(await Hub.Client.GetAsync<AutoBackupDto>("/api/backup/auto"));
+        await RefreshPorts();
         await RefreshLog();
     }
 
@@ -588,6 +601,53 @@ public sealed partial class SettingsTool : StudioTool
         BackupStatus = await Hub.Client.PostAsync("/api/system/restart")
             ? "De engine start opnieuw; de studio maakt vanzelf weer verbinding."
             : "Opnieuw starten kan alleen als de engine met bewaking draait.";
+    }
+
+    [RelayCommand]
+    private async Task RefreshPorts()
+    {
+        var p = await Hub.Client.GetAsync<PortsDto>("/api/system/ports");
+        Ports.Clear();
+        if (p is null) { FirewallCommand = "De engine kent het poortenoverzicht nog niet: werk hem bij."; return; }
+        foreach (var port in p.Ports) Ports.Add(port);
+        FirewallCommand = p.Firewall.Length > 0 ? p.Firewall
+            : "Geen poort staat open voor het netwerk: alles luistert alleen op deze pc, dus er is geen firewallregel nodig.";
+    }
+
+    private void ShowAutoBackup(AutoBackupDto? a)
+    {
+        AutoBackupLoaded = a is not null;
+        if (a is null) { AutoBackupInfo = "De engine kent de dagelijkse reservekopie nog niet: werk hem bij."; AutoBackupFiles = ""; return; }
+        AutoBackupEnabled = a.Enabled;
+        AutoBackupFolder = a.Folder;
+        AutoBackupTime = a.Time;
+        AutoBackupKeep = a.KeepDays;
+        var lines = new List<string> { $"Map: {a.UsedFolder}" };
+        if (a.SameDisk) lines.Add("Let op: deze map staat op dezelfde schijf als de database. Gaat die schijf kapot, dan ben je beide kwijt; kies een andere schijf of een NAS.");
+        if (a.Next is { } next) lines.Add($"Volgende: {next:dddd d MMMM HH:mm}" + (a.Files.Count == 0 ? " (of binnen een minuut als er nog geen is)" : ""));
+        if (a.LastError is { } e) lines.Add($"Laatste poging mislukt: {e}");
+        AutoBackupInfo = string.Join(Environment.NewLine, lines);
+        AutoBackupFiles = a.Files.Count == 0 ? "(nog geen automatische reservekopieën)"
+            : string.Join(Environment.NewLine, a.Files.Select(f => $"{f.Time:ddd d-M-yyyy HH:mm}   {f.Bytes / 1024.0 / 1024.0:0.0} MB   {f.Name}"));
+    }
+
+    [RelayCommand]
+    private async Task RunAutoBackup()
+    {
+        AutoBackupInfo = "reservekopie maken…";
+        var (r, error) = await Hub.Client.SendWithErrorAsync<AutoBackupDto>(HttpMethod.Post, "/api/backup/auto/run", null);
+        ShowAutoBackup(r ?? await Hub.Client.GetAsync<AutoBackupDto>("/api/backup/auto"));
+        BackupStatus = r is null ? $"Niet gelukt: {error}" : $"Reservekopie gemaakt: {r.Files.FirstOrDefault()?.Name}";
+    }
+
+    /// <summary>Stores the daily backup settings; returns an error text when the engine refused them.</summary>
+    private async Task<string?> SaveAutoBackupAsync()
+    {
+        if (!AutoBackupLoaded) return null;
+        var (r, error) = await Hub.Client.SendWithErrorAsync<AutoBackupDto>(HttpMethod.Put, "/api/backup/auto",
+            new AutoBackupSettingsDto(AutoBackupEnabled, AutoBackupFolder.Trim(), AutoBackupTime.Trim(), (int)AutoBackupKeep));
+        if (r is not null) ShowAutoBackup(r);
+        return r is null ? $"Dagelijkse reservekopie niet opgeslagen: {error}" : null;
     }
 
     /// <summary>Fetches a backup of the whole station from the engine.</summary>
@@ -666,6 +726,7 @@ public sealed partial class SettingsTool : StudioTool
             var sys = await Hub.Client.SendForAsync<SystemDto>(HttpMethod.Put, "/api/system", new SystemSettingsRequest(AutoStart, DetailedLog));
             if (sys is not null) { AutoStart = sys.AutoStart; AutoStartCommand = sys.AutoStartCommand ?? ""; }
         }
+        string? autoBackupError = await SaveAutoBackupAsync();
 
         // This computer: the engine address is used the next time the studio starts.
         Hub.Settings.EngineUrl = string.IsNullOrWhiteSpace(EngineUrl) ? Hub.Settings.EngineUrl : EngineUrl.Trim();
@@ -679,6 +740,7 @@ public sealed partial class SettingsTool : StudioTool
         if (saved.Rescanning) notes.Add("De bibliotheek wordt opnieuw ingelezen uit de nieuwe mappen.");
         if (saved.NeedsRestart.Count > 0) notes.Add("Actief na een herstart van de engine: " + string.Join(", ", saved.NeedsRestart) + ".");
         if (failoverError is not null) notes.Add(failoverError + ".");
+        if (autoBackupError is not null) notes.Add(autoBackupError);
         Status = string.Join(" ", notes);
     }
 

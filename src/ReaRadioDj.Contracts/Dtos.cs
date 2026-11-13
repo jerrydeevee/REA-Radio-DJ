@@ -667,6 +667,20 @@ public sealed record SystemLogEntryDto(long Id, DateTime Time, string Level, str
 
 public sealed record BackupStagedDto(string Station, DateTime Created, string Machine, bool Restarting);
 
+/// <summary>The daily backup: settings, where it goes, and what is there.</summary>
+public sealed record AutoBackupDto(bool Enabled, string Folder, string Time, int KeepDays, string UsedFolder, bool SameDisk,
+    DateTime? Next, string? LastError, IReadOnlyList<AutoBackupFileDto> Files);
+
+public sealed record AutoBackupFileDto(string Name, DateTime Time, long Bytes);
+
+public sealed record AutoBackupSettingsDto(bool Enabled, string Folder, string Time, int KeepDays);
+
+/// <summary>A port the engine uses: "in" (others connect) or "uit" (the engine connects); reach "netwerk", "alleen deze pc" or "naar buiten".</summary>
+public sealed record PortDto(int Port, string Protocol, string Direction, string What, string Reach, bool Active, string Note);
+
+/// <summary>All ports, plus a PowerShell command for the incoming network ports (for the administrator to run).</summary>
+public sealed record PortsDto(IReadOnlyList<PortDto> Ports, string Firewall, string Program);
+
 /// <summary>An output a mixer channel can go to ("" = its normal bus).</summary>
 public sealed record OutputChoiceDto(string Id, string Name);
 

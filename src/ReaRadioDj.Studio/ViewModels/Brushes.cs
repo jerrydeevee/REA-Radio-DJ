@@ -19,6 +19,7 @@ public static class Brushes
     /// <summary>Engine connection: green when connected, amber when not (a word next to it says which).</summary>
     public static readonly IValueConverter WarnOrOk = new FuncValueConverter<bool, IBrush>(warn => warn ? Amber : Green);
     public static readonly IValueConverter Connection =new FuncValueConverter<bool, IBrush>(ok => ok ? Ok : Amber);
+    public static readonly IValueConverter ActiveOpacity = new FuncValueConverter<bool, double>(on => on ? 1 : 0.5);
     public static readonly IValueConverter BoldIf = new FuncValueConverter<bool, Avalonia.Media.FontWeight>(b => b ? Avalonia.Media.FontWeight.SemiBold : Avalonia.Media.FontWeight.Normal);
     public static readonly IValueConverter TwinWaveHeight = new FuncValueConverter<int, double>(n => n >= 4 ? 140 : 110);
     /// <summary>Height of the transport buttons of a deck: lower in the compact (four-deck) view.</summary>

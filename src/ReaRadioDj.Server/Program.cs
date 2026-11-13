@@ -94,6 +94,8 @@ builder.Services.AddSingleton(new DjStore(Path.Combine(options.DataFolder, "dj.j
 builder.Services.AddSingleton<DjMixer>();
 builder.Services.AddSingleton<DjHandover>();
 builder.Services.AddSingleton<StandbyFlag>();
+builder.Services.AddSingleton<AutoBackupService>();
+builder.Services.AddHostedService(sp => sp.GetRequiredService<AutoBackupService>());
 builder.Services.AddSingleton<DeviceWatch>();
 builder.Services.AddHostedService(sp => sp.GetRequiredService<DeviceWatch>());
 builder.Services.AddSingleton<SilenceWatch>();
@@ -228,6 +230,7 @@ StudioApi.Map(api, options);
 UsersApi.Map(api);
 DjApi.Map(api);
 SystemApi.Map(api, options, args);
+PortsApi.Map(api, options);
 OutputsApi.Map(api, options);
 TitleLogApi.Map(api, options);
 PathsApi.Map(api, app.Services.GetRequiredService<StationDb>());

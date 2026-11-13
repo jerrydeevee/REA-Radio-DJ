@@ -499,6 +499,46 @@
           </StackPanel>
           <TextBlock Classes="help" Text="{Binding BackupStatus}" Margin="0,8,0,0" />
 
+          <TextBlock Classes="title" Text="Elke dag een reservekopie" Margin="0,24,0,4" />
+          <TextBlock Classes="help" Text="De engine maakt elke dag op een vaste tijd dezelfde reservekopie in een map, en ruimt de oude op. Stond de pc op dat moment uit, dan volgt hij zodra de engine weer draait. Kies bij voorkeur een andere schijf of een NAS; de muziek en jingles bewaar je apart." />
+          <CheckBox Content="Elke dag automatisch een reservekopie maken" IsChecked="{Binding AutoBackupEnabled}" IsEnabled="{Binding AutoBackupLoaded}" Margin="0,10,0,0" />
+          <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto,Auto" Margin="0,8,0,0" IsEnabled="{Binding AutoBackupLoaded}">
+            <TextBlock Classes="muted" Text="Map" VerticalAlignment="Center" Margin="0,0,12,0" />
+            <TextBox Grid.Column="1" Text="{Binding AutoBackupFolder}" Watermark="leeg = map reservekopieen in de datamap · bijv. D:\Reservekopie of \\nas\radio" />
+            <TextBlock Grid.Row="1" Classes="muted" Text="Tijd" VerticalAlignment="Center" Margin="0,6,12,0" />
+            <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding AutoBackupTime}" Width="80" HorizontalAlignment="Left" Margin="0,6,0,0" Watermark="03:00" />
+            <TextBlock Grid.Row="2" Classes="muted" Text="Bewaren" VerticalAlignment="Center" Margin="0,6,12,0" />
+            <StackPanel Grid.Row="2" Grid.Column="1" Orientation="Horizontal" Spacing="8" Margin="0,6,0,0">
+              <NumericUpDown Value="{Binding AutoBackupKeep}" Minimum="1" Maximum="365" Increment="1" FormatString="0" Width="72" ShowButtonSpinner="False" />
+              <TextBlock Classes="muted" Text="dagen (de nieuwste blijft altijd staan)" VerticalAlignment="Center" />
+            </StackPanel>
+          </Grid>
+          <TextBlock Classes="help" Text="{Binding AutoBackupInfo}" Margin="0,8,0,0" />
+          <Button Classes="bar" Content="Nu een reservekopie in deze map maken" Command="{Binding RunAutoBackupCommand}" IsEnabled="{Binding AutoBackupLoaded}" Margin="0,8,0,0"
+                  ToolTip.Tip="Gebruikt de opgeslagen map; wijzig je de map, sla dan eerst op" />
+          <TextBox Text="{Binding AutoBackupFiles}" IsReadOnly="True" Background="{DynamicResource CardBrush}" Foreground="{DynamicResource TextBrush}" FontFamily="Consolas" FontSize="11" Height="110" TextWrapping="NoWrap" Margin="0,8,0,0" />
+
+          <TextBlock Classes="title" Text="Poorten" Margin="0,24,0,4" />
+          <TextBlock Classes="help" Text="Welke poorten de engine gebruikt. 'In' met bereik 'netwerk' heeft een regel in de firewall nodig; 'alleen deze pc' en 'uit' niet. De engine zet zelf niets open in de firewall: de opdracht hieronder voer je als beheerder uit in PowerShell, alleen voor de poorten die open moeten." />
+          <Button Classes="bar" Content="Vernieuwen" Command="{Binding RefreshPortsCommand}" Margin="0,8,0,0" />
+          <ItemsControl ItemsSource="{Binding Ports}" Margin="0,8,0,0">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="c:PortDto">
+                <Grid ColumnDefinitions="60,40,36,110,*" Margin="0,2" Opacity="{Binding Active, Converter={x:Static vm:Brushes.ActiveOpacity}}">
+                  <TextBlock Text="{Binding Port}" FontFamily="Consolas" FontSize="12" />
+                  <TextBlock Grid.Column="1" Text="{Binding Protocol}" FontSize="11" Classes="muted" VerticalAlignment="Center" />
+                  <TextBlock Grid.Column="2" Text="{Binding Direction}" FontSize="11" VerticalAlignment="Center" />
+                  <TextBlock Grid.Column="3" Text="{Binding Reach}" FontSize="11" VerticalAlignment="Center" />
+                  <TextBlock Grid.Column="4" FontSize="12" TextWrapping="Wrap">
+                    <Run Text="{Binding What}" /><Run Text="  " /><Run Text="{Binding Note}" Foreground="{DynamicResource MutedTextBrush}" FontSize="11" />
+                  </TextBlock>
+                </Grid>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+          <TextBlock Classes="field" Text="Firewallregel (PowerShell, als beheerder)" />
+          <TextBox Text="{Binding FirewallCommand}" IsReadOnly="True" FontFamily="Consolas" FontSize="11" TextWrapping="Wrap" />
+
           <TextBlock Classes="title" Text="Systeemlog van de engine" Margin="0,24,0,4" />
           <TextBlock Classes="help" Text="Fouten en waarschuwingen van de engine zelf. Uitgebreid bewaart ook de gewone meldingen; zet dat alleen aan als je een probleem zoekt." />
           <StackPanel Orientation="Horizontal" Spacing="16" Margin="0,8,0,0">
