@@ -11,7 +11,10 @@ namespace ReaRadioDj.Studio.Controls;
 /// <list type="bullet">
 /// <item>studio: a ring of 60 second dots that fill up during the minute, hour markers and the time in the middle;</item>
 /// <item>analog: a classic face with hour, minute and a sweeping second hand;</item>
-/// <item>digital: only large digits.</item>
+/// <item>digital: only large digits;</item>
+/// <item>combi: the analog face with the digital time beside it (wide) or under it (tall);</item>
+/// <item>led: seven-segment digits with unlit segments faintly visible, a bar of 60 seconds and the date;</item>
+/// <item>hour: a ring that fills over the hour with quarter marks, the minutes and seconds left to the top of the hour in the middle.</item>
 /// </list>
 /// An optional outer arc shows how much of the item on air is left (green, amber, red).
 /// It ticks on its own (10× per second) from the engine time plus the time since the last update, so it stays smooth.
@@ -86,6 +89,9 @@ public sealed class StudioClock : Control
         {
             case "digital": RenderDigital(context, new Rect(b.Size), now); break;
             case "analog": RenderAnalog(context, b.Size, now); break;
+            case "combi": RenderCombi(context, b.Size, now); break;
+            case "led": RenderLed(context, new Rect(b.Size), now); break;
+            case "hour": RenderHour(context, b.Size, now); break;
             default: RenderStudio(context, b.Size, now); break;
         }
     }
@@ -168,6 +174,149 @@ public sealed class StudioClock : Control
             g.DrawRectangle(Dim, null, new Rect(at.X, y, w, h), h / 2, h / 2);
             g.DrawRectangle(ItemBrush, null, new Rect(at.X, y, w * Math.Clamp(ItemLeft, 0, 1), h), h / 2, h / 2);
         }
+    }
+
+    private static readonly CultureInfo Dutch = new("nl-NL");
+
+    private void RenderCombi(DrawingContext g, Size size, DateTime now)
+    {
+        bool wide = size.Width >= size.Height * 1.25;
+        var face = wide ? new Size(Math.Min(size.Height, size.Width * 0.55), size.Height) : new Size(size.Width, Math.Min(size.Width, size.Height * 0.68));
+        using (g.PushTransform(Matrix.CreateTranslation(wide ? 0 : (size.Width - face.Width) / 2, 0)))
+            RenderAnalog(g, face, now);
+        var rest = wide ? new Rect(face.Width, 0, size.Width - face.Width, size.Height) : new Rect(0, face.Height, size.Width, size.Height - face.Height);
+        if (rest.Width < 20 || rest.Height < 14) return;
+        var t = Fit(now.ToString(ShowSeconds ? "HH:mm:ss" : "HH:mm", CultureInfo.InvariantCulture), rest.Width * 0.9, rest.Height * 0.5, Text);
+        var at = new Point(rest.Center.X - t.Width / 2, rest.Center.Y - t.Height * 0.65);
+        g.DrawText(t, at);
+        var d = Fit(now.ToString("dddd d MMMM", Dutch), rest.Width * 0.9, t.Height * 0.32, Muted);
+        g.DrawText(d, new Point(rest.Center.X - d.Width / 2, at.Y + t.Height * 1.02));
+    }
+
+    // Seven segments of the digits 0-9: bit 0 = a (top), b (top right), c (bottom right), d (bottom), e, f, g (middle).
+    private static readonly int[] Segments = [0x3F, 0x06, 0x5B, 0x4F, 0x66, 0x6D, 0x7D, 0x07, 0x7F, 0x6F];
+
+    private void RenderLed(DrawingContext g, Rect area, DateTime now)
+    {
+        string text = now.ToString(ShowSeconds ? "HH:mm:ss" : "HH:mm", CultureInfo.InvariantCulture);
+        int digits = text.Count(char.IsDigit), colons = text.Length - digits;
+        // in units of the digit height: a digit 0.6 wide, a colon 0.3, a gap of 0.12 between all
+        double units = digits * 0.6 + colons * 0.3 + (text.Length - 1) * 0.12;
+        double h = Math.Min(area.Height * 0.6, area.Width * 0.94 / units);
+        if (h < 8) return;
+        double total = units * h, left = area.Center.X - total / 2;
+        double x = left, y = area.Y + (area.Height - h) / 2 - h * 0.12;
+        var on = Accent;
+        var off = new SolidColorBrush(Services.Appearance.Surface.Grid, 0.45);
+        foreach (char ch in text)
+        {
+            if (ch == ':')
+            {
+                // the colons blink with the seconds
+                var dot = now.Millisecond < 500 ? on : off;
+                double r = h * 0.055;
+                g.DrawEllipse(dot, null, new Point(x + h * 0.15, y + h * 0.3), r, r);
+                g.DrawEllipse(dot, null, new Point(x + h * 0.15, y + h * 0.7), r, r);
+                x += h * 0.42;
+                continue;
+            }
+            DrawDigit(g, x, y, h, Segments[ch - '0'], on, off);
+            x += h * 0.72;
+        }
+        // 60 second blocks under the digits; full for the one second at :00
+        double barY = y + h * 1.12, barH = Math.Max(3, h * 0.07), cell = total / 60;
+        for (int i = 0; i < 60; i++)
+            g.DrawRectangle(i < now.Second || now.Second == 0 ? on : off, null, new Rect(left + i * cell + cell * 0.12, barY, cell * 0.76, barH));
+        var date = Fit(now.ToString("dddd d MMMM yyyy", Dutch), total, h * 0.16, Muted);
+        g.DrawText(date, new Point(area.Center.X - date.Width / 2, barY + barH + h * 0.06));
+        if (ItemLeft >= 0)
+        {
+            // the item on air as a thin bar above the digits
+            double iy = y - h * 0.16, ih = Math.Max(3, h * 0.05);
+            g.DrawRectangle(Dim, null, new Rect(left, iy, total, ih), ih / 2, ih / 2);
+            g.DrawRectangle(ItemBrush, null, new Rect(left, iy, total * Math.Clamp(ItemLeft, 0, 1), ih), ih / 2, ih / 2);
+        }
+    }
+
+    /// <summary>One seven-segment digit, <paramref name="h"/> high and 0.6·h wide; unlit segments faintly.</summary>
+    private static void DrawDigit(DrawingContext g, double x, double y, double h, int mask, IBrush on, IBrush off)
+    {
+        double w = h * 0.6, t = h * 0.1, half = h / 2;
+        void Seg(int bit, double sx, double sy, bool horizontal)
+        {
+            double len = horizontal ? w - t * 1.2 : half - t * 1.1;
+            var geo = new StreamGeometry();
+            using (var c = geo.Open())
+            {
+                c.BeginFigure(new Point(sx, sy), true);
+                if (horizontal)
+                {
+                    c.LineTo(new Point(sx + t / 2, sy - t / 2)); c.LineTo(new Point(sx + len - t / 2, sy - t / 2));
+                    c.LineTo(new Point(sx + len, sy)); c.LineTo(new Point(sx + len - t / 2, sy + t / 2)); c.LineTo(new Point(sx + t / 2, sy + t / 2));
+                }
+                else
+                {
+                    c.LineTo(new Point(sx + t / 2, sy + t / 2)); c.LineTo(new Point(sx + t / 2, sy + len - t / 2));
+                    c.LineTo(new Point(sx, sy + len)); c.LineTo(new Point(sx - t / 2, sy + len - t / 2)); c.LineTo(new Point(sx - t / 2, sy + t / 2));
+                }
+                c.EndFigure(true);
+            }
+            g.DrawGeometry(((mask >> bit) & 1) == 1 ? on : off, null, geo);
+        }
+        double l = x + t / 2, r = x + w - t / 2, hx = x + t * 0.6;
+        Seg(0, hx, y + t / 2, true);
+        Seg(1, r, y + t * 0.55, false);
+        Seg(2, r, y + half + t * 0.05, false);
+        Seg(3, hx, y + h - t / 2, true);
+        Seg(4, l, y + half + t * 0.05, false);
+        Seg(5, l, y + t * 0.55, false);
+        Seg(6, hx, y + half, true);
+    }
+
+    private void RenderHour(DrawingContext g, Size size, DateTime now)
+    {
+        double r = Math.Min(size.Width, size.Height) / 2;
+        var c = new Point(size.Width / 2, size.Height / 2);
+        g.DrawEllipse(Face, null, c, r, r);
+        DrawItemArc(g, c, r * 0.985, r * 0.03);
+        double ring = r * 0.82, thick = r * 0.09;
+        int secondsIn = now.Minute * 60 + now.Second;
+        double passed = (secondsIn + now.Millisecond / 1000.0) / 3600;
+        g.DrawEllipse(null, new Pen(Dim, thick), c, ring, ring);
+        // the last five minutes before the hour turn amber, the last minute red
+        int toHour = 3600 - secondsIn;
+        var fill = toHour <= 60 ? Red : toHour <= 300 ? Amber : Green;
+        DrawArc(g, c, ring, passed * 360, new Pen(fill, thick, lineCap: PenLineCap.Flat));
+        for (int q = 0; q < 4; q++)
+        {
+            g.DrawLine(new Pen(Text, Math.Max(2, r * 0.02)), Polar(c, ring - thick * 0.9, q * 90), Polar(c, ring + thick * 0.9, q * 90));
+            var lbl = Fit((q * 15).ToString("00", CultureInfo.InvariantCulture), r * 0.14, r * 0.1, Muted);
+            var lp = Polar(c, ring - thick * 2, q * 90);
+            g.DrawText(lbl, new Point(lp.X - lbl.Width / 2, lp.Y - lbl.Height / 2));
+        }
+        var main = Fit(now.ToString("HH:mm", CultureInfo.InvariantCulture), r * 0.95, r * 0.34, Text);
+        g.DrawText(main, new Point(c.X - main.Width / 2, c.Y - main.Height * 0.78));
+        string left = $"{toHour / 60:00}:{toHour % 60:00}";
+        var sub = Fit("nog " + left + " tot het uur", r * 1.0, r * 0.13, fill);
+        g.DrawText(sub, new Point(c.X - sub.Width / 2, c.Y + main.Height * 0.32));
+    }
+
+    private static void DrawArc(DrawingContext g, Point c, double rr, double sweep, IPen pen)
+    {
+        if (sweep <= 0.1) return;
+        var geo = new StreamGeometry();
+        using (var ctx = geo.Open())
+        {
+            ctx.BeginFigure(Polar(c, rr, 0), false);
+            if (sweep >= 359.9)
+            {
+                ctx.ArcTo(Polar(c, rr, 180), new Size(rr, rr), 0, false, SweepDirection.Clockwise);
+                ctx.ArcTo(Polar(c, rr, 359.9), new Size(rr, rr), 0, false, SweepDirection.Clockwise);
+            }
+            else ctx.ArcTo(Polar(c, rr, sweep), new Size(rr, rr), 0, sweep > 180, SweepDirection.Clockwise);
+            ctx.EndFigure(false);
+        }
+        g.DrawGeometry(null, pen, geo);
     }
 
     // ---------------------------------------------------------------- helpers

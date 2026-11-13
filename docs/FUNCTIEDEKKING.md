@@ -188,7 +188,12 @@ Het belang staat in de kolom **Prio** voor Radio Aa en Hunze: **H** hoog, **M** 
 | ✅ | Gebruikers, rollen en rechten met pincode, studio vergrendelen | | — |
 | ⬜ | **Per gebruiker**: eigen indeling, eigen beginwerkruimte, zichtbare vensters, eigen knoppen | rechten per rol; indeling per gebruiker ontbreekt | M |
 | ✅ | Klok met kwartier- en uuraftelling; tijdcode (resterend tot mix, uit, intro, outro) | | — |
-| ⬜ | Grote losse klok voor in de studio (apart venster of scherm) | kan met een venster op een tweede scherm | L |
+| 🟡 | Grote losse klok voor in de studio (apart venster of scherm), **te kiezen uit een paar soorten**: analoog met secondenstippen, digitaal, en een combinatie | venster Klok; soorten in de maak | L |
+| ⬜ | **Duidelijk zien wat er speelt**: het spelende deck licht op, met een signaalbalk (niveau) en een voortgangsbalk die van kleur verandert naar het einde | voortgang en resttijd; geen niveau per deck | H |
+| ⬜ | **Mooiere VU-meters**: piek en gemiddelde (RMS/LUFS) samen, piekvasthouden, schaal in dB met kleurzones, rustig vallend | eenvoudige meters | M |
+| ⬜ | **Venster Uitsturing**: losse meters per kanaal (decks, cartwall, PFL, microfoons, inkomende lijnen, uitgangen), elk met naam en een lampje dat oplicht als het kanaal open staat | meters per uitgang verspreid over vensters | M |
+| ⬜ | **Kanaal-open-lampjes van een mengtafel**: met een MIDI- of IO-mengtafel aangesloten tonen de lampjes welke microfoon of lijn openstaat (fader op of knop aan), en "mic live" over het hele scherm | hardwarelaag (fase D) | M |
+| ⬜ | Kleine bewegingen die helpen: knoppen die reageren op aanwijzen, een korte puls bij starten, een rustige knipper in de laatste tien seconden | | L |
 | ⬜ | Stationsbeeld: logo, foto van de presentator, live spectrum | | L |
 | ⬜ | Ingebouwd webpaneel (eigen pagina's, luisteraarsinteractie) | WebView | L |
 | ⬜ | Online hulp per scherm en een handleiding | stap 10 | H |
@@ -447,6 +452,9 @@ Zonder dit heeft uitbreiden geen zin.
 | 4. **Flexibele mixergraaf**: vrij aantal kanalen, subgroepen, profielen met presets | mixergraaf | L | een extra microfoon en een groepsbus toevoegen zonder code; preset wisselen in één klik |
 | 5. Hook-container met opener, scheider en afsluiter | — | S | een "straks hoor je…"-teaser uit drie hooks |
 | 6. Indeling, beginwerkruimte en zichtbare vensters per gebruiker | — | M | elke presentator krijgt na aanmelden zijn eigen indeling |
+| 7. **Meters en signaal**: niveau per deck en kanaal vanuit de engine, nieuwe VU-meter (piek, RMS, piekvasthouden, kleurzones), spelend deck licht op | meterstroom | M | in één oogopslag is te zien welk deck speelt en hoe hard |
+| 8. **Venster Uitsturing** met een meter en een open-lampje per kanaal; met een MIDI/IO-tafel volgen de lampjes de fader of knop, "mic live" groot in beeld | meterstroom + hardwarelaag (D) | M | microfoon open op de tafel → lampje in de studio en rode balk bovenin |
+| 9. Studioklok in een paar soorten (analoog, digitaal, combinatie), te kiezen per venster | — | S | elk klokvenster kan een andere soort tonen |
 
 ### Fase C — Planning en automatisering volwassen
 

@@ -12,8 +12,8 @@ namespace ReaRadioDj.Studio.ViewModels;
 /// </summary>
 public sealed partial class ClockTool : StudioTool
 {
-    public static readonly string[] StyleNames = ["Studioklok", "Analoog", "Digitaal"];
-    private static readonly string[] StyleKeys = ["studio", "analog", "digital"];
+    public static readonly string[] StyleNames = ["Studioklok", "Analoog", "Digitaal", "Analoog + digitaal", "LED-segmenten", "Uurklok (tot het hele uur)"];
+    private static readonly string[] StyleKeys = ["studio", "analog", "digital", "combi", "led", "hour"];
     public static readonly string[] SizeNames = ["Klein", "Normaal", "Groot", "Extra groot"];
     private static readonly double[] CounterFonts = [22, 34, 52, 76];
     public static readonly string[] FlashNames = ["Rood", "Oranje", "Wit", "Blauw"];
