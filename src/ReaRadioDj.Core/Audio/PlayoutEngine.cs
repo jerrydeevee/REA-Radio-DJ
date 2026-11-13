@@ -29,6 +29,9 @@ public sealed class PlayoutEngine : IDisposable
     /// <summary>Jingles laid over a transition: they play alongside and never start the next item.</summary>
     private readonly List<Deck> _inserts = [];
     private readonly System.Collections.Concurrent.ConcurrentQueue<Action> _events = new();
+    /// <summary>Raises the events in order on their own thread, so a slow handler (database, network) never holds up the audio loop.</summary>
+    private readonly System.Collections.Concurrent.BlockingCollection<Action> _raise = new();
+    private Thread? _eventThread;
     private Thread? _thread;
     private volatile bool _running;
     private int _mixer;
@@ -98,6 +101,8 @@ public sealed class PlayoutEngine : IDisposable
         _running = true;
         _thread = new Thread(Loop) { IsBackground = true, Name = "REA-Radio-DJ engine", Priority = ThreadPriority.AboveNormal };
         _thread.Start();
+        _eventThread ??= new Thread(RaiseEvents) { IsBackground = true, Name = "REA-Radio-DJ engine events" };
+        if (!_eventThread.IsAlive) _eventThread.Start();
         _logger.LogInformation("Engine started on device {Device}", _options.OutputDevice);
     }
 
@@ -178,11 +183,20 @@ public sealed class PlayoutEngine : IDisposable
             try
             {
                 lock (_gate) Tick();
-                while (_events.TryDequeue(out var raise)) raise();
+                while (_events.TryDequeue(out var raise)) _raise.Add(raise);
             }
             catch (Exception ex) { _logger.LogError(ex, "Engine tick failed"); }
             Interlocked.Exchange(ref _lastTick, Environment.TickCount64);
             Thread.Sleep(10);
+        }
+    }
+
+    private void RaiseEvents()
+    {
+        foreach (var raise in _raise.GetConsumingEnumerable())
+        {
+            try { raise(); }
+            catch (Exception ex) { _logger.LogError(ex, "Engine event handler failed"); }
         }
     }
 
@@ -309,6 +323,8 @@ public sealed class PlayoutEngine : IDisposable
     {
         _running = false;
         _thread?.Join(500);
+        _raise.CompleteAdding();
+        _eventThread?.Join(500);
         lock (_gate)
         {
             foreach (var d in _decks.Concat(_inserts)) d.Free();

@@ -21,7 +21,9 @@ public sealed class StationDb
         {
             DataSource = Path,
             Mode = SqliteOpenMode.ReadWriteCreate,
-            Cache = SqliteCacheMode.Shared,
+            // Private cache: with a shared cache a reader waits for every writer in this process (table locks, up to the
+            // 30 s command timeout), so a library scan could hold up the playout engine. WAL lets them work side by side.
+            Cache = SqliteCacheMode.Private,
             ForeignKeys = true,
         }.ToString();
         Migrate();

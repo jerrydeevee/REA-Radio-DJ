@@ -58,7 +58,8 @@ public sealed class AutomationService(
     {
         _ct = ct;
         engine.FallbackProvider = Fallback;
-        engine.BeatProvider = m => m.Id > 0 && library.GetDetails(m.Id) is { Bpm: > 0 } d ? (d.Bpm!.Value, d.FirstBeat ?? 0) : null;
+        // from memory: this is asked inside the engine lock, where a database wait would stall the audio loop
+        engine.BeatProvider = m => m.Id > 0 && library.Cached(m.Id) is { Bpm: > 0 } d ? (d.Bpm!.Value, d.FirstBeat ?? 0) : null;
         var adService = services.GetRequiredService<AdService>();
         // While the DJ desk is on air the automation runs on unheard: what nobody heard is no broadcast (as-run, proof of broadcast).
         engine.ItemStarted += item =>
