@@ -271,6 +271,8 @@ public sealed partial class MainWindowViewModel : ObservableObject
     [ObservableProperty] private string _introText = "";
     /// <summary>Title and the line under it (artist, category, clock) of the item on air.</summary>
     [ObservableProperty] private string _nowTitle = "";
+    /// <summary>What the presenter says with the item on air (empty = nothing).</summary>
+    [ObservableProperty] private string _presenterText = "";
     [ObservableProperty] private string _nowSub = "";
     /// <summary>0-100: how far the item on air is; the intro and mix marks are -1 when there is none.</summary>
     [ObservableProperty] private double _nowPos;
@@ -467,6 +469,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
             NowLabel = c.Label;
             double left = Math.Max(0, c.To - c.Position), length = Math.Max(0.1, c.To - c.From);
             NowTitle = string.IsNullOrWhiteSpace(c.Title) ? c.Label : c.Title;
+            PresenterText = c.PresenterText ?? "";
             NowSub = string.Join(" \u00b7 ", new[] { c.Artist, c.Category, s.Clock is null ? "" : $"klok {s.Clock}" }.Where(t => !string.IsNullOrWhiteSpace(t)));
             double Mark(double at) => Math.Clamp((at - c.From) / length * 100, 0, 100);
             NowPos = Mark(c.Position);
@@ -485,6 +488,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
             NowLabel = AutoPlay ? "wachten op materiaal…" : "stil — start het volgende item (F5)";
             NowRemaining = ""; NowLeft = 0; EndState = "normal"; Flash = false; IntroText = "";
             NowTitle = NowLabel; NowSub = s.Clock is null ? "" : $"klok {s.Clock}";
+            PresenterText = "";
             NowPos = 0; IntroMark = -1; MixMark = -1; IntroState = ""; MixText = "";
         }
         // Overlays play on top of everything; show them in the on-air bar so a stray one is never hidden in a tab.

@@ -123,6 +123,7 @@ builder.Services.AddSingleton<OwnVoiceRecorder>();
 builder.Services.AddSingleton<Own>();
 builder.Services.AddSingleton<PersonaStore>();
 builder.Services.AddSingleton<NoteStore>();
+builder.Services.AddSingleton<ReaRadioDj.Core.Library.PresenterTexts>();
 builder.Services.AddSingleton(sp => new BreakExtras(sp.GetRequiredService<IHttpClientFactory>().CreateClient("extras"), options.Presenter,
     sp.GetRequiredService<NoteStore>(), sp.GetService<ILogger<BreakExtras>>()));
 builder.Services.AddSingleton(sp => new CreativePicker(sp.GetRequiredService<IHttpClientFactory>().CreateClient("extras"), options.Presenter,

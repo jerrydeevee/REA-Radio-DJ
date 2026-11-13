@@ -36,7 +36,7 @@ public static class Snapshot
         var s = streamer.GetStatus();
         return new StateDto(
             options.StationName, now, automation.CurrentClock,
-            Engine(state),
+            Engine(state, sp.GetService<PresenterTexts>()),
             upcoming,
             log.History.Take(20).Select(i => Item(i, default)).ToList(),
             players.Standby.Select(p => Player(p.Info)).ToList(),
@@ -62,11 +62,11 @@ public static class Snapshot
     public static T Parse<T>(string? text, T fallback) where T : struct, Enum =>
         Enum.TryParse<T>(text, ignoreCase: true, out var v) ? v : fallback;
 
-    public static EngineDto Engine(EngineState s) => new(s.Running, s.AutoPlay, s.Current is null ? null : Now(s.Current),
-        s.Playing.Select(Now).ToList(), s.LevelLeft, s.LevelRight, s.SecondsToNext);
+    public static EngineDto Engine(EngineState s, PresenterTexts? texts = null) => new(s.Running, s.AutoPlay,
+        s.Current is null ? null : Now(s.Current, texts), s.Playing.Select(n => Now(n, texts)).ToList(), s.LevelLeft, s.LevelRight, s.SecondsToNext);
 
-    private static NowPlayingDto Now(NowPlaying n) => new(n.Id, Lower(n.Type), n.Label, n.Artist, n.Title, n.Category, n.Origin,
-        n.Position, n.From, n.To, n.MixAt, n.Intro, n.FadeAt, n.Script, n.MediaId);
+    private static NowPlayingDto Now(NowPlaying n, PresenterTexts? texts) => new(n.Id, Lower(n.Type), n.Label, n.Artist, n.Title, n.Category, n.Origin,
+        n.Position, n.From, n.To, n.MixAt, n.Intro, n.FadeAt, n.Script, n.MediaId, texts?.Get(n.MediaId));
 
     private static string Lower(string s) => s.Length == 0 ? s : char.ToLowerInvariant(s[0]) + s[1..];
 

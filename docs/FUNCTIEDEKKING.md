@@ -83,7 +83,7 @@ Het belang staat in de kolom **Prio** voor Radio Aa en Hunze: **H** hoog, **M** 
 | ⬜ | **Overgangseditor met twee sporen**: einde van A en begin van B onder elkaar, B verslepen, een voice-over ertussen leggen of direct inspreken, automatische demping, tempo aanpassen | **grootste ontbrekende stuk in de bediening** | H |
 | ✅ | Hooks afspelen (alleen een fragment) in de planning | klokregel "Hook" | — |
 | ⬜ | Hook-container met eigen opener, scheider en afsluiter (een "teaser" van komende nummers) | ontbreekt | M |
-| ⬜ | Presentatortekst per item (wat je bij dit nummer of deze reclame zegt), groot in beeld tijdens het afspelen | er zijn alleen notities voor de AI-presentator | M |
+| ✅ | Presentatortekst per item (wat je bij dit nummer of deze reclame zegt), groot in beeld tijdens het afspelen | tekst per item in de bibliotheek; de Live-balk toont hem onder de knoppen zolang het item speelt | M |
 
 ### 5. Bibliotheek en metagegevens
 
@@ -448,7 +448,7 @@ Zonder dit heeft uitbreiden geen zin.
 |---|---|---|---|
 | 1. **Overgangseditor met twee sporen**, met voice-over-spoor, direct inspreken en automatische demping | tijdlijn | L | een voicetrack tussen twee nummers maken en beluisteren zonder de cue-editor |
 | 2. **Inzet-overgang** (station-ID over het einde van een nummer) en **maximale speelduur / niet faden per soort** | tijdlijn + overgangsregels | M | een ID valt automatisch over de outro, gedempt |
-| 3. **Presentatortekst per item**, groot in beeld tijdens het afspelen | — | S | tekst bij een reclame staat in de Live-balk zolang die speelt |
+| 3. ✅ **Presentatortekst per item**, groot in beeld tijdens het afspelen | — | S | tekst bij een reclame staat in de Live-balk zolang die speelt |
 | 4. **Flexibele mixergraaf**: vrij aantal kanalen, subgroepen, profielen met presets | mixergraaf | L | een extra microfoon en een groepsbus toevoegen zonder code; preset wisselen in één klik |
 | 5. Hook-container met opener, scheider en afsluiter | — | S | een "straks hoor je…"-teaser uit drie hooks |
 | 6. Indeling, beginwerkruimte en zichtbare vensters per gebruiker | — | M | elke presentator krijgt na aanmelden zijn eigen indeling |

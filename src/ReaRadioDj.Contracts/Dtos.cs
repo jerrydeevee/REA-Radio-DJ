@@ -135,7 +135,11 @@ public sealed record EngineDto(bool Running, bool AutoPlay, NowPlayingDto? Curre
     float LevelLeft, float LevelRight, double SecondsToNext);
 
 public sealed record NowPlayingDto(long Id, string Type, string Label, string Artist, string Title, string Category, string Origin,
-    double Position, double From, double To, double MixAt, double? Intro, double? FadeAt, string? Script, long MediaId);
+    double Position, double From, double To, double MixAt, double? Intro, double? FadeAt, string? Script, long MediaId,
+    string? PresenterText = null);
+
+/// <summary>What the presenter says with a library item (empty = none).</summary>
+public sealed record PresenterTextDto(string Text);
 
 public sealed record LogItemDto(long Id, string Type, string Label, string? Artist, string? Title, string? Category, string Origin,
     double Length, DateTime StartsAt, string? BreakState, string? Script, string? ScriptSource, string? Voice, string? Error,

@@ -123,7 +123,17 @@
     <!-- On-air bar: always visible, whatever the layout -->
     <LayoutTransformControl x:Name="ZoomOnAir" DockPanel.Dock="Top">
     <Border Padding="24,12" Background="{DynamicResource BarBrush}" BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="0,0,0,1">
-      <Grid x:Name="OnAirGrid" ColumnDefinitions="Auto,*,Auto,Auto,Auto,Auto" RowDefinitions="Auto,Auto">
+      <Grid x:Name="OnAirGrid" ColumnDefinitions="Auto,*,Auto,Auto,Auto,Auto" RowDefinitions="Auto,Auto,Auto">
+        <!-- what the presenter says with the item on air, large, for as long as it plays -->
+        <Border Grid.Row="2" Grid.ColumnSpan="6" Margin="0,10,0,0" Padding="14,8" CornerRadius="{DynamicResource Radius6}"
+                Background="{DynamicResource CardBrush}" BorderBrush="{DynamicResource WarnBrush}" BorderThickness="4,0,0,0"
+                IsVisible="{Binding PresenterText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+                ToolTip.Tip="Presentatortekst bij dit item (te zetten in de Bibliotheek bij de itemgegevens)">
+          <DockPanel>
+            <TextBlock DockPanel.Dock="Left" Classes="lbl" Text="ZEG" Foreground="{DynamicResource WarnBrush}" Margin="0,5,14,0" VerticalAlignment="Top" />
+            <TextBlock Text="{Binding PresenterText}" FontSize="20" FontWeight="SemiBold" TextWrapping="Wrap" />
+          </DockPanel>
+        </Border>
         <Border Grid.Column="0" CornerRadius="{DynamicResource Radius8}" Padding="12,8" Margin="0,0,24,0" VerticalAlignment="Center"
                 Background="{Binding OnAir, Converter={x:Static vm:Brushes.OnAir}}">
           <StackPanel Orientation="Horizontal" Spacing="8">

@@ -188,6 +188,10 @@ public static class StudioApi
         api.MapPut("/media/{id:long}", (long id, MediaUpdateRequest r, MediaLibrary library) =>
             library.UpdateDetails(id, r.CategoryId, r.Enabled, r.ValidFrom, r.ValidUntil) ? Results.Ok(Media(library.GetDetails(id)!)) : Results.NotFound());
         // Music or jingle, by hand (a later scan keeps it); moves to a category of that kind when needed.
+        // what the presenter says with this item, shown large in the studio while it plays
+        api.MapGet("/media/{id:long}/presenter-text", (long id, PresenterTexts texts) => new PresenterTextDto(texts.Get(id) ?? ""));
+        api.MapPut("/media/{id:long}/presenter-text", (long id, PresenterTextDto d, PresenterTexts texts, MediaLibrary library) =>
+            library.Get(id) is null ? Results.NotFound() : Results.Ok(new PresenterTextDto(texts.Set(id, d.Text) ?? "")));
         api.MapPut("/media/{id:long}/kind", (long id, MediaKindRequest r, MediaLibrary library) =>
             r.Kind is "song" or "jingle" && library.SetKind(id, Parse(r.Kind, MediaKind.Song), r.CategoryId)
                 ? Results.Ok(Media(library.GetDetails(id)!)) : Results.BadRequest());

@@ -30,8 +30,10 @@ Elk venster is te verslepen, te docken of los te laten zweven, ook op een tweede
   via REST (`/api/...`), met live status via WebSocket (`/api/ws`) of server-sent events (`/api/events`).
 - **Watchdog**: een klein bewakingsproces start de engine opnieuw na een crash of vastloper, en hij gaat verder waar
   de log was. De engine kan met Windows mee starten, los van de studio.
-- **Bewaking van de geluidskaart**: zet Windows of een ander programma de kaart van de zender zachter of dempt het
+- **Bewaking van de geluidskaart**: zet Windows of een ander programma de kaart van de zender zachter of dempt
   hem, dan komt er een melding, of de engine zet hem meteen terug.
+- **Presentatortekst**: per nummer, reclame of aankondiging een tekst die je erbij zegt; zolang het item speelt staat
+  hij groot in de Live-balk.
 - **Stiltedetectie** op de zender: drempel, duur en actie (melden, automatisering starten of iets uit een
   noodcategorie spelen).
 - **Reservestudio**: een tweede engine bewaakt de hoofdstudio en neemt de uitzending over als die uitvalt, een

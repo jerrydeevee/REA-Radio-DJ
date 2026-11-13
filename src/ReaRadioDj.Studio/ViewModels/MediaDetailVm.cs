@@ -48,6 +48,9 @@ public sealed partial class MediaDetailVm : ObservableObject
     public IReadOnlyList<string> Issues => Media.Issues ?? [];
     public bool HasIssues => Media.HasIssues;
     [ObservableProperty] private string _saveText = "";
+    /// <summary>What the presenter says with this item; shown large in the on-air bar while it plays.</summary>
+    [ObservableProperty] private string _presenterText = "";
+    [ObservableProperty] private string _presenterSaveText = "";
     [ObservableProperty] private ushort[]? _peaks;
     [ObservableProperty] private Avalonia.Media.Imaging.Bitmap? _cover;
 
@@ -120,6 +123,7 @@ public sealed partial class MediaDetailVm : ObservableObject
             History.Add($"{h.Started:ddd d-M HH:mm}" + (h.Played is double p ? $"  ({StudioHub.Time(p)})" : "") + (h.Source != "log" ? $"  {h.Source}" : ""));
         HistoryText = History.Count == 0 ? "Nog niet uitgezonden." : "";
 
+        if (await hub.Client.GetAsync<PresenterTextDto>($"/api/media/{Id}/presenter-text") is { } pt) PresenterText = pt.Text;
         await LoadCoverAsync();
         var peaks = await hub.Client.GetAsync<PeaksDto>($"/api/media/{Id}/peaks");
         if (peaks is not null)
@@ -138,6 +142,14 @@ public sealed partial class MediaDetailVm : ObservableObject
         };
         if (c.Intro is double i) marks.Add(new("intro", "intro", i, Avalonia.Media.Color.Parse("#3FA7FF")));
         Markers = marks;
+    }
+
+    [RelayCommand]
+    private async Task SavePresenterText()
+    {
+        var r = await StudioHub.Current.Client.SendForAsync<PresenterTextDto>(HttpMethod.Put, $"/api/media/{Id}/presenter-text", new PresenterTextDto(PresenterText));
+        PresenterSaveText = r is null ? "Opslaan mislukt." : r.Text.Length == 0 ? "Geen tekst meer bij dit item." : "Opgeslagen; staat groot in beeld zolang dit item speelt.";
+        if (r is not null) PresenterText = r.Text;
     }
 
     [RelayCommand]
