@@ -461,11 +461,11 @@ Zonder dit heeft uitbreiden geen zin.
 | Werk | Bouwsteen | Grootte | Klaar als |
 |---|---|---|---|
 | 1. **Agenda-laag**: programma's op datum met herhaling en eindtijd boven het weekrooster | agenda | L | een eenmalige uitzending op 24 december verdringt die avond het rooster |
-| 2. Startgedrag: vast, zacht met maximale vertraging, handmatig; mengtijd tussen programma's | agenda | M | zacht start nooit meer dan N seconden te laat |
+| 2. 🟡 Startgedrag: vast, ✅ zacht met maximale vertraging, handmatig; mengtijd tussen programma's | agenda | M | zacht start nooit meer dan N seconden te laat |
 | 3. Overlay tot eindtijd of één ronde; daarna verder met het onderbroken programma; uitstellen of overslaan vóór de start | agenda | M | nieuws onderbreekt en het programma loopt verder waar het was |
 | 4. **Afspeellijst als vaste bron** en als één doorlopend item | — | S | een M3U-map speelt als categorie |
 | 5. Koppelprofielen voor externe muziekplanners en traffic (eerst het formaat dat het station gebruikt) | — | M | een geïmporteerde dag speelt zonder handwerk |
-| 6. Log en planning afdrukken of exporteren (PDF/HTML) | — | S | het draaiboek van morgen ligt op papier |
+| 6. 🟡 Log (✅ PDF/CSV) en planning afdrukken of exporteren | — | S | het draaiboek van morgen ligt op papier |
 
 ### Fase D — Commando's en hardware
 
@@ -474,7 +474,7 @@ Zonder dit heeft uitbreiden geen zin.
 | 1. **Expressietaal** met velden, voorwaarden en functies in alle gebeurtenissen en titelupdates | expressietaal | M | "als soort = jingle dan geen titelupdate" zonder code |
 | 2. Gebeurtenissen per bron: speler, mengkanaal, stream, MIDI, OSC, serieel met patroonherkenning | expressietaal | M | een fader-start op de tafel start de juiste speler |
 | 3. Toegangslimiet per afstandsbediener | — | S | de tablet mag geen instellingen wijzigen |
-| 4. `rea-cmd` op de opdrachtregel | — | S | een ander programma stuurt "NEXT" |
+| 4. ✅ `rea-cmd` op de opdrachtregel | — | S | een ander programma stuurt "NEXT" |
 | 5. USB-GPIO en D&R Airence/Webstation via de algemene hardwarelaag (alleen met het openbare protocol) | — | M | knoppen en lampjes werken op de echte tafel |
 
 ### Fase E — Meerdere plekken
@@ -531,7 +531,7 @@ Zonder dit heeft uitbreiden geen zin.
 | 1. **Systeemcontrole-scherm** en een beheerdershandleiding (virusscanner, Windows-updates, poorten, ASIO/BIOS) | — | M | een nieuwe uitzend-pc is in een half uur nagekeken |
 | 2. Firewallregel in het installatieprogramma; draaien zonder beheerdersrechten nagaan | — | S | de engine is van buiten alleen bereikbaar op de poorten die nodig zijn |
 | 3. **Activiteitenlog per gebruiker** en geschiedenis per item | — | M | "wie heeft de log van vrijdag veranderd?" is te beantwoorden |
-| 4. Account met einddatum, uitschakelen in plaats van verwijderen, instelbare blokkade | — | S | een stagiair kan na zijn laatste dag niet meer inloggen |
+| 4. ✅ Account met einddatum, uitschakelen in plaats van verwijderen, instelbare blokkade | — | S | een stagiair kan na zijn laatste dag niet meer inloggen |
 | 5. Meldingen per niveau naar e-mail | — | S | stilte 's nachts komt als mail binnen |
 | 6. **Plaatshouder** in de planning, met waarschuwing als het geluid ontbreekt | — | S | een ingeplande reclame zonder bestand geeft een dag vooraf een melding |
 | 7. **Bewerkingsslot** op log en planning | engine-rollen | M | twee plekken kunnen niet tegelijk dezelfde dag overschrijven |
