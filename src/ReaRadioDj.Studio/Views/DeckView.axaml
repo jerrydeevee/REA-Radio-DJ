@@ -34,10 +34,11 @@
       </ItemsControl.ItemsPanel>
       <ItemsControl.ItemTemplate>
         <DataTemplate x:DataType="vm:DeckVm">
-          <Border Classes="card" Margin="0,0,6,6" BorderBrush="{Binding Brush}" BorderThickness="1,4,1,1" Padding="0">
+          <Border Classes="card" Margin="0,0,6,6" BorderBrush="{Binding Brush}" BorderThickness="2" CornerRadius="{DynamicResource Radius6}" Padding="0">
             <Grid ColumnDefinitions="44,*">
               <!-- deck badge -->
-              <Border Grid.Column="0" Background="{Binding Brush}" CornerRadius="3,0,0,3">
+              <!-- inner radius = card radius (6) minus the border (2), so the strip follows the rounded corners -->
+              <Border Grid.Column="0" Background="{Binding Brush}" CornerRadius="4,0,0,4">
                 <TextBlock Text="{Binding Letter}" FontSize="30" FontWeight="Black" Foreground="#11161D"
                            HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,6,0,0" />
               </Border>
