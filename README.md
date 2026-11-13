@@ -56,6 +56,9 @@ Elk venster is te verslepen, te docken of los te laten zweven, ook op een tweede
 - **Uurklokken en weekgrid**, met vaste tijden: *hard* (op de seconde), *zacht* (na het huidige nummer) of
   *overlay* (eroverheen, de muziek duikt). Regels voor de rotatie, **containers** (een blok als één regel in de log)
   en **externe streams** die in een tijdvenster het programma overnemen.
+- **Afspeellijst als bron** in een klok: een plek speelt het volgende (of een willekeurig) nummer uit een M3U-, PLS-
+  of XSPF-bestand, ook als een ander programma die lijst schrijft. Alleen bestanden uit de bibliotheek spelen;
+  *Controleer* laat zien hoeveel dat er zijn.
 - **Gebeurtenissen op een plek in een nummer**: een volume-omhullende of een commando op een tijdstip, te zetten in
   de cue-editor.
 - **Studio-spelers**: standby-spelers met stapel, een PFL-speler, cartwalls van 4 × 16 knoppen, overlays en een

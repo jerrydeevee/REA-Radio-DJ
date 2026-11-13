@@ -359,6 +359,14 @@ public static class StudioApi
         // ------------------------------------------------------------ planner
         var planner = api.MapGroup("/planner");
         planner.MapGet("/clocks", (PlannerStore p) => p.Clocks.Select(Clock));
+        // what a playlist file for a clock position holds (counts and the first file name only)
+        planner.MapGet("/playlist", (string? path, PlannerStore p) =>
+        {
+            var list = ReaRadioDj.Core.Library.Playlists.Read(path ?? "");
+            var media = p.ByPaths(list.Entries);
+            return new PlaylistCheckDto(list.Path, list.Entries.Count, media.Count, list.Skipped,
+                media.FirstOrDefault()?.DisplayName, list.Problem);
+        });
         planner.MapPost("/clocks", (ClockDto c, PlannerStore p) => Results.Ok(new { id = p.SaveClock(Clock(c) with { Id = 0 }) }));
         planner.MapPut("/clocks/{id:long}", (long id, ClockDto c, PlannerStore p) => Results.Ok(new { id = p.SaveClock(Clock(c) with { Id = id }) }));
         planner.MapDelete("/clocks/{id:long}", (long id, PlannerStore p) => p.DeleteClock(id) ? Results.Ok() : Results.NotFound());

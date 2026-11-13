@@ -305,7 +305,11 @@ public sealed record RoutingDto(int OutputDevice, int PreviewDevice, bool MicEna
 // ---------------------------------------------------------------- planner
 
 /// <summary>Kind: category, media or aiBreak. Mode: random, sequential or hook.</summary>
-public sealed record ClockRuleDto(long Id, string Kind, long? CategoryId, long? MediaId, string Mode, string Note);
+/// <summary>Kind "category", "media", "aiBreak" or "playlist" (Source = path of the playlist file on the engine).</summary>
+public sealed record ClockRuleDto(long Id, string Kind, long? CategoryId, long? MediaId, string Mode, string Note, string? Source = null);
+
+/// <summary>What the engine finds in a playlist file: entries, how many are in the library, the first playable one.</summary>
+public sealed record PlaylistCheckDto(string Path, int Entries, int InLibrary, int Skipped, string? First, string? Problem);
 
 public sealed record ClockDto(long Id, string Name, string Color, IReadOnlyList<ClockRuleDto> Rules);
 

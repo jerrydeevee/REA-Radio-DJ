@@ -66,15 +66,17 @@ public sealed class PlannerStore : IScheduleSource
             if (_library.GetDetails(id) is { } d && d.IsPlayable(now)) result.Add((index, d.Media));
         return result;
     }
+    public IReadOnlyList<MediaItem> ByPaths(IReadOnlyList<string> paths) => _library.PlayableByPaths(paths, DateTime.Now);
+
     public MediaKind? CategoryKind(long categoryId) => _library.Categories.FirstOrDefault(c => c.Id == categoryId)?.Kind;
 
     // ---------------------------------------------------------------- loading
 
     public void Reload()
     {
-        var items = _db.Query("SELECT id, clock_id, kind, category_id, media_id, mode, note FROM clock_items ORDER BY clock_id, position",
+        var items = _db.Query("SELECT id, clock_id, kind, category_id, media_id, mode, note, source FROM clock_items ORDER BY clock_id, position",
             r => (ClockId: r.GetInt64(1), Rule: new ClockRule(r.GetInt64(0), (ClockRuleKind)r.GetInt64(2), r.GetInt64OrNull(3),
-                r.GetInt64OrNull(4), (RuleMode)r.GetInt64(5), r.GetString(6))));
+                r.GetInt64OrNull(4), (RuleMode)r.GetInt64(5), r.GetString(6), r.GetString(7))));
         var clocks = _db.Query("SELECT id, name, color FROM clocks", r => (Id: r.GetInt64(0), Name: r.GetString(1), Color: r.GetString(2)))
             .ToDictionary(c => c.Id, c => new ClockDef(c.Id, c.Name, c.Color,
                 items.Where(i => i.ClockId == c.Id).Select(i => i.Rule).ToList()));
@@ -166,8 +168,9 @@ public sealed class PlannerStore : IScheduleSource
             SqliteRun(c, tx, "DELETE FROM clock_items WHERE clock_id=$id", ("$id", id));
             int pos = 0;
             foreach (var r in clock.Rules)
-                SqliteRun(c, tx, "INSERT INTO clock_items(clock_id, position, kind, category_id, media_id, mode, note) VALUES($id, $p, $k, $c, $m, $mo, $n)",
-                    ("$id", id), ("$p", pos++), ("$k", (int)r.Kind), ("$c", r.CategoryId), ("$m", r.MediaId), ("$mo", (int)r.Mode), ("$n", r.Note ?? ""));
+                SqliteRun(c, tx, "INSERT INTO clock_items(clock_id, position, kind, category_id, media_id, mode, note, source) VALUES($id, $p, $k, $c, $m, $mo, $n, $s)",
+                    ("$id", id), ("$p", pos++), ("$k", (int)r.Kind), ("$c", r.CategoryId), ("$m", r.MediaId), ("$mo", (int)r.Mode), ("$n", r.Note ?? ""),
+                    ("$s", (r.Source ?? "").Trim().Trim('"')));
         });
         if (notify) Saved();
         return id;

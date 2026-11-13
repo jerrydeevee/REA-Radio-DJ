@@ -91,7 +91,7 @@ Het belang staat in de kolom **Prio** voor Radio Aa en Hunze: **H** hoog, **M** 
 |---|---|---|---|
 | ✅ | Mappen als bibliotheek, automatisch bijwerken, ook op shares | Bibliotheek › Beheer | — |
 | ✅ | Externe database als bron (SQL) | Databronnen | — |
-| ⬜ | **Een afspeellijst (M3U/PLS/XSPF) als vaste bron**, en als één doorlopend item in de log | niet in de code gevonden | M |
+| 🟡 | **Een afspeellijst (M3U/PLS/XSPF) als vaste bron**, en als één doorlopend item in de log | als bron in een klok (op volgorde of willekeurig, alleen bestanden uit de bibliotheek, opnieuw gelezen als de lijst verandert); als één doorlopend item in de log nog niet | M |
 | ⬜ | **Centrale bibliotheekdienst** voor meerdere studio's: één plek scant en meet, de studio's vragen op en halen het bestand over als het lokaal niet bereikbaar is | stap 7 | M |
 | ✅ | Snel zoeken met filters (artiest, jaar, BPM, energie, stemming, waardering, categorie) | zoektaal met chips | — |
 | 🟡 | Vergelijkbare nummers vinden | via toonsoort en BPM; echte gelijkenis ontbreekt | L |
@@ -463,7 +463,7 @@ Zonder dit heeft uitbreiden geen zin.
 | 1. **Agenda-laag**: programma's op datum met herhaling en eindtijd boven het weekrooster | agenda | L | een eenmalige uitzending op 24 december verdringt die avond het rooster |
 | 2. 🟡 Startgedrag: vast, ✅ zacht met maximale vertraging, handmatig; mengtijd tussen programma's | agenda | M | zacht start nooit meer dan N seconden te laat |
 | 3. Overlay tot eindtijd of één ronde; daarna verder met het onderbroken programma; uitstellen of overslaan vóór de start | agenda | M | nieuws onderbreekt en het programma loopt verder waar het was |
-| 4. **Afspeellijst als vaste bron** en als één doorlopend item | — | S | een M3U-map speelt als categorie |
+| 4. 🟡 **Afspeellijst als vaste bron** (✅ in een klok) en als één doorlopend item | — | S | een M3U-map speelt als categorie |
 | 5. Koppelprofielen voor externe muziekplanners en traffic (eerst het formaat dat het station gebruikt) | — | M | een geïmporteerde dag speelt zonder handwerk |
 | 6. 🟡 Log (✅ PDF/CSV) en planning afdrukken of exporteren | — | S | het draaiboek van morgen ligt op papier |
 

@@ -217,7 +217,7 @@
                       </StackPanel>
                       <ComboBox DockPanel.Dock="Left" Width="150" ItemsSource="{Binding $parent[ListBox].DataContext.RuleKinds}" SelectedIndex="{Binding Kind}" />
                       <ComboBox Margin="4,0,0,0" ItemsSource="{Binding $parent[ListBox].DataContext.RuleModes}" SelectedIndex="{Binding Mode}"
-                                HorizontalAlignment="Stretch" IsVisible="{Binding IsCategory}" />
+                                HorizontalAlignment="Stretch" IsVisible="{Binding HasMode}" />
                     </DockPanel>
                     <ComboBox ItemsSource="{Binding $parent[ListBox].DataContext.Categories}" SelectedItem="{Binding Category}"
                               ItemTemplate="{StaticResource CategoryItem}" HorizontalAlignment="Stretch" IsVisible="{Binding IsCategory}" />
@@ -225,6 +225,14 @@
                             Content="{Binding MediaLabel, TargetNullValue='kies: selectie uit bibliotheek', FallbackValue='kies'}"
                             Command="{Binding $parent[ListBox].DataContext.RuleMediaCommand}" CommandParameter="{Binding}"
                             ToolTip.Tip="Neem het geselecteerde bibliotheekitem" />
+                    <DockPanel IsVisible="{Binding IsPlaylist}">
+                      <Button DockPanel.Dock="Right" Classes="small" Content="Kies…" Margin="4,0,0,0" Click="OnPickPlaylist"
+                              ToolTip.Tip="Een .m3u-, .m3u8-, .pls- of .xspf-bestand" />
+                      <Button DockPanel.Dock="Right" Classes="small" Content="Controleer" Margin="4,0,0,0"
+                              Command="{Binding $parent[ListBox].DataContext.CheckPlaylistCommand}" CommandParameter="{Binding}" />
+                      <TextBox Text="{Binding Source}" FontSize="12" Watermark="pad van de afspeellijst, zoals de engine hem ziet" />
+                    </DockPanel>
+                    <TextBlock Classes="muted" FontSize="11" TextWrapping="Wrap" Text="{Binding SourceInfo}" IsVisible="{Binding IsPlaylist}" />
                   </StackPanel>
                 </DataTemplate>
               </ListBox.ItemTemplate>

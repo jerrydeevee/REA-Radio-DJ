@@ -135,11 +135,11 @@ public static class Snapshot
         c.Slot.Loop, c.Slot.Overlay, c.Playing, c.Position, Math.Round(c.Length, 2), c.Media?.DisplayName);
 
     public static ClockDto Clock(ClockDef c) => new(c.Id, c.Name, c.Color,
-        c.Rules.Select(r => new ClockRuleDto(r.Id, Name(r.Kind), r.CategoryId, r.MediaId, Name(r.Mode), r.Note)).ToList());
+        c.Rules.Select(r => new ClockRuleDto(r.Id, Name(r.Kind), r.CategoryId, r.MediaId, Name(r.Mode), r.Note, r.Source)).ToList());
 
     public static ClockDef Clock(ClockDto c) => new(c.Id, string.IsNullOrWhiteSpace(c.Name) ? "Klok" : c.Name, c.Color ?? "#3fa7ff",
         (c.Rules ?? []).Select(r => new ClockRule(r.Id, Parse(r.Kind, ClockRuleKind.Category), r.CategoryId, r.MediaId,
-            Parse(r.Mode, RuleMode.Random), r.Note ?? "")).ToList());
+            Parse(r.Mode, RuleMode.Random), r.Note ?? "", r.Source ?? "")).ToList());
 
     public static TimedEventDto Event(TimedEvent e, DateTime now) => new(e.Id, e.Name, e.Enabled, e.Days, e.Hours, e.Minute, e.Second,
         Name(e.Timing), Name(e.Action), e.CategoryId, e.MediaId, e.Describe(), e.Enabled ? e.NextOccurrence(now) : null, e.Text);

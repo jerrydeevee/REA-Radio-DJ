@@ -58,6 +58,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
                 // "--show settings:Systeem" opens a window on one of its tabs.
                 var parts = args[i + 1].Split(':', 2);
                 if (parts.Length == 2 && parts[0] == "mixer") MixerTool.StartChannel = parts[1];
+                else if (parts.Length == 2 && parts[0] == "planner") PlannerTool.StartTab = parts[1];
                 else if (parts.Length == 2) Views.SettingsView.StartTab = parts[1];
                 ShowWindow(parts[0]);
             }

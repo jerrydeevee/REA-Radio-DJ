@@ -868,6 +868,18 @@ public sealed class MediaLibrary
         return _all.FirstOrDefault(d => string.Equals(d.Media.Path, full, StringComparison.OrdinalIgnoreCase))?.Media;
     }
 
+    /// <summary>The playable library items of these files (full paths), in the given order; unknown files are left out.</summary>
+    public IReadOnlyList<MediaItem> PlayableByPaths(IReadOnlyList<string> paths, DateTime now)
+    {
+        if (paths.Count == 0) return [];
+        var byPath = new Dictionary<string, MediaDetails>(StringComparer.OrdinalIgnoreCase);
+        foreach (var d in _all) byPath.TryAdd(d.Media.Path, d);
+        var result = new List<MediaItem>(paths.Count);
+        foreach (var p in paths)
+            if (byPath.TryGetValue(p, out var d) && d.IsPlayable(now)) result.Add(d.Media);
+        return result;
+    }
+
     /// <summary>Library ids of the files directly inside <paramref name="folder"/>, by full path.</summary>
     public IReadOnlyDictionary<string, long> IdsIn(string folder)
     {
