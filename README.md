@@ -45,7 +45,10 @@ Elk venster is te verslepen, te docken of los te laten zweven, ook op een tweede
   storing meldt of (als je dat kiest) stil valt; als de hoofdstudio weer speelt, geeft hij de lucht na een ingestelde
   tijd of met een knop terug (*Instellingen › Reservestudio*).
 - **Reservekopie** van instellingen, klokken, planning, cartwalls en hardware in één bestand, en een systeemlog in
-  de studio.
+  de studio. De engine kan dat **elke dag automatisch** doen op een vaste tijd, in een map op een andere schijf of
+  een NAS, met een bewaartermijn; een gemiste nacht wordt ingehaald (*Instellingen › Systeem*).
+- **Poortenoverzicht**: welke poorten de engine gebruikt (in of uit, alleen deze pc of het netwerk), met een
+  PowerShell-opdracht voor de firewall die alleen de nodige poorten opent (*Instellingen › Systeem*).
 
 ### Playout en planning
 - **BASS-mixer** (32-bit float), crossfades op het mixpunt, loudness-normalisatie naar −16 LUFS (EBU R128),

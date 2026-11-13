@@ -321,13 +321,13 @@ Deze artikelen gaan minder over uitzenden en meer over **hoe een omroepsysteem b
 | ⬜ | **Systeemcontrole**: één scherm dat de pc nakijkt (energiebeheer, samplefrequentie van de kaart, virusscanner op de muziekmap, vrije ruimte, klok gelijk, database in orde) | losse meldingen | M |
 | ⬜ | Advies om de virusscanner de muziek-, jingle- en datamap niet live te laten scannen (geeft vertraging en mislukte toegang) | ontbreekt | M |
 | ⬜ | Advies over Windows-updates: niet automatisch op de uitzend-pc; gepland en afgesproken, een week na de maandelijkse update | ontbreekt | M |
-| ⬜ | **Overzicht van alle poorten** die de engine gebruikt, plus een firewallregel uit het installatieprogramma voor alleen die poorten | poort 8600 bekend, geen overzicht | M |
+| 🟡 | **Overzicht van alle poorten** die de engine gebruikt, plus een firewallregel uit het installatieprogramma voor alleen die poorten | *Instellingen › Systeem* toont alle poorten (in/uit, netwerk of alleen deze pc) en geeft een firewallopdracht voor alleen de open netwerkpoorten; het installatieprogramma maakt de regel nog niet zelf | M |
 | ⬜ | Draaien zonder beheerdersrechten en zonder UAC uit te zetten (nagaan en vastleggen) | nog niet nagekeken | M |
 | ⬜ | Advies bij haperend geluid: ASIO-buffer, stroombesparing van de processor (C-states/SpeedStep) in het BIOS | ontbreekt | L |
 | ⬜ | Bij HTTPS voor toegang van buiten: volledige certificaatketen, en een controle die waarschuwt voor een verlopen of onvolledige keten | geen HTTPS | L |
 | ⬜ | Databasecontrole vóór een upgrade (integriteit, schemaversie, reservekopie) met een duidelijke melding | migraties bestaan; controle vooraf ontbreekt | M |
 | ⬜ | Handleiding per rol: presentator, superuser/eerste hulp, beheerder | stap 10 (handleiding) | M |
-| ⬜ | **Dagelijkse automatische reservekopie van de database** met bewaartermijn (bijv. 7 dagen) op een andere schijf of NAS; muziek en jingles apart | handmatige reservekopie van instellingen | H |
+| ✅ | **Dagelijkse automatische reservekopie van de database** met bewaartermijn (bijv. 7 dagen) op een andere schijf of NAS; muziek en jingles apart | *Instellingen › Systeem*: vaste tijd, eigen map, bewaartermijn; waarschuwt bij dezelfde schijf als de database en als het mislukt | H |
 | ⬜ | **Hulp op afstand die het station zelf aan- en uitzet**: een uitgaande, versleutelde verbinding (geen open poort), met een log van wie er wanneer in zat | ontbreekt; nu ad hoc | M |
 | ⬜ | Meetwaarden van de engine (buffer, CPU, stilte, streamstatus) als standaard-endpoint voor een monitoringpakket, en logs 30 dagen lokaal bewaren | `/api/health` en systeemlog | L |
 | ⬜ | Mailserver (SMTP) instellen voor meldingen, met een testknop | ontbreekt | M |

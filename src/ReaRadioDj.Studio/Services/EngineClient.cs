@@ -115,7 +115,11 @@ public sealed class EngineClient : IDisposable
             using var response = await _http.SendAsync(request);
             if (!response.IsSuccessStatusCode)
             {
-                var text = (await response.Content.ReadAsStringAsync()).Trim().Trim('"');
+                var raw = (await response.Content.ReadAsStringAsync()).Trim();
+                // a plain JSON string ("..."): decode it, so backslashes and quotes in the text come out right
+                string text;
+                try { text = raw.StartsWith('"') ? JsonSerializer.Deserialize<string>(raw) ?? "" : raw; }
+                catch (JsonException) { text = raw.Trim('"'); }
                 return (default, text.Length > 0 ? text : $"Niet gelukt ({(int)response.StatusCode}).");
             }
             return (await response.Content.ReadFromJsonAsync<T>(Wire.Json), null);

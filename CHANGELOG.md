@@ -16,10 +16,14 @@
 - **ASIO-bewaking**: stopt een ASIO-kaart tijdens het spelen, dan start de engine hem opnieuw, met een melding; komt
   hij niet terug, dan een waarschuwing en elke 10 seconden een nieuwe poging.
 - **Testplan** (`docs/TESTPLAN.md`) voor luistertests en echte apparatuur, met een lijst geteste apparatuur.
+- **Elke dag een reservekopie** van de database op een vaste tijd, in een eigen map, met een bewaartermijn; de
+  nieuwste blijft altijd staan, en een gemiste nacht wordt ingehaald.
+- **Poortenoverzicht** in *Instellingen › Systeem*, met een firewallopdracht voor de poorten die open moeten.
 
 ### Opgelost
 - In een laag venster lag de analoge klok over de tellers, en de lijst van de bibliotheek over het zoekveld.
 - In de as-run stond bij items zonder gemeten speelduur een losse "s".
+- Foutmeldingen van de engine met een backslash (een map) kwamen met dubbele backslashes in de studio.
 
 ## 1.1.0 (13 november 2026)
 
