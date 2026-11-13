@@ -25,7 +25,7 @@ if (args.Contains("--watchdog")) return Watchdog.Run(args.Where(a => a != "--wat
 // working directory. "--demo" is our own switch and is kept away from the configuration parser.
 var builder = WebApplication.CreateBuilder(new WebApplicationOptions
 {
-    Args = args.Where(a => a is not "--demo" and not "--no-tray").ToArray(),
+    Args = args.Where(a => a is not "--demo" and not "--no-tray" and not "--users-off").ToArray(),
     ContentRootPath = AppContext.BaseDirectory,
 });
 var options = builder.Configuration.GetSection("ReaRadioDj").Get<ReaRadioDjOptions>() ?? new ReaRadioDjOptions();
@@ -61,6 +61,7 @@ PresenterSettings.Load(db, options);
 PresenterExtrasSettings.Load(db, options);
 CreativeSettings.Load(db, options);
 VoiceServicesSettings.Load(db, options);
+HiggsServerSettings.Load(db, options);
 SpotifySettings.Load(db, options);
 
 builder.Services.AddSingleton(options);
@@ -71,6 +72,8 @@ builder.Services.AddSingleton<MediaLibrary>();
 builder.Services.AddSingleton<PlannerStore>();
 builder.Services.AddSingleton<ReaRadioDj.Core.Hardware.HardwareStore>();
 builder.Services.AddSingleton<ReaRadioDj.Server.Hardware.DjMidiService>();
+builder.Services.AddSingleton<ReaRadioDj.Server.Hardware.MackieService>();
+builder.Services.AddHostedService(sp => sp.GetRequiredService<ReaRadioDj.Server.Hardware.MackieService>());
 builder.Services.AddSingleton<ReaRadioDj.Server.Hardware.HardwareService>();
 builder.Services.AddHostedService(sp => sp.GetRequiredService<ReaRadioDj.Server.Hardware.HardwareService>());
 builder.Services.AddSingleton<ReaRadioDj.Core.Library.DbSourceStore>();
@@ -90,14 +93,21 @@ builder.Services.AddSingleton<StudioPlayers>();
 builder.Services.AddSingleton(new DjStore(Path.Combine(options.DataFolder, "dj.json")));
 builder.Services.AddSingleton<DjMixer>();
 builder.Services.AddSingleton<DjHandover>();
+builder.Services.AddSingleton<StandbyFlag>();
 builder.Services.AddSingleton<SilenceWatch>();
 builder.Logging.AddProvider(SystemLog.Instance);
 builder.Services.AddHostedService(sp => sp.GetRequiredService<SilenceWatch>());
-builder.Services.AddSingleton(sp => new VoiceTracker(sp.GetRequiredService<PlayoutLog>(), new BassVoiceCapture(),
+builder.Services.AddSingleton<FailoverService>();
+builder.Services.AddHostedService(sp => sp.GetRequiredService<FailoverService>());
+// One microphone capture, shared by voicetracking and the own-voice recording (never both at once).
+builder.Services.AddSingleton<IVoiceCapture>(_ => new BassVoiceCapture());
+builder.Services.AddSingleton(sp => new VoiceTracker(sp.GetRequiredService<PlayoutLog>(), sp.GetRequiredService<IVoiceCapture>(),
     new PflVoicePreview(sp.GetRequiredService<StudioPlayers>()), path => sp.GetRequiredService<MediaLibrary>().Load(path, ReaRadioDj.Core.Model.MediaKind.Voice),
     Path.Combine(options.DataFolder, "voicetracks"), options.Routing.MicDevice));
 builder.Services.AddSingleton<Cartwall>();
 builder.Services.AddSingleton<AsRunLog>();
+builder.Services.AddSingleton<ReaRadioDj.Core.Users.UserStore>();
+builder.Services.AddSingleton(new ReaRadioDj.Core.Users.SessionStore());
 builder.Services.AddSingleton<PlayoutEngine>();
 builder.Services.AddSingleton(sp => new IcecastStreamer(options.Stream, options.StationName, sp.GetService<ILogger<IcecastStreamer>>()));
 builder.Services.AddSingleton(sp => new StreamGroup(sp.GetRequiredService<IcecastStreamer>(), options.StationName, sp.GetService<ILoggerFactory>()));
@@ -105,6 +115,10 @@ builder.Services.AddHostedService<StreamKeepalive>();
 builder.Services.AddHttpClient();
 // Presenter voice: the default voice profile chooses Higgs TTS 3 (GPU server) or Windows speech.
 builder.Services.AddSingleton<VoiceStore>();
+builder.Services.AddSingleton<VoiceRoleStore>();
+builder.Services.AddSingleton(new VoiceClips(Path.Combine(options.DataFolder, "voices")));
+builder.Services.AddSingleton<OwnVoiceRecorder>();
+builder.Services.AddSingleton<Own>();
 builder.Services.AddSingleton<PersonaStore>();
 builder.Services.AddSingleton<NoteStore>();
 builder.Services.AddSingleton(sp => new BreakExtras(sp.GetRequiredService<IHttpClientFactory>().CreateClient("extras"), options.Presenter,
@@ -121,7 +135,7 @@ builder.Services.AddSingleton(sp =>
 {
     var http = sp.GetRequiredService<IHttpClientFactory>().CreateClient("tts");
     http.Timeout = Timeout.InfiniteTimeSpan; // per-call timeouts come from the options
-    return new HiggsSpeechEngine(http, options.Presenter.Tts);
+    return new HiggsSpeechEngine(http, options.Presenter.Tts, sp.GetRequiredService<VoiceClips>());
 });
 builder.Services.AddSingleton(_ => new SapiSpeechEngine(options.Presenter.Tts, options.Presenter.Language));
 builder.Services.AddSingleton(sp => new ElevenLabsSpeechEngine(sp.GetRequiredService<IHttpClientFactory>().CreateClient("cloudvoice"), options.Presenter.Tts));
@@ -184,6 +198,20 @@ app.Use(async (http, next) =>
     }
     await next();
 });
+// Users and rights: changes to the sound, the programming and the settings need a signed-in user with that role.
+UsersApi.UseAccessCheck(app, args.Contains("--users-off"));
+if (args.Contains("--users-off"))
+    app.Services.GetRequiredService<MessageCenter>().Warning("Gestart met --users-off: aanmelden en rechten worden niet gecontroleerd.");
+{
+    // Songs coming up on the log get their details and cover before they play (first time only).
+    var upcomingLog = app.Services.GetRequiredService<PlayoutLog>();
+    var meta = app.Services.GetRequiredService<MetadataService>();
+    upcomingLog.Changed += () =>
+    {
+        try { meta.OnUpcoming(PlayoutLog.Flat(upcomingLog.Upcoming).Select(i => i.Media).OfType<ReaRadioDj.Core.Model.MediaItem>()); }
+        catch (Exception ex) { app.Logger.LogWarning(ex, "Looking up upcoming songs could not start"); }
+    };
+}
 app.UseDefaultFiles();
 // The browser studio changes with the code; always let the browser revalidate it.
 app.UseStaticFiles(new StaticFileOptions { OnPrepareResponse = c => c.Context.Response.Headers.CacheControl = "no-cache" });
@@ -193,6 +221,7 @@ json.Converters.Add(new JsonStringEnumConverter(JsonNamingPolicy.CamelCase));
 
 var api = app.MapGroup("/api");
 StudioApi.Map(api, options);
+UsersApi.Map(api);
 DjApi.Map(api);
 SystemApi.Map(api, options, args);
 OutputsApi.Map(api, options);
@@ -214,6 +243,7 @@ static ReaRadioDj.Contracts.RecordingSettingsDto RecordingDto(AirRecorder r)
 }
 ChannelsApi.Map(api, options);
 VoiceApi.Map(api);
+VoiceLibraryApi.Map(api, options);
 PresenterApi.Map(api, options);
 VoiceTrackApi.Map(api, options);
 TransitionApi.Map(api, options);

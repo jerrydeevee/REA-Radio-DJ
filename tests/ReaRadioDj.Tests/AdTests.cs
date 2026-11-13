@@ -136,7 +136,7 @@ public sealed class AdStoreTests : IDisposable
         long spot = Media("spot");
         var c = store.Campaign(store.Save(new AdCampaign(0, "Garage", "Winterbanden", true, new DateOnly(2026, 11, 1), new DateOnly(2026, 11, 30),
             TimedEvent.AllDays, "*", 4, 1, AdPosition.Any, [spot])))!;
-        var now = DateTime.Now;
+        var now = DateTime.Today.AddHours(12);               // midday: half an hour back is still today, whenever the test runs
         var pick = new AdPick(c, spot, 30);
 
         long aired = store.Planned(pick, "Winterbanden 30s", "Reclame :25", now.AddMinutes(-30));

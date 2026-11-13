@@ -81,17 +81,7 @@ public static class ChannelsApi
         {
             if (!router.IsStarted || !router.HasStrip(id)) return Results.NotFound();
             var strip = router.Strip(id);
-            if (body.On)
-            {
-                try { strip.Recorder.Start(options.RecordingPath, id); }
-                catch (Exception ex) when (ex is BassException or IOException or UnauthorizedAccessException)
-                {
-                    return Results.BadRequest($"Opname niet gestart: {ex.Message}");
-                }
-                messages.Info($"Opname van {strip.Name} gestart");
-            }
-            else if (strip.Recorder.Stop() is { } file)
-                messages.Info($"Opname van {strip.Name} opgeslagen: {Path.GetFileName(file)} ({Duration(strip.Recorder.Seconds)})");
+            if (SetRecording(router, options, messages, id, body.On) is { } problem) return Results.BadRequest(problem);
             return Results.Ok(Recording(strip));
         });
 
@@ -214,6 +204,37 @@ public static class ChannelsApi
         options.Routing.Channels[id] = s;
         Save(db, options);
         return true;
+    }
+
+    /// <summary>Changes the channel strip of a channel and keeps that (balance from a control surface, for example).</summary>
+    public static bool Update(AudioRouter router, StationDb db, ReaRadioDjOptions options, string id, Func<ChannelSettings, ChannelSettings> change)
+    {
+        if (!router.IsStarted || !router.HasStrip(id)) return false;
+        var s = change(router.Strip(id).Processor.Settings).Clamped();
+        router.ApplyChannel(id, s);
+        options.Routing.Channels[id] = s;
+        Save(db, options);
+        return true;
+    }
+
+    /// <summary>Starts or stops recording a channel; returns what went wrong, or null.</summary>
+    public static string? SetRecording(AudioRouter router, ReaRadioDjOptions options, MessageCenter messages, string id, bool on)
+    {
+        if (!router.IsStarted || !router.HasStrip(id)) return "onbekend kanaal";
+        var strip = router.Strip(id);
+        if (on)
+        {
+            if (strip.Recorder.IsRecording) return null;
+            try { strip.Recorder.Start(options.RecordingPath, id); }
+            catch (Exception ex) when (ex is BassException or IOException or UnauthorizedAccessException)
+            {
+                return $"Opname niet gestart: {ex.Message}";
+            }
+            messages.Info($"Opname van {strip.Name} gestart");
+        }
+        else if (strip.Recorder.Stop() is { } file)
+            messages.Info($"Opname van {strip.Name} opgeslagen: {Path.GetFileName(file)} ({Duration(strip.Recorder.Seconds)})");
+        return null;
     }
 
     private static void Save(StationDb db, ReaRadioDjOptions options)

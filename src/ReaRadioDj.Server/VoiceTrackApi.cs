@@ -18,8 +18,9 @@ public static class VoiceTrackApi
         VoiceTracker.CleanUp(Path.Combine(options.DataFolder, "voicetracks"));
 
         vt.MapGet("", (VoiceTracker t) => Dto(t));
-        vt.MapPost("/start", (VoiceTrackStartRequest r, VoiceTracker t) =>
-            Try(t, () => t.Start(r.BeforeId, Math.Clamp(r.Preroll, 0, 30), r.Device)));
+        vt.MapPost("/start", (VoiceTrackStartRequest r, VoiceTracker t, OwnVoiceRecorder own) => own.Recording
+            ? Dto(t, "er loopt een stemopname (Mijn stem); probeer het straks")
+            : Try(t, () => t.Start(r.BeforeId, Math.Clamp(r.Preroll, 0, 30), r.Device)));
         vt.MapPost("/next", (VoiceTracker t) => Try(t, t.Next));
         vt.MapPost("/stop", (VoiceTracker t) => Try(t, () => t.Stop()));
         vt.MapPost("/cancel", (VoiceTracker t) => Try(t, t.Cancel));

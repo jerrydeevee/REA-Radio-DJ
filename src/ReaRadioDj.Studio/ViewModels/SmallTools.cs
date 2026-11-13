@@ -12,8 +12,8 @@ namespace ReaRadioDj.Studio.ViewModels;
 /// </summary>
 public sealed partial class ClockTool : StudioTool
 {
-    public static readonly string[] StyleNames = ["Studioklok", "Analoog", "Digitaal"];
-    private static readonly string[] StyleKeys = ["studio", "analog", "digital"];
+    public static readonly string[] StyleNames = ["Studioklok", "Analoog", "Digitaal", "Analoog + digitaal", "LED-segmenten", "Uurklok (tot het hele uur)"];
+    private static readonly string[] StyleKeys = ["studio", "analog", "digital", "combi", "led", "hour"];
     public static readonly string[] SizeNames = ["Klein", "Normaal", "Groot", "Extra groot"];
     private static readonly double[] CounterFonts = [22, 34, 52, 76];
     public static readonly string[] FlashNames = ["Rood", "Oranje", "Wit", "Blauw"];
@@ -332,6 +332,21 @@ public sealed partial class AsRunTool : StudioTool
     partial void OnDayChanged(DateTime? value) => _ = LoadAsync();
     protected override void OnFirstShow() { _ = LoadAsync(); _ = LoadReportAsync(); }
 
+    /// <summary>Who was signed in at the studio: the day per presenter.</summary>
+    public const string AllPresenters = "alle presentatoren";
+    public ObservableCollection<string> Presenters { get; } = [AllPresenters];
+    [ObservableProperty] private string? _presenter = AllPresenters;
+    private List<AsRunDto> _dayEntries = [];
+    partial void OnPresenterChanged(string? value) => Show();
+
+    private void Show()
+    {
+        var list = Presenter is null or AllPresenters ? _dayEntries : _dayEntries.Where(e => e.Presenter == Presenter).ToList();
+        Entries.Clear();
+        foreach (var e in list.AsEnumerable().Reverse()) Entries.Add(e);
+        Summary = $"{list.Count} regels · {list.Count(e => e.Type == "song")} nummers · {list.Count(e => e.Ai)} AI-breaks";
+    }
+
     private string DayText => (Day ?? DateTime.Today).ToString("yyyy-MM-dd");
 
     [RelayCommand]
@@ -339,9 +354,12 @@ public sealed partial class AsRunTool : StudioTool
     {
         var list = await Hub.Client.GetAsync<List<AsRunDto>>($"/api/asrun?day={DayText}");
         if (list is null) return;
-        Entries.Clear();
-        foreach (var e in list.AsEnumerable().Reverse()) Entries.Add(e);
-        Summary = $"{list.Count} regels · {list.Count(e => e.Type == "song")} nummers · {list.Count(e => e.Ai)} AI-breaks";
+        _dayEntries = list;
+        var keep = Presenter;
+        foreach (var name in list.Select(e => e.Presenter).Where(n => n.Length > 0).Distinct().Order())
+            if (!Presenters.Contains(name)) Presenters.Add(name);
+        Presenter = keep is not null && Presenters.Contains(keep) ? keep : AllPresenters;
+        Show();
     }
 
     /// <summary>Saves the CSV of the day; the view asks where.</summary>

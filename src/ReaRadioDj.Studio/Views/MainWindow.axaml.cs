@@ -13,6 +13,7 @@ public partial class MainWindow : Window
         InitializeComponent();
         // Hotkeys come from studio.json (Bediening › Sneltoetsen) and are rebuilt when they are saved.
         DataContextChanged += (_, _) => ApplyHotkeys();
+        DataContextChanged += (_, _) => FillWindowMenus();
         ViewModels.Hotkeys.Changed += ApplyHotkeys;
         Closed += (_, _) => { ViewModels.Hotkeys.Changed -= ApplyHotkeys; _global?.Dispose(); };
         Opened += (_, _) => ApplyHotkeys();
@@ -66,7 +67,28 @@ public partial class MainWindow : Window
                 e.Handled = true;
             }
             else if (vm.GoToOpen && e.Key == Avalonia.Input.Key.Escape) { vm.GoToOpen = false; e.Handled = true; }
+            else if (e.Key == Avalonia.Input.Key.L && e.KeyModifiers == Avalonia.Input.KeyModifiers.Control)
+            {
+                vm.Session.LockCommand.Execute(null);
+                e.Handled = true;
+            }
+            else if (vm.Session.Open && e.Key == Avalonia.Input.Key.Escape) { vm.Session.CloseCommand.Execute(null); e.Handled = true; }
         }, RoutingStrategies.Tunnel);
+        // The sign-in screen and the lock: the PIN box gets the focus, and the other studio windows (workbenches,
+        // floating windows) wait as well.
+        DataContextChanged += (_, _) =>
+        {
+            if (DataContext is not ViewModels.MainWindowViewModel vm) return;
+            vm.Session.PropertyChanged += (_, e) =>
+            {
+                if (e.PropertyName != nameof(ViewModels.SessionVm.Open)) return;
+                bool open = vm.Session.Open;
+                if (open) Dispatcher.UIThread.Post(() => PinBox.Focus(), DispatcherPriority.Input);
+                if (Avalonia.Application.Current?.ApplicationLifetime is Avalonia.Controls.ApplicationLifetimes.IClassicDesktopStyleApplicationLifetime life)
+                    foreach (var w in life.Windows)
+                        if (w != this) w.IsEnabled = !open;
+            };
+        };
         GoToBox.KeyDown += (_, e) =>
         {
             if (DataContext is not ViewModels.MainWindowViewModel vm) return;
@@ -121,6 +143,17 @@ public partial class MainWindow : Window
             string id = args[si + 1];
             Opened += (_, _) => DispatcherTimer.RunOnce(() => (DataContext as ViewModels.MainWindowViewModel)?.ShowWindow(id), TimeSpan.FromSeconds(1));
         }
+        // --menu <n>: open the Vensters menu and its n-th group (1 = Uitzending), for checking it on a screen capture.
+        int mi = Array.IndexOf(args, "--menu");
+        if (mi >= 0 && mi + 1 < args.Length && int.TryParse(args[mi + 1], out var group))
+            Opened += (_, _) => DispatcherTimer.RunOnce(() =>
+            {
+                WindowsMenu.Open();
+                DispatcherTimer.RunOnce(() =>
+                {
+                    if (WindowsMenu.ItemsSource is IList<Control> list && group + 1 < list.Count && list[group + 1] is MenuItem sub) sub.Open();
+                }, TimeSpan.FromMilliseconds(400));
+            }, TimeSpan.FromSeconds(3));
         int i = Array.IndexOf(args, "--screenshot");
         if (i >= 0 && i + 1 < args.Length)
         {
@@ -161,5 +194,32 @@ public partial class MainWindow : Window
         if (_global is null) return;
         var failed = _global.Apply(ViewModels.Hotkeys.GlobalBindings(vm.Settings));
         if (failed.Count > 0) vm.Hub.Status = $"Sneltoets niet overal te gebruiken (al in gebruik door een ander programma?): {string.Join(", ", failed)}";
+    }
+
+    /// <summary>
+    /// Vensters and Zwevend: one submenu per group (Uitzending, Bibliotheek en productie, Planning, …), with
+    /// "Ga naar venster… (Ctrl+K)" on top so a window is also found by typing.
+    /// </summary>
+    private void FillWindowMenus()
+    {
+        if (DataContext is not ViewModels.MainWindowViewModel vm) return;
+        Fill(WindowsMenu, vm.ShowWindowCommand);
+        Fill(FloatMenu, vm.FloatWindowCommand);
+
+        void Fill(MenuItem menu, System.Windows.Input.ICommand open)
+        {
+            var items = new List<Control>
+            {
+                new MenuItem { Header = "Ga naar venster…", InputGesture = new Avalonia.Input.KeyGesture(Avalonia.Input.Key.K, Avalonia.Input.KeyModifiers.Control), Command = vm.OpenGoToCommand },
+                new Separator(),
+            };
+            foreach (var (group, windows) in ViewModels.DockFactory.MenuGroups())
+                items.Add(new MenuItem
+                {
+                    Header = group,
+                    ItemsSource = windows.Select(w => new MenuItem { Header = w.Name, Command = open, CommandParameter = w.Id }).ToList(),
+                });
+            menu.ItemsSource = items;
+        }
     }
 }

@@ -187,6 +187,10 @@ public static class StudioApi
             library.GetDetails(id) is { } d ? Results.Ok(Media(d)) : Results.NotFound());
         api.MapPut("/media/{id:long}", (long id, MediaUpdateRequest r, MediaLibrary library) =>
             library.UpdateDetails(id, r.CategoryId, r.Enabled, r.ValidFrom, r.ValidUntil) ? Results.Ok(Media(library.GetDetails(id)!)) : Results.NotFound());
+        // Music or jingle, by hand (a later scan keeps it); moves to a category of that kind when needed.
+        api.MapPut("/media/{id:long}/kind", (long id, MediaKindRequest r, MediaLibrary library) =>
+            r.Kind is "song" or "jingle" && library.SetKind(id, Parse(r.Kind, MediaKind.Song), r.CategoryId)
+                ? Results.Ok(Media(library.GetDetails(id)!)) : Results.BadRequest());
         api.MapPut("/media/{id:long}/cues", (long id, CueDto r, MediaLibrary library) =>
             library.SaveCues(id, Cues(r)) is not null ? Results.Ok(Media(library.GetDetails(id)!)) : Results.NotFound());
         // Events at places in a track: volume changes and commands, every time it plays on air.

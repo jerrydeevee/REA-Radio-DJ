@@ -67,6 +67,40 @@ public sealed partial class StudioHub : ObservableObject
 
     public void RequestCueEditor(long mediaId) => EditCuesRequested?.Invoke(mediaId);
 
+    // ------------------------------------------------------------ users and rights
+
+    /// <summary>Who is signed in at this studio ('' = nobody).</summary>
+    [ObservableProperty] private string _userName = "";
+    [ObservableProperty] [NotifyPropertyChangedFor(nameof(IsAdmin), nameof(IsTechnician), nameof(UserText))] private string _userRole = "";
+    /// <summary>The station has users: changes to settings need signing in.</summary>
+    [ObservableProperty] [NotifyPropertyChangedFor(nameof(IsAdmin), nameof(IsTechnician), nameof(UserText))] private bool _usersActive;
+    /// <summary>False when the engine runs with --users-off (recovery): everything is allowed.</summary>
+    [ObservableProperty] [NotifyPropertyChangedFor(nameof(IsAdmin), nameof(IsTechnician), nameof(UserText))] private bool _usersEnforced = true;
+
+    private bool Free => !UsersActive || !UsersEnforced;
+    public bool IsAdmin => Free || UserRoles.Rank(UserRole) >= 2;
+    public bool IsTechnician => Free || UserRoles.Rank(UserRole) >= 1;
+    public string UserText => !UsersActive ? "" : !UsersEnforced ? "rechten uit (herstelstand)" : UserName.Length == 0 ? "niet aangemeld" : $"{UserName} · {UserRole}";
+
+    /// <summary>The role a window needs: the station settings an administrator, the technique a technician.</summary>
+    public static int RequiredRank(string? windowId) => windowId switch
+    {
+        "settings" => 2,
+        "hardware" or "control" or "djmidi" => 1,
+        _ => 0,
+    };
+
+    public bool MayOpen(string? windowId) => RequiredRank(windowId) switch { 2 => IsAdmin, 1 => IsTechnician, _ => true };
+
+    public void ApplySession(SessionDto s)
+    {
+        UsersActive = s.Active;
+        UsersEnforced = s.Enforced;
+        UserName = s.Name;
+        UserRole = s.Role;
+        OnPropertyChanged(nameof(UserText));
+    }
+
     /// <summary>Raised when a window asks to edit the transition into a log item.</summary>
     public event Action<long>? TransitionRequested;
     /// <summary>The last log item asked for, for a transition window that opens only now.</summary>

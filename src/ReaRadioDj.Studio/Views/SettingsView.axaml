@@ -119,8 +119,8 @@
 
           <TextBlock Classes="title" Text="Werkwijze" Margin="0,24,0,4" />
           <StackPanel Orientation="Horizontal" Spacing="12">
-            <RadioButton GroupName="desk" Content="Software: de engine mengt" IsChecked="{Binding !DeskMode}" />
-            <RadioButton GroupName="desk" Content="Mengtafel: elk kanaal met een eigen uitgang op vol naar de tafel" IsChecked="{Binding DeskMode}" />
+            <RadioButton GroupName="desk" Content="Software: de engine mengt" IsChecked="{Binding DeskSoftware}" />
+            <RadioButton GroupName="desk" Content="Mengtafel: elk kanaal met een eigen uitgang op vol naar de tafel" IsChecked="{Binding DeskTable}" />
           </StackPanel>
           <TextBlock Classes="help" Text="Bij mengtafel doet de tafel het mengen: een kanaal met een eigen uitgang gaat op vol, en de fader, dempen en het automatisch zachter zetten onder de microfoon gelden er niet. Een kanaal uitzetten of de microfoon dichtdoen werkt wel. Omschakelen werkt meteen en blijft bewaard." />
           <TextBlock Classes="muted" Text="{Binding DeskStatus}" TextWrapping="Wrap" />
@@ -404,7 +404,7 @@
           <TextBox Text="{Binding ControlPassword}" PasswordChar="●" Watermark="nieuw wachtwoord" />
           <TextBlock Classes="help" Text="{Binding ControlPasswordHint}" />
           <CheckBox Content="Wachtwoord verwijderen" IsChecked="{Binding ClearControlPassword}" Margin="0,8,0,0" />
-          <TextBlock Classes="help" Text="Adres en poorten worden actief na een herstart van de engine. Zet een wachtwoord als je op het hele netwerk luistert." />
+          <TextBlock Classes="help" TextWrapping="Wrap" Text="Adres en poorten worden actief na een herstart van de engine. Zet een wachtwoord als je op het hele netwerk luistert. Het wachtwoord geldt ook voor de webpagina en de remote-app (/remote/): vanaf een andere computer vraagt elke handeling om dit wachtwoord of een aanmelding met pincode. Zonder wachtwoord en zonder gebruikers kan een andere computer alleen meekijken." />
         </StackPanel></ScrollViewer>
       </TabItem>
 
@@ -419,6 +419,10 @@
                   ToolTip.Tip="Stopt de engine en laat de bewaking hem meteen weer starten; wat ON AIR is gaat verder" />
           <TextBlock Classes="field" Text="Laatste meldingen van de bewaking" />
           <TextBox Text="{Binding WatchdogLog}" IsReadOnly="True" Background="{DynamicResource CardBrush}" Foreground="{DynamicResource TextBrush}" FontFamily="Consolas" FontSize="11" Height="110" TextWrapping="NoWrap" />
+
+          <TextBlock Classes="title" Text="Nieuwe versies" Margin="0,24,0,4" />
+          <CheckBox Content="Eén keer per dag op GitHub kijken of er een nieuwere versie is" IsChecked="{Binding CheckUpdates}" />
+          <TextBlock Classes="help" Text="Geldt voor deze studio en meteen. Er wordt niets gedownload of geïnstalleerd: een nieuwere versie verschijnt als knop rechts onderin, die de pagina van de uitgave opent. Zelf zoeken kan via Info › Zoeken naar updates." />
 
           <TextBlock Classes="title" Text="Reservekopie" Margin="0,24,0,4" />
           <TextBlock Classes="help" Text="Eén bestand met alle instellingen, klokken, planning, gebeurtenissen, cartwalls, hardware, reclame, nieuws, presentatoren en de cuepunten van de bibliotheek. De audiobestanden zelf zitten er niet in. Terugzetten vervangt alles; wat er stond, blijft bewaard in een map in de datamap." />
@@ -447,6 +451,94 @@
               </DataTemplate>
             </ListBox.ItemTemplate>
           </ListBox>
+        </StackPanel></ScrollViewer>
+      </TabItem>
+
+      <TabItem Header="Reservestudio">
+        <ScrollViewer><StackPanel Classes="page" DataContext="{Binding Failover}" x:DataType="vm:FailoverVm">
+          <TextBlock Classes="title" Text="Hoofd- en reservestudio" />
+          <TextBlock Classes="help" Text="Twee engines die op elkaar letten, elk met een eigen geluidskaart naar de zender of de stream. De reservestudio vraagt de hoofdstudio om de paar seconden hoe het gaat. Antwoordt die te lang niet (of is het daar stil, als je dat kiest), dan start de reservestudio zijn eigen automatisering. Speelt de hoofdstudio weer, dan geeft de reservestudio de uitzending terug: vanzelf na de gekozen tijd, of met de knop. Tijdens die tijd spelen beide; laat de mengtafel of de streamserver de juiste kiezen." />
+          <Border Classes="card" Padding="10,8" Margin="0,12,0,0" IsVisible="{Binding IsOn}">
+            <StackPanel Spacing="4">
+              <DockPanel>
+                <TextBlock DockPanel.Dock="Right" Text="OP DE LUCHT" FontWeight="Bold" Foreground="{DynamicResource WarnBrush}" IsVisible="{Binding HasAir}" VerticalAlignment="Center" />
+                <TextBlock FontWeight="SemiBold" Text="{Binding State}" TextWrapping="Wrap" />
+              </DockPanel>
+              <TextBlock Classes="help" Text="{Binding PartnerText}" />
+              <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,6,0,0" IsVisible="{Binding IsBackup}">
+                <Button Classes="bar danger" Content="Nu overnemen" Command="{Binding TakeOverCommand}" IsVisible="{Binding !HasAir}"
+                        ToolTip.Tip="De reservestudio start meteen, ook al antwoordt de hoofdstudio nog" />
+                <Button Classes="bar primary" Content="Teruggeven aan de hoofdstudio" Command="{Binding GiveBackCommand}" IsVisible="{Binding HasAir}"
+                        ToolTip.Tip="De automatisering hier stopt met uitfaden" />
+              </StackPanel>
+              <TextBlock Classes="help" Foreground="{DynamicResource WarnBrush}" Text="{Binding Result}" IsVisible="{Binding Result, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+            </StackPanel>
+          </Border>
+          <TextBlock Classes="field" Text="Deze engine is" />
+          <ComboBox ItemsSource="{Binding Roles}" SelectedItem="{Binding Role}" MinWidth="150" IsEnabled="{Binding Loaded}"
+                    ToolTip.Tip="uit = let niet op een andere studio · hoofd = toont of de reserve paraat is · reserve = neemt over als de hoofdstudio wegvalt" />
+          <StackPanel IsVisible="{Binding IsOn}">
+            <TextBlock Classes="field" Text="Adres van de andere engine" />
+            <TextBox Text="{Binding Partner}" Watermark="http://studio1:8600" />
+            <TextBlock Classes="help" Text="De andere engine moet op het netwerk luisteren (niet alleen 127.0.0.1)." />
+            <TextBlock Classes="field" Text="Vragen elke (seconden)" />
+            <NumericUpDown Value="{Binding IntervalSeconds}" Minimum="1" Maximum="30" Increment="1" FormatString="0" />
+            <TextBlock Classes="field" Text="Overnemen als de hoofdstudio zo lang niet antwoordt (seconden)" />
+            <NumericUpDown Value="{Binding LostSeconds}" Minimum="3" Maximum="600" Increment="1" FormatString="0" />
+            <CheckBox Content="Ook overnemen bij stilte op de zender van de hoofdstudio" IsChecked="{Binding TakeOverOnSilence}" Margin="0,10,0,0"
+                      ToolTip.Tip="Gebruikt de stiltebewaking van de hoofdstudio (tabblad Bewaking daar)" />
+            <CheckBox Content="Vanzelf teruggeven als de hoofdstudio weer speelt" IsChecked="{Binding GiveBackAutomatically}" Margin="0,6,0,0" />
+            <TextBlock Classes="field" Text="Teruggeven nadat de hoofdstudio zo lang weer speelt (seconden)" IsVisible="{Binding GiveBackAutomatically}" />
+            <NumericUpDown Value="{Binding GiveBackSeconds}" Minimum="5" Maximum="3600" Increment="5" FormatString="0" IsVisible="{Binding GiveBackAutomatically}" />
+            <CheckBox Content="Bij overnemen ook de stream starten (en bij teruggeven weer stoppen)" IsChecked="{Binding StartStream}" Margin="0,10,0,0" />
+            <TextBlock Classes="field" Text="Commando's bij overnemen" />
+            <TextBox Text="{Binding OnTakeOver}" Watermark="bijv. ALERT Reservestudio op de lucht; OSC 192.168.1.20:8000 /licht/reserve 1" />
+            <TextBlock Classes="field" Text="Commando's bij teruggeven" />
+            <TextBox Text="{Binding OnGiveBack}" Watermark="bijv. OSC 192.168.1.20:8000 /licht/reserve 0" />
+            <TextBlock Classes="help" Text="Commando's van de commandobus (venster Bediening), meerdere gescheiden door een puntkomma. Actief na Opslaan." />
+          </StackPanel>
+        </StackPanel></ScrollViewer>
+      </TabItem>
+
+      <TabItem Header="Gebruikers">
+        <ScrollViewer><StackPanel Classes="page" MaxWidth="760" DataContext="{Binding Users}" x:DataType="vm:UsersPanelVm">
+          <TextBlock Classes="title" Text="Gebruikers en rechten" />
+          <TextBlock Classes="help" Text="{Binding IntroText}" />
+          <Grid ColumnDefinitions="260,*" ColumnSpacing="20" Margin="0,14,0,0">
+            <StackPanel Spacing="8">
+              <ListBox ItemsSource="{Binding Users}" SelectedItem="{Binding Selected}" Height="260">
+                <ListBox.ItemTemplate>
+                  <DataTemplate x:DataType="c:UserDto">
+                    <StackPanel>
+                      <TextBlock Text="{Binding Name}" FontWeight="SemiBold" />
+                      <StackPanel Orientation="Horizontal" Spacing="6">
+                        <TextBlock Classes="muted" FontSize="12" Text="{Binding RoleText}" />
+                        <TextBlock Classes="muted" FontSize="12" Text="· uitgeschakeld" IsVisible="{Binding !Enabled}" />
+                      </StackPanel>
+                    </StackPanel>
+                  </DataTemplate>
+                </ListBox.ItemTemplate>
+              </ListBox>
+              <Button Classes="bar" Content="Nieuwe gebruiker" Command="{Binding NewCommand}" />
+            </StackPanel>
+            <StackPanel Grid.Column="1">
+              <TextBlock FontWeight="SemiBold" FontSize="15" Text="{Binding EditTitle}" />
+              <TextBlock Classes="field" Text="Naam" />
+              <TextBox Text="{Binding EditName}" Watermark="zoals hij in de log komt" />
+              <TextBlock Classes="field" Text="Rol" />
+              <ComboBox ItemsSource="{Binding Roles}" SelectedItem="{Binding EditRole}" MinWidth="180" />
+              <TextBlock Classes="field" Text="Pincode (4 tot 12 cijfers)" />
+              <TextBox Text="{Binding EditPin}" PasswordChar="●" Watermark="leeg = pincode niet wijzigen" />
+              <CheckBox Content="Mag zich aanmelden" IsChecked="{Binding EditEnabled}" Margin="0,10,0,0" />
+              <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,14,0,0">
+                <Button Classes="bar primary" Content="Opslaan" Command="{Binding SaveCommand}" />
+                <Button Classes="bar danger" Content="Verwijderen" Command="{Binding DeleteCommand}" IsVisible="{Binding IsExisting}" />
+              </StackPanel>
+              <TextBlock Classes="help" Text="{Binding Status}" Margin="0,8,0,0" />
+              <TextBlock Classes="help" Margin="0,12,0,0"
+                         Text="Gebruikers worden meteen opgeslagen (de knop onderaan is voor de andere tabbladen). Pincode vergeten en geen beheerder meer? Start de engine op deze computer met --users-off; dan wordt er niets gecontroleerd tot de volgende start." />
+            </StackPanel>
+          </Grid>
         </StackPanel></ScrollViewer>
       </TabItem>
 

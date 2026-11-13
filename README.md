@@ -18,8 +18,8 @@ VoIP-kanalen voor bellers en verslaggevers, en bediening via MIDI, Livewire, Emb
 | **DJ-modus**: decks met golfvorm en beatstrepen, mengpaneel en automix | **Automatisering**: programmalog met AI-presentator, klok en berichten |
 | ![Productie met bibliotheek, cue-editor en voicetracking](docs/screenshots/productie.png) | ![Planning met de planner, reclame en programmalog](docs/screenshots/planning.png) |
 | **Productie**: bibliotheek, cue-editor, voicetracking en PFL | **Planning**: dag, week, klokken en vaste tijden, reclamecampagnes |
-| ![Rapportage met as-run, muziekrapport, stream en regiekamer](docs/screenshots/rapportage.png) | |
-| **Rapportage**: as-run, muziekrapport (CSV en PDF), stream en regiekamer | |
+| ![Rapportage met as-run, muziekrapport, stream en regiekamer](docs/screenshots/rapportage.png) | ![Het venster Uitsturing met een grote meter en een open-lampje per kanaal](docs/screenshots/uitsturing.png) |
+| **Rapportage**: as-run, muziekrapport (CSV en PDF), stream en regiekamer | **Uitsturing**: programma met loudness en per kanaal een meter met OPEN/DICHT |
 
 Elk venster is te verslepen, te docken of los te laten zweven, ook op een tweede scherm.
 
@@ -32,6 +32,9 @@ Elk venster is te verslepen, te docken of los te laten zweven, ook op een tweede
   de log was. De engine kan met Windows mee starten, los van de studio.
 - **Stiltedetectie** op de zender: drempel, duur en actie (melden, automatisering starten of iets uit een
   noodcategorie spelen).
+- **Reservestudio**: een tweede engine bewaakt de hoofdstudio en neemt de uitzending over als die uitvalt, een
+  storing meldt of (als je dat kiest) stil valt; als de hoofdstudio weer speelt, geeft hij de lucht na een ingestelde
+  tijd of met een knop terug (*Instellingen › Reservestudio*).
 - **Reservekopie** van instellingen, klokken, planning, cartwalls en hardware in één bestand, en een systeemlog in
   de studio.
 
@@ -55,6 +58,10 @@ Elk venster is te verslepen, te docken of los te laten zweven, ook op een tweede
   outromarkers, plus een kwaliteitscontrole (te zacht, clipping, stilte, lage bitrate, dubbele nummers).
 - **Zoeken** zonder accenten en met kleine tikfouten, korte filters (`bpm:120-128`, `jaar:198`, `duur:<3:30`),
   filterknoppen, slimme lijsten, "mag dit nu?" per nummer en een detailpaneel. Snel bij 100.000 nummers.
+- **Opzoeken op geluid**: met AcoustID wordt een nummer eerst op zijn vingerafdruk herkend, daarna op de tags;
+  nummers die straks in de log komen worden vooruit opgezocht, zodat hoes en gegevens er op tijd zijn.
+- **Losse bestanden** die vanuit de Verkenner in de log of een speler worden gezet, komen in de categorie
+  *Losse bestanden* (niet in de rotatie) en krijgen zo ook een hoes en metadata.
 - **Tags lezen en terugschrijven**, hoezen, meer tagvelden (ISRC, componist, uitgever) en ongedaan maken.
 
 ### Mengpaneel en geluid
@@ -62,6 +69,10 @@ Elk venster is te verslepen, te docken of los te laten zweven, ook op een tweede
   voorluisteren, elk naar een eigen Windows-kaart, kanaalpaar of ASIO-uitgang.
 - **Kanaalstrip** per kanaal: gain, balans, equalizer, compressor, automatische niveauregeling, dempen, naar de
   zender, opnemen (REC), een ingebouwd effect en plekken voor VST-effecten.
+- **LED-meters** in dBFS met piek-vasthouden in de decks, de mixer, de DJ-strip en de bovenbalk; het deck dat
+  in de lucht is, heeft een signaalbalk en meldt *geen geluid* als het stil blijft.
+- **Venster Uitsturing**: het programma met piek, loudness (kort en geïntegreerd), true peak en begrenzer, en per
+  kanaal een grote meter met een lampje OPEN, DICHT of MIC OPEN; leesbaar vanaf de andere kant van de studio.
 - **Master** met begrenzer en loudness-meter. Werkwijze *software* (de engine mengt) of *mengtafel* (elk kanaal
   naar zijn eigen uitgang).
 
@@ -88,20 +99,57 @@ Elk venster is te verslepen, te docken of los te laten zweven, ook op een tweede
 ### AI-presentator
 - Tekst via elk OpenAI-compatibel endpoint (bijv. Ollama) of ingebouwde sjablonen, stem via Higgs TTS 3 of
   Windows-spraak. Breaks worden vooraf gemaakt; de uitzending wacht nooit op de AI.
+- **Stemmendatabase**: een presentator neemt een eigen stem op (studiomicrofoon) of uploadt er een, met rollen
+  voor presentator, nieuwslezer en weerman/-vrouw; de Higgs-server kan met de engine mee starten.
 - Een creatieve presentator die de plaatjes aan elkaar praat, ook met denkende taalmodellen.
+- **AI-nieuws en weerbericht** als vast nieuwsblok: landelijke (bv. de NOS) en regionale bronnen (bv. RTV Drenthe),
+  door het lokale taalmodel herschreven tot een bulletin met bronvermelding, of een weerbericht voor een gekozen plaats.
+  Eigen stem, nieuwstune eronder, opener en sluiter; bv. regionaal op :30 en landelijk op :00. Noemt het taalmodel
+  iets dat niet in de bron staat (een getal), dan worden de koppen letterlijk voorgelezen.
 
 ### Bediening en hardware
 - Alles als tekstcommando: via HTTP, TCP, UDP, OSC, sneltoetsen (ook buiten de studio), eigen knoppen, de planner
   en gebeurtenissen (start van een item, microfoon open, stream weg).
 - **Hardware**: MIDI, seriële poorten, Livewire-GPIO en Ember+, voor knoppen, lampjes en tallies.
   *Ember+ is nog niet tegen een echt apparaat getest.*
+- **Mackie Control**: een bedieningspaneel met motorfaders (bijv. iCON V1-M, met een uitbreiding zoals de
+  V1-X ernaast) bedient het mengpaneel: volume, balans, dempen, opnemen en naar de zender per kanaal, met display
+  en meters; de faders volgen de studio.
+  *Nog niet tegen een echt paneel getest.*
 
 ### De studio
+- **Op afstand**: een pagina voor telefoon en tablet (`/remote/` op de engine) toont wat er speelt en wat er komt,
+  met grote knoppen voor start, overslaan en carts. Lezen kan vanaf elke computer; elke actie via het netwerk vraagt
+  een aangemelde gebruiker of het bedieningswachtwoord.
+- **Studioklokken** in drie stijlen: analoog en digitaal samen, een LED-klok met secondeblokjes, en een uurklok
+  die aftelt naar het hele uur.
+- Een inrichthulp bij de eerste start: stationsnaam, kleurstijl, muziek- en jinglemap en geluidskaarten in vier
+  stappen (later terug te vinden onder *Studio › Inrichthulp*).
 - Werkruimtes Live, DJ, Automatisering, Productie, Planning en Rapportage, met werkbladen per scherm.
 - Meerdere thema's (donker, licht en meer), instelbare lettergrootte en schaal, een aanraakmodus en kleuren per
   soort item.
+- **Gebruikers en rechten**: aanmelden met een eigen naam en pincode, rollen presentator, technicus en beheerder
+  (*Instellingen › Gebruikers*); de instellingen zijn dan alleen voor beheerders. *Studio › Studio vergrendelen*
+  (Ctrl+L) houdt de uitzending gaande en de studio dicht tot de pincode; de as-run laat per presentator zien wat er
+  is uitgezonden. Pincode kwijt: start de engine op die computer met `--users-off`.
 
-## Snel starten (Windows 10/11, x64)
+## Installeren (Windows 10/11, x64)
+
+Bij elke [uitgave](https://github.com/jerrydeevee/REA-Radio-DJ/releases) staat een zip; vanaf 1.1.0 ook een
+setup (`REA-Radio-DJ-<versie>-setup.exe`). .NET hoeft niet apart geïnstalleerd te worden.
+
+- De setup installeert voor de eigen gebruiker, zonder beheerdersrechten, in `%LocalAppData%\Programs\REA-Radio-DJ`.
+  De engine bewaart zijn database, muziek en opnamen naast zichzelf (`engine\data`, `engine\media`).
+- De setup zet REA-Radio-DJ in het Startmenu (studio, engine en web-interface). Een snelkoppeling op het
+  bureaublad en het starten van de engine bij aanmelden zijn keuzes in de setup.
+- Een nieuwere setup installeert over de oude heen. Verwijderen gaat via Windows-instellingen › Apps: de
+  engine wordt gestopt, en `engine\data` en `engine\media` blijven staan.
+- De studio meldt een nieuwere uitgave rechts onderin (Info › Zoeken naar updates).
+
+Een setup bouwen kan met [Inno Setup 6](https://jrsoftware.org/isinfo.php):
+`powershell -ExecutionPolicy Bypass -File scripts\build-installer.ps1` (BASS moet in `native\` staan).
+
+## Snel starten vanuit de broncode
 
 1. Installeer de [.NET 9 SDK](https://dotnet.microsoft.com/download).
 2. Haal BASS op (komt niet mee in de repository):
@@ -131,7 +179,7 @@ categorie) en jingles in `media\jingles`, naast de plek waar je de engine start,
 - Slepen vanuit de bibliotheek naar log, speler of cartknop; dubbelklik = voorbeluisteren (PFL).
 - Sneltoetsen: F5 volgende, F6 automatisch/assist, F8 microfoon, F9 stop.
 - Opties: `--engine <url>`, `--no-engine`, `--profile <map>` (eigen instellingenmap), `--show <venster>`,
-  `--float <venster>`.
+  `--float <venster>`, `--workspace <live|dj|auto|prod|plan|report>`, `--setup` (inrichthulp openen).
 
 ## Instellingen
 
@@ -183,6 +231,7 @@ src/ReaRadioDj.Server     de engine-service: REST, WebSocket, server-sent events
 src/ReaRadioDj.Studio     de desktop-studio (Avalonia + Dock): dokbare en zwevende vensters
 tests/ReaRadioDj.Tests    unit tests en audiotests (draaien op het "no sound"-apparaat van BASS)
 scripts/fetch-bass.ps1   downloadt BASS naar /native
+scripts/build-installer.ps1, installer/   bouwen de Windows-setup (Inno Setup 6)
 ```
 
 De mixer bestaat uit geneste BASS-mixers: uitgangen (uitzending, PFL) → kanalen → bronnen. Een controlelus van

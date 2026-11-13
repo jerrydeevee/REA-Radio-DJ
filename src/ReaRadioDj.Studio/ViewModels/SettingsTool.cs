@@ -117,6 +117,19 @@ public sealed partial class SettingsTool : StudioTool
     [ObservableProperty] private string _soloistKey = "";
     [ObservableProperty] private string _soloistKeyHint = "";
     [ObservableProperty] private bool _soloistStartWithStudio;
+
+    /// <summary>Instellingen › Systeem › Nieuwe versies: a studio setting, saved at once.</summary>
+    public bool CheckUpdates
+    {
+        get => Hub.Settings.CheckUpdates;
+        set
+        {
+            if (Hub.Settings.CheckUpdates == value) return;
+            Hub.Settings.CheckUpdates = value;
+            Hub.Settings.Save();
+            OnPropertyChanged();
+        }
+    }
     [ObservableProperty] private bool _soloistAutoConnect = true;
     [ObservableProperty] private string _soloistStatus = "";
     [ObservableProperty] private bool _soloistRunning;
@@ -191,7 +204,10 @@ public sealed partial class SettingsTool : StudioTool
     }
     [ObservableProperty] private bool _startEngine;
 
-    protected override void OnFirstShow() => _ = LoadAsync();
+    protected override void OnFirstShow() { _ = LoadAsync(); _ = Users.LoadAsync(); }
+
+    /// <summary>Instellingen › Gebruikers.</summary>
+    public UsersPanelVm Users { get; } = new();
 
     // ---- mixing desk or software
     [ObservableProperty] private bool _deskMode;
@@ -213,16 +229,39 @@ public sealed partial class SettingsTool : StudioTool
         : m.Direct.Count == 0 ? "Mengtafel, maar nog geen kanaal heeft een eigen uitgang: geef ze hieronder een uitgang."
         : $"Op vol naar de tafel: {string.Join(", ", m.Direct)}.";
 
+    // The two choices as their own properties that only ever switch ON. A radio button bound to "!DeskMode" wrote
+    // back when the group unchecked it while the look was applied again (a new button style re-templates every button):
+    // the two buttons then flipped DeskMode back and forth without end, froze the studio and flooded the engine.
+    public bool DeskSoftware { get => !DeskMode; set { if (value) DeskMode = false; } }
+    public bool DeskTable { get => DeskMode; set { if (value) DeskMode = true; } }
+
     partial void OnDeskModeChanged(bool value)
     {
+        OnPropertyChanged(nameof(DeskSoftware));
+        OnPropertyChanged(nameof(DeskTable));
         if (!_deskLoaded) return;
         _ = SaveDeskModeAsync(value);
     }
 
+    private bool _deskSending;
+    private bool? _deskWanted;
+
+    /// <summary>One request at a time; quick changes in between collapse into the last one.</summary>
     private async Task SaveDeskModeAsync(bool desk)
     {
-        var m = await Hub.Client.SendForAsync<MixingMode>(HttpMethod.Put, "/api/mixing-mode", new { desk });
-        DeskStatus = m is null ? "Omschakelen mislukt." : Describe(m);
+        _deskWanted = desk;
+        if (_deskSending) return;
+        _deskSending = true;
+        try
+        {
+            while (_deskWanted is bool want)
+            {
+                _deskWanted = null;
+                var m = await Hub.Client.SendForAsync<MixingMode>(HttpMethod.Put, "/api/mixing-mode", new { desk = want });
+                DeskStatus = m is null ? "Omschakelen mislukt." : Describe(m);
+            }
+        }
+        finally { _deskSending = false; }
     }
 
     // ---- the station's own recordings
@@ -316,6 +355,9 @@ public sealed partial class SettingsTool : StudioTool
 
     [RelayCommand] private Task Reload() => LoadAsync();
 
+    /// <summary>Settings › Reservestudio.</summary>
+    public FailoverVm Failover { get; } = new();
+
     private async Task LoadAsync()
     {
         Status = "lezen…";
@@ -334,6 +376,7 @@ public sealed partial class SettingsTool : StudioTool
         Show(s);
         await LoadRulesAsync();
         await LoadSystemAsync();
+        await Failover.LoadAsync();
         await LoadOutputsAsync();
         await LoadDeskModeAsync();
         await LoadAudioAsync();
@@ -514,6 +557,8 @@ public sealed partial class SettingsTool : StudioTool
         if (AcoustIdLoaded && AcoustIdKey.Trim().Length > 0) await SaveAcoustIdAsync();
         StoreSoloist();
 
+        string? failoverError = await Failover.SaveAsync();
+
         if (SystemLoaded)
         {
             var sys = await Hub.Client.SendForAsync<SystemDto>(HttpMethod.Put, "/api/system", new SystemSettingsRequest(AutoStart, DetailedLog));
@@ -531,6 +576,7 @@ public sealed partial class SettingsTool : StudioTool
         if (!routed) notes.Add("De geluidskaarten zijn niet gewisseld (kaart niet beschikbaar?).");
         if (saved.Rescanning) notes.Add("De bibliotheek wordt opnieuw ingelezen uit de nieuwe mappen.");
         if (saved.NeedsRestart.Count > 0) notes.Add("Actief na een herstart van de engine: " + string.Join(", ", saved.NeedsRestart) + ".");
+        if (failoverError is not null) notes.Add(failoverError + ".");
         Status = string.Join(" ", notes);
     }
 

@@ -15,7 +15,17 @@ public sealed class DjTrackMemory
     public double?[] HotCues { get; set; } = new double?[DjDeck.HotCueCount];
 }
 
-/// <summary>Tempo and hot cues per file, kept in one JSON file in the data folder.</summary>
+/// <summary>The desk settings that survive a restart.</summary>
+public sealed class DjDeskSettings
+{
+    public bool Quantize { get; set; }
+    public double CueMix { get; set; }
+    public bool Limiter { get; set; } = true;
+    public double LimiterDb { get; set; } = -1;
+    public string Curve { get; set; } = DjMixer.Smooth;
+}
+
+/// <summary>Tempo and hot cues per file, kept in one JSON file in the data folder; the desk settings next to it.</summary>
 public sealed class DjStore
 {
     private readonly string? _file;
@@ -40,6 +50,39 @@ public sealed class DjStore
     }
 
     public DjTrackMemory Get(string path) => _tracks.GetOrAdd(path, _ => new DjTrackMemory());
+
+    private string? DeskFile => _file is null ? null : Path.Combine(Path.GetDirectoryName(Path.GetFullPath(_file))!, Path.GetFileNameWithoutExtension(_file) + "-desk.json");
+    private DjDeskSettings? _desk;
+
+    /// <summary>The desk settings from the last session (defaults when there are none or the file is damaged).</summary>
+    public DjDeskSettings Desk
+    {
+        get
+        {
+            lock (_gate)
+            {
+                if (_desk is not null) return _desk;
+                try { if (DeskFile is { } f && File.Exists(f)) _desk = JsonSerializer.Deserialize<DjDeskSettings>(File.ReadAllText(f)); }
+                catch (Exception ex) when (ex is JsonException or IOException) { /* defaults */ }
+                return _desk ??= new DjDeskSettings();
+            }
+        }
+    }
+
+    public void SaveDesk(DjDeskSettings desk)
+    {
+        lock (_gate)
+        {
+            _desk = desk;
+            if (DeskFile is not { } f) return;
+            try
+            {
+                Directory.CreateDirectory(Path.GetDirectoryName(f)!);
+                File.WriteAllText(f, JsonSerializer.Serialize(desk));
+            }
+            catch (IOException) { /* kept in memory; the next change tries again */ }
+        }
+    }
 
     public void Save()
     {
@@ -809,8 +852,13 @@ public sealed class DjMixer : ITickable, IDisposable
         Automix = new DjAutomix(this);
         SetOnAir(false);
         _limiter.Attach(_strip.Handle);
-        try { SetLimiter(true, -1); }
+        var desk = store.Desk;
+        try { _limiter.SetLimiter(desk.Limiter, desk.LimiterDb); }
         catch (BassException) { /* no limiter: the desk still plays */ }
+        Quantize = desk.Quantize;
+        foreach (var d in Decks) d.Quantize = desk.Quantize;
+        CueMix = Math.Clamp(desk.CueMix, 0, 1);
+        Curve = desk.Curve == Sharp ? Sharp : Smooth;
         router.Register(this);
     }
 
@@ -855,12 +903,18 @@ public sealed class DjMixer : ITickable, IDisposable
     {
         Quantize = on;
         foreach (var d in Decks) d.Quantize = on;
+        SaveDesk();
     }
 
-    public void SetCueMix(double value) => CueMix = Math.Clamp(value, 0, 1);
+    public void SetCueMix(double value) { CueMix = Math.Clamp(value, 0, 1); SaveDesk(); }
 
     /// <summary>The peak limiter on the DJ output (before the on-air switch and the mix recording); ceiling in dBFS.</summary>
-    public void SetLimiter(bool on, double ceilingDb) => _limiter.SetLimiter(on, ceilingDb);
+    public void SetLimiter(bool on, double ceilingDb) { _limiter.SetLimiter(on, ceilingDb); SaveDesk(); }
+
+    private void SaveDesk() => _store.SaveDesk(new DjDeskSettings
+    {
+        Quantize = Quantize, CueMix = CueMix, Limiter = _limiter.LimiterOn, LimiterDb = _limiter.CeilingDb, Curve = Curve,
+    });
 
     /// <summary>Cue and master level in the headphones for a cue mix of 0..1: both full in the middle.</summary>
     public static (float Cue, float Master) CueMixGains(double mix)
@@ -939,7 +993,7 @@ public sealed class DjMixer : ITickable, IDisposable
     }
 
     public void SetCrossfader(double position) => Crossfader = Math.Clamp(position, 0, 1);
-    public void SetCurve(string curve) => Curve = curve == Sharp ? Sharp : Smooth;
+    public void SetCurve(string curve) { Curve = curve == Sharp ? Sharp : Smooth; SaveDesk(); }
 
     public void SetOnAir(bool on)
     {

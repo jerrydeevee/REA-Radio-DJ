@@ -80,16 +80,73 @@
               </ComboBox.ItemTemplate>
             </ComboBox>
 
-            <StackPanel Spacing="4" IsVisible="{Binding IsHeadlines}" Margin="70,0,0,0">
-              <TextBox Text="{Binding Feeds}" AcceptsReturn="True" MinHeight="64" TextWrapping="NoWrap" FontFamily="Consolas" FontSize="12"
-                       Watermark="RSS- of Atom-adressen, één per regel" />
+            <StackPanel Spacing="4" IsVisible="{Binding HasFeeds}" Margin="70,0,0,0">
+              <TextBlock Classes="muted" FontSize="11" Text="{Binding FeedsLabel}" />
+              <TextBox Text="{Binding Feeds}" AcceptsReturn="True" MinHeight="48" TextWrapping="NoWrap" FontFamily="Consolas" FontSize="12"
+                       Watermark="https://feeds.nos.nl/nosnieuwsalgemeen | NOS" />
               <StackPanel Orientation="Horizontal" Spacing="6">
                 <TextBlock Text="hoogstens" VerticalAlignment="Center" />
-                <NumericUpDown Value="{Binding MaxHeadlines}" Minimum="1" Maximum="12" Increment="1" FormatString="0" Width="100" />
-                <TextBlock Text="koppen per bron" VerticalAlignment="Center" />
+                <NumericUpDown Value="{Binding MaxHeadlines}" Minimum="0" Maximum="12" Increment="1" FormatString="0" Width="100" />
+                <TextBlock Text="berichten per bron" VerticalAlignment="Center" />
               </StackPanel>
-              <TextBlock Classes="muted" FontSize="11" TextWrapping="Wrap"
+              <TextBlock Classes="muted" FontSize="11" TextWrapping="Wrap" IsVisible="{Binding IsHeadlines}"
                          Text="De koppen worden letterlijk voorgelezen, zonder taalmodel: er wordt niets bij verzonnen. Nodig: de AI-presentator staat aan." />
+            </StackPanel>
+
+            <!-- AI news: regional sources -->
+            <StackPanel Spacing="4" IsVisible="{Binding IsAiNews}" Margin="70,0,0,0">
+              <TextBlock Classes="muted" FontSize="11" Text="Regionale of lokale bronnen (omroep, streekkrant), één per regel: adres | naam" />
+              <TextBox Text="{Binding RegionalFeeds}" AcceptsReturn="True" MinHeight="48" TextWrapping="NoWrap" FontFamily="Consolas" FontSize="12"
+                       Watermark="https://www.rtvdrenthe.nl/rss/index.xml | RTV Drenthe" />
+              <WrapPanel>
+                <TextBlock Text="hoogstens" VerticalAlignment="Center" Margin="0,0,6,4" />
+                <NumericUpDown Value="{Binding RegionalCount}" Minimum="0" Maximum="12" Increment="1" FormatString="0" Width="100" Margin="0,0,6,4" />
+                <TextBlock Text="regionale berichten" VerticalAlignment="Center" Margin="0,0,12,4" />
+                <CheckBox Content="regionaal eerst" IsChecked="{Binding RegionalFirst}" Margin="0,0,12,4" />
+                <CheckBox Content="bron noemen (“meldt de NOS”)" IsChecked="{Binding Attribution}" Margin="0,0,0,4" />
+              </WrapPanel>
+              <StackPanel Orientation="Horizontal" Spacing="6">
+                <TextBlock Text="berichten hoogstens" VerticalAlignment="Center" />
+                <NumericUpDown Value="{Binding MaxAgeHours}" Minimum="1" Maximum="72" Increment="1" FormatString="0" Width="100" />
+                <TextBlock Text="uur oud" VerticalAlignment="Center" />
+              </StackPanel>
+            </StackPanel>
+
+            <!-- weather: the place -->
+            <StackPanel Spacing="4" IsVisible="{Binding IsWeather}" Margin="70,0,0,0">
+              <DockPanel>
+                <Button DockPanel.Dock="Right" Classes="small" Content="Zoeken" Command="{Binding FindPlaceCommand}" Margin="4,0,0,0" />
+                <TextBox Text="{Binding PlaceQuery}" Watermark="plaats, bijv. Gieten" />
+              </DockPanel>
+              <ComboBox ItemsSource="{Binding Places}" SelectedItem="{Binding PlaceChoice}" HorizontalAlignment="Stretch"
+                        IsVisible="{Binding HasPlaces}" PlaceholderText="kies de plaats">
+                <ComboBox.ItemTemplate>
+                  <DataTemplate x:DataType="c:PlaceDto">
+                    <TextBlock><Run Text="{Binding Name}" FontWeight="SemiBold" /><Run Text="  " /><Run Text="{Binding Region}" /></TextBlock>
+                  </DataTemplate>
+                </ComboBox.ItemTemplate>
+              </ComboBox>
+              <TextBlock Classes="muted" FontSize="11" TextWrapping="Wrap" Text="{Binding PlaceText}" />
+            </StackPanel>
+
+            <!-- AI news and weather: length, voice, bed -->
+            <StackPanel Spacing="4" IsVisible="{Binding IsAi}" Margin="70,0,0,0">
+              <StackPanel Orientation="Horizontal" Spacing="6">
+                <TextBlock Text="lengte" VerticalAlignment="Center" />
+                <NumericUpDown Value="{Binding Words}" Minimum="30" Maximum="400" Increment="10" FormatString="0" Width="130" />
+                <TextBlock Text="{Binding LengthText}" VerticalAlignment="Center" />
+              </StackPanel>
+              <DockPanel>
+                <TextBlock DockPanel.Dock="Left" Text="stem" Width="70" VerticalAlignment="Center" />
+                <ComboBox ItemsSource="{Binding Voices}" SelectedItem="{Binding Voice}" HorizontalAlignment="Stretch" />
+              </DockPanel>
+              <DockPanel>
+                <TextBlock DockPanel.Dock="Left" Text="tune eronder" Width="70" VerticalAlignment="Center" TextWrapping="Wrap" />
+                <ComboBox ItemsSource="{Binding Jingles}" SelectedItem="{Binding Bed}" HorizontalAlignment="Stretch"
+                          ToolTip.Tip="een nieuws- of weertune die zacht onder de stem speelt" />
+              </DockPanel>
+              <TextBlock Classes="muted" FontSize="11" TextWrapping="Wrap"
+                         Text="Het taalmodel (bijv. Ollama, lokaal) herschrijft alleen wat in de bronnen staat. Noemt het een getal dat er niet in staat, of is het niet bereikbaar, dan worden de koppen of vaste weerzinnen letterlijk gebruikt. Het taalmodel en de stem stel je in bij de AI-presentator." />
             </StackPanel>
 
             <DockPanel>
@@ -102,13 +159,24 @@
         <WrapPanel>
           <Button Classes="small go" Content="Opslaan" Command="{Binding SaveCommand}" Margin="0,0,4,4" />
           <Button Classes="small" Content="Test: wat zou nu spelen?" Command="{Binding CheckCommand}" Margin="0,0,4,4" />
+          <Button Classes="small" Content="Proef: tekst schrijven" Command="{Binding TryBlockCommand}" CommandParameter="tekst"
+                  IsVisible="{Binding IsAi}" IsEnabled="{Binding !Busy}" Margin="0,0,4,4" />
+          <Button Classes="small" Content="Proef met stem (PFL)" Command="{Binding TryBlockCommand}" CommandParameter="stem"
+                  IsVisible="{Binding IsAi}" IsEnabled="{Binding !Busy}" Margin="0,0,4,4" />
           <Button Classes="small" Content="Verwijderen" Command="{Binding DeleteCommand}" Margin="0,0,4,4" />
+        </WrapPanel>
+        <WrapPanel>
+          <TextBlock Classes="muted" Text="Voorbeeld:" VerticalAlignment="Center" Margin="0,0,6,4" />
+          <Button Classes="small" Content="Kort regionaal nieuws (:30)" Command="{Binding ExampleCommand}" CommandParameter="kort" Margin="0,0,4,4" />
+          <Button Classes="small" Content="Nieuws op het hele uur" Command="{Binding ExampleCommand}" CommandParameter="uur" Margin="0,0,4,4" />
+          <Button Classes="small" Content="Weerbericht" Command="{Binding ExampleCommand}" CommandParameter="weer" Margin="0,0,4,4" />
         </WrapPanel>
         <TextBlock Text="{Binding CheckText}" TextWrapping="Wrap" />
         <TextBlock Foreground="{DynamicResource WarnBrush}" TextWrapping="Wrap" Text="{Binding CheckProblem}" IsVisible="{Binding CheckProblem, Converter={x:Static ObjectConverters.IsNotNull}}" />
         <Border Classes="card" IsVisible="{Binding Script, Converter={x:Static ObjectConverters.IsNotNull}}">
           <TextBlock Text="{Binding Script}" TextWrapping="Wrap" FontStyle="Italic" />
         </Border>
+        <TextBlock Classes="muted" FontSize="11" TextWrapping="Wrap" Text="{Binding Note}" IsVisible="{Binding Note, Converter={x:Static ObjectConverters.IsNotNull}}" />
         <TextBlock Classes="muted" FontSize="11" TextWrapping="Wrap"
                    Text="Een blok wordt 3 minuten vooraf klaargezet. Is er geen actueel nieuws (bestand te oud of weg, geen koppen), dan wordt het hele blok overgeslagen met een waarschuwing in Berichten, zodat er nooit een opener zonder nieuws klinkt." />
       </StackPanel>

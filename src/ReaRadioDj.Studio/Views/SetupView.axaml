@@ -1,0 +1,106 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:ReaRadioDj.Studio.ViewModels"
+             xmlns:c="using:ReaRadioDj.Contracts"
+             x:Class="ReaRadioDj.Studio.Views.SetupView"
+             x:DataType="vm:SetupWizardVm">
+  <UserControl.Styles>
+    <Style Selector="TextBlock.lead"><Setter Property="TextWrapping" Value="Wrap" /><Setter Property="FontSize" Value="14" /></Style>
+    <Style Selector="TextBlock.label"><Setter Property="FontWeight" Value="SemiBold" /><Setter Property="Margin" Value="0,8,0,2" /></Style>
+    <Style Selector="TextBlock.hint"><Setter Property="TextWrapping" Value="Wrap" /><Setter Property="FontSize" Value="12" />
+      <Setter Property="Foreground" Value="{DynamicResource MutedTextBrush}" /></Style>
+  </UserControl.Styles>
+
+  <!-- Dimmed background over the whole studio; the helper itself is a card in the middle. -->
+  <Border Background="#99000000">
+    <Border HorizontalAlignment="Center" VerticalAlignment="Center" Width="640" MaxHeight="720"
+            Background="{DynamicResource CardBrush}" BorderBrush="{DynamicResource AccentBrush}" BorderThickness="1"
+            CornerRadius="{DynamicResource Radius10}" Padding="24,20" BoxShadow="0 16 40 0 #88000000">
+      <DockPanel>
+        <!-- header: step and title -->
+        <StackPanel DockPanel.Dock="Top" Spacing="2" Margin="0,0,0,12">
+          <TextBlock Classes="hint" Text="{Binding StepText}" />
+          <TextBlock FontSize="22" FontWeight="Bold" Text="{Binding Title}" />
+        </StackPanel>
+
+        <!-- footer: status and buttons -->
+        <StackPanel DockPanel.Dock="Bottom" Spacing="10" Margin="0,16,0,0">
+          <TextBlock Foreground="{DynamicResource WarnBrush}" Text="{Binding Status}" TextWrapping="Wrap"
+                     IsVisible="{Binding Status, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+          <DockPanel>
+            <Button DockPanel.Dock="Left" Content="{Binding CloseText}" Command="{Binding SkipCommand}"
+                    ToolTip.Tip="Sluiten zonder iets te veranderen; de inrichthulp staat altijd onder Studio › Inrichthulp" />
+            <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
+              <Button Content="Vorige" Command="{Binding BackCommand}" IsEnabled="{Binding CanBack}" />
+              <Button Content="Volgende" Classes="accent" Command="{Binding NextCommand}" IsVisible="{Binding CanNext}" />
+              <Button Content="Klaar" Classes="accent" Command="{Binding FinishCommand}" IsVisible="{Binding CanFinish}" />
+            </StackPanel>
+          </DockPanel>
+        </StackPanel>
+
+        <ScrollViewer>
+          <Panel>
+            <!-- 1: station and look -->
+            <StackPanel IsVisible="{Binding IsStation}" Spacing="4">
+              <TextBlock Classes="lead" Text="Deze hulp zet in een paar stappen het belangrijkste klaar: de naam van je station, waar je muziek staat en welke geluidskaart naar de zender gaat. Alles is later te veranderen onder Studio › Instellingen." />
+              <TextBlock Classes="label" Text="Naam van het station" />
+              <TextBox Text="{Binding StationName}" Watermark="bijv. Radio Aa en Hunze" />
+              <TextBlock Classes="hint" Text="Komt in de titelbalk, de stream en wat de AI-presentator zegt." />
+              <TextBlock Classes="label" Text="Kleurstijl van de studio" />
+              <ComboBox ItemsSource="{Binding ThemeNames}" SelectedIndex="{Binding ThemeIndex}" HorizontalAlignment="Stretch" />
+              <TextBlock Classes="hint" Text="Je ziet de stijl meteen. Lettergrootte, schaal en aanraakmodus staan onder Instellingen › Uiterlijk." />
+            </StackPanel>
+
+            <!-- 2: folders -->
+            <StackPanel IsVisible="{Binding IsFolders}" Spacing="4">
+              <TextBlock Classes="lead" Text="Kies de map met je muziek. Elke submap wordt een categorie, bijvoorbeeld Pop, Nederlandstalig of Gouwe ouwe. Nieuwe bestanden worden vanzelf ingelezen." />
+              <TextBlock Classes="label" Text="Muziek" />
+              <DockPanel>
+                <Button DockPanel.Dock="Right" Content="Bladeren…" Margin="6,0,0,0" Click="OnBrowseMusic" />
+                <TextBox Text="{Binding MusicFolder}" Watermark="bijv. D:\Muziek of \\server\muziek" />
+              </DockPanel>
+              <TextBlock Classes="label" Text="Jingles en tunes" />
+              <DockPanel>
+                <Button DockPanel.Dock="Right" Content="Bladeren…" Margin="6,0,0,0" Click="OnBrowseJingles" />
+                <TextBox Text="{Binding JingleFolder}" Watermark="bijv. D:\Jingles" />
+              </DockPanel>
+              <TextBlock Classes="hint" Text="De mappen moeten bereikbaar zijn voor de computer waar de engine draait." />
+              <TextBlock Classes="hint" Text="{Binding FolderInfo}" Margin="0,6,0,0" />
+            </StackPanel>
+
+            <!-- 3: sound cards -->
+            <StackPanel IsVisible="{Binding IsSound}" Spacing="4">
+              <TextBlock Classes="lead" Text="Kies waar de uitzending naartoe gaat (naar de zender of de mengtafel) en waar je voorluistert (koptelefoon). Gebruik bij voorkeur twee verschillende kaarten." />
+              <TextBlock Classes="label" Text="Uitzending" />
+              <DockPanel>
+                <Button DockPanel.Dock="Right" Content="Testtoon" Margin="6,0,0,0" Command="{Binding TestToneCommand}" CommandParameter="program" />
+                <ComboBox ItemsSource="{Binding Outputs}" SelectedItem="{Binding OutputDevice}" HorizontalAlignment="Stretch">
+                  <ComboBox.ItemTemplate><DataTemplate x:DataType="c:DeviceDto"><TextBlock Text="{Binding Name}" /></DataTemplate></ComboBox.ItemTemplate>
+                </ComboBox>
+              </DockPanel>
+              <TextBlock Classes="label" Text="Voorluisteren (PFL)" />
+              <DockPanel>
+                <Button DockPanel.Dock="Right" Content="Testtoon" Margin="6,0,0,0" Command="{Binding TestToneCommand}" CommandParameter="pfl" />
+                <ComboBox ItemsSource="{Binding Outputs}" SelectedItem="{Binding PreviewDevice}" HorizontalAlignment="Stretch">
+                  <ComboBox.ItemTemplate><DataTemplate x:DataType="c:DeviceDto"><TextBlock Text="{Binding Name}" /></DataTemplate></ComboBox.ItemTemplate>
+                </ComboBox>
+              </DockPanel>
+              <TextBlock Classes="hint" Text="Een uitgang per mengkanaal, ASIO, de microfoon en lijn-in stel je later in onder Instellingen › Geluid." />
+            </StackPanel>
+
+            <!-- 4: done -->
+            <StackPanel IsVisible="{Binding IsDone}" Spacing="4">
+              <TextBlock Classes="lead" Text="Dit wordt opgeslagen in de engine:" />
+              <Border Background="{DynamicResource AppBrush}" CornerRadius="{DynamicResource Radius10}" Padding="12,8" Margin="0,4">
+                <TextBlock Classes="mono" Text="{Binding Summary}" TextWrapping="Wrap" />
+              </Border>
+              <CheckBox Content="Automatisch beginnen met spelen als de engine start" IsChecked="{Binding StartAutomation}" Margin="0,6,0,0" />
+              <TextBlock Classes="hint" Text="Klokken, vaste tijden (bijvoorbeeld nieuws op het hele uur) en jingles regel je in de werkruimte Planning. Met Volgende (F5) start je zelf het volgende item; Automatisch of Assist kies je bovenaan." />
+              <TextBlock Classes="hint" Text="De bibliotheek wordt na Klaar ingelezen; bij een grote verzameling duurt dat even." Margin="0,6,0,0" />
+            </StackPanel>
+          </Panel>
+        </ScrollViewer>
+      </DockPanel>
+    </Border>
+  </Border>
+</UserControl>

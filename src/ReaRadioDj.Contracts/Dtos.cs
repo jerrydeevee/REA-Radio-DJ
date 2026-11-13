@@ -234,6 +234,9 @@ public sealed record CategoryDto(long Id, string Name, string Kind, string Color
 /// <summary>Waveform: one linear peak (0..65535) per block, little-endian UInt16, base64.</summary>
 public sealed record PeaksDto(int BlockMs, string Data);
 
+/// <summary>Makes an item music ("song") or a jingle by hand; CategoryId = where it goes (null = a fitting one).</summary>
+public sealed record MediaKindRequest(string Kind, long? CategoryId = null);
+
 public sealed record MediaUpdateRequest(long? CategoryId, bool Enabled, DateTime? ValidFrom, DateTime? ValidUntil);
 
 public sealed record CategoryRequest(string Name, string Kind, string? Color);
@@ -323,7 +326,7 @@ public sealed record CommandResultDto(bool Ok, string Text);
 // ---------------------------------------------------------------- reporting
 
 public sealed record AsRunDto(long Id, DateTime Started, DateTime? Ended, string Source, string Type, long? MediaId, string? Path,
-    string? Artist, string? Title, string? Category, double? Planned, double? Played, bool Ai, string? Note);
+    string? Artist, string? Title, string? Category, double? Planned, double? Played, bool Ai, string? Note, string Presenter = "");
 
 public sealed record MessageDto(long Id, DateTime Time, string Level, string Text);
 
@@ -331,7 +334,40 @@ public sealed record MessageDto(long Id, DateTime Time, string Level, string Tex
 
 /// <summary>Engine: higgs or sapi. Problem: why the profile cannot be used (e.g. a clone without consent).</summary>
 public sealed record VoiceProfileDto(long Id, string? Name, string? Engine, string? ReferenceAudio, string? ReferenceText, string? Tags,
-    double Temperature, string? SapiVoice, bool Consent, string? ConsentNote, bool IsDefault, string? Problem = null, long? FallbackId = null);
+    double Temperature, string? SapiVoice, bool Consent, string? ConsentNote, bool IsDefault, string? Problem = null, long? FallbackId = null,
+    string? Owner = null, string? Uses = null)
+{
+    /// <summary>Short line for lists: engine, whose own voice, the roles it may speak in.</summary>
+    [JsonIgnore] public string Summary => string.Join(" · ", new[]
+    {
+        Engine switch { "higgs" => string.IsNullOrWhiteSpace(ReferenceAudio) ? "Higgs" : "Higgs, gekloond", "sapi" => "Windows", "elevenlabs" => "ElevenLabs", "azure" => "Azure", _ => Engine },
+        string.IsNullOrWhiteSpace(Owner) ? null : $"eigen stem van {Owner}",
+        string.IsNullOrWhiteSpace(Uses) ? null : "alleen: " + Uses.Replace("presenter", "presentator").Replace("news", "nieuws").Replace("weather", "weer").Replace(",", ", "),
+    }.Where(x => !string.IsNullOrEmpty(x)));
+}
+
+/// <summary>Which voice speaks as AI presenter (the default profile), as news reader and as weather man or woman (null = the presenter's voice).</summary>
+public sealed record VoiceRolesDto(long? Presenter, long? News, long? Weather);
+
+/// <summary>
+/// The own voice of a presenter: who (the signed-in user, or a name when the station has no users), the voice when there
+/// is one, the text to read for a recording, and the recording waiting to be kept.
+/// </summary>
+public sealed record OwnVoiceDto(string? Owner, bool SignInNeeded, VoiceProfileDto? Profile, string ReadText, bool Recording,
+    double RecordingSeconds, VoiceClipDto? Take);
+
+/// <summary>A voice recording: length, peak and why it cannot be used (null = fine).</summary>
+public sealed record VoiceClipDto(double Seconds, double PeakDb, string? Problem);
+
+/// <summary>Start recording the own voice (Device: input device, null = the studio microphone). Owner only without users.</summary>
+public sealed record OwnVoiceRecordRequest(string? Owner, int? Device);
+
+/// <summary>Keep the recording as the own voice: the text read, the permission and the roles it may speak in (presenter, news, weather).</summary>
+public sealed record OwnVoiceSaveRequest(string? Owner, string? Text, bool Consent, string? Uses);
+
+/// <summary>How the Higgs voice server is started. The command can only be changed on the studio computer itself.</summary>
+public sealed record HiggsServerSettingsDto(bool AutoStart, string BaseUrl, string Command, string Arguments, string WorkingDirectory,
+    bool CommandEditable = true);
 
 /// <summary>Online voice keys (masked when read) and the speech check settings.</summary>
 public sealed record VoiceServicesDto(string ElevenLabsKey, string ElevenLabsModel, string AzureKey, string AzureRegion, bool CheckEnabled,
@@ -349,13 +385,14 @@ public sealed record VoiceTrackStartRequest(long BeforeId, double Preroll, int? 
 
 /// <summary>
 /// A news block. Timing "hard" or "soft"; Source "folder" (newest file in Folder, at most MaxAgeMinutes old),
-/// "category" or "headlines" (Feeds, one URL per line, read out by the AI voice). When and Next are filled in by the engine.
+/// "category", "headlines" (Feeds, one URL per line, read out by the AI voice), "ainews" (national Feeds and regional
+/// feeds rewritten by the language model) or "weather" (a weather report for Ai.Place). When and Next are filled in by the engine.
 /// </summary>
 public sealed record NewsBlockDto(long Id, string Name, bool Enabled, int Days, string Hours, int Minute, int Second, string Timing,
     long? OpenerId, long? CloserId, string Source, string Folder, int MaxAgeMinutes, long? CategoryId, string Feeds, int MaxHeadlines,
-    string? When = null, DateTime? Next = null);
+    string? When = null, DateTime? Next = null, NewsAiOptionsDto? Ai = null);
 
-/// <summary>A hardware device. Kind "midi", "serial", "livewire" or "ember"; Port is the MIDI name, COM port or host[:port].</summary>
+/// <summary>A hardware device. Kind "midi", "serial", "livewire", "ember" or "mackie" (Mackie Control surface); Port is the MIDI name, COM port or host[:port].</summary>
 public sealed record HwDeviceDto(long Id, string Name, bool Enabled, string Kind, string Port, int Baud, string Password,
     bool Connected = false, string Status = "");
 
@@ -372,6 +409,25 @@ public sealed record HwEventDto(DateTime Time, long DeviceId, string Device, str
 public sealed record HwEmberItemDto(string Path, string Identifier, string Description, bool IsNode, string Value, string Type, bool Writable);
 
 public sealed record HwPortsDto(List<string> Midi, List<string> Serial);
+
+/// <summary>
+/// Choices for Mackie Control surfaces: the channel on the master fader ("" = none), transport buttons, meters, which
+/// devices are extenders (eight strips more, e.g. iCON V1-X) and whether those stand left of the main panel.
+/// </summary>
+public sealed record MackieSettingsDto(string MasterStrip, bool Transport, bool Meters, List<long>? Extenders = null, bool ExtendersLeft = false);
+
+/// <summary>A mixer channel a Mackie surface can show, in strip order.</summary>
+public sealed record MackieChannelDto(string Id, string Name);
+
+/// <summary>A Mackie Control surface: whether it is connected and which channels are on its strips (Bank = first, from 0).</summary>
+public sealed record MackieDeviceDto(long Id, string Name, string Port, bool Connected, string Status, int Bank, bool Extender = false);
+
+/// <summary>The Mackie Control set-up and what happened lately (newest first).</summary>
+public sealed record MackieDto(MackieSettingsDto Settings, IReadOnlyList<MackieChannelDto> Channels, IReadOnlyList<MackieDeviceDto> Devices,
+    IReadOnlyList<string> Recent);
+
+/// <summary>Messages as if a surface sent them: hex bytes, several separated by commas ("90 10 7F, E0 00 40").</summary>
+public sealed record MackieSimulateRequest(long DeviceId, string Messages);
 
 /// <summary>A DJ function a controller can operate. Kind: button, absolute (fader, knob) or relative (jog wheel).</summary>
 public sealed record DjMidiControlDto(string Id, string Name, string Group, string Kind);
@@ -464,7 +520,21 @@ public sealed record AdPlayDto(long Id, string Advertiser, string Campaign, stri
 public sealed record AdPreviewDto(List<string> Lines, double Seconds, string? Problem);
 
 /// <summary>What a news block would play now: the parts in order, or the problem that would make it skip.</summary>
-public sealed record NewsCheckDto(bool Ok, List<string> Parts, string? Problem, string? Script);
+public sealed record NewsCheckDto(bool Ok, List<string> Parts, string? Problem, string? Script, string? Note = null, double? Seconds = null);
+
+/// <summary>
+/// AI news and weather settings of a news block. RegionalFeeds: one URL per line (national ones are in Feeds);
+/// Words: length of the bulletin; BedId: a library item under the voice; VoiceId: a voice profile (null = default).
+/// </summary>
+public sealed record NewsAiOptionsDto(string RegionalFeeds = "", int RegionalCount = 3, bool RegionalFirst = false, int Words = 120,
+    bool Attribution = true, int MaxAgeHours = 6, long? BedId = null, long? VoiceId = null, string Place = "", double Latitude = 0,
+    double Longitude = 0);
+
+/// <summary>A place found by name (for the weather report).</summary>
+public sealed record PlaceDto(string Name, string Region, double Latitude, double Longitude);
+
+/// <summary>Try a news block: Speak renders it with the voice and loads it into PFL (Play: and starts it).</summary>
+public sealed record NewsTryRequest(NewsBlockDto Block, bool Speak = false, bool Play = false);
 
 /// <summary>Transition editor: a point on a volume line (seconds in the item's own time, linear gain 0..1.5).</summary>
 public sealed record EnvelopePointDto(double Seconds, double Gain);
@@ -654,3 +724,14 @@ public sealed record AdReportLineDto(string Advertiser, string Campaign, int Pla
 {
     public string Text => $"{Aired}× uitgezonden ({Complete} volledig){(Missed > 0 ? $", {Missed} gemist" : "")} · {SecondsOnAir / 60:0.0} min";
 }
+
+// ---------------------------------------------------------------- main and backup studio
+
+/// <summary>What an engine tells the other studio: healthy, something playing, silence on air, and whether it took the air over.</summary>
+public sealed record FailoverBeatDto(string Station, string Role, bool Healthy, bool Playing, bool Silent, bool HasAir, DateTime TimeUtc);
+
+/// <summary>Role "uit", "hoofd" or "reserve"; State in words; Partner = what the other engine said last (null = no answer).</summary>
+public sealed record FailoverStatusDto(string Role, string PartnerUrl, string State, bool HasAir, DateTime? LastAnswerUtc, FailoverBeatDto? Partner, string? Error);
+
+public sealed record FailoverSettingsDto(string Role, string Partner, int IntervalSeconds, int LostSeconds, bool TakeOverOnSilence,
+    bool GiveBackAutomatically, int GiveBackSeconds, bool StartStream, string OnTakeOver, string OnGiveBack);

@@ -27,9 +27,9 @@ public static class FilesApi
                     ids.TryGetValue(e.Path, out var id) ? id : null)).ToList(), l.Error);
         });
 
-        g.MapPost("/log", async (FileRequest r, PlayoutLog log, MediaLibrary library) =>
+        g.MapPost("/log", async (FileRequest r, PlayoutLog log, MediaLibrary library, MetadataService meta) =>
         {
-            if (await LoadAsync(r.Path, library) is not { } media) return Results.BadRequest("Geen afspeelbaar audiobestand.");
+            if (await LoadAsync(r.Path, library, meta) is not { } media) return Results.BadRequest("Geen afspeelbaar audiobestand.");
             var item = new LogItem { Type = media.Kind == MediaKind.Song ? LogItemType.Song : LogItemType.Jingle, Media = media, Origin = "verkenner" };
             log.Insert(Math.Clamp(r.Position ?? log.Count, 0, log.Count), item);
             return Results.Ok(new { item.Id });
@@ -44,17 +44,36 @@ public static class FilesApi
         });
     }
 
-    /// <summary>The library item of the file, or the file analysed on the spot; null when it is not a readable audio file.</summary>
-    public static async Task<MediaItem?> LoadAsync(string? path, MediaLibrary library)
+    /// <summary>
+    /// The library item of the file. With <paramref name="meta"/> (putting it on the log) a file that is not in the library
+    /// yet is added (see <see cref="MediaLibrary.AddLoose"/>) so it gets its cover and details, and a song is looked up online
+    /// right away; without (pre-listening while browsing) it is only analysed. Null when it is not a readable audio file.
+    /// </summary>
+    public static async Task<MediaItem?> LoadAsync(string? path, MediaLibrary library, MetadataService? meta = null)
     {
         if (string.IsNullOrWhiteSpace(path) || !FileBrowser.IsAudio(path) || !File.Exists(path)) return null;
-        if (library.FindByPath(path) is { } known) return known;
+        if (library.FindByPath(path) is { } known) { meta?.OnPlayed(known); return known; }
         try
         {
-            var m = await Task.Run(() => library.Load(path, MediaKind.Song));
-            if (m.Duration <= 0) return null;
-            return m.Duration < JingleSeconds ? m with { Kind = MediaKind.Jingle } : m;
+            if (meta is null)
+            {
+                var a = await Task.Run(() => library.Load(path, MediaKind.Song));
+                if (a.Duration <= 0) return null;
+                return a.Duration < JingleSeconds ? a with { Kind = MediaKind.Jingle } : a;
+            }
+            var kind = QuickDuration(path) is double d and > 0 and < JingleSeconds ? MediaKind.Jingle : MediaKind.Song;
+            var m = await Task.Run(() => library.AddLoose(path, kind));
+            if (m is null || m.Duration <= 0) return null;
+            meta.OnPlayed(m);
+            return m;
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException) { return null; }
+    }
+
+    /// <summary>The length from the file header (no decoding); null when it cannot be read.</summary>
+    private static double? QuickDuration(string path)
+    {
+        try { using var f = TagLib.File.Create(path); return f.Properties?.Duration.TotalSeconds; }
+        catch (Exception) { return null; }
     }
 }

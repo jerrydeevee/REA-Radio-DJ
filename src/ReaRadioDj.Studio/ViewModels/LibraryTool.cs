@@ -41,7 +41,12 @@ public sealed partial class LibraryTool : StudioTool
 
     public LibraryTool() : base("library", "Bibliotheek") { }
 
-    public ObservableCollection<MediaDto> Items { get; } = [];
+    /// <summary>The rows; a new search replaces the whole collection (see <see cref="Refresh"/>).</summary>
+    [ObservableProperty] private ObservableCollection<MediaDto> _items = [];
+    private bool _refilling;
+    /// <summary>"--library &lt;text&gt;" at start: search for it and select the first row (screenshots).</summary>
+    public static string? StartSearch;
+    private bool _selectFirst;
     public ObservableCollection<CategoryChoice> CategoryChoices { get; } = [];
     public ObservableCollection<FilterChip> Chips { get; } = [];
     public ObservableCollection<SearchHelpDto> HelpLines { get; } = [];
@@ -435,6 +440,7 @@ public sealed partial class LibraryTool : StudioTool
     partial void OnCategoryChanged(CategoryChoice? value) { if (!_applyingList) Refresh(); }
     partial void OnSelectedChanged(MediaDto? value)
     {
+        if (_refilling && value is null) return;   // a refill briefly clears the selection
         if (value is not null) Hub.SelectedMedia = value;
         if (ShowDetails && value is not null && Detail?.Id != value.Id) Detail = new MediaDetailVm(this, value);
         else if (value is null) Detail = null;
@@ -461,6 +467,7 @@ public sealed partial class LibraryTool : StudioTool
         OnPropertyChanged(nameof(Sort)); OnPropertyChanged(nameof(DoubleClick));
         Hub.LibraryChanged += () => { FillCategories(); Refresh(); _ = LoadFoldersAsync(); _ = LoadListsAsync(); _ = LoadUndoAsync(); };
         FillCategories();
+        if (StartSearch is { } start) { StartSearch = null; _selectFirst = true; Query = start; }
         Refresh();
         _ = LoadFoldersAsync();
         _ = LoadListsAsync();
@@ -507,10 +514,19 @@ public sealed partial class LibraryTool : StudioTool
             Avalonia.Threading.Dispatcher.UIThread.Post(() =>
             {
                 var keep = Selected?.Id;
-                Items.Clear();
-                foreach (var i in Sorted(items)) Items.Add(i);
-                Selected = Items.FirstOrDefault(i => i.Id == keep);
-                if (Detail is { } d && Items.FirstOrDefault(i => i.Id == d.Id) is { } fresh && fresh != d.Media && ShowDetails) Detail = new MediaDetailVm(this, fresh);
+                // Empty the (multiple) selection first and swap in a new collection: clearing the old one while
+                // several rows were selected threw inside Avalonia's selection, which left the list empty.
+                _refilling = true;
+                try
+                {
+                    Selected = null;
+                    Items = new ObservableCollection<MediaDto>(Sorted(items));
+                    Selected = _selectFirst ? Items.FirstOrDefault() : Items.FirstOrDefault(i => i.Id == keep);
+                    _selectFirst = false;
+                }
+                finally { _refilling = false; }
+                if (Selected is null) Detail = null;
+                if (Detail is { } d && Items.FirstOrDefault(i => i.Id == d.Id) is { } fresh && fresh != d.Media && ShowDetails) Detail = new MediaDetailVm(this, fresh) { SaveText = d.SaveText };
                 int blocked = items.Count(i => !i.Allowed);
                 ResultText = items.Count == 0
                     ? (Query.Length > 0 ? "Niets gevonden. Typ ? voor de zoekmogelijkheden." : "De bibliotheek is leeg.")
@@ -565,6 +581,20 @@ public sealed partial class LibraryTool : StudioTool
     {
         if (Selected is not { } m) return;
         await Hub.Client.PutAsync($"/api/media/{m.Id}", new MediaUpdateRequest(m.CategoryId, !m.Enabled, m.ValidFrom, m.ValidUntil));
+        Refresh();
+        await LoadUndoAsync();
+    }
+
+    /// <summary>The selected rows: music becomes a jingle and a jingle music (each moves to a category of its new kind).</summary>
+    [RelayCommand]
+    private async Task ToggleKind()
+    {
+        var rows = _selection.Count > 0 ? _selection.ToList() : Selected is { } s ? [s] : [];
+        int n = 0;
+        foreach (var m in rows)
+            if (await Hub.Client.SendForAsync<MediaDto>(HttpMethod.Put, $"/api/media/{m.Id}/kind",
+                    new MediaKindRequest(m.Kind == "jingle" ? "song" : "jingle")) is not null) n++;
+        BulkText = n == rows.Count ? $"{n} omgezet (muziek ↔ jingle)." : $"{n} van {rows.Count} omgezet.";
         Refresh();
         await LoadUndoAsync();
     }

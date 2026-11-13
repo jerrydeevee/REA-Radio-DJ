@@ -22,12 +22,29 @@ public static class SystemApi
 
     public static bool Watched => Environment.GetEnvironmentVariable(WatchedVariable) == "1";
 
+    private static FailoverSettingsDto Failover(Core.Studio.FailoverSettings s) => new(s.Role, s.Partner, s.IntervalSeconds, s.LostSeconds,
+        s.TakeOverOnSilence, s.GiveBackAutomatically, s.GiveBackSeconds, s.StartStream, s.OnTakeOver, s.OnGiveBack);
+
     public static void Map(RouteGroupBuilder api, ReaRadioDjOptions options, string[] args)
     {
         api.MapGet("/health", (PlayoutEngine engine) =>
             engine.Healthy ? Results.Ok(new { ok = true }) : Results.Json(new { ok = false, stalled = engine.Stalled }, statusCode: 503));
 
         api.MapGet("/system", (StationDb db) => Dto(options, db, args));
+
+        // main and backup studio: the heartbeat the other engine asks for, the state, settings, and by hand
+        api.MapGet("/failover/beat", (FailoverService f) => f.Beat());
+        api.MapGet("/failover", (FailoverService f) => f.Status());
+        api.MapGet("/failover/settings", (FailoverService f) => Failover(f.Settings));
+        api.MapPut("/failover/settings", (FailoverSettingsDto d, FailoverService f) =>
+            f.Save(new Core.Studio.FailoverSettings
+            {
+                Role = d.Role, Partner = d.Partner, IntervalSeconds = d.IntervalSeconds, LostSeconds = d.LostSeconds, TakeOverOnSilence = d.TakeOverOnSilence,
+                GiveBackAutomatically = d.GiveBackAutomatically, GiveBackSeconds = d.GiveBackSeconds, StartStream = d.StartStream,
+                OnTakeOver = d.OnTakeOver, OnGiveBack = d.OnGiveBack,
+            }) is { } error ? Results.BadRequest(new { error }) : Results.Ok(Failover(f.Settings)));
+        api.MapPost("/failover/takeover", (FailoverService f) => f.TakeOverNow() is { } error ? Results.BadRequest(new { error }) : Results.Ok(f.Status()));
+        api.MapPost("/failover/giveback", (FailoverService f) => f.GiveBackNow() is { } error ? Results.BadRequest(new { error }) : Results.Ok(f.Status()));
 
         api.MapPut("/system", (SystemSettingsRequest body, StationDb db) =>
         {

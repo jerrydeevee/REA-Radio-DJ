@@ -10,6 +10,16 @@ public sealed class StudioSettings
     public string? EnginePath { get; set; }
     public string? EngineWorkingDirectory { get; set; }
     public bool StartEngine { get; set; } = true;
+    /// <summary>The setup helper was finished or skipped, so it does not open by itself again.</summary>
+    public bool SetupDone { get; set; }
+    /// <summary>The DJ mixer shows four decks instead of two.</summary>
+    public bool DjFourDecks { get; set; }
+    /// <summary>Ask GitHub once a day whether a newer version is out (only a notice, nothing is downloaded).</summary>
+    public bool CheckUpdates { get; set; } = true;
+    public DateTime? LastUpdateCheck { get; set; }
+    /// <summary>The newest release seen at the last check, so the notice stays until the studio is updated.</summary>
+    public string? LatestTag { get; set; }
+    public string? LatestUrl { get; set; }
     /// <summary>Colour style: regiekamer, daglicht, dark, night, light, contrast … (see Appearance).</summary>
     public string Theme { get; set; } = "regiekamer";
     /// <summary>Corner shape: square, normal or round.</summary>

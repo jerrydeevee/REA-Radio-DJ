@@ -20,9 +20,20 @@ public sealed class EngineClient : IDisposable
     {
         BaseUri = baseUri;
         _http = new HttpClient { BaseAddress = baseUri, Timeout = TimeSpan.FromSeconds(30) };
+        // A studio on another computer without users at the station: the control password from the environment
+        // (never on the command line, where every program can read it).
+        if (Environment.GetEnvironmentVariable("REA_ENGINE_KEY") is { Length: > 0 } key)
+            _http.DefaultRequestHeaders.Add("X-Rea-Key", key);
     }
 
     public Uri BaseUri { get; }
+
+    /// <summary>The session of the signed-in user, sent with every request (empty = nobody signed in).</summary>
+    public void SetSession(string? token)
+    {
+        _http.DefaultRequestHeaders.Remove(UserRoles.SessionHeader);
+        if (!string.IsNullOrEmpty(token)) _http.DefaultRequestHeaders.Add(UserRoles.SessionHeader, token);
+    }
 
     /// <summary>Raised on a background thread for every state frame.</summary>
     public event Action<StateDto>? StateReceived;

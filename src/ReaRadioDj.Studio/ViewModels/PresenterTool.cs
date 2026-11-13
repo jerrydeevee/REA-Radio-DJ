@@ -371,8 +371,72 @@ public sealed partial class PresenterTool : StudioTool
 
     protected override void OnFirstShow() => _ = LoadAllAsync();
 
+    // ---------------------------------------------------------------- the Higgs voice server
+
+    [ObservableProperty] private bool _higgsAutoStart;
+    [ObservableProperty] private string _higgsUrl = "http://localhost:8001";
+    [ObservableProperty] private string _higgsCommand = "";
+    [ObservableProperty] private string _higgsArguments = "";
+    [ObservableProperty] private string _higgsFolder = "";
+    [ObservableProperty] private bool _higgsEditable = true;
+    [ObservableProperty] private string _higgsState = "Stemserver: controleren…";
+    [ObservableProperty] private bool _higgsOnline;
+    [ObservableProperty] private bool _higgsRunning;
+    [ObservableProperty] private string _higgsResult = "";
+    /// <summary>Online but not started by this engine: it runs elsewhere (by hand, another engine), so no second one.</summary>
+    public bool HiggsElsewhere => HiggsOnline && !HiggsRunning;
+    public string HiggsButtonText => HiggsRunning ? "Server stoppen" : HiggsElsewhere ? "Draait al" : "Server starten";
+    partial void OnHiggsRunningChanged(bool value) { OnPropertyChanged(nameof(HiggsButtonText)); OnPropertyChanged(nameof(HiggsElsewhere)); }
+    partial void OnHiggsOnlineChanged(bool value) { OnPropertyChanged(nameof(HiggsButtonText)); OnPropertyChanged(nameof(HiggsElsewhere)); }
+
+    private async Task LoadHiggsAsync()
+    {
+        if (await Hub.Client.GetAsync<HiggsServerSettingsDto>("/api/voice/server/settings") is { } d)
+        {
+            HiggsAutoStart = d.AutoStart;
+            HiggsUrl = d.BaseUrl;
+            HiggsCommand = d.Command;
+            HiggsArguments = d.Arguments;
+            HiggsFolder = d.WorkingDirectory;
+            HiggsEditable = d.CommandEditable;
+        }
+        await RefreshHiggsAsync();
+    }
+
+    [RelayCommand]
+    private async Task RefreshHiggsAsync()
+    {
+        if (await Hub.Client.GetAsync<VoiceStatusDto>("/api/voice/status") is not { } s) return;
+        HiggsOnline = s.ServerOnline;
+        HiggsRunning = s.ServerRunning;
+        HiggsState = s.ServerOnline ? $"Stemserver online ({s.LatencyMs:0} ms) · {s.Model}"
+            : s.ServerRunning ? "Stemserver start op (het model laden duurt een paar minuten)…"
+            : $"Stemserver offline{(s.FallbackToSapi ? ": tot hij draait spreekt Windows-spraak" : "")}";
+    }
+
+    [RelayCommand]
+    private async Task SaveHiggs()
+    {
+        var (d, error) = await Hub.Client.SendWithErrorAsync<HiggsServerSettingsDto>(HttpMethod.Put, "/api/voice/server/settings",
+            new HiggsServerSettingsDto(HiggsAutoStart, HiggsUrl.Trim(), HiggsCommand.Trim(), HiggsArguments.Trim(), HiggsFolder.Trim()));
+        HiggsResult = error is not null ? $"✕ {error}"
+            : d!.AutoStart ? "✓ Opgeslagen: de stemserver start voortaan mee met de engine."
+            : "✓ Opgeslagen: de stemserver start alleen met de knop.";
+    }
+
+    [RelayCommand]
+    private async Task ToggleHiggs()
+    {
+        if (HiggsElsewhere) { HiggsResult = "De stemserver draait al, buiten deze engine gestart; daar ook stoppen."; return; }
+        var path = HiggsRunning ? "/api/voice/server/stop" : "/api/voice/server/start";
+        if (!HiggsRunning && string.IsNullOrWhiteSpace(HiggsCommand)) { HiggsResult = "✕ Vul eerst het startcommando in en sla op."; return; }
+        await Hub.Client.PostAsync(path);
+        await RefreshHiggsAsync();
+    }
+
     private async Task LoadAllAsync()
     {
+        _ = LoadHiggsAsync();
         await LoadChoicesAsync();
         await LoadSettingsAsync();
         await LoadPersonasAsync(null);

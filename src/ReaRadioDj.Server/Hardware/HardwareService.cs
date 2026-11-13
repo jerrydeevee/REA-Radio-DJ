@@ -13,7 +13,7 @@ namespace ReaRadioDj.Server.Hardware;
 /// lamps, relays and tallies.
 /// </summary>
 public sealed class HardwareService(HardwareStore store, CommandBus bus, PlayoutEngine engine, AudioRouter router, DjMidiService djMidi,
-    Voip.VoipService voip, ILogger<HardwareService> logger)
+    Voip.VoipService voip, MackieService mackie, ILogger<HardwareService> logger)
     : BackgroundService
 {
     private readonly ConcurrentDictionary<long, IHwConnection> _open = new();
@@ -80,7 +80,7 @@ public sealed class HardwareService(HardwareStore store, CommandBus bus, Playout
             catch (Exception ex) { logger.LogError(ex, "Hardware check failed"); }
             try { await Task.Delay(200, ct); } catch (OperationCanceledException) { break; }
         }
-        foreach (var c in _open.Values) c.Dispose();
+        foreach (var (id, c) in _open) { if (c is MackieConnection m) mackie.Detach(id, m.Send); c.Dispose(); }
         _open.Clear();
     }
 
@@ -98,6 +98,7 @@ public sealed class HardwareService(HardwareStore store, CommandBus bus, Playout
         foreach (var (id, c) in _open)
         {
             if (devices.TryGetValue(id, out var d) && d == c.Device && (c.Alive || c.Status == "verbinden…")) continue;
+            if (c is MackieConnection m) mackie.Detach(id, m.Send);
             c.Dispose();
             _open.TryRemove(id, out _);
         }
@@ -109,10 +110,12 @@ public sealed class HardwareService(HardwareStore store, CommandBus bus, Playout
                 HwKind.Midi => new MidiConnection(d, Report),
                 HwKind.Serial => new SerialConnection(d, Report),
                 HwKind.Ember => new EmberConnection(d, Report),
+                HwKind.Mackie => new MackieConnection(d, mackie.Received),
                 _ => new LivewireConnection(d, Report),
             };
             _open[d.Id] = c;
             opened = true;
+            if (c is MackieConnection { Alive: true } surface) mackie.Attach(d.Id, surface.Send);
             if (!c.Alive && c.Status != "verbinden…") logger.LogInformation("Hardware {Name}: {Status}", d.Name, c.Status);
         }
         if (opened || changed)

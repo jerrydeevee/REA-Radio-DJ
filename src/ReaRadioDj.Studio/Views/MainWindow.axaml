@@ -2,6 +2,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:ReaRadioDj.Studio.ViewModels"
         xmlns:ctl="using:ReaRadioDj.Studio.Controls"
+        xmlns:views="using:ReaRadioDj.Studio.Views"
         x:Class="ReaRadioDj.Studio.Views.MainWindow"
         x:DataType="vm:MainWindowViewModel"
         Title="{Binding Station, StringFormat='{}{0} · Studio'}"
@@ -32,27 +33,18 @@
             <MenuItem Header="Alle overlays stoppen" Command="{Binding StopOverlaysCommand}" />
             <Separator />
             <MenuItem Header="Ga naar venster…" InputGesture="Ctrl+K" Command="{Binding OpenGoToCommand}" />
-            <MenuItem Header="Instellingen…" Command="{Binding ShowWindowCommand}" CommandParameter="settings" />
-        <MenuItem Header="Bediening en sneltoetsen…" Command="{Binding ShowWindowCommand}" CommandParameter="control" />
+            <MenuItem Header="Instellingen…" Command="{Binding ShowWindowCommand}" CommandParameter="settings" IsEnabled="{Binding Hub.IsAdmin}" />
+            <MenuItem Header="Inrichthulp…" Command="{Binding OpenSetupCommand}" IsEnabled="{Binding Hub.IsAdmin}" />
+            <MenuItem Header="Bediening en sneltoetsen…" Command="{Binding ShowWindowCommand}" CommandParameter="control" IsEnabled="{Binding Hub.IsTechnician}" />
+            <Separator />
+            <MenuItem Header="Aanmelden…" Command="{Binding Session.ShowSignInScreenCommand}" />
+            <MenuItem Header="Afmelden" Command="{Binding Session.SignOutCommand}"
+                      IsVisible="{Binding Hub.UserName, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+            <MenuItem Header="Studio vergrendelen" InputGesture="Ctrl+L" Command="{Binding Session.LockCommand}" />
           </MenuItem>
-          <MenuItem Header="_Vensters" ItemsSource="{Binding WindowMenu}" Command="{x:Null}" CommandParameter="{x:Null}">
-            <MenuItem.Styles>
-              <Style Selector="MenuItem" x:DataType="vm:WindowEntry">
-                <Setter Property="Header" Value="{Binding Name}" />
-                <Setter Property="Command" Value="{Binding $parent[Window].DataContext.ShowWindowCommand}" />
-                <Setter Property="CommandParameter" Value="{Binding Id}" />
-              </Style>
-            </MenuItem.Styles>
-          </MenuItem>
-          <MenuItem Header="_Zwevend" ItemsSource="{Binding WindowMenu}" Command="{x:Null}" CommandParameter="{x:Null}">
-            <MenuItem.Styles>
-              <Style Selector="MenuItem" x:DataType="vm:WindowEntry">
-                <Setter Property="Header" Value="{Binding Name}" />
-                <Setter Property="Command" Value="{Binding $parent[Window].DataContext.FloatWindowCommand}" />
-                <Setter Property="CommandParameter" Value="{Binding Id}" />
-              </Style>
-            </MenuItem.Styles>
-          </MenuItem>
+          <!-- Filled in code (MainWindow.axaml.cs) from DockFactory.Groups: one submenu per group. -->
+          <MenuItem x:Name="WindowsMenu" Header="_Vensters" />
+          <MenuItem x:Name="FloatMenu" Header="_Zwevend" ToolTip.Tip="Een venster als los, zwevend venster openen" />
           <MenuItem Header="_Werkbladen" ItemsSource="{Binding ScreenMenu}" Command="{x:Null}" CommandParameter="{x:Null}"
                     ToolTip.Tip="Een werkblad is een extra studiovenster op een scherm naar keuze; sleep er vensters heen. Het wordt bewaard met de indeling.">
             <MenuItem.Styles>
@@ -80,6 +72,7 @@
           </MenuItem>
           <MenuItem Header="I_nfo">
             <MenuItem Header="Over REA-Radio-DJ…" Click="OnAbout" />
+            <MenuItem Header="Zoeken naar updates…" Command="{Binding CheckUpdatesCommand}" />
             <Separator />
             <MenuItem Header="Broncode op GitHub" Click="OnSource" />
             <MenuItem Header="Licentie en onderdelen" Click="OnLicense" />
@@ -103,6 +96,8 @@
                     ToolTip.Tip="Kies een opgeslagen indeling" />
         </StackPanel>
         <StackPanel Grid.Column="5" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center" ToolTip.Tip="{Binding Hub.ConnectionText}">
+          <Button Classes="small" Content="{Binding Hub.UserText}" IsVisible="{Binding Hub.UsersActive}" Command="{Binding Session.ShowSignInScreenCommand}"
+                  Margin="0,0,8,0" ToolTip.Tip="Wie is aangemeld in deze studio. Klik om je (als iemand anders) aan te melden; Ctrl+L vergrendelt." />
           <Ellipse Width="10" Height="10" Fill="{Binding Hub.Connected, Converter={x:Static vm:Brushes.Connection}}" />
           <TextBlock x:Name="ConnectionText" Classes="muted" FontSize="13" Text="{Binding Hub.ConnectionText}" VerticalAlignment="Center" />
         </StackPanel>
@@ -118,6 +113,8 @@
           <TextBox Text="{Binding NewLayoutName}" Watermark="naam nieuwe indeling" Width="170" FontSize="12" MinHeight="24" Padding="4,2" />
           <Button Classes="small" Content="Opslaan" Command="{Binding SaveLayoutCommand}" />
         </StackPanel>
+        <Button DockPanel.Dock="Right" Classes="small primary" Content="{Binding UpdateText}" Command="{Binding OpenUpdateCommand}" IsVisible="{Binding HasUpdate}"
+                Margin="0,0,12,0" ToolTip.Tip="Opent de pagina van deze uitgave op GitHub. Er wordt niets vanzelf gedownload of geïnstalleerd." />
         <TextBlock Classes="muted" Text="{Binding StatusLine}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
       </DockPanel>
     </Border>
@@ -226,9 +223,8 @@
             </StackPanel>
           </Button>
         </StackPanel>
-        <StackPanel Grid.Column="4" Width="72" VerticalAlignment="Center" Spacing="4" Margin="16,0,0,0" ToolTip.Tip="Niveau van het programma, links en rechts">
-          <ProgressBar Value="{Binding LevelLeft}" Maximum="100" MinHeight="6" MinWidth="0" Foreground="{DynamicResource OkBrush}" />
-          <ProgressBar Value="{Binding LevelRight}" Maximum="100" MinHeight="6" MinWidth="0" Foreground="{DynamicResource OkBrush}" />
+        <StackPanel Grid.Column="4" Width="96" VerticalAlignment="Center" Spacing="4" Margin="16,0,0,0" ToolTip.Tip="Niveau van het programma, links en rechts (dBFS; oranje vanaf -9, rood vanaf -3)">
+          <ctl:LevelMeter Left="{Binding LevelLeft}" Right="{Binding LevelRight}" FullScale="100" Height="14" />
           <TextBlock Text="{Binding LufsText}" FontSize="11" Foreground="{DynamicResource MutedTextBrush}" HorizontalAlignment="Center" ToolTip.Tip="{Binding LufsTip}" />
         </StackPanel>
         <Border Grid.Column="5" BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1,0,0,0" Padding="16,0,0,0" Margin="16,0,0,0">
@@ -296,6 +292,36 @@
         <TextBlock Foreground="{DynamicResource WarnBrush}" Text="{Binding PlaceResult}" VerticalAlignment="Center" TextWrapping="Wrap" />
       </StackPanel>
     </StackPanel>
+  </Border>
+
+  <!-- First start: the setup helper over the whole studio. -->
+  <views:SetupView DataContext="{Binding Setup}" IsVisible="{Binding IsOpen}" />
+
+  <!-- Signing in and the studio lock: over everything; the broadcast goes on, this studio waits for a name and PIN. -->
+  <Border IsVisible="{Binding Session.Open}" Background="{DynamicResource AppBrush}">
+    <Border HorizontalAlignment="Center" VerticalAlignment="Center" Width="400"
+            Background="{DynamicResource CardBrush}" BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1"
+            CornerRadius="{DynamicResource Radius10}" Padding="24" BoxShadow="0 12 32 0 #66000000">
+      <StackPanel Spacing="10">
+        <TextBlock Text="{Binding Station}" Classes="muted" />
+        <TextBlock Text="{Binding Session.Title}" FontSize="22" FontWeight="Bold" />
+        <TextBlock Classes="muted" TextWrapping="Wrap"
+                   Text="De uitzending gaat gewoon door. Meld je aan met je eigen naam en pincode." />
+        <TextBlock Classes="lbl" Text="NAAM" Margin="0,6,0,0" />
+        <ComboBox ItemsSource="{Binding Session.Names}" SelectedItem="{Binding Session.Name}" IsEnabled="{Binding !Session.Locked}"
+                  HorizontalAlignment="Stretch" MinHeight="36" />
+        <TextBlock Classes="lbl" Text="PINCODE" />
+        <TextBox x:Name="PinBox" PasswordChar="●" Text="{Binding Session.Pin}" MinHeight="36" FontSize="16" />
+        <TextBlock Foreground="{DynamicResource WarnBrush}" Text="{Binding Session.Error}" TextWrapping="Wrap"
+                   IsVisible="{Binding Session.Error, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+        <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,6,0,0">
+          <Button Classes="primary" Content="{Binding Session.ActionText}" Command="{Binding Session.SignInCommand}" IsDefault="True"
+                  IsEnabled="{Binding !Session.Busy}" />
+          <Button Content="Andere gebruiker" Command="{Binding Session.OtherUserCommand}" IsVisible="{Binding Session.Locked}" />
+          <Button Content="Annuleren" Command="{Binding Session.CloseCommand}" IsVisible="{Binding Session.CanClose}" />
+        </StackPanel>
+      </StackPanel>
+    </Border>
   </Border>
   </Panel>
   </LayoutTransformControl>

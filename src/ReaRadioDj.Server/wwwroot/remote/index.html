@@ -1,0 +1,381 @@
+<!doctype html>
+<html lang="nl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#111418">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <title>REA-Radio-DJ op afstand</title>
+  <style>
+    :root {
+      --bg: #f4f5f7; --panel: #ffffff; --line: #d9dde3; --text: #15181d; --muted: #5c6470;
+      --accent: #1f6feb; --air: #d1242f; --ok: #1a7f37; --warn: #9a6700; --pad: #e9edf2;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root:not([data-theme="light"]) {
+        --bg: #111418; --panel: #1a1f25; --line: #2c333c; --text: #e8ebef; --muted: #98a1ad;
+        --accent: #4c8dff; --air: #ff4d57; --ok: #3fb950; --warn: #d29922; --pad: #252c34;
+      }
+    }
+    * { box-sizing: border-box; }
+    [hidden] { display: none !important; }
+    html, body { margin: 0; background: var(--bg); color: var(--text); font: 16px/1.35 system-ui, "Segoe UI", sans-serif; }
+    body { padding: 0 16px calc(76px + env(safe-area-inset-bottom)); max-width: 900px; margin: 0 auto; }
+    header { position: sticky; top: 0; z-index: 2; background: var(--bg); display: flex; align-items: center; gap: 12px; padding: 12px 0 10px; }
+    .station { font-weight: 650; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .clock { font-variant-numeric: tabular-nums; font-size: 22px; font-weight: 600; }
+    .air { border-radius: 6px; padding: 4px 10px; font-weight: 700; font-size: 13px; letter-spacing: .04em; border: 1px solid var(--line); color: var(--muted); }
+    .air.on { background: var(--air); border-color: var(--air); color: #fff; }
+    .lost { display: none; background: var(--warn); color: #000; border-radius: 6px; padding: 8px 12px; margin-bottom: 10px; }
+    .lost.show { display: block; }
+    section { display: none; }
+    section.active { display: block; }
+    .card { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 14px; margin-bottom: 12px; }
+    h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin: 0 0 8px; font-weight: 600; }
+    .now-title { font-size: 24px; font-weight: 650; overflow-wrap: anywhere; }
+    .now-artist { color: var(--muted); font-size: 18px; overflow-wrap: anywhere; }
+    .bar { height: 10px; background: var(--pad); border-radius: 5px; overflow: hidden; margin: 12px 0 6px; position: relative; }
+    .bar > i { position: absolute; inset: 0 auto 0 0; background: var(--accent); width: 0; }
+    .times { display: flex; justify-content: space-between; color: var(--muted); font-variant-numeric: tabular-nums; }
+    .big { font-size: 34px; font-weight: 700; color: var(--text); font-variant-numeric: tabular-nums; }
+    .big.soon { color: var(--air); }
+    .vu { display: grid; gap: 4px; margin-top: 10px; }
+    .vu div { height: 6px; background: var(--pad); border-radius: 3px; overflow: hidden; }
+    .vu i { display: block; height: 100%; width: 0; background: var(--ok); }
+    ol { list-style: none; margin: 0; padding: 0; }
+    ol li { display: flex; gap: 10px; padding: 8px 0; border-top: 1px solid var(--line); align-items: baseline; }
+    ol li:first-child { border-top: 0; }
+    .at { font-variant-numeric: tabular-nums; color: var(--muted); min-width: 64px; }
+    .what { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+    .what small { display: block; color: var(--muted); }
+    .len { color: var(--muted); font-variant-numeric: tabular-nums; }
+    .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+    .chip { border: 1px solid var(--line); border-radius: 999px; padding: 4px 10px; font-size: 14px; color: var(--muted); }
+    .chip.on { border-color: var(--ok); color: var(--ok); }
+    .chip.bad { border-color: var(--air); color: var(--air); }
+    .msg { padding: 6px 0; border-top: 1px solid var(--line); font-size: 14px; }
+    .msg:first-child { border-top: 0; }
+    .msg.warning { color: var(--warn); } .msg.error { color: var(--air); }
+    .msg time { color: var(--muted); margin-right: 6px; font-variant-numeric: tabular-nums; }
+    .controls { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+    button { font: inherit; color: var(--text); background: var(--pad); border: 1px solid var(--line); border-radius: 10px; padding: 18px 10px; min-height: 64px; cursor: pointer; touch-action: manipulation; }
+    button:active { filter: brightness(.92); }
+    button.primary { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 650; }
+    button.live { background: var(--air); border-color: var(--air); color: #fff; }
+    button.wide { grid-column: 1 / -1; }
+    .walls { display: flex; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; }
+    .walls button { min-height: 44px; padding: 8px 14px; }
+    .walls button.sel { border-color: var(--accent); color: var(--accent); font-weight: 650; }
+    .pads { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 8px; }
+    .pad { min-height: 84px; text-align: left; padding: 10px; display: flex; flex-direction: column; justify-content: space-between; overflow: hidden; }
+    .pad span { overflow-wrap: anywhere; }
+    .pad small { color: var(--muted); font-variant-numeric: tabular-nums; }
+    .pad.playing { outline: 3px solid var(--air); }
+    .pad.empty { opacity: .45; }
+    nav { position: fixed; left: 0; right: 0; bottom: 0; display: flex; background: var(--panel); border-top: 1px solid var(--line); padding-bottom: env(safe-area-inset-bottom); }
+    nav button { flex: 1; border: 0; border-radius: 0; background: transparent; min-height: 60px; color: var(--muted); }
+    nav button.sel { color: var(--accent); font-weight: 650; }
+    dialog { border: 1px solid var(--line); border-radius: 12px; background: var(--panel); color: var(--text); width: min(360px, calc(100vw - 32px)); }
+    dialog input { font: inherit; width: 100%; padding: 12px; margin: 6px 0 12px; border-radius: 8px; border: 1px solid var(--line); background: var(--bg); color: var(--text); }
+    .row { display: flex; gap: 8px; } .row button { flex: 1; min-height: 48px; padding: 10px; }
+    .err { color: var(--air); min-height: 1.4em; }
+    .hint { color: var(--muted); font-size: 14px; }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="station" id="station">REA-Radio-DJ</div>
+    <div class="air" id="air">OFF AIR</div>
+    <div class="clock" id="clock">--:--</div>
+  </header>
+  <div class="lost" id="lost">Geen verbinding met de engine; opnieuw proberen…</div>
+
+  <section id="tab-watch" class="active">
+    <div class="card">
+      <h2>Nu op de radio</h2>
+      <div class="now-title" id="nowTitle">—</div>
+      <div class="now-artist" id="nowArtist"></div>
+      <div class="bar"><i id="progress"></i></div>
+      <div class="times"><span id="pos">0:00</span><span id="len">0:00</span></div>
+      <div class="times" style="margin-top:8px;align-items:baseline"><span>volgende over</span><span class="big" id="toNext">—</span></div>
+      <div class="vu" aria-label="Uitgangsniveau"><div><i id="vuL"></i></div><div><i id="vuR"></i></div></div>
+    </div>
+    <div class="card">
+      <h2>Straks</h2>
+      <ol id="upcoming"></ol>
+    </div>
+    <div class="card">
+      <h2>Stand</h2>
+      <div class="chips" id="chips"></div>
+    </div>
+    <div class="card">
+      <h2>Meldingen</h2>
+      <div id="messages"><div class="hint">Nog geen meldingen.</div></div>
+    </div>
+  </section>
+
+  <section id="tab-control">
+    <div class="card">
+      <h2>Bediening</h2>
+      <div class="controls">
+        <button class="primary wide" id="bNext">⏵ Start volgende</button>
+        <button id="bAuto">Automatisch</button>
+        <button id="bSkip">⏭ Overslaan</button>
+        <button id="bMic">🎤 Microfoon</button>
+        <button id="bCartsStop">■ Carts stoppen</button>
+        <button class="wide" id="bStop">■ Uitzending stoppen</button>
+      </div>
+      <p class="hint" id="whoami"></p>
+    </div>
+  </section>
+
+  <section id="tab-carts">
+    <div class="walls" id="walls"></div>
+    <div class="pads" id="pads"></div>
+  </section>
+
+  <nav id="nav">
+    <button data-tab="watch" class="sel">Bewaken</button>
+    <button data-tab="control">Bedienen</button>
+    <button data-tab="carts">Carts</button>
+  </nav>
+
+  <dialog id="login">
+    <form method="dialog" id="loginForm">
+      <h2>Aanmelden</h2>
+      <p class="hint" id="lHint">Deze handeling vraagt om een gebruiker van de studio.</p>
+      <div id="lUser">
+        <label>Naam<input id="lName" autocomplete="username"></label>
+        <label>Pincode<input id="lPin" type="password" inputmode="numeric" autocomplete="current-password"></label>
+      </div>
+      <div id="lKeyBox" hidden>
+        <label>Bedieningswachtwoord<input id="lKey" type="password" autocomplete="current-password"></label>
+      </div>
+      <div class="err" id="lErr"></div>
+      <div class="row"><button value="cancel" type="button" id="lCancel">Annuleren</button><button class="primary" id="lOk">Aanmelden</button></div>
+    </form>
+  </dialog>
+
+<script>
+"use strict";
+// REA-Radio-DJ on a phone or tablet: watch what is on air and what comes next; start, skip and fire carts.
+// Reading is open; an action the engine guards asks for a name and pin once (kept for this browser tab only).
+const $ = (id) => document.getElementById(id);
+const params = new URLSearchParams(location.search);
+const watchOnly = params.get("alleen") === "kijken";
+const store = {
+  get(k) { try { return sessionStorage.getItem(k); } catch { return null; } },
+  set(k, v) { try { v == null ? sessionStorage.removeItem(k) : sessionStorage.setItem(k, v); } catch { } },
+};
+const fmt = (s) => {
+  if (s == null || !isFinite(s)) return "—";
+  s = Math.max(0, Math.round(s));
+  const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), r = String(s % 60).padStart(2, "0");
+  return h ? `${h}:${String(m).padStart(2, "0")}:${r}` : `${m}:${r}`;
+};
+const hhmm = (iso) => iso ? new Date(iso).toLocaleTimeString("nl-NL", { hour: "2-digit", minute: "2-digit", second: "2-digit" }) : "";
+const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
+const typeName = { song: "Muziek", jingle: "Jingle", aiBreak: "AI-break", voiceTrack: "Voicetrack", ad: "Reclame", news: "Nieuws" };
+
+// ---- actions, with sign-in when the engine asks for it
+async function act(method, url, body) {
+  const headers = {};
+  const token = store.get("rea-session"), key = store.get("rea-key");
+  if (token) headers["X-Rea-Session"] = token;
+  if (key) headers["X-Rea-Key"] = key;
+  if (body !== undefined) headers["Content-Type"] = "application/json";
+  const res = await fetch(url, { method, headers, body: body === undefined ? undefined : JSON.stringify(body) });
+  if (res.status === 401) {
+    store.set("rea-session", null);
+    store.set("rea-key", null);
+    if (await signIn()) return act(method, url, body);
+    return res;
+  }
+  if (!res.ok) flash(await res.text().catch(() => "") || `Niet gelukt (${res.status})`);
+  return res;
+}
+
+async function signIn() {
+  // With users at the station: name and pin. Without: the control password from the remote-control settings.
+  const me = await fetch("/api/users/me").then((r) => r.ok ? r.json() : null).catch(() => null);
+  const users = !me || me.active;
+  $("lUser").hidden = !users;
+  $("lKeyBox").hidden = users;
+  $("lHint").textContent = users ? "Vanaf dit apparaat vraagt de engine om een gebruiker van de studio."
+    : "Vanaf dit apparaat vraagt de engine om het bedieningswachtwoord (Instellingen › Op afstand).";
+  return new Promise((resolve) => {
+    const d = $("login");
+    $("lErr").textContent = "";
+    $("lCancel").onclick = () => { d.close(); resolve(false); };
+    $("loginForm").onsubmit = async (e) => {
+      e.preventDefault();
+      if (!users) {
+        // Tried with the next action: a wrong password brings this question back.
+        store.set("rea-key", $("lKey").value);
+        $("lKey").value = "";
+        d.close();
+        showWho("met het bedieningswachtwoord");
+        resolve(true);
+        return;
+      }
+      const res = await fetch("/api/users/login", { method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: $("lName").value.trim(), pin: $("lPin").value }) });
+      if (!res.ok) { $("lErr").textContent = (await res.json().catch(() => null)) || "Aanmelden lukt niet."; return; }
+      const s = await res.json();
+      store.set("rea-session", s.token);
+      $("lPin").value = "";
+      d.close();
+      showWho(s.name);
+      resolve(true);
+    };
+    d.showModal();
+  });
+}
+
+function showWho(name) { $("whoami").textContent = name ? `Aangemeld ${name.startsWith("met ") ? name : `als ${name}`}.` : ""; }
+
+let flashTimer;
+function flash(text) {
+  const t = String(text).replace(/^"|"$/g, "");
+  $("lost").textContent = t; $("lost").classList.add("show");
+  clearTimeout(flashTimer);
+  flashTimer = setTimeout(() => { $("lost").classList.remove("show"); $("lost").textContent = "Geen verbinding met de engine; opnieuw proberen…"; }, 4000);
+}
+
+// ---- watching
+let state = null, lastList = "";
+function render(s) {
+  state = s;
+  $("station").textContent = s.station || "REA-Radio-DJ";
+  document.title = `${s.station || "REA-Radio-DJ"} · op afstand`;
+  $("clock").textContent = new Date(s.time).toLocaleTimeString("nl-NL", { hour: "2-digit", minute: "2-digit" });
+  const e = s.engine, cur = e.current;
+  $("air").textContent = cur ? "ON AIR" : "OFF AIR";
+  $("air").classList.toggle("on", !!cur);
+  $("nowTitle").textContent = cur ? (cur.type === "aiBreak" ? "AI-presentator" : cur.title || cur.label) : (e.autoPlay ? "Wachten op materiaal…" : "Live-assist");
+  $("nowArtist").textContent = cur ? (cur.artist || typeName[cur.type] || "") : "";
+  const len = cur ? Math.max(0.1, cur.to - (cur.from || 0)) : 1;
+  const pos = cur ? cur.position - (cur.from || 0) : 0;
+  $("progress").style.width = cur ? `${Math.min(100, (pos / len) * 100)}%` : "0";
+  $("pos").textContent = cur ? fmt(pos) : "0:00";
+  $("len").textContent = cur ? `-${fmt(cur.to - cur.position)}` : "0:00";
+  const toNext = e.secondsToNext;
+  $("toNext").textContent = cur && toNext != null ? fmt(toNext) : "—";
+  $("toNext").classList.toggle("soon", !!cur && toNext != null && toNext < 10);
+  $("vuL").style.width = `${Math.min(100, (e.levelLeft || 0) * 100)}%`;
+  $("vuR").style.width = `${Math.min(100, (e.levelRight || 0) * 100)}%`;
+
+  const listKey = JSON.stringify(s.upcoming.slice(0, 8).map((i) => [i.id, i.startsAt, i.label]));
+  if (listKey !== lastList) {
+    lastList = listKey;
+    $("upcoming").replaceChildren(...s.upcoming.slice(0, 8).map((i) => {
+      const li = el("li");
+      li.append(el("span", "at", hhmm(i.startsAt).slice(0, 5)));
+      const w = el("div", "what", i.type === "aiBreak" ? "AI-presentator" : i.title || i.label);
+      w.append(el("small", null, i.type === "song" ? i.artist || "" : typeName[i.type] || i.type));
+      li.append(w, el("span", "len", fmt(i.length)));
+      return li;
+    }));
+    if (!s.upcoming.length) $("upcoming").append(el("li", "hint", "Niets gepland."));
+  }
+
+  const chips = [
+    [e.autoPlay ? "Automatisch" : "Live-assist", e.autoPlay],
+    [`Microfoon ${s.mixer.mic.open ? "open" : "dicht"}`, s.mixer.mic.open ? "bad" : false],
+    [s.stream.enabled ? (s.stream.connected ? "Stream live" : "Stream valt weg") : "Stream uit", s.stream.enabled ? (s.stream.connected ? true : "bad") : false],
+    [s.dj && s.dj.onAir ? "DJ op de lucht" : null, true],
+    [s.sip && s.sip.enabled ? (s.sip.registration === "registered" ? "SIP aangemeld" : `SIP: ${s.sip.registration}`) : null, s.sip && s.sip.registration === "registered" ? true : "bad"],
+    [`Bibliotheek ${s.library.songs} nummers`, false],
+  ];
+  $("chips").replaceChildren(...chips.filter(([t]) => t).map(([t, k]) => el("span", `chip${k === true ? " on" : k === "bad" ? " bad" : ""}`, t)));
+
+  $("bAuto").textContent = e.autoPlay ? "⏸ Naar live-assist" : "▶ Automatisch";
+  $("bMic").classList.toggle("live", s.mixer.mic.open);
+  $("bMic").disabled = !s.mixer.mic.available;
+  if (s.lastMessageId !== lastMessage) loadMessages();
+}
+
+let lastMessage = 0, messages = [];
+async function loadMessages() {
+  try {
+    const res = await fetch(`/api/messages?since=${lastMessage}`);
+    const list = await res.json();
+    if (!list.length) return;
+    lastMessage = Math.max(lastMessage, ...list.map((m) => m.id));
+    messages = [...list.reverse(), ...messages].slice(0, 12);
+    $("messages").replaceChildren(...messages.map((m) => {
+      const d = el("div", `msg ${String(m.level).toLowerCase()}`);
+      d.append(el("time", null, hhmm(m.time).slice(0, 5)), document.createTextNode(m.text));
+      return d;
+    }));
+  } catch { }
+}
+
+let source, watchdog;
+function connect() {
+  source?.close();
+  source = new EventSource("/api/events");
+  const alive = () => { clearTimeout(watchdog); $("lost").classList.remove("show"); watchdog = setTimeout(() => { $("lost").classList.add("show"); connect(); }, 5000); };
+  source.onmessage = (ev) => { alive(); render(JSON.parse(ev.data)); };
+  source.onerror = () => { $("lost").classList.add("show"); };
+  alive();
+}
+
+// ---- carts
+let wall = Number(store.get("rea-wall")) || 1, padTimer;
+const wallNames = { 1: "Cartwall 1", 2: "Cartwall 2" };
+function renderWalls() {
+  $("walls").replaceChildren(...Object.entries(wallNames).map(([n, name]) => {
+    const b = el("button", Number(n) === wall ? "sel" : "", name);
+    b.onclick = () => { wall = Number(n); store.set("rea-wall", n); renderWalls(); loadPads(); };
+    return b;
+  }));
+}
+async function loadPads() {
+  clearTimeout(padTimer);
+  if (!$("tab-carts").classList.contains("active")) return;
+  try {
+    const pads = (await (await fetch(`/api/carts/${wall}`)).json()).filter((p) => p.page === 0 || p.mediaId != null);
+    $("pads").replaceChildren(...pads.map((p) => {
+      const b = el("button", `pad${p.playing ? " playing" : ""}${p.mediaId == null ? " empty" : ""}`);
+      if (p.color) b.style.borderLeft = `6px solid ${p.color}`;
+      b.append(el("span", null, p.label || p.mediaLabel || (p.mediaId == null ? "leeg" : "—")));
+      b.append(el("small", null, p.playing ? `-${fmt(p.length - p.position)}` : p.length ? fmt(p.length) : ""));
+      b.disabled = p.mediaId == null;
+      b.onclick = () => act("POST", `/api/carts/${p.wall}/${p.slot}/press`).then(loadPads);
+      return b;
+    }));
+  } catch { }
+  padTimer = setTimeout(loadPads, 700);
+}
+
+// ---- tabs and buttons
+function show(tab) {
+  for (const s of document.querySelectorAll("section")) s.classList.toggle("active", s.id === `tab-${tab}`);
+  for (const b of document.querySelectorAll("nav button")) b.classList.toggle("sel", b.dataset.tab === tab);
+  store.set("rea-tab", tab);
+  if (tab === "carts") { renderWalls(); loadPads(); }
+}
+for (const b of document.querySelectorAll("nav button")) b.onclick = () => show(b.dataset.tab);
+if (watchOnly) $("nav").hidden = true;
+
+$("bNext").onclick = () => act("POST", "/api/transport/next");
+$("bSkip").onclick = () => act("POST", "/api/transport/skip");
+$("bAuto").onclick = () => act("POST", "/api/transport/autoplay", { on: !(state && state.engine.autoPlay) });
+$("bMic").onclick = () => act("POST", "/api/mixer/mic/toggle");
+$("bCartsStop").onclick = () => act("POST", "/api/carts/stop");
+$("bStop").onclick = () => { if (confirm("De uitzending echt stoppen?")) act("POST", "/api/transport/stop"); };
+
+// Keep the screen on while watching (where the browser allows it).
+async function keepAwake() { try { await navigator.wakeLock?.request("screen"); } catch { } }
+document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") keepAwake(); });
+
+if (store.get("rea-session")) fetch("/api/users/me", { headers: { "X-Rea-Session": store.get("rea-session") } })
+  .then((r) => r.ok ? r.json() : null).then((s) => showWho(s && s.name)).catch(() => { });
+show(watchOnly ? "watch" : store.get("rea-tab") || "watch");
+connect();
+keepAwake();
+</script>
+</body>
+</html>

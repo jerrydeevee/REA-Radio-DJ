@@ -104,17 +104,58 @@ public sealed class BreakRenderer(
         finally { if (item.BreakState == BreakState.Rendering) item.BreakState = BreakState.Failed; }
     }
 
+    /// <summary>The language model for news and weather bulletins (null when none is set up).</summary>
+    public ITextWriter? TextWriter => llmWriter is ITextWriter { Configured: true } w ? w : null;
+
+    /// <summary>
+    /// Speaks a news or weather bulletin with the block's own voice and its own bed (news tune) under it; the presenter's
+    /// bed and outro jingle are not used, the block has its own opener and closer.
+    /// </summary>
+    public async Task RenderBulletinAsync(LogItem item, string text, string source, string? bedPath, long? voiceId, CancellationToken ct)
+    {
+        item.BreakState = BreakState.Rendering;
+        item.Error = null;
+        item.Script = text;
+        item.ScriptSource = source;
+        try
+        {
+            var bulletin = new Bulletin(bedPath, voiceId);
+            _bulletins[item.Id] = bulletin;   // also when approved later
+            if (options.Presenter.RequireApproval) { item.BreakState = BreakState.AwaitingApproval; return; }
+            await SpeakAsync(item, text, ct, bulletin);
+        }
+        catch (Exception ex) when (!ct.IsCancellationRequested) { Fail(item, ex); }
+        finally { if (item.BreakState == BreakState.Rendering) item.BreakState = BreakState.Failed; }
+    }
+
+    /// <summary>How a bulletin is spoken: its own bed (or none) and voice profile (or the default).</summary>
+    private sealed record Bulletin(string? BedPath, long? VoiceId);
+    private readonly System.Collections.Concurrent.ConcurrentDictionary<long, Bulletin> _bulletins = new();
+
+    /// <summary>Speaks a bulletin to a WAV for a trial (PFL), with the bed under it.</summary>
+    public async Task<string> TryBulletinAsync(string text, string wav, string? bedPath, long? voiceId, CancellationToken ct)
+    {
+        var voice = await RenderBulletinVoiceAsync(text, wav, voiceId, ct);
+        if (bedPath is not null)
+        {
+            BreakMixer.Mix(wav, bedPath);
+            voice += " + bed";
+        }
+        return voice;
+    }
+
     /// <summary>A person approved the script (possibly edited): speak it now.</summary>
     public async Task<bool> ApproveAsync(LogItem item, string? editedScript, CancellationToken ct)
     {
         if (item.Type != LogItemType.AiBreak || item.BreakState is BreakState.Rendering or BreakState.Ready) return false;
-        var script = ScriptSanitizer.Clean(string.IsNullOrWhiteSpace(editedScript) ? item.Script ?? "" : editedScript, options.Presenter.MaxWords * 2);
+        var script = ScriptSanitizer.Clean(string.IsNullOrWhiteSpace(editedScript) ? item.Script ?? "" : editedScript,
+            _bulletins.ContainsKey(item.Id) ? 450 : options.Presenter.MaxWords * 2);   // a bulletin is much longer than a break
         if (script.Length == 0) return false;
         if (!string.Equals(script, item.Script, StringComparison.Ordinal)) item.ScriptSource = "bewerkt";
         item.Script = script;
         item.BreakState = BreakState.Rendering;
         item.Error = null;
-        try { await SpeakAsync(item, script, ct); }
+        try { await SpeakAsync(item, script, ct, _bulletins.TryGetValue(item.Id, out var b) ? b : null); }
         catch (Exception ex) when (!ct.IsCancellationRequested) { Fail(item, ex); }
         finally { if (item.BreakState == BreakState.Rendering) item.BreakState = BreakState.AwaitingApproval; }
         return item.BreakState == BreakState.Ready;
@@ -189,13 +230,14 @@ public sealed class BreakRenderer(
         return (script, source);
     }
 
-    private async Task SpeakAsync(LogItem item, string script, CancellationToken ct)
+    private async Task SpeakAsync(LogItem item, string script, CancellationToken ct, Bulletin? bulletin = null)
     {
         Directory.CreateDirectory(_folder);
         var wav = Path.Combine(_folder, $"break-{DateTime.Now:yyyyMMdd-HHmmss}-{item.Id}.wav");
-        var persona = PersonaOf(item);
+        var persona = bulletin is null ? PersonaOf(item) : null;
         string? tone = item.Extra is { } x && x.StartsWith("theme:", StringComparison.Ordinal) ? x[6..] : null;
-        string voice = await RenderVoiceAsync(script, wav, persona, ct, tone);
+        string voice = bulletin is not null ? await RenderBulletinVoiceAsync(script, wav, bulletin.VoiceId, ct)
+                                            : await RenderVoiceAsync(script, wav, persona, ct, tone);
         item.CheckScore = null;
         if (check is { Enabled: true })
         {
@@ -218,11 +260,25 @@ public sealed class BreakRenderer(
                     item.Error = $"controle: score {r.Score:0.00}";
                     break;
                 }
-                voice = await RenderVoiceAsync(script, wav, persona, ct, tone);
+                voice = bulletin is not null ? await RenderBulletinVoiceAsync(script, wav, bulletin.VoiceId, ct)
+                                             : await RenderVoiceAsync(script, wav, persona, ct, tone);
             }
         }
 
-        if ((persona?.BedCategoryId ?? options.Presenter.BedCategoryId) is long bedCategory)
+        if (bulletin is not null)
+        {
+            if (bulletin.BedPath is { } bedPath)
+                try
+                {
+                    BreakMixer.Mix(wav, bedPath);
+                    voice += $" + bed {Path.GetFileNameWithoutExtension(bedPath)}";
+                }
+                catch (Exception ex) when (ex is InvalidDataException or InvalidOperationException or IOException)
+                {
+                    _log.LogWarning("News bed {Bed} skipped: {Message}", bedPath, ex.Message);
+                }
+        }
+        else if ((persona?.BedCategoryId ?? options.Presenter.BedCategoryId) is long bedCategory)
         {
             var beds = library.InCategory(bedCategory);
             if (beds.Count > 0)
@@ -245,14 +301,15 @@ public sealed class BreakRenderer(
         item.Voice = persona is null ? voice : $"{persona.Name}: {voice}";
         item.Media = media;
         item.BreakState = BreakState.Ready;
-        AddOutro(item);
+        if (bulletin is null) AddOutro(item);
         _log.LogInformation("AI break {Id} ready ({Source} + {Voice}, {Duration:0.0}s): {Script}",
             item.Id, item.ScriptSource, voice, media.CueOut - media.CueIn, script);
     }
 
     /// <summary>Speaks the script with the persona's voice (or the default) and its backups, then post-processes it.</summary>
     /// <param name="tone">A creative break's tone: its own voice (when chosen) and, with Higgs, tone tags.</param>
-    private async Task<string> RenderVoiceAsync(string script, string wav, Persona? persona, CancellationToken ct, string? tone = null)
+    private async Task<string> RenderVoiceAsync(string script, string wav, Persona? persona, CancellationToken ct, string? tone = null,
+        long? voiceId = null)
     {
         string voice;
         try
@@ -260,8 +317,11 @@ public sealed class BreakRenderer(
             if (primaryVoice is ProfileSpeechEngine profiles)
             {
                 var c = options.Presenter.Creative;
-                var profile = tone is not null && c.VoiceId is long creativeId ? profiles.Profile(creativeId) : null;
-                profile ??= persona?.VoiceId is long voiceId ? profiles.Profile(voiceId) : null;
+                var profile = voiceId is long own ? profiles.Profile(own) : null;
+                profile ??= tone is not null && c.VoiceId is long creativeId ? profiles.Profile(creativeId) : null;
+                profile ??= persona?.VoiceId is long personaVoice ? profiles.Profile(personaVoice) : null;
+                // A break is the presenter's role: a voice whose owner did not allow that is passed over.
+                if (voiceId is null && profile is not null && !profile.Allows(VoiceRoles.Presenter)) profile = null;
                 profile ??= profiles.Profile(0) ?? DefaultProfile(profiles);
                 if (tone is not null && c.ToneVoice && profile is { Engine: "higgs" })
                     profile = profile with { Tags = CreativeTones.HiggsTags(tone) };
@@ -296,6 +356,68 @@ public sealed class BreakRenderer(
     }
 
     private static VoiceProfile? DefaultProfile(ProfileSpeechEngine profiles) => profiles.DefaultProfile;
+
+    /// <summary>Most words a bulletin part may have; speech models such as Higgs stop early or ramble on long input.</summary>
+    public const int PartWords = 35;
+
+    /// <summary>
+    /// Speaks a bulletin in parts of whole sentences and joins them with a short pause: a long text in one go can come
+    /// back cut short or with rambling at the end. A text that fits in one part is spoken as it is.
+    /// </summary>
+    private async Task<string> RenderBulletinVoiceAsync(string script, string wav, long? voiceId, CancellationToken ct)
+    {
+        var parts = BulletinParts(script, PartWords);
+        if (parts.Count <= 1) return await RenderVoiceAsync(script, wav, null, ct, voiceId: voiceId);
+
+        var voices = new List<string>();
+        var all = new List<float>();
+        int rate = 0, channels = 0;
+        for (int i = 0; i < parts.Count; i++)
+        {
+            var partWav = $"{wav}.{i}.wav";
+            try
+            {
+                voices.Add(await RenderVoiceAsync(parts[i], partWav, null, ct, voiceId: voiceId));
+                var (r, c, samples) = VoiceProcessor.Read(await File.ReadAllBytesAsync(partWav, ct));
+                if (rate == 0) (rate, channels) = (r, c);
+                else if (r != rate || c != channels)
+                {
+                    // a backup voice with another format took over halfway: speak the whole text in one go after all
+                    _log.LogWarning("Bulletin parts differ in format ({Rate}/{Channels} vs {R}/{C}); speaking in one go", rate, channels, r, c);
+                    return await RenderVoiceAsync(script, wav, null, ct, voiceId: voiceId);
+                }
+                if (all.Count > 0) all.AddRange(new float[(int)(rate * 0.3) * channels]);   // breath between the parts
+                all.AddRange(samples);
+            }
+            finally { try { File.Delete(partWav); } catch (IOException) { } }
+        }
+        await File.WriteAllBytesAsync(wav, VoiceProcessor.Write(rate, channels, all.ToArray()), ct);
+        return $"{string.Join(", ", voices.Distinct())}, {parts.Count} delen";
+    }
+
+    /// <summary>The text in parts of whole sentences of at most <paramref name="maxWords"/> words (a longer sentence stays whole).</summary>
+    public static IReadOnlyList<string> BulletinParts(string text, int maxWords)
+    {
+        var sentences = System.Text.RegularExpressions.Regex.Split(text.Trim(), @"(?<=[.!?…])\s+(?=[\p{Lu}\d'‘“""])")
+            .Select(s => s.Trim()).Where(s => s.Length > 0);
+        var parts = new List<string>();
+        var current = new List<string>();
+        int words = 0;
+        foreach (var s in sentences)
+        {
+            int n = s.Split(' ', StringSplitOptions.RemoveEmptyEntries).Length;
+            if (current.Count > 0 && words + n > maxWords)
+            {
+                parts.Add(string.Join(" ", current));
+                current.Clear();
+                words = 0;
+            }
+            current.Add(s);
+            words += n;
+        }
+        if (current.Count > 0) parts.Add(string.Join(" ", current));
+        return parts;
+    }
 
     /// <summary>Puts one jingle of the outro category straight after the break (once; not when a jingle already follows).</summary>
     private void AddOutro(LogItem item)

@@ -28,6 +28,8 @@ public sealed partial class DjDeckVm : ObservableObject
     private readonly Dictionary<string, DateTime> _touched = [];
     private bool _fromEngine;
     private long? _waveFor;
+    /// <summary>With four decks: a lower deck without its own waveform, effect and stop rows (the waveform is in the scrolling view on top).</summary>
+    [ObservableProperty] private bool _compact;
 
     public DjDeckVm(string id)
     {
@@ -261,6 +263,8 @@ public sealed partial class DjTool : StudioTool
     public DjTool() : base("dj", "DJ-mengtafel")
     {
         Decks = [new DjDeckVm("A"), new DjDeckVm("B"), new DjDeckVm("C"), new DjDeckVm("D")];
+        _fourDecks = Services.StudioHub.Current.Settings.DjFourDecks;   // the last choice, kept over a restart
+        foreach (var d in Decks) d.Compact = _fourDecks;
     }
 
     public IReadOnlyList<DjDeckVm> Decks { get; }
@@ -273,7 +277,15 @@ public sealed partial class DjTool : StudioTool
     [ObservableProperty] private bool _fourDecks;
     /// <summary>Decks shown in the scrolling waveforms.</summary>
     public int DeckCount => FourDecks ? 4 : 2;
-    partial void OnFourDecksChanged(bool value) => OnPropertyChanged(nameof(DeckCount));
+    partial void OnFourDecksChanged(bool value)
+    {
+        OnPropertyChanged(nameof(DeckCount));
+        foreach (var d in Decks) d.Compact = value;
+        var s = Services.StudioHub.Current.Settings;
+        if (s.DjFourDecks == value) return;
+        s.DjFourDecks = value;
+        s.Save();
+    }
     [ObservableProperty] private bool _sharp;
     /// <summary>0 (decks A and C) .. 100 (B and D).</summary>
     [ObservableProperty] private double _crossfader = 50;

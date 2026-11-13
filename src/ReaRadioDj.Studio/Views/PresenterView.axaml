@@ -52,6 +52,43 @@
         </ItemsControl.ItemTemplate>
       </ItemsControl>
 
+      <!-- the Higgs voice server -->
+      <Expander Header="Stemserver (Higgs)" HorizontalAlignment="Stretch">
+        <StackPanel Spacing="6">
+          <DockPanel>
+            <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="4">
+              <Button Classes="small" Content="{Binding HiggsButtonText}" Command="{Binding ToggleHiggsCommand}"
+                      ToolTip.Tip="Start of stop de stemserver nu met het commando hieronder" />
+              <Button Classes="small" Content="↻" Command="{Binding RefreshHiggsCommand}" ToolTip.Tip="Status opnieuw bekijken" />
+            </StackPanel>
+            <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+              <Ellipse Width="10" Height="10" Fill="{Binding HiggsOnline, Converter={x:Static vm:Brushes.Active}}" VerticalAlignment="Center" />
+              <TextBlock Text="{Binding HiggsState}" FontWeight="SemiBold" TextWrapping="Wrap" />
+            </StackPanel>
+          </DockPanel>
+          <CheckBox Content="Stemserver automatisch starten met de engine" IsChecked="{Binding HiggsAutoStart}"
+                    ToolTip.Tip="Na een herstart van de engine wordt de stemserver vanzelf weer gestart. Het model laden duurt een paar minuten; tot dan spreekt de reservestem." />
+          <Grid ColumnDefinitions="110,*" RowDefinitions="Auto,Auto,Auto,Auto">
+            <TextBlock Grid.Row="0" Text="Adres" VerticalAlignment="Center" />
+            <TextBox Grid.Row="0" Grid.Column="1" Text="{Binding HiggsUrl}" Watermark="http://localhost:8001" Margin="0,0,0,4" />
+            <TextBlock Grid.Row="1" Text="Startcommando" VerticalAlignment="Center" />
+            <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding HiggsCommand}" Watermark="wsl.exe" FontFamily="Consolas" Margin="0,0,0,4" IsReadOnly="{Binding !HiggsEditable}" />
+            <TextBlock Grid.Row="2" Text="Argumenten" VerticalAlignment="Center" />
+            <TextBox Grid.Row="2" Grid.Column="1" Text="{Binding HiggsArguments}" Watermark="-d Ubuntu -- bash -lc ~/higgs/start.sh" FontFamily="Consolas" Margin="0,0,0,4" IsReadOnly="{Binding !HiggsEditable}" />
+            <TextBlock Grid.Row="3" Text="Werkmap" VerticalAlignment="Center" />
+            <TextBox Grid.Row="3" Grid.Column="1" Text="{Binding HiggsFolder}" Watermark="leeg = map van de engine" FontFamily="Consolas" Margin="0,0,0,4" IsReadOnly="{Binding !HiggsEditable}" />
+          </Grid>
+          <TextBlock Classes="muted" TextWrapping="Wrap" IsVisible="{Binding !HiggsEditable}"
+                     Text="Het startcommando kan alleen op de studio-pc zelf worden gewijzigd." />
+          <TextBlock Classes="muted" TextWrapping="Wrap"
+                     Text="Welke stem de presentator, het nieuws en het weer gebruiken, en je eigen stem vastleggen: venster Stemmen." />
+          <WrapPanel>
+            <Button Classes="small" Content="Opslaan" Command="{Binding SaveHiggsCommand}" Margin="0,0,8,0" />
+            <TextBlock Text="{Binding HiggsResult}" VerticalAlignment="Center" TextWrapping="Wrap" />
+          </WrapPanel>
+        </StackPanel>
+      </Expander>
+
       <!-- settings -->
       <Expander Header="Instellingen: taalmodel en persona" HorizontalAlignment="Stretch">
         <StackPanel Spacing="6">

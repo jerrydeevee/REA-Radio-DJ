@@ -25,14 +25,20 @@ public sealed partial class MainWindowViewModel : ObservableObject
         var args = Environment.GetCommandLineArgs();
         int pa = Array.IndexOf(args, "--profile");
         if (pa >= 0 && pa + 1 < args.Length) StudioSettings.FolderOverride = Path.GetFullPath(args[pa + 1]);
+        if (args.Contains("--dock-log")) StartDockLog();
         _settings = StudioSettings.Load();
         Appearance.Apply(_settings);
         int ea = Array.IndexOf(args, "--engine");
         if (ea >= 0 && ea + 1 < args.Length) _settings.SessionEngineUrl = args[ea + 1];
         if (args.Contains("--no-engine")) _settings.StartEngine = false;
         Hub = StudioHub.Start(_settings);
+        Session = new SessionVm(Hub);
         if (_settings.StartEngine) _ = EnsureEngineAsync();
         Hub.StateReceived += OnState;
+        Hub.StateReceived += CheckSetup;
+        _forceSetup = args.Contains("--setup");   // --setup: open the setup helper at start (also for screenshots)
+        // --check-updates: ask GitHub right away, whatever the last check was (for testing).
+        _ = StartUpdateCheckAsync(args.Contains("--check-updates"));
         Hub.PropertyChanged += (_, e) => { if (e.PropertyName is nameof(StudioHub.Status) or nameof(StudioHub.ConnectionText)) OnPropertyChanged(nameof(StatusLine)); };
         Hub.EditCuesRequested += id => ShowWindow("cues");
         Hub.TransitionRequested += _ => ShowWindow("transition");
@@ -62,12 +68,15 @@ public sealed partial class MainWindowViewModel : ObservableObject
                 Hub.Status = PlaceDockable(pw, pt == "*" ? WholeArea : pt, ps,
                     double.Parse(share, System.Globalization.CultureInfo.InvariantCulture)) ?? $"geplaatst: {pw}";
             else if (args[i] == "--workbench" && int.TryParse(args[i + 1], out var screen)) _startWorkbenches.Add(screen - 1);
+            else if (args[i] == "--library") LibraryTool.StartSearch = args[i + 1];   // search and select the first row
         int ca = Array.IndexOf(args, "--cues");
         if (ca >= 0 && ca + 1 < args.Length && long.TryParse(args[ca + 1], out var cueId))
             _ = Task.Delay(1500).ContinueWith(_ => Avalonia.Threading.Dispatcher.UIThread.Post(() => Hub.RequestCueEditor(cueId)));
     }
 
     public StudioHub Hub { get; }
+    /// <summary>Signing in, signing out and the studio lock.</summary>
+    public SessionVm Session { get; }
     public IReadOnlyList<WindowEntry> WindowMenu { get; } = DockFactory.Windows.Select(w => new WindowEntry(w.Id, w.Name)).ToList();
 
     // ---- Ctrl+K: go to a window by typing part of its name
@@ -199,6 +208,30 @@ public sealed partial class MainWindowViewModel : ObservableObject
         return null;
     }
 
+    /// <summary>
+    /// --dock-log: the docking library writes why it accepts or refuses a drop (which target, which operation) to
+    /// dock-log.txt in the settings folder, to find out why a window lands somewhere else than aimed at.
+    /// </summary>
+    private static void StartDockLog()
+    {
+        var path = Path.Combine(StudioSettings.Folder, "dock-log.txt");
+        var gate = new object();
+        string? last = null;
+        try { Directory.CreateDirectory(StudioSettings.Folder); File.WriteAllText(path, $"dock-log {DateTime.Now:yyyy-MM-dd HH:mm:ss}{Environment.NewLine}"); }
+        catch (IOException) { return; }
+        Dock.Settings.DockSettings.DiagnosticsLogHandler = message =>
+        {
+            lock (gate)
+            {
+                if (message == last) return;   // the same line on every mouse move while dragging
+                last = message;
+                try { File.AppendAllText(path, $"{DateTime.Now:HH:mm:ss.fff} {message}{Environment.NewLine}"); }
+                catch (IOException) { }
+            }
+        };
+        Dock.Settings.DockSettings.EnableDiagnosticsLogging = true;
+    }
+
     private bool IsInLayout(IDockable d) => Layout is not null && (ReferenceEquals(d, Layout) || _factory.FindDockable(Layout, x => ReferenceEquals(x, d)) is not null);
 
     /// <summary>A floating window whose last studio window moved out is closed.</summary>
@@ -321,6 +354,99 @@ public sealed partial class MainWindowViewModel : ObservableObject
         ? Task.CompletedTask
         : Hub.Client.PostAsync("/api/transport/autoplay", new SwitchRequest(mode == "auto"));
 
+    // ------------------------------------------------------------ newer version
+
+    /// <summary>Shown in the status bar when GitHub has a newer release; a click opens its page.</summary>
+    [ObservableProperty] private string _updateText = "";
+    private string _updateUrl = UpdateChecker.Repo + "/releases";
+    public bool HasUpdate => UpdateText.Length > 0;
+    partial void OnUpdateTextChanged(string value) => OnPropertyChanged(nameof(HasUpdate));
+
+    /// <summary>At start: the notice from the last check, and a new check when the last one is a day old.</summary>
+    private async Task StartUpdateCheckAsync(bool force)
+    {
+        ShowRelease(_settings.LatestTag, _settings.LatestUrl);
+        if (!force && (!_settings.CheckUpdates || _settings.LastUpdateCheck is { } last && DateTime.UtcNow - last < TimeSpan.FromHours(20))) return;
+        await Task.Delay(force ? 3000 : 20000);   // let the studio settle first
+        await CheckNowAsync(force);
+    }
+
+    /// <summary>Info › Zoeken naar updates: asks GitHub now and says what came back.</summary>
+    [RelayCommand]
+    private Task CheckUpdates() => CheckNowAsync(true);
+
+    private async Task CheckNowAsync(bool report)
+    {
+        if (report) Hub.Status = "Zoeken naar een nieuwere versie…";
+        var (release, error) = await UpdateChecker.CheckAsync();
+        if (release is null)
+        {
+            if (report) Hub.Status = "Zoeken naar updates lukte niet: " + error;
+            return;
+        }
+        _settings.LastUpdateCheck = DateTime.UtcNow;
+        _settings.LatestTag = release.Tag;
+        _settings.LatestUrl = release.Url;
+        _settings.Save();
+        var newer = ShowRelease(release.Tag, release.Url);
+        if (report)
+            Hub.Status = newer
+                ? $"Versie {release.Version} is uit (je hebt {UpdateChecker.CurrentVersion})."
+                : $"Je hebt de nieuwste versie ({UpdateChecker.CurrentVersion}; nieuwste uitgave {release.Version}).";
+    }
+
+    private bool ShowRelease(string? tag, string? url)
+    {
+        var latest = ReleaseVersion.Parse(tag);
+        var current = ReleaseVersion.Parse(UpdateChecker.CurrentVersion);
+        var newer = latest is not null && current is not null && latest > current;
+        if (newer && url is not null && url.StartsWith(UpdateChecker.Repo, StringComparison.OrdinalIgnoreCase)) _updateUrl = url;
+        UpdateText = newer ? $"Nieuwe versie {latest} beschikbaar" : "";
+        return newer;
+    }
+
+    [RelayCommand]
+    private void OpenUpdate()
+    {
+        try { System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(_updateUrl) { UseShellExecute = true }); }
+        catch (Exception ex) when (ex is System.ComponentModel.Win32Exception or InvalidOperationException) { }
+    }
+
+    // ------------------------------------------------------------ setup helper
+
+    public SetupWizardVm Setup { get; } = new();
+    private readonly bool _forceSetup;
+    private bool _setupChecked;
+
+    [RelayCommand] private Task OpenSetup() => Setup.OpenAsync();
+
+    /// <summary>Once, at the first state from the engine: open the setup helper on a new installation (nothing in the library yet).</summary>
+    private void CheckSetup(StateDto _)
+    {
+        if (_setupChecked) return;
+        _setupChecked = true;
+        Hub.StateReceived -= CheckSetup;
+        Dispatcher.UIThread.Post(async () =>
+        {
+            if (_forceSetup)
+            {
+                await Setup.OpenAsync();
+                // --setup-step <1-4>: show that step (for screenshots without a mouse)
+                var a = Environment.GetCommandLineArgs();
+                int si = Array.IndexOf(a, "--setup-step");
+                if (si >= 0 && si + 1 < a.Length && int.TryParse(a[si + 1], out int step))
+                    Setup.Step = Math.Clamp(step - 1, 0, SetupWizardVm.Steps - 1);
+                return;
+            }
+            if (_settings.SetupDone) return;
+            var folders = await Hub.Client.GetAsync<List<LibraryFolderDto>>("/api/library/folders");
+            if (folders is null) return;
+            bool empty = folders.All(f => f.Fixed) && folders.All(f => (f.Files ?? 0) == 0);
+            if (empty) await Setup.OpenAsync();
+            else { _settings.SetupDone = true; _settings.Save(); }   // an existing station: never ask
+        });
+    }
+
     private void OnState(StateDto s)
     {
         Station = s.Station;
@@ -397,6 +523,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
     private async Task RunEngineCommand(string? text)
     {
         if (string.IsNullOrWhiteSpace(text)) return;
+        if (Session.Blocks) { Hub.Status = "De studio is vergrendeld: sneltoetsen werken na het ontgrendelen."; return; }
         var r = await Hub.Client.RunCommandAsync(text);
         if (!r.Ok) Hub.Status = $"{text}: {r.Text}";
     }
@@ -669,6 +796,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
         else { window.X = 100; window.Y = 100; window.Width = 1200; window.Height = 800; }
         _factory.AddWindow(Layout, window);
         window.Present(false);
+        EnsureWindowFocus();
         if (screen is not null) PlaceOnScreen(window, screen, maximize: true);
         Hub.Status = $"Werkblad {n} geopend{(entry is null ? "" : $" op scherm {entry.Index + 1}")}: sleep er vensters heen of kies ze op het werkblad";
     }
@@ -724,8 +852,29 @@ public sealed partial class MainWindowViewModel : ObservableObject
     /// <summary>After a layout opens: workbenches go back to their screen (or the main screen when it is gone) and size.</summary>
     private void RestoreWindowsSoon() => DispatcherTimer.RunOnce(RestoreWindows, TimeSpan.FromMilliseconds(400));
 
+    /// <summary>
+    /// Gives every floating window and workbench a focused window. The docking library shows the drop targets at the
+    /// edges of the main window (a full-height column, a full-width row) for a dragged window only when that window
+    /// has one; without it only the targets of the panel under the mouse appear, so "left" lands next to that panel.
+    /// A workbench (made with CreateWindowFrom) and a window restored from a layout file can have none.
+    /// </summary>
+    private void EnsureWindowFocus()
+    {
+        foreach (var w in FloatingWindows)
+            if (w.Layout is { FocusedDockable: null } root && FirstTool(root) is { Owner: IDock owner } tool)
+                _factory.SetFocusedDockable(owner, tool);
+    }
+
+    private static IDockable? FirstTool(IDock dock)
+    {
+        if (dock.ActiveDockable is ITool active) return active;
+        if (dock.VisibleDockables is not { } children) return null;
+        return children.FirstOrDefault(c => c is ITool) ?? children.OfType<IDock>().Select(FirstTool).FirstOrDefault(t => t is not null);
+    }
+
     private void RestoreWindows()
     {
+        EnsureWindowFocus();
         var screens = SortedScreens();
         if (screens.Count == 0) return;
         foreach (var w in FloatingWindows.ToList())

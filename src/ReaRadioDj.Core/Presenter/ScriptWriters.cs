@@ -20,6 +20,15 @@ public interface IScriptWriter
     Task<string> WriteAsync(BreakContext context, CancellationToken ct);
 }
 
+/// <summary>A language model that writes any text from instructions (news and weather bulletins).</summary>
+public interface ITextWriter
+{
+    string Name { get; }
+    bool Configured { get; }
+    /// <param name="minSeconds">At least this long before giving up (a long bulletin on a slow local model), 0 = the configured time.</param>
+    Task<string> CompleteAsync(string system, string user, int maxTokens, CancellationToken ct, int minSeconds = 0);
+}
+
 /// <summary>Offline fallback: fills in a Dutch template. Always works, needs nothing.</summary>
 public sealed class TemplateScriptWriter(Random? random = null) : IScriptWriter
 {
@@ -90,7 +99,7 @@ public sealed class TemplateScriptWriter(Random? random = null) : IScriptWriter
 }
 
 /// <summary>Any OpenAI-compatible /v1/chat/completions endpoint: Ollama, LM Studio, vLLM, OpenAI ...</summary>
-public sealed class OpenAiScriptWriter(HttpClient http, PresenterOptions options) : IScriptWriter
+public sealed class OpenAiScriptWriter(HttpClient http, PresenterOptions options) : IScriptWriter, ITextWriter
 {
     public string Name => $"llm:{options.Llm.Model}";
     public bool Configured => !string.IsNullOrWhiteSpace(options.Llm.BaseUrl) && !string.IsNullOrWhiteSpace(options.Llm.Model);
@@ -121,14 +130,19 @@ public sealed class OpenAiScriptWriter(HttpClient http, PresenterOptions options
     /// <summary>Servers that refused "reasoning_effort" (they get requests without it).</summary>
     private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, bool> NoReasoningOption = new();
 
-    public async Task<string> WriteAsync(BreakContext c, CancellationToken ct)
+    public Task<string> WriteAsync(BreakContext c, CancellationToken ct)
+    {
+        var (system, user) = Prompt(options, c);
+        return CompleteAsync(system, user, 400, ct);
+    }
+
+    public async Task<string> CompleteAsync(string system, string user, int maxTokens, CancellationToken ct, int minSeconds = 0)
     {
         var llm = options.Llm;
-        var (system, user) = Prompt(options, c);
         var root = Root(llm.BaseUrl);
 
         using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
-        cts.CancelAfter(TimeSpan.FromSeconds(llm.TimeoutSeconds));
+        cts.CancelAfter(TimeSpan.FromSeconds(Math.Max(llm.TimeoutSeconds, minSeconds)));
         // Thinking models (qwen3, deepseek-r1 ...) would spend all tokens on reasoning and say nothing: ask them not to
         // think. A server that does not know the option gets the request again without it.
         bool noThinking = !NoReasoningOption.ContainsKey(root);
@@ -138,7 +152,7 @@ public sealed class OpenAiScriptWriter(HttpClient http, PresenterOptions options
             using var request = new HttpRequestMessage(HttpMethod.Post, root + "/v1/chat/completions")
             {
                 Content = JsonContent.Create(new ChatRequest(llm.Model,
-                    [new ChatMessage("system", system), new ChatMessage("user", user)], llm.Temperature, 400, noThinking ? "none" : null)),
+                    [new ChatMessage("system", system), new ChatMessage("user", user)], llm.Temperature, maxTokens, noThinking ? "none" : null)),
             };
             if (!string.IsNullOrWhiteSpace(llm.ApiKey))
                 request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", llm.ApiKey);

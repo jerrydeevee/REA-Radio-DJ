@@ -12,5 +12,6 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\src\ReaRadioDj.Core\ReaRadioDj.Core.csproj" />
+    <ProjectReference Include="..\..\src\ReaRadioDj.Contracts\ReaRadioDj.Contracts.csproj" />
   </ItemGroup>
 </Project>

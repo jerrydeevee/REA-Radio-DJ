@@ -70,6 +70,9 @@ public sealed class MediaLibrary
     private Timer? _nightly;
     private DateTime _lastNightly = DateTime.Today;
     private volatile bool _rescanWanted;
+    /// <summary>Files that could not be read (path -> size and time): not tried again until they change.</summary>
+    private readonly System.Collections.Concurrent.ConcurrentDictionary<string, (long Size, long Modified)> _unreadable =
+        new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, FolderState> _folderState = new(StringComparer.OrdinalIgnoreCase);
     private int _recognised;
 
@@ -386,6 +389,28 @@ public sealed class MediaLibrary
             .Where(x => Inside(x.Path, root))
             .ToDictionary(x => x.Path, StringComparer.OrdinalIgnoreCase);
 
+        // Unchanged files only need "present" again: that is done in one transaction per batch, not one per file
+        // (tens of thousands of separate writes kept the database busy for minutes after every start).
+        var unchanged = new List<(string Path, long Category)>();
+        void Flush()
+        {
+            if (unchanged.Count == 0) return;
+            _db.Transaction((c, tx) =>
+            {
+                using var cmd = StationDb.Command(c,
+                    "UPDATE media SET missing = 0, retired = 0, category_id = COALESCE(category_id, $c) WHERE path = $p AND (missing <> 0 OR retired <> 0 OR category_id IS NULL)",
+                    ("$c", 0L), ("$p", ""));
+                cmd.Transaction = tx;
+                foreach (var (path, category) in unchanged)
+                {
+                    cmd.Parameters["$c"].Value = category;
+                    cmd.Parameters["$p"].Value = path;
+                    cmd.ExecuteNonQuery();
+                }
+            });
+            unchanged.Clear();
+        }
+
         int done = 0;
         foreach (var file in files)
         {
@@ -398,16 +423,19 @@ public sealed class MediaLibrary
                 bool isNew = !known.TryGetValue(info.FullName, out var k);
                 if (!isNew && k.Size == info.Length && k.Modified == info.LastWriteTimeUtc.Ticks)
                 {
-                    _db.Execute("UPDATE media SET missing = 0, retired = 0, category_id = COALESCE(category_id, $c) WHERE path = $p",
-                        ("$c", categoryId), ("$p", info.FullName));
+                    unchanged.Add((info.FullName, categoryId));
+                    if (unchanged.Count >= 1000) Flush();
                     if (!k.HasRights) StoreRights(k.Id, info.FullName); // files from before rights metadata existed
                     continue;
                 }
+                if (_unreadable.TryGetValue(info.FullName, out var bad) && bad == (info.Length, info.LastWriteTimeUtc.Ticks)) continue;
                 if (StillBeingWritten(info)) { _rescanWanted = true; continue; }
-                Import(info, folder.Kind, categoryId, keepCues: k.Manual, isNew, folder.WriteTags, fixedCategory: folder.Category.Length > 0);
+                try { Import(info, folder.Kind, categoryId, keepCues: k.Manual, isNew, folder.WriteTags, fixedCategory: folder.Category.Length > 0); }
+                catch (Audio.BassException) { _unreadable[info.FullName] = (info.Length, info.LastWriteTimeUtc.Ticks); throw; }
             }
             catch (Exception ex) { _log.LogWarning(ex, "Skipping {File}", file); }
         }
+        Flush();
 
         // Files that disappeared stay in the database (as-run and cartwalls refer to them) but are not played.
         var present = files.ToHashSet(StringComparer.OrdinalIgnoreCase);
@@ -478,7 +506,7 @@ public sealed class MediaLibrary
                        $hi, $ho, $manual, $added, 0, $genre, $aa, $bpm, $fb, $ei, $eo, $energy, $measured, 0,
                        $clip, $lang, $mood, $rating, $key, $keyTried)
                 ON CONFLICT(path) DO UPDATE SET
-                    kind = excluded.kind, artist = excluded.artist, title = excluded.title, album = excluded.album,
+                    kind = CASE WHEN media.kind_manual = 1 THEN media.kind ELSE excluded.kind END, artist = excluded.artist, title = excluded.title, album = excluded.album,
                     size = excluded.size, modified = excluded.modified, duration = excluded.duration, lufs = excluded.lufs,
                     category_id = COALESCE(media.category_id, excluded.category_id), missing = 0, retired = 0,
                     genre = excluded.genre, album_artist = excluded.album_artist,
@@ -671,7 +699,7 @@ public sealed class MediaLibrary
                     _db.Transaction((c, tx) =>
                     {
                         using var cmd = StationDb.Command(c, """
-                            UPDATE media SET source = $s, missing = 0, kind = $k,
+                            UPDATE media SET source = $s, missing = 0, kind = CASE WHEN kind_manual = 1 THEN kind ELSE $k END,
                                 artist = COALESCE($a, artist), title = COALESCE($t, title), album = COALESCE($al, album),
                                 category_id = CASE WHEN $hascat = 1 OR category_id IS NULL THEN $cat ELSE category_id END
                             WHERE path = $p;
@@ -731,6 +759,7 @@ public sealed class MediaLibrary
             for (int i = 0; i < all.Count; i++)
                 if (issues.TryGetValue(all[i].Media.Id, out var p)) all[i] = all[i] with { Issues = p };
         _all = all;
+        _albumFolders.Clear();
         LibrarySearch.Warm(all);
         var now = DateTime.Now;
         var playable = _all.Where(d => d.IsPlayable(now)).Select(d => d.Media).ToList();
@@ -739,6 +768,13 @@ public sealed class MediaLibrary
     }
 
     public MediaItem? Get(long id) => GetDetails(id)?.Media;
+
+    /// <summary>The details as loaded at the last scan or edit (no database access; null when unknown).</summary>
+    public MediaDetails? Cached(long id)
+    {
+        foreach (var d in _all) if (d.Media.Id == id) return d;
+        return null;
+    }
 
     private static readonly string[] CoverNames = ["cover", "folder", "front", "albumart", "album"];
 
@@ -767,8 +803,17 @@ public sealed class MediaLibrary
         }
         try
         {
+            // A cover found online by the metadata lookup, kept in the data folder (the music file stays as it is).
+            var found = FoundCoverPath(id);
+            if (File.Exists(found)) { var b = File.ReadAllBytes(found); if (CoverMime(b) is { } mime) return (b, mime); }
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { _log.LogDebug("No found cover for {Id}: {Message}", id, ex.Message); }
+        try
+        {
             var dir = Path.GetDirectoryName(m.Path);
             if (dir is null) return null;
+            // A folder picture belongs to an album folder; in a large mixed folder ("Various") it is not this song's cover.
+            if (!IsAlbumFolder(dir)) return null;
             foreach (var name in CoverNames)
                 foreach (var ext in new[] { ".jpg", ".jpeg", ".png" })
                 {
@@ -778,15 +823,29 @@ public sealed class MediaLibrary
                 }
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { _log.LogDebug("No cover file for {File}: {Message}", m.Path, ex.Message); }
-        try
-        {
-            // A cover found online by the metadata lookup, kept in the data folder (the music file stays as it is).
-            var found = FoundCoverPath(id);
-            if (File.Exists(found)) { var b = File.ReadAllBytes(found); if (CoverMime(b) is { } mime) return (b, mime); }
-        }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { _log.LogDebug("No found cover for {Id}: {Message}", id, ex.Message); }
         return null;
     }
+
+    /// <summary>Most albums have fewer tracks; a folder with more songs of different albums is a mixed folder.</summary>
+    public const int AlbumFolderMax = 40;
+
+    /// <summary>
+    /// Whether a folder picture can be the cover of the songs in it: at most <see cref="AlbumFolderMax"/> library items,
+    /// or all with the same album. Counted from the library, not from the disk (a network folder can be slow).
+    /// </summary>
+    public bool IsAlbumFolder(string folder) => _albumFolders.GetOrAdd(Path.TrimEndingDirectorySeparator(folder), full =>
+    {
+        var albums = _all.Where(d => string.Equals(Path.GetDirectoryName(d.Media.Path), full, StringComparison.OrdinalIgnoreCase))
+            .Select(d => d.Album).ToList();
+        return IsAlbumFolder(albums);
+    });
+
+    private readonly System.Collections.Concurrent.ConcurrentDictionary<string, bool> _albumFolders = new(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>The rule of <see cref="IsAlbumFolder(string)"/> for the albums of the items in one folder.</summary>
+    public static bool IsAlbumFolder(IReadOnlyCollection<string> albums) =>
+        albums.Count <= AlbumFolderMax
+        || (albums.First() is { Length: > 0 } a && albums.All(x => string.Equals(x, a, StringComparison.OrdinalIgnoreCase)));
 
     /// <summary>Where a cover found online is kept for an item: covers\{id}.img in the data folder.</summary>
     public string FoundCoverPath(long id) => Path.Combine(_options.DataFolder, "covers", id.ToString(System.Globalization.CultureInfo.InvariantCulture) + ".img");
@@ -846,6 +905,41 @@ public sealed class MediaLibrary
         if (categoryId is long c) q = q.Where(d => d.Media.CategoryId == c);
         if (kind is MediaKind k) q = q.Where(d => d.Media.Kind == k);
         return LibrarySearch.Run(q, text, DateTime.Now, block, limit);
+    }
+
+    /// <summary>The category of files put on air from the Verkenner that are not in a library folder.</summary>
+    public const string LooseCategory = "Losse bestanden";
+
+    /// <summary>
+    /// A file loaded from the Verkenner as a library item, so it gets its tags, cover, waveform and the online lookup
+    /// like any other song. A file in a library folder is read as the scan would; any other file goes to
+    /// <see cref="LooseCategory"/>, switched off, so it never plays in rotation by itself. A known file is returned as is.
+    /// </summary>
+    public MediaItem? AddLoose(string path, MediaKind kind)
+    {
+        var info = new FileInfo(path);
+        if (FindByPath(info.FullName) is { } known) return known;
+        bool existed = _db.Scalar<long?>("SELECT id FROM media WHERE path = $p", ("$p", info.FullName)) is not null;
+        var folder = Folders().FirstOrDefault(f => f.Enabled && Inside(info.FullName, f.Path));
+        long category;
+        if (folder is not null)
+        {
+            string fallback = folder.Fixed ? (folder.Kind == MediaKind.Song ? "Muziek" : "Jingles") : Path.GetFileName(folder.Path.TrimEnd('\\')) is { Length: > 0 } n ? n : folder.Path;
+            kind = folder.Kind;
+            category = EnsureCategory(folder.Category.Length > 0 ? folder.Category : CategoryName(folder.Path, info.FullName, fallback), kind);
+        }
+        else category = EnsureCategory(LooseCategory, kind);
+        // Not "new": a copy of a library song elsewhere must not take over that song's path.
+        Import(info, kind, category, keepCues: false, isNew: false, writeTags: false, fixedCategory: folder is null);
+        if (!existed && folder is null) _db.Execute("UPDATE media SET enabled = 0 WHERE path = $p", ("$p", info.FullName));
+        if (_db.Scalar<long?>("SELECT id FROM media WHERE path = $p", ("$p", info.FullName)) is not long id) return null;
+        // A running scan reloads at its end; otherwise reload now so search and the album rule know the file.
+        if (_scanLock.Wait(0))
+        {
+            try { Reload(); } finally { _scanLock.Release(); }
+            Changed?.Invoke();
+        }
+        return Get(id);
     }
 
     /// <summary>Analyses a file that is not part of the library (rendered voice breaks).</summary>
@@ -928,6 +1022,32 @@ public sealed class MediaLibrary
         int n = _db.Execute("UPDATE media SET category_id=$c, enabled=$e, valid_from=$f, valid_until=$u WHERE id=$id",
             ("$c", categoryId), ("$e", enabled ? 1 : 0), ("$f", validFrom is DateTime f ? StationDb.Iso(f) : null),
             ("$u", validUntil is DateTime u ? StationDb.Iso(u) : null), ("$id", id));
+        Reload();
+        Changed?.Invoke();
+        return n > 0;
+    }
+
+    /// <summary>
+    /// Makes an item music or a jingle by hand; a later scan of its folder keeps that. When its category is of the
+    /// other kind it moves to <paramref name="categoryId"/>, or else to the first category of the new kind
+    /// ("Jingles" or "Muziek" when there is one), so it shows up where it belongs.
+    /// </summary>
+    public bool SetKind(long id, MediaKind kind, long? categoryId = null)
+    {
+        if (GetDetails(id) is not { } before) return false;
+        if (kind is not (MediaKind.Song or MediaKind.Jingle)) return false;
+        Remember([id], $"{(kind == MediaKind.Jingle ? "jingle maken" : "muziek maken")} van {Label(before)}");
+        long? cat = before.Media.CategoryId;
+        bool fits = cat is long c0 && _categories.FirstOrDefault(c => c.Id == c0) is { } cur && cur.Kind == kind;
+        if (categoryId is long chosen && _categories.Any(c => c.Id == chosen)) cat = chosen;
+        else if (!fits)
+        {
+            var same = _categories.Where(c => c.Kind == kind).ToList();
+            string preferred = kind == MediaKind.Jingle ? "Jingles" : "Muziek";
+            cat = (same.FirstOrDefault(c => string.Equals(c.Name, preferred, StringComparison.OrdinalIgnoreCase)) ?? same.FirstOrDefault())?.Id ?? cat;
+        }
+        int n = _db.Execute("UPDATE media SET kind = $k, kind_manual = 1, category_id = $c WHERE id = $id",
+            ("$k", (int)kind), ("$c", cat), ("$id", id));
         Reload();
         Changed?.Invoke();
         return n > 0;
@@ -1178,7 +1298,7 @@ public sealed class MediaLibrary
     private sealed record UndoRow(long Id, long? Category, bool Enabled, string? ValidFrom, string? ValidUntil,
         string Artist, string Title, string Album, string Genre, string Language, string Mood, int? Rating, int? EnergyLevel,
         double CueIn, double? FullLevel, double? Intro, double? Intro2, double? Outro, double? FadeOut, double Mix, double CueOut,
-        double? HookIn, double? HookOut, bool Manual, int? Year);
+        double? HookIn, double? HookOut, bool Manual, int? Year, int? Kind = null, bool? KindManual = null);
 
     private static string Label(MediaDetails d) => d.Media.Artist.Length > 0 ? $"{d.Media.Artist} - {d.Media.Title}" : d.Media.Title;
 
@@ -1192,14 +1312,14 @@ public sealed class MediaLibrary
             rows.AddRange(_db.Query($"""
                 SELECT m.id, m.category_id, m.enabled, m.valid_from, m.valid_until, m.artist, m.title, m.album, m.genre,
                        m.language, m.mood, m.rating, m.energy_level, m.cue_in, m.full_level, m.intro, m.intro2, m.outro,
-                       m.fade_out, m.mix, m.cue_out, m.hook_in, m.hook_out, m.cues_manual, r.year
+                       m.fade_out, m.mix, m.cue_out, m.hook_in, m.hook_out, m.cues_manual, r.year, m.kind, m.kind_manual
                 FROM media m LEFT JOIN media_rights r ON r.media_id = m.id WHERE m.id IN ({string.Join(',', chunk)})
                 """, r => new UndoRow(r.GetInt64(0), r.GetInt64OrNull(1), r.GetInt64(2) != 0, r.GetStringOrNull(3), r.GetStringOrNull(4),
                     r.GetString(5), r.GetString(6), r.GetString(7), r.GetString(8), r.GetString(9), r.GetString(10),
                     r.GetInt64OrNull(11) is long a ? (int)a : null, r.GetInt64OrNull(12) is long b ? (int)b : null,
                     r.GetDouble(13), r.GetDoubleOrNull(14), r.GetDoubleOrNull(15), r.GetDoubleOrNull(16), r.GetDoubleOrNull(17),
                     r.GetDoubleOrNull(18), r.GetDouble(19), r.GetDouble(20), r.GetDoubleOrNull(21), r.GetDoubleOrNull(22),
-                    r.GetInt64(23) != 0, r.GetInt64OrNull(24) is long y ? (int)y : null)));
+                    r.GetInt64(23) != 0, r.GetInt64OrNull(24) is long y ? (int)y : null, (int)r.GetInt64(25), r.GetInt64(26) != 0)));
         }
         if (rows.Count == 0) return;
         _db.Execute("INSERT INTO media_undo(time, label, items, rows) VALUES($t, $l, $n, $r)",
@@ -1227,7 +1347,8 @@ public sealed class MediaLibrary
                     UPDATE media SET category_id = $cat, enabled = $en, valid_from = $vf, valid_until = $vu,
                         artist = $a, title = $t, album = $al, genre = $g, language = $l, mood = $mo, rating = $ra, energy_level = $el,
                         cue_in = $in, full_level = $fl, intro = $i1, intro2 = $i2, outro = $ou, fade_out = $fo, mix = $mix,
-                        cue_out = $out, hook_in = $hi, hook_out = $ho, cues_manual = $man
+                        cue_out = $out, hook_in = $hi, hook_out = $ho, cues_manual = $man,
+                        kind = COALESCE($k, kind), kind_manual = COALESCE($km, kind_manual)
                     WHERE id = $id;
                     INSERT INTO media_rights(media_id, year) VALUES($id, $y) ON CONFLICT(media_id) DO UPDATE SET year = excluded.year;
                     """,
@@ -1235,7 +1356,8 @@ public sealed class MediaLibrary
                     ("$t", u.Title), ("$al", u.Album), ("$g", u.Genre), ("$l", u.Language), ("$mo", u.Mood), ("$ra", u.Rating),
                     ("$el", u.EnergyLevel), ("$in", u.CueIn), ("$fl", u.FullLevel), ("$i1", u.Intro), ("$i2", u.Intro2), ("$ou", u.Outro),
                     ("$fo", u.FadeOut), ("$mix", u.Mix), ("$out", u.CueOut), ("$hi", u.HookIn), ("$ho", u.HookOut),
-                    ("$man", u.Manual ? 1 : 0), ("$id", u.Id), ("$y", u.Year));
+                    ("$man", u.Manual ? 1 : 0), ("$id", u.Id), ("$y", u.Year), ("$k", u.Kind),
+                    ("$km", u.KindManual is bool km ? (km ? 1 : 0) : null));
                 cmd.Transaction = tx;
                 cmd.ExecuteNonQuery();
             }
