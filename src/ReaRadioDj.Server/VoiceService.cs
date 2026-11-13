@@ -241,10 +241,11 @@ public sealed class VoiceService(
     // ---------------------------------------------------------------- mapping
 
     public static VoiceProfileDto Dto(VoiceProfile p) => new(p.Id, p.Name, p.Engine, p.ReferenceAudio, p.ReferenceText, p.Tags, p.Temperature,
-        p.SapiVoice, p.Consent, p.ConsentNote, p.IsDefault, p.Problem(), p.FallbackId);
+        p.SapiVoice, p.Consent, p.ConsentNote, p.IsDefault, p.Problem(), p.FallbackId, p.Owner, p.Uses);
 
     public static VoiceProfile FromDto(VoiceProfileDto d) => new(d.Id, d.Name ?? "", d.Engine ?? "higgs", d.ReferenceAudio ?? "", d.ReferenceText ?? "",
-        d.Tags ?? "", d.Temperature, d.SapiVoice ?? "", d.Consent, d.ConsentNote ?? "", d.IsDefault, d.FallbackId is > 0 ? d.FallbackId : null);
+        d.Tags ?? "", d.Temperature, d.SapiVoice ?? "", d.Consent, d.ConsentNote ?? "", d.IsDefault, d.FallbackId is > 0 ? d.FallbackId : null,
+        d.Owner ?? "", d.Uses ?? "");
 }
 
 public static class VoiceApi
@@ -256,11 +257,18 @@ public static class VoiceApi
         v.MapGet("/profiles", (VoiceStore st) => st.Profiles.Select(VoiceService.Dto));
         v.MapPost("/profiles", (VoiceProfileDto d, VoiceStore st) => Results.Ok(new { id = st.Save(VoiceService.FromDto(d) with { Id = 0 }) }));
         v.MapPut("/profiles/{id:long}", (long id, VoiceProfileDto d, VoiceStore st) => Results.Ok(new { id = st.Save(VoiceService.FromDto(d) with { Id = id }) }));
-        v.MapDelete("/profiles/{id:long}", (long id, VoiceStore st) => st.Delete(id) ? Results.Ok() : Results.NotFound());
+        v.MapDelete("/profiles/{id:long}", (long id, VoiceStore st, VoiceClips clips) =>
+        {
+            var clip = st.Get(id)?.ReferenceAudio;
+            if (!st.Delete(id)) return Results.NotFound();
+            clips.Delete(clip);   // a stored recording goes with its voice
+            return Results.Ok();
+        });
         v.MapPost("/profiles/{id:long}/default", (long id, VoiceStore st, MessageCenter m) =>
         {
             if (st.Get(id) is not { } p) return Results.NotFound();
             if (p.Problem() is { } problem) return Results.BadRequest(new { error = problem });
+            if (!p.Allows(VoiceRoles.Presenter)) return Results.BadRequest(new { error = $"'{p.Name}' mag niet als presentator spreken" });
             st.SetDefault(id);
             m.Info($"Presentatorstem: {p.Name}");
             return Results.Ok();

@@ -334,7 +334,40 @@ public sealed record MessageDto(long Id, DateTime Time, string Level, string Tex
 
 /// <summary>Engine: higgs or sapi. Problem: why the profile cannot be used (e.g. a clone without consent).</summary>
 public sealed record VoiceProfileDto(long Id, string? Name, string? Engine, string? ReferenceAudio, string? ReferenceText, string? Tags,
-    double Temperature, string? SapiVoice, bool Consent, string? ConsentNote, bool IsDefault, string? Problem = null, long? FallbackId = null);
+    double Temperature, string? SapiVoice, bool Consent, string? ConsentNote, bool IsDefault, string? Problem = null, long? FallbackId = null,
+    string? Owner = null, string? Uses = null)
+{
+    /// <summary>Short line for lists: engine, whose own voice, the roles it may speak in.</summary>
+    [JsonIgnore] public string Summary => string.Join(" · ", new[]
+    {
+        Engine switch { "higgs" => string.IsNullOrWhiteSpace(ReferenceAudio) ? "Higgs" : "Higgs, gekloond", "sapi" => "Windows", "elevenlabs" => "ElevenLabs", "azure" => "Azure", _ => Engine },
+        string.IsNullOrWhiteSpace(Owner) ? null : $"eigen stem van {Owner}",
+        string.IsNullOrWhiteSpace(Uses) ? null : "alleen: " + Uses.Replace("presenter", "presentator").Replace("news", "nieuws").Replace("weather", "weer").Replace(",", ", "),
+    }.Where(x => !string.IsNullOrEmpty(x)));
+}
+
+/// <summary>Which voice speaks as AI presenter (the default profile), as news reader and as weather man or woman (null = the presenter's voice).</summary>
+public sealed record VoiceRolesDto(long? Presenter, long? News, long? Weather);
+
+/// <summary>
+/// The own voice of a presenter: who (the signed-in user, or a name when the station has no users), the voice when there
+/// is one, the text to read for a recording, and the recording waiting to be kept.
+/// </summary>
+public sealed record OwnVoiceDto(string? Owner, bool SignInNeeded, VoiceProfileDto? Profile, string ReadText, bool Recording,
+    double RecordingSeconds, VoiceClipDto? Take);
+
+/// <summary>A voice recording: length, peak and why it cannot be used (null = fine).</summary>
+public sealed record VoiceClipDto(double Seconds, double PeakDb, string? Problem);
+
+/// <summary>Start recording the own voice (Device: input device, null = the studio microphone). Owner only without users.</summary>
+public sealed record OwnVoiceRecordRequest(string? Owner, int? Device);
+
+/// <summary>Keep the recording as the own voice: the text read, the permission and the roles it may speak in (presenter, news, weather).</summary>
+public sealed record OwnVoiceSaveRequest(string? Owner, string? Text, bool Consent, string? Uses);
+
+/// <summary>How the Higgs voice server is started. The command can only be changed on the studio computer itself.</summary>
+public sealed record HiggsServerSettingsDto(bool AutoStart, string BaseUrl, string Command, string Arguments, string WorkingDirectory,
+    bool CommandEditable = true);
 
 /// <summary>Online voice keys (masked when read) and the speech check settings.</summary>
 public sealed record VoiceServicesDto(string ElevenLabsKey, string ElevenLabsModel, string AzureKey, string AzureRegion, bool CheckEnabled,

@@ -14,9 +14,13 @@ namespace ReaRadioDj.Server;
 /// and closer. Also checks a block without playing it (the "Test" button) and tries it with the voice in PFL.
 /// </summary>
 public sealed class NewsService(ReaRadioDjOptions options, NewsStore store, MediaLibrary library, BreakRenderer breaks,
-    IHttpClientFactory http, MessageCenter messages, VoiceService voices, ILogger<NewsService> logger)
+    IHttpClientFactory http, MessageCenter messages, VoiceService voices, VoiceRoleStore roles, ILogger<NewsService> logger)
 {
     public IReadOnlyList<TimedEvent> Events => store.Events;
+
+    /// <summary>The voice of a block: its own, else the news reader or the weather voice, else the presenter (null).</summary>
+    private long? VoiceOf(NewsBlock b) =>
+        roles.Resolve(b.Source == NewsSource.Weather ? VoiceRoles.WeatherReader : VoiceRoles.NewsReader, b.Settings.VoiceId);
 
     private static bool Spoken(NewsSource s) => s is NewsSource.Headlines or NewsSource.AiNews or NewsSource.Weather;
 
@@ -150,7 +154,7 @@ public sealed class NewsService(ReaRadioDjOptions options, NewsStore store, Medi
                 messages.Warning($"{b.Name}: niet alle bronnen bereikbaar, de rest wordt gebruikt");
             if (w.Note is not null) messages.Warning($"{b.Name}: {w.Note}; de letterlijke versie wordt voorgelezen");
             if (b.Source == NewsSource.Headlines) await breaks.RenderTextAsync(item, w.Script, w.Source, ct);
-            else await breaks.RenderBulletinAsync(item, w.Script, w.Source, BedPath(b), b.Settings.VoiceId, ct);
+            else await breaks.RenderBulletinAsync(item, w.Script, w.Source, BedPath(b), VoiceOf(b), ct);
         }
         catch (Exception ex) when (!ct.IsCancellationRequested)
         {
@@ -213,7 +217,7 @@ public sealed class NewsService(ReaRadioDjOptions options, NewsStore store, Medi
                     try
                     {
                         var wav = voices.NewTestPath();
-                        await breaks.TryBulletinAsync(script, wav, BedPath(b), b.Settings.VoiceId, ct);
+                        await breaks.TryBulletinAsync(script, wav, BedPath(b), VoiceOf(b), ct);
                         seconds = voices.PlayTest(wav, b.Name, play);
                     }
                     catch (Exception ex) when (ex is InvalidOperationException or HttpRequestException or IOException or InvalidDataException

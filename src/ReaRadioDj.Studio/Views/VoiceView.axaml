@@ -5,7 +5,7 @@
              x:Class="ReaRadioDj.Studio.Views.VoiceView"
              x:DataType="vm:VoiceTool">
   <ScrollViewer HorizontalScrollBarVisibility="Disabled">
-  <DockPanel Margin="6" MinHeight="660">
+  <DockPanel Margin="6" MinHeight="900">
     <!-- ============================================================ status: GPU, server, active voice -->
     <Grid DockPanel.Dock="Top" ColumnDefinitions="*,6,*" Margin="0,0,0,6">
       <Border Grid.Column="0" Classes="card">
@@ -39,28 +39,88 @@
         </DockPanel>
       </Border>
     </Grid>
-    <!-- ============================================================ the voice the automation uses -->
+    <!-- ============================================================ who speaks what: presenter, news reader, weather -->
     <Border DockPanel.Dock="Top" Classes="card" Margin="0,0,0,6" BorderBrush="{DynamicResource AccentBrush}" BorderThickness="2">
       <StackPanel Spacing="6">
-        <TextBlock Text="PRESENTATORSTEM VAN DE AUTOMATISERING" FontSize="11" FontWeight="Bold" Classes="muted" />
-        <DockPanel>
-          <Button DockPanel.Dock="Right" Classes="small" Content="Standaardstemmen toevoegen" Command="{Binding AddPresetsCommand}" Margin="8,0,0,0"
-                  ToolTip.Tip="Vijf Higgs-stemmen met een eigen karakter (warm, enthousiast, vlot, rustig, zakelijk) en de Nederlandse Windows-stem als reserve" />
-          <ComboBox ItemsSource="{Binding Profiles}" SelectedItem="{Binding PresenterVoice}" HorizontalAlignment="Stretch" MinHeight="40" FontSize="15">
+        <TextBlock Text="STEMMEN PER ROL" FontSize="11" FontWeight="Bold" Classes="muted" />
+        <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto,Auto">
+          <TextBlock Grid.Row="1" Text="Nieuwslezer" VerticalAlignment="Center" FontWeight="SemiBold" Margin="0,4,10,0" />
+          <ComboBox Grid.Row="1" Grid.Column="1" Margin="0,4,0,0" ItemsSource="{Binding NewsChoices}" SelectedItem="{Binding NewsVoice}" HorizontalAlignment="Stretch"
+                    ToolTip.Tip="Leest de AI-nieuwsblokken en de koppen voor, tenzij een nieuwsblok zelf een stem kiest (venster Nieuws)" />
+          <TextBlock Grid.Row="2" Text="Weer" VerticalAlignment="Center" FontWeight="SemiBold" Margin="0,4,10,0"
+                     ToolTip.Tip="De weerman of weervrouw" />
+          <ComboBox Grid.Row="2" Grid.Column="1" Margin="0,4,0,0" ItemsSource="{Binding WeatherChoices}" SelectedItem="{Binding WeatherVoice}" HorizontalAlignment="Stretch"
+                    ToolTip.Tip="Spreekt de weerberichten in, tenzij een weerblok zelf een stem kiest (venster Nieuws)" />
+          <TextBlock Grid.Row="0" Text="AI-presentator" VerticalAlignment="Center" FontWeight="SemiBold" Margin="0,0,10,0" />
+          <ComboBox Grid.Row="0" Grid.Column="1" ItemsSource="{Binding PresenterProfiles}" SelectedItem="{Binding PresenterVoice}" HorizontalAlignment="Stretch" MinHeight="40" FontSize="15">
             <ComboBox.ItemTemplate>
               <DataTemplate x:DataType="c:VoiceProfileDto">
                 <StackPanel Orientation="Horizontal" Spacing="8">
                   <TextBlock Text="★" Foreground="{DynamicResource WarnBrush}" IsVisible="{Binding IsDefault}" VerticalAlignment="Center" />
                   <TextBlock Text="{Binding Name}" FontWeight="SemiBold" VerticalAlignment="Center" />
-                  <TextBlock Text="{Binding Engine}" Classes="muted" VerticalAlignment="Center" />
+                  <TextBlock Text="{Binding Summary}" Classes="muted" VerticalAlignment="Center" />
                 </StackPanel>
               </DataTemplate>
             </ComboBox.ItemTemplate>
           </ComboBox>
-        </DockPanel>
+        </Grid>
         <TextBlock Text="{Binding PresenterVoiceNote}" TextWrapping="Wrap" />
+        <Button Classes="small" Content="Standaardstemmen toevoegen" Command="{Binding AddPresetsCommand}" HorizontalAlignment="Left"
+                ToolTip.Tip="Vijf Higgs-stemmen met een eigen karakter (warm, enthousiast, vlot, rustig, zakelijk) en de Nederlandse Windows-stem als reserve" />
       </StackPanel>
     </Border>
+
+    <!-- ============================================================ a presenter's own voice -->
+    <Expander DockPanel.Dock="Top" Header="Mijn eigen stem (presentator)" HorizontalAlignment="Stretch" Margin="0,0,0,6">
+      <StackPanel Spacing="6">
+        <TextBlock Classes="muted" TextWrapping="Wrap"
+                   Text="Presenteer je zelf op de radio? Dan kun je hier je eigen stem vastleggen. De AI-presentator, het nieuws of het weer kan daarna met jouw stem spreken, alleen voor de rollen die je zelf aanvinkt. Je kunt je stem en je toestemming altijd weer verwijderen." />
+        <DockPanel IsVisible="{Binding OwnNeedsName}">
+          <Button DockPanel.Dock="Right" Classes="small" Content="Ophalen" Command="{Binding OwnRefreshCommand}" Margin="6,0,0,0" />
+          <TextBox Text="{Binding OwnName}" Watermark="je naam, zoals je op de radio heet" />
+        </DockPanel>
+        <TextBlock Text="{Binding OwnWhoText}" FontWeight="SemiBold" TextWrapping="Wrap" />
+        <TextBlock Text="{Binding OwnVoiceText}" TextWrapping="Wrap" Foreground="#A78BFA" />
+
+        <TextBlock Text="1. Lees deze tekst rustig en duidelijk voor (ongeveer 15 seconden, zoals je op de radio praat):" TextWrapping="Wrap" />
+        <TextBox Text="{Binding OwnText}" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="60"
+                 ToolTip.Tip="Dit moet letterlijk zijn wat er in de opname gezegd wordt. Wijk je af, pas de tekst dan aan." />
+        <DockPanel>
+          <TextBlock DockPanel.Dock="Left" Text="Microfoon" VerticalAlignment="Center" Width="80" />
+          <ComboBox ItemsSource="{Binding InputDevices}" SelectedItem="{Binding OwnDevice}" HorizontalAlignment="Stretch" IsEnabled="{Binding !OwnRecording}">
+            <ComboBox.ItemTemplate>
+              <DataTemplate x:DataType="c:DeviceDto"><TextBlock Text="{Binding Name}" /></DataTemplate>
+            </ComboBox.ItemTemplate>
+          </ComboBox>
+        </DockPanel>
+        <WrapPanel>
+          <Button Classes="transport go" Content="{Binding OwnRecordText}" Command="{Binding OwnRecordCommand}" Margin="0,0,6,4" MinWidth="120"
+                  ToolTip.Tip="Neemt op met de microfoon van de studio (niet ON AIR). Stilte voor en na wordt eraf gehaald." />
+          <Button x:Name="OwnPick" Classes="small" Content="WAV-bestand kiezen…" Margin="0,0,6,4" IsEnabled="{Binding !OwnRecording}"
+                  ToolTip.Tip="Een opname die je al hebt (WAV, 4 tot 40 seconden, alleen jouw stem)" />
+          <Button Classes="small" Content="▶ Beluister (PFL)" Command="{Binding OwnPlayCommand}" IsEnabled="{Binding OwnHasTake}" Margin="0,0,6,4" />
+          <Button Classes="small" Content="Opnieuw" Command="{Binding OwnDiscardCommand}" IsEnabled="{Binding OwnHasTake}" Margin="0,0,6,4" />
+        </WrapPanel>
+        <TextBlock Text="{Binding OwnTake}" TextWrapping="Wrap" IsVisible="{Binding OwnHasTake}" />
+
+        <TextBlock Text="2. Waarvoor mag je stem gebruikt worden?" />
+        <WrapPanel>
+          <CheckBox Content="AI-presentator" IsChecked="{Binding OwnPresenter}" Margin="0,0,12,0" />
+          <CheckBox Content="Nieuws" IsChecked="{Binding OwnNews}" Margin="0,0,12,0" />
+          <CheckBox Content="Weer" IsChecked="{Binding OwnWeather}" />
+        </WrapPanel>
+        <CheckBox IsChecked="{Binding OwnConsent}">
+          <TextBlock TextWrapping="Wrap" Text="3. Ik geef toestemming dat deze zender een AI-stem op basis van mijn stem maakt en gebruikt voor de rollen hierboven. Ik kan dit altijd intrekken met 'Mijn stem verwijderen'." />
+        </CheckBox>
+        <WrapPanel>
+          <Button Content="Mijn stem vastleggen" Command="{Binding OwnSaveCommand}" Background="#2F9E6A" Margin="0,0,6,0"
+                  ToolTip.Tip="Bewaart de opname, de tekst en je toestemming. Zonder nieuwe opname worden alleen de rollen aangepast." />
+          <Button Classes="small" Content="{Binding OwnRemoveText}" Command="{Binding OwnRemoveCommand}" IsVisible="{Binding HasOwnVoice}"
+                  ToolTip.Tip="Verwijdert je stem en de opname, en trekt je toestemming in" />
+        </WrapPanel>
+        <TextBlock Text="{Binding OwnStatus}" TextWrapping="Wrap" />
+      </StackPanel>
+    </Expander>
     <Border DockPanel.Dock="Top" Classes="card" IsVisible="{Binding ShowLog}" Margin="0,0,0,6" MaxHeight="140">
       <ListBox ItemsSource="{Binding ServerLog}" Classes="mono" FontSize="11" />
     </Border>
@@ -105,7 +165,7 @@
                   <TextBlock Text="★" Foreground="{DynamicResource WarnBrush}" IsVisible="{Binding IsDefault}" />
                   <TextBlock Text="{Binding Name}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
                 </StackPanel>
-                <TextBlock Classes="muted" Text="{Binding Engine}" />
+                <TextBlock Classes="muted" Text="{Binding Summary}" TextWrapping="Wrap" />
                 <TextBlock Text="{Binding Problem}" Foreground="#E5484D" FontSize="11" TextWrapping="Wrap"
                            IsVisible="{Binding Problem, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
               </StackPanel>
@@ -146,8 +206,15 @@
               <StackPanel Spacing="5">
                 <TextBlock Text="STEM KLONEN (optioneel)" FontSize="11" FontWeight="Bold" Classes="muted" />
                 <TextBlock Classes="muted" TextWrapping="Wrap"
-                           Text="Een korte, schone opname (5-15 s) van de stem plus de letterlijke tekst. Het pad moet leesbaar zijn voor de Higgs-server (bij WSL bijv. /mnt/c/…)." />
-                <TextBox Text="{Binding ReferenceAudio}" Watermark="pad of URL van de referentieclip" FontFamily="Consolas" />
+                           Text="Een korte, schone opname (4-40 s, WAV) van de stem plus de letterlijke tekst. Kies het bestand: de engine bewaart het in de stemmenmap en stuurt het zelf naar de Higgs-server. Een pad of URL die de server zelf kan lezen mag ook." />
+                <TextBlock Foreground="#A78BFA" TextWrapping="Wrap" Text="{Binding OwnerNote}" IsVisible="{Binding IsOwned}" />
+                <DockPanel>
+                  <Button x:Name="ClipPick" DockPanel.Dock="Right" Classes="small" Content="Opname kiezen…" Margin="6,0,0,0" IsEnabled="{Binding !IsOwned}"
+                          ToolTip.Tip="WAV-bestand van 4 tot 40 seconden; sla een nieuwe stem eerst op" />
+                  <TextBox Text="{Binding ReferenceAudio}" Watermark="opname uit de stemmenmap, of pad/URL voor de server" FontFamily="Consolas" IsReadOnly="{Binding IsOwned}" />
+                </DockPanel>
+                <TextBlock Text="{Binding ClipResult}" TextWrapping="Wrap" FontSize="12"
+                           IsVisible="{Binding ClipResult, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
                 <TextBox Text="{Binding ReferenceText}" Watermark="letterlijke tekst van de clip" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="44" />
                 <StackPanel Spacing="4" IsVisible="{Binding IsClone}">
                   <CheckBox IsChecked="{Binding Consent}" Content="Deze persoon heeft schriftelijk toestemming gegeven voor het klonen van de stem" />
@@ -174,6 +241,14 @@
             <TextBlock Classes="muted" TextWrapping="Wrap" Text="De sleutel staat onder 'Online stemmen en controle'. Online stemmen kosten geld per teken en sturen de tekst naar de dienst." />
           </StackPanel>
 
+          <DockPanel>
+            <TextBlock DockPanel.Dock="Left" Text="Gebruiken voor" VerticalAlignment="Center" Width="100" />
+            <WrapPanel IsEnabled="{Binding !IsOwned}" ToolTip.Tip="Bij een eigen stem bepaalt de eigenaar dit zelf (onder 'Mijn eigen stem')">
+              <CheckBox Content="AI-presentator" IsChecked="{Binding UsePresenter}" Margin="0,0,12,0" />
+              <CheckBox Content="Nieuws" IsChecked="{Binding UseNews}" Margin="0,0,12,0" />
+              <CheckBox Content="Weer" IsChecked="{Binding UseWeather}" />
+            </WrapPanel>
+          </DockPanel>
           <DockPanel>
             <TextBlock DockPanel.Dock="Left" Text="Reservestem" VerticalAlignment="Center" Width="100" />
             <ComboBox ItemsSource="{Binding FallbackChoices}" SelectedItem="{Binding Fallback}" HorizontalAlignment="Stretch"

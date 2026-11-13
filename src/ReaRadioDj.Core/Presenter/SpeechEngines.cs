@@ -17,7 +17,7 @@ public interface ISpeechEngine
 /// {model, input, voice, response_format, references, temperature}; the response body is the WAV file (24 kHz mono).
 /// Note: the Higgs model license is research / non-commercial; that suits this free project, not a commercial one.
 /// </summary>
-public sealed class HiggsSpeechEngine(HttpClient http, TtsOptions options) : ISpeechEngine
+public sealed class HiggsSpeechEngine(HttpClient http, TtsOptions options, VoiceClips? clips = null) : ISpeechEngine
 {
     public string Name => "higgs";
 
@@ -32,7 +32,12 @@ public sealed class HiggsSpeechEngine(HttpClient http, TtsOptions options) : ISp
         double temperature = profile?.Temperature ?? options.Temperature;
         // Tags that the script already starts with are not doubled.
         var input = string.IsNullOrWhiteSpace(tags) || text.TrimStart().StartsWith("<|", StringComparison.Ordinal) ? text : tags.Trim() + text;
-        Reference[]? references = string.IsNullOrWhiteSpace(refAudio) ? null : [new Reference(refAudio, refText)];
+        // A clip from the voice folder goes inside the request; anything else is a path or URL the server reads itself.
+        Reference[]? references = string.IsNullOrWhiteSpace(refAudio) ? null
+            : VoiceClips.IsStored(refAudio)
+                ? [new Reference(null, refText, Convert.ToBase64String(clips?.Read(refAudio)
+                    ?? throw new InvalidOperationException($"de stemopname {refAudio} ontbreekt in de stemmenmap")), "audio/wav")]
+                : [new Reference(refAudio, refText)];
 
         using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
         cts.CancelAfter(TimeSpan.FromSeconds(options.TimeoutSeconds));
@@ -81,8 +86,10 @@ public sealed class HiggsSpeechEngine(HttpClient http, TtsOptions options) : ISp
         [property: JsonPropertyName("temperature")] double Temperature);
 
     private sealed record Reference(
-        [property: JsonPropertyName("audio_path")] string AudioPath,
-        [property: JsonPropertyName("text")] string Text);
+        [property: JsonPropertyName("audio_path"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? AudioPath,
+        [property: JsonPropertyName("text")] string Text,
+        [property: JsonPropertyName("data"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? Data = null,
+        [property: JsonPropertyName("media_type"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? MediaType = null);
 }
 
 /// <summary>Windows built-in speech (SAPI). Offline and always available on Windows; quality depends on the installed voices.</summary>

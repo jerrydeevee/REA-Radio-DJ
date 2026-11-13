@@ -320,6 +320,8 @@ public sealed class BreakRenderer(
                 var profile = voiceId is long own ? profiles.Profile(own) : null;
                 profile ??= tone is not null && c.VoiceId is long creativeId ? profiles.Profile(creativeId) : null;
                 profile ??= persona?.VoiceId is long personaVoice ? profiles.Profile(personaVoice) : null;
+                // A break is the presenter's role: a voice whose owner did not allow that is passed over.
+                if (voiceId is null && profile is not null && !profile.Allows(VoiceRoles.Presenter)) profile = null;
                 profile ??= profiles.Profile(0) ?? DefaultProfile(profiles);
                 if (tone is not null && c.ToneVoice && profile is { Engine: "higgs" })
                     profile = profile with { Tags = CreativeTones.HiggsTags(tone) };

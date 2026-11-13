@@ -70,7 +70,7 @@ public sealed partial class NewsTool : StudioTool
     [ObservableProperty] private bool _busy;
     public ObservableCollection<PlaceDto> Places { get; } = [];
     public bool HasPlaces => Places.Count > 0;
-    public ObservableCollection<NewsJingle> Voices { get; } = [new(null, "standaardstem van de presentator")];
+    public ObservableCollection<NewsJingle> Voices { get; } = [new(null, "stem van de rol: nieuwslezer of weerman/weervrouw (venster Stemmen)")];
 
     public string LengthText => $"woorden, ongeveer {Math.Round((double)(Words ?? 120) / 2.5 / 5) * 5:0} seconden";
     public string PlaceText => Latitude == 0 && Longitude == 0

@@ -8,11 +8,17 @@ namespace ReaRadioDj.Core.Presenter;
 /// voices (key in the settings, voice ID or name in <see cref="SapiVoice"/>). <see cref="FallbackId"/> is the voice to
 /// use when this one fails. A cloned voice is only used when
 /// <see cref="Consent"/> is set: the person whose voice it is gave written permission (recorded in ConsentNote).
+/// <see cref="Owner"/> is the presenter whose own voice this is (empty = a station voice); <see cref="Uses"/> limits
+/// the roles it may speak in (comma list of <see cref="VoiceRoles.All"/>; empty = every role).
 /// </summary>
 public sealed record VoiceProfile(long Id, string Name, string Engine, string ReferenceAudio, string ReferenceText, string Tags,
-    double Temperature, string SapiVoice, bool Consent, string ConsentNote, bool IsDefault, long? FallbackId = null)
+    double Temperature, string SapiVoice, bool Consent, string ConsentNote, bool IsDefault, long? FallbackId = null,
+    string Owner = "", string Uses = "")
 {
     public static readonly string[] Engines = ["higgs", "sapi", "elevenlabs", "azure"];
+
+    /// <summary>May this voice speak in this role (presenter, news, weather)?</summary>
+    public bool Allows(string role) => VoiceRoles.Parse(Uses) is var u && (u.Count == 0 || u.Contains(role));
 
     public bool IsClone => Engine == "higgs" && !string.IsNullOrWhiteSpace(ReferenceAudio);
 
@@ -45,11 +51,20 @@ public sealed class VoiceStore
 
     public VoiceProfile? Get(long id) { lock (_gate) return _profiles.FirstOrDefault(p => p.Id == id); }
 
+    /// <summary>The own voice of a presenter (by name, case-insensitive), or null.</summary>
+    public VoiceProfile? OwnedBy(string owner)
+    {
+        owner = owner.Trim();
+        if (owner.Length == 0) return null;
+        lock (_gate) return _profiles.FirstOrDefault(p => string.Equals(p.Owner, owner, StringComparison.OrdinalIgnoreCase));
+    }
+
     public void Reload()
     {
-        var list = _db.Query("SELECT id, name, engine, reference_audio, reference_text, tags, temperature, sapi_voice, consent, consent_note, is_default, fallback_id FROM voice_profiles ORDER BY name",
+        var list = _db.Query("SELECT id, name, engine, reference_audio, reference_text, tags, temperature, sapi_voice, consent, consent_note, is_default, fallback_id, owner, uses FROM voice_profiles ORDER BY name",
             r => new VoiceProfile(r.GetInt64(0), r.GetString(1), r.GetString(2), r.GetString(3), r.GetString(4), r.GetString(5),
-                r.GetDouble(6), r.GetString(7), r.GetInt64(8) != 0, r.GetString(9), r.GetInt64(10) != 0, r.GetInt64OrNull(11)));
+                r.GetDouble(6), r.GetString(7), r.GetInt64(8) != 0, r.GetString(9), r.GetInt64(10) != 0, r.GetInt64OrNull(11),
+                r.GetString(12), r.GetString(13)));
         lock (_gate) _profiles = list;
     }
 
@@ -71,17 +86,18 @@ public sealed class VoiceStore
             ("$temp", Math.Clamp(p.Temperature, 0.1, 1.5)), ("$sv", p.SapiVoice.Trim()), ("$c", p.Consent ? 1 : 0),
             ("$cn", p.ConsentNote.Trim()), ("$d", p.IsDefault ? 1 : 0), ("$id", p.Id),
             ("$fb", p.FallbackId is long f && f != p.Id ? f : null),
+            ("$o", p.Owner.Trim()), ("$u", VoiceRoles.Format(VoiceRoles.Parse(p.Uses))),
         };
         long id = p.Id;
         if (id > 0)
             _db.Execute("""
                 UPDATE voice_profiles SET name=$n, engine=$e, reference_audio=$ra, reference_text=$rt, tags=$t, temperature=$temp,
-                sapi_voice=$sv, consent=$c, consent_note=$cn, fallback_id=$fb WHERE id=$id
+                sapi_voice=$sv, consent=$c, consent_note=$cn, fallback_id=$fb, owner=$o, uses=$u WHERE id=$id
                 """, args);
         else
             id = _db.Insert("""
-                INSERT INTO voice_profiles(name, engine, reference_audio, reference_text, tags, temperature, sapi_voice, consent, consent_note, is_default, fallback_id)
-                VALUES($n, $e, $ra, $rt, $t, $temp, $sv, $c, $cn, $d, $fb)
+                INSERT INTO voice_profiles(name, engine, reference_audio, reference_text, tags, temperature, sapi_voice, consent, consent_note, is_default, fallback_id, owner, uses)
+                VALUES($n, $e, $ra, $rt, $t, $temp, $sv, $c, $cn, $d, $fb, $o, $u)
                 """, args);
         if (p.IsDefault) SetDefault(id); else Done();
         return id;

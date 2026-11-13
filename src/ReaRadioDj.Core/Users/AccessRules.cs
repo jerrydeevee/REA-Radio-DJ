@@ -60,6 +60,9 @@ public static class AccessRules
         ("/api/news", UserRole.Technician),
         ("/api/import", UserRole.Technician),
         ("/api/voice/profiles", UserRole.Technician),
+        ("/api/voice/roles", UserRole.Technician),
+        // A presenter's own voice: everybody, for themselves (the engine links it to the signed-in name).
+        ("/api/voice/mine", null),
         ("/api/presenter/personas", UserRole.Technician),
         ("/api/transition-rules", UserRole.Technician),
         ("/api/transition", UserRole.Technician),

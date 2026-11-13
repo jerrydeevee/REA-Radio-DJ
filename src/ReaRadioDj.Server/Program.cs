@@ -61,6 +61,7 @@ PresenterSettings.Load(db, options);
 PresenterExtrasSettings.Load(db, options);
 CreativeSettings.Load(db, options);
 VoiceServicesSettings.Load(db, options);
+HiggsServerSettings.Load(db, options);
 SpotifySettings.Load(db, options);
 
 builder.Services.AddSingleton(options);
@@ -98,7 +99,9 @@ builder.Logging.AddProvider(SystemLog.Instance);
 builder.Services.AddHostedService(sp => sp.GetRequiredService<SilenceWatch>());
 builder.Services.AddSingleton<FailoverService>();
 builder.Services.AddHostedService(sp => sp.GetRequiredService<FailoverService>());
-builder.Services.AddSingleton(sp => new VoiceTracker(sp.GetRequiredService<PlayoutLog>(), new BassVoiceCapture(),
+// One microphone capture, shared by voicetracking and the own-voice recording (never both at once).
+builder.Services.AddSingleton<IVoiceCapture>(_ => new BassVoiceCapture());
+builder.Services.AddSingleton(sp => new VoiceTracker(sp.GetRequiredService<PlayoutLog>(), sp.GetRequiredService<IVoiceCapture>(),
     new PflVoicePreview(sp.GetRequiredService<StudioPlayers>()), path => sp.GetRequiredService<MediaLibrary>().Load(path, ReaRadioDj.Core.Model.MediaKind.Voice),
     Path.Combine(options.DataFolder, "voicetracks"), options.Routing.MicDevice));
 builder.Services.AddSingleton<Cartwall>();
@@ -112,6 +115,10 @@ builder.Services.AddHostedService<StreamKeepalive>();
 builder.Services.AddHttpClient();
 // Presenter voice: the default voice profile chooses Higgs TTS 3 (GPU server) or Windows speech.
 builder.Services.AddSingleton<VoiceStore>();
+builder.Services.AddSingleton<VoiceRoleStore>();
+builder.Services.AddSingleton(new VoiceClips(Path.Combine(options.DataFolder, "voices")));
+builder.Services.AddSingleton<OwnVoiceRecorder>();
+builder.Services.AddSingleton<Own>();
 builder.Services.AddSingleton<PersonaStore>();
 builder.Services.AddSingleton<NoteStore>();
 builder.Services.AddSingleton(sp => new BreakExtras(sp.GetRequiredService<IHttpClientFactory>().CreateClient("extras"), options.Presenter,
@@ -128,7 +135,7 @@ builder.Services.AddSingleton(sp =>
 {
     var http = sp.GetRequiredService<IHttpClientFactory>().CreateClient("tts");
     http.Timeout = Timeout.InfiniteTimeSpan; // per-call timeouts come from the options
-    return new HiggsSpeechEngine(http, options.Presenter.Tts);
+    return new HiggsSpeechEngine(http, options.Presenter.Tts, sp.GetRequiredService<VoiceClips>());
 });
 builder.Services.AddSingleton(_ => new SapiSpeechEngine(options.Presenter.Tts, options.Presenter.Language));
 builder.Services.AddSingleton(sp => new ElevenLabsSpeechEngine(sp.GetRequiredService<IHttpClientFactory>().CreateClient("cloudvoice"), options.Presenter.Tts));
@@ -226,6 +233,7 @@ static ReaRadioDj.Contracts.RecordingSettingsDto RecordingDto(AirRecorder r)
 }
 ChannelsApi.Map(api, options);
 VoiceApi.Map(api);
+VoiceLibraryApi.Map(api, options);
 PresenterApi.Map(api, options);
 VoiceTrackApi.Map(api, options);
 TransitionApi.Map(api, options);
