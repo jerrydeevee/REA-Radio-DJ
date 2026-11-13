@@ -1,8 +1,9 @@
 # Wijzigingen
 
-## 1.1.0-rc.1 (13 november 2026)
+## 1.1.0 (13 november 2026)
 
-Release candidate voor 1.1.0. Status: proof of concept, nog niet bedoeld voor een echte zender.
+Tweede openbare uitgave, de eerste met een Windows-setup. Status: proof of concept, nog niet bedoeld voor een echte
+zender. Deze versie is eerder dezelfde dag als release candidate 1.1.0-rc.1 verschenen.
 
 ### Nieuw
 - **Venster Uitsturing**: het programma met piek, loudness (kort en geïntegreerd), true peak en begrenzer, en per
@@ -21,7 +22,8 @@ Release candidate voor 1.1.0. Status: proof of concept, nog niet bedoeld voor ee
 - **Studioklokken** in drie stijlen: analoog en digitaal samen, LED met secondeblokjes, en een uurklok.
 - **Mackie Control**: het mengpaneel bedienen met een paneel met motorfaders, ook met uitbreidingen ernaast.
 - **Inrichthulp** bij de eerste start, en een **melding van een nieuwere uitgave** (Info › Zoeken naar updates).
-- **Windows-setup** (Inno Setup) als bouwscript, naast de zip.
+- **Windows-setup** (`REA-Radio-DJ-1.1.0-setup.exe`) naast de zip: installatie per gebruiker zonder
+  beheerdersrechten, met Startmenu, en bijwerken over een oude versie heen.
 
 ### Verbeterd
 - Nummers worden met AcoustID eerst **op geluid** herkend, daarna op de tags; nummers die straks in de log komen,
