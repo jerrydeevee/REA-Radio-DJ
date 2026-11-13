@@ -907,6 +907,41 @@ public sealed class MediaLibrary
         return LibrarySearch.Run(q, text, DateTime.Now, block, limit);
     }
 
+    /// <summary>The category of files put on air from the Verkenner that are not in a library folder.</summary>
+    public const string LooseCategory = "Losse bestanden";
+
+    /// <summary>
+    /// A file loaded from the Verkenner as a library item, so it gets its tags, cover, waveform and the online lookup
+    /// like any other song. A file in a library folder is read as the scan would; any other file goes to
+    /// <see cref="LooseCategory"/>, switched off, so it never plays in rotation by itself. A known file is returned as is.
+    /// </summary>
+    public MediaItem? AddLoose(string path, MediaKind kind)
+    {
+        var info = new FileInfo(path);
+        if (FindByPath(info.FullName) is { } known) return known;
+        bool existed = _db.Scalar<long?>("SELECT id FROM media WHERE path = $p", ("$p", info.FullName)) is not null;
+        var folder = Folders().FirstOrDefault(f => f.Enabled && Inside(info.FullName, f.Path));
+        long category;
+        if (folder is not null)
+        {
+            string fallback = folder.Fixed ? (folder.Kind == MediaKind.Song ? "Muziek" : "Jingles") : Path.GetFileName(folder.Path.TrimEnd('\\')) is { Length: > 0 } n ? n : folder.Path;
+            kind = folder.Kind;
+            category = EnsureCategory(folder.Category.Length > 0 ? folder.Category : CategoryName(folder.Path, info.FullName, fallback), kind);
+        }
+        else category = EnsureCategory(LooseCategory, kind);
+        // Not "new": a copy of a library song elsewhere must not take over that song's path.
+        Import(info, kind, category, keepCues: false, isNew: false, writeTags: false, fixedCategory: folder is null);
+        if (!existed && folder is null) _db.Execute("UPDATE media SET enabled = 0 WHERE path = $p", ("$p", info.FullName));
+        if (_db.Scalar<long?>("SELECT id FROM media WHERE path = $p", ("$p", info.FullName)) is not long id) return null;
+        // A running scan reloads at its end; otherwise reload now so search and the album rule know the file.
+        if (_scanLock.Wait(0))
+        {
+            try { Reload(); } finally { _scanLock.Release(); }
+            Changed?.Invoke();
+        }
+        return Get(id);
+    }
+
     /// <summary>Analyses a file that is not part of the library (rendered voice breaks).</summary>
     public MediaItem Load(string path, MediaKind kind)
     {
