@@ -18,8 +18,8 @@ VoIP-kanalen voor bellers en verslaggevers, en bediening via MIDI, Livewire, Emb
 | **DJ-modus**: decks met golfvorm en beatstrepen, mengpaneel en automix | **Automatisering**: programmalog met AI-presentator, klok en berichten |
 | ![Productie met bibliotheek, cue-editor en voicetracking](docs/screenshots/productie.png) | ![Planning met de planner, reclame en programmalog](docs/screenshots/planning.png) |
 | **Productie**: bibliotheek, cue-editor, voicetracking en PFL | **Planning**: dag, week, klokken en vaste tijden, reclamecampagnes |
-| ![Rapportage met as-run, muziekrapport, stream en regiekamer](docs/screenshots/rapportage.png) | |
-| **Rapportage**: as-run, muziekrapport (CSV en PDF), stream en regiekamer | |
+| ![Rapportage met as-run, muziekrapport, stream en regiekamer](docs/screenshots/rapportage.png) | ![Het venster Uitsturing met een grote meter en een open-lampje per kanaal](docs/screenshots/uitsturing.png) |
+| **Rapportage**: as-run, muziekrapport (CSV en PDF), stream en regiekamer | **Uitsturing**: programma met loudness en per kanaal een meter met OPEN/DICHT |
 
 Elk venster is te verslepen, te docken of los te laten zweven, ook op een tweede scherm.
 
@@ -32,6 +32,9 @@ Elk venster is te verslepen, te docken of los te laten zweven, ook op een tweede
   de log was. De engine kan met Windows mee starten, los van de studio.
 - **Stiltedetectie** op de zender: drempel, duur en actie (melden, automatisering starten of iets uit een
   noodcategorie spelen).
+- **Reservestudio**: een tweede engine bewaakt de hoofdstudio en neemt de uitzending over als die uitvalt, een
+  storing meldt of (als je dat kiest) stil valt; als de hoofdstudio weer speelt, geeft hij de lucht na een ingestelde
+  tijd of met een knop terug (*Instellingen › Reservestudio*).
 - **Reservekopie** van instellingen, klokken, planning, cartwalls en hardware in één bestand, en een systeemlog in
   de studio.
 
@@ -55,6 +58,10 @@ Elk venster is te verslepen, te docken of los te laten zweven, ook op een tweede
   outromarkers, plus een kwaliteitscontrole (te zacht, clipping, stilte, lage bitrate, dubbele nummers).
 - **Zoeken** zonder accenten en met kleine tikfouten, korte filters (`bpm:120-128`, `jaar:198`, `duur:<3:30`),
   filterknoppen, slimme lijsten, "mag dit nu?" per nummer en een detailpaneel. Snel bij 100.000 nummers.
+- **Opzoeken op geluid**: met AcoustID wordt een nummer eerst op zijn vingerafdruk herkend, daarna op de tags;
+  nummers die straks in de log komen worden vooruit opgezocht, zodat hoes en gegevens er op tijd zijn.
+- **Losse bestanden** die vanuit de Verkenner in de log of een speler worden gezet, komen in de categorie
+  *Losse bestanden* (niet in de rotatie) en krijgen zo ook een hoes en metadata.
 - **Tags lezen en terugschrijven**, hoezen, meer tagvelden (ISRC, componist, uitgever) en ongedaan maken.
 
 ### Mengpaneel en geluid
@@ -62,6 +69,10 @@ Elk venster is te verslepen, te docken of los te laten zweven, ook op een tweede
   voorluisteren, elk naar een eigen Windows-kaart, kanaalpaar of ASIO-uitgang.
 - **Kanaalstrip** per kanaal: gain, balans, equalizer, compressor, automatische niveauregeling, dempen, naar de
   zender, opnemen (REC), een ingebouwd effect en plekken voor VST-effecten.
+- **LED-meters** in dBFS met piek-vasthouden in de decks, de mixer, de DJ-strip en de bovenbalk; het deck dat
+  in de lucht is, heeft een signaalbalk en meldt *geen geluid* als het stil blijft.
+- **Venster Uitsturing**: het programma met piek, loudness (kort en geïntegreerd), true peak en begrenzer, en per
+  kanaal een grote meter met een lampje OPEN, DICHT of MIC OPEN; leesbaar vanaf de andere kant van de studio.
 - **Master** met begrenzer en loudness-meter. Werkwijze *software* (de engine mengt) of *mengtafel* (elk kanaal
   naar zijn eigen uitgang).
 
@@ -88,6 +99,8 @@ Elk venster is te verslepen, te docken of los te laten zweven, ook op een tweede
 ### AI-presentator
 - Tekst via elk OpenAI-compatibel endpoint (bijv. Ollama) of ingebouwde sjablonen, stem via Higgs TTS 3 of
   Windows-spraak. Breaks worden vooraf gemaakt; de uitzending wacht nooit op de AI.
+- **Stemmendatabase**: een presentator neemt een eigen stem op (studiomicrofoon) of uploadt er een, met rollen
+  voor presentator, nieuwslezer en weerman/-vrouw; de Higgs-server kan met de engine mee starten.
 - Een creatieve presentator die de plaatjes aan elkaar praat, ook met denkende taalmodellen.
 - **AI-nieuws en weerbericht** als vast nieuwsblok: landelijke (bv. de NOS) en regionale bronnen (bv. RTV Drenthe),
   door het lokale taalmodel herschreven tot een bulletin met bronvermelding, of een weerbericht voor een gekozen plaats.
@@ -105,6 +118,11 @@ Elk venster is te verslepen, te docken of los te laten zweven, ook op een tweede
   *Nog niet tegen een echt paneel getest.*
 
 ### De studio
+- **Op afstand**: een pagina voor telefoon en tablet (`/remote/` op de engine) toont wat er speelt en wat er komt,
+  met grote knoppen voor start, overslaan en carts. Lezen kan vanaf elke computer; elke actie via het netwerk vraagt
+  een aangemelde gebruiker of het bedieningswachtwoord.
+- **Studioklokken** in drie stijlen: analoog en digitaal samen, een LED-klok met secondeblokjes, en een uurklok
+  die aftelt naar het hele uur.
 - Een inrichthulp bij de eerste start: stationsnaam, kleurstijl, muziek- en jinglemap en geluidskaarten in vier
   stappen (later terug te vinden onder *Studio › Inrichthulp*).
 - Werkruimtes Live, DJ, Automatisering, Productie, Planning en Rapportage, met werkbladen per scherm.
