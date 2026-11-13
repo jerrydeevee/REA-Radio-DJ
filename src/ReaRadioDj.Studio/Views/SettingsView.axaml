@@ -260,6 +260,21 @@
             <TextBlock Classes="help" Text="Bij stilte start meteen een willekeurig item uit deze categorie (bijvoorbeeld een noodplaylist of stationsjingles) en daarna gaat de automatisering verder. Is de categorie leeg, dan start alleen de automatisering." />
           </StackPanel>
           <TextBlock Classes="help" Text="Zolang het stil blijft, komt het alarm elke minuut terug. Kies een duur die langer is dan de langste stilte in je eigen programma (een stille passage in klassieke muziek, een pauze in een gesprek)." />
+
+          <TextBlock Classes="title" Text="Volume van de geluidskaart" Margin="0,22,0,0" />
+          <TextBlock Classes="help" Text="De engine kijkt elke twee seconden naar het Windows-volume en de demping van de kaarten waar de zender (en de PFL en de mengkanalen) op spelen. Zet Windows of een ander programma (een update, een vergaderprogramma, een toetsenbordknop) een kaart zachter of dempt het hem, dan komt er een melding in Berichten. ASIO loopt buiten het Windows-volume om en telt niet mee." />
+          <CheckBox Content="Volume van de kaarten bewaken" IsChecked="{Binding DevWatchEnabled}" Margin="0,10,0,0" />
+          <CheckBox Content="Een veranderde kaart meteen terugzetten" IsChecked="{Binding DevWatchRestore}" IsEnabled="{Binding DevWatchEnabled}" Margin="24,0,0,0"
+                    ToolTip.Tip="Zonder deze keuze komt er alleen een melding en geldt de nieuwe stand daarna als normaal. Met deze keuze zet de engine de kaart binnen twee seconden terug op de normale stand." />
+          <ItemsControl ItemsSource="{Binding DevWatchCards}" Margin="0,8,0,0">
+            <ItemsControl.ItemTemplate><DataTemplate x:DataType="x:String"><TextBlock Text="{Binding}" TextWrapping="Wrap" /></DataTemplate></ItemsControl.ItemTemplate>
+          </ItemsControl>
+          <StackPanel Orientation="Horizontal" Spacing="6" Margin="0,10,0,0">
+            <Button Content="Bewaking opslaan" Command="{Binding SaveDeviceWatchCommand}" />
+            <Button Content="Huidige stand is normaal" Command="{Binding AcceptDeviceWatchCommand}"
+                    ToolTip.Tip="Na het bewust harder of zachter zetten van een kaart in Windows: die stand wordt de normale stand om op terug te zetten." />
+            <TextBlock Classes="muted" Text="{Binding DevWatchStatus}" VerticalAlignment="Center" />
+          </StackPanel>
         </StackPanel></ScrollViewer>
       </TabItem>
 

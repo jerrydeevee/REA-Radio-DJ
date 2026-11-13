@@ -280,6 +280,42 @@ public sealed partial class SettingsTool : StudioTool
     [ObservableProperty] private OutputChoiceDto? _recSpeechSource = MicChoice;
     public int[] RecBitrates { get; } = [64, 96, 128, 160, 192, 256, 320];
 
+    // ---- the sound card watch (Windows volume and mute of the cards the station plays on)
+    [ObservableProperty] private bool _devWatchEnabled = true;
+    [ObservableProperty] private bool _devWatchRestore;
+    [ObservableProperty] private List<string> _devWatchCards = [];
+    [ObservableProperty] private string _devWatchStatus = "";
+
+    private async Task LoadDeviceWatchAsync()
+    {
+        if (await Hub.Client.GetAsync<DeviceWatchDto>("/api/devicewatch") is { } d) ShowDeviceWatch(d);
+    }
+
+    private void ShowDeviceWatch(DeviceWatchDto d)
+    {
+        DevWatchEnabled = d.Enabled;
+        DevWatchRestore = d.Restore;
+        DevWatchCards = d.Cards.Select(c =>
+            $"{c.Name} — {c.Uses}: {(c.Volume is double v ? (c.Muted ? "gedempt" : $"{v:0}%") : "volume niet uit te lezen")}{(c.Note.Length > 0 && c.Volume is not null ? $" ({c.Note})" : "")}").ToList();
+        if (DevWatchCards.Count == 0) DevWatchCards = ["Geen Windows-kaart in gebruik (ASIO of geen geluid)."];
+    }
+
+    [RelayCommand]
+    private async Task SaveDeviceWatch()
+    {
+        var d = await Hub.Client.SendForAsync<DeviceWatchDto>(HttpMethod.Put, "/api/devicewatch", new DeviceWatchDto(DevWatchEnabled, DevWatchRestore, []));
+        DevWatchStatus = d is null ? "Opslaan mislukt." : "Bewaard.";
+        if (d is not null) ShowDeviceWatch(d);
+    }
+
+    [RelayCommand]
+    private async Task AcceptDeviceWatch()
+    {
+        var d = await Hub.Client.SendForAsync<DeviceWatchDto>(HttpMethod.Post, "/api/devicewatch/accept", new { });
+        DevWatchStatus = d is null ? "Mislukt." : "De huidige stand van de kaarten is nu de normale stand.";
+        if (d is not null) ShowDeviceWatch(d);
+    }
+
     private async Task LoadRecordingAsync()
     {
         if (await Hub.Client.GetAsync<RecordingSettingsDto>("/api/recordings/settings") is { } r) ShowRecording(r);
@@ -394,6 +430,7 @@ public sealed partial class SettingsTool : StudioTool
         }
         Show(s);
         await LoadRulesAsync();
+        await LoadDeviceWatchAsync();
         await LoadSystemAsync();
         await Failover.LoadAsync();
         await LoadOutputsAsync();

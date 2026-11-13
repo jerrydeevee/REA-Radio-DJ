@@ -231,6 +231,10 @@ public sealed record RecordingSettingsDto(bool Program, bool Mic, bool MicToLibr
     bool Speech = false, double SpeechThresholdDb = -40, double SpeechHangSeconds = 2,
     string? SpeechFile = null, bool SpeechRecording = false, long SpeechTakes = 0, string SpeechSource = "mic");
 
+/// <summary>The sound card watch: settings and per Windows card in use its volume (percent, null when it cannot be read).</summary>
+public sealed record DeviceWatchDto(bool Enabled, bool Restore, IReadOnlyList<DeviceWatchCardDto> Cards);
+public sealed record DeviceWatchCardDto(string Name, string Uses, double? Volume, bool Muted, string Note);
+
 public sealed record CategoryDto(long Id, string Name, string Kind, string Color);
 
 /// <summary>Waveform: one linear peak (0..65535) per block, little-endian UInt16, base64.</summary>

@@ -52,7 +52,7 @@ Het belang staat in de kolom **Prio** voor Radio Aa en Hunze: **H** hoog, **M** 
 | ⬜ | **Vrij aantal in- en uitgangskanalen** en **subgroepen** (som van een paar spelers, groepsbus, luidsprekertoewijzing per kanaal) | onze kanalen liggen vast | M |
 | ⬜ | **Profielen met presets**: hele mengpanelinstelling of alleen EQ/gain/pan wisselen met één klik | ontbreekt | M |
 | ⬜ | "Talk to user": een tweede spreekcircuit naar één bepaalde uitgang (bijv. de beller of de tweede studio), los van de zender | deels via de VoIP-terugweg | L |
-| ⬜ | **Bewaking van de geluidskaart**: melden of terugzetten als Windows of een ander programma het volume of de demping van het apparaat verandert | ontbreekt | H |
+| ✅ | **Bewaking van de geluidskaart**: melden of terugzetten als Windows of een ander programma het volume of de demping van het apparaat verandert | Instellingen › Bewaking › "Volume van de geluidskaart": elke 2 s het Windows-volume en de demping (Core Audio) van de kaarten van zender, PFL en mengkanalen; een verandering geeft een melding, of wordt meteen teruggezet als je dat kiest; "Huidige stand is normaal" na een bewuste wijziging. ASIO telt niet mee. Getest: uitlezen op de testengine (alleen lezen); terugzetten alleen in de tests, niet op een echte kaart | H |
 | ⬜ | Inrichthulp voor het mengpaneel: in een paar stappen kanalen, uitgangen en routering kiezen | onze inrichthulp doet alleen de basis | L |
 | ✅ | Gesynchroniseerde PFL op elke bron, plus een PFL-speler die vooruit luistert | PFL-speler | — |
 | ⬜ | Volumeregeling van een externe tafel of kaart vanuit het programma (uitgangsniveau van het apparaat) | ontbreekt | L |
@@ -437,7 +437,7 @@ Zonder dit heeft uitbreiden geen zin.
 |---|---|---|
 | Luistertests: DJ-modus, AI-nieuws op de zender, opnemen met bewaartermijn | S | bevindingen verwerkt, niets hoorbaar mis |
 | ASIO-stuurprogramma dat niet start: terugval naar WASAPI met melding | S | engine blijft spelen, studio toont de melding |
-| **Bewaking van de geluidskaart** (volume en demping van het apparaat) | S | ander programma zet de kaart zacht → melding en terugzetten |
+| ✅ **Bewaking van de geluidskaart** (volume en demping van het apparaat) | S | ander programma zet de kaart zacht → melding en terugzetten |
 | ✅ **Opnemen met signaaldetectie** (drempel en nalooptijd) | S | alleen de presentatorpraat staat in de opname |
 | Testen tegen echte apparatuur: SIP bij de aanbieder, Ember+ tegen LUCI/Lawo, Mackie Control | M | elk apparaat werkt of heeft een bekende beperking op papier |
 | Cosmetische ronde over de hele studio | M | in een smal of laag paneel is alles vindbaar |

@@ -94,6 +94,8 @@ builder.Services.AddSingleton(new DjStore(Path.Combine(options.DataFolder, "dj.j
 builder.Services.AddSingleton<DjMixer>();
 builder.Services.AddSingleton<DjHandover>();
 builder.Services.AddSingleton<StandbyFlag>();
+builder.Services.AddSingleton<DeviceWatch>();
+builder.Services.AddHostedService(sp => sp.GetRequiredService<DeviceWatch>());
 builder.Services.AddSingleton<SilenceWatch>();
 builder.Logging.AddProvider(SystemLog.Instance);
 builder.Services.AddHostedService(sp => sp.GetRequiredService<SilenceWatch>());
@@ -230,6 +232,7 @@ PathsApi.Map(api, app.Services.GetRequiredService<StationDb>());
 StreamTargetsApi.Map(api, app.Services.GetRequiredService<StationDb>(), app.Services.GetRequiredService<ReaRadioDj.Core.Streaming.StreamGroup>());
 TransitionRulesApi.Map(api, app.Services.GetRequiredService<StationDb>(), app.Services.GetRequiredService<PlayoutEngine>());
 // The station's own recordings: the program per hour, the microphone per take, with a retention time.
+DeviceWatch.Map(api);
 api.MapGet("/recordings/settings", (AirRecorder r) => RecordingDto(r));
 api.MapPut("/recordings/settings", (ReaRadioDj.Contracts.RecordingSettingsDto d, RecordingService service, AirRecorder r) =>
 {
