@@ -1,6 +1,6 @@
 # Functiedekking en plan naar een volwaardige playout
 
-*Versie 2.1, 13 november 2026: onderdeel 16 en fase I toegevoegd. Versie 2 (12 november) Versie 1 was een eerste overzicht; deze versie is uitgewerkt per onderdeel, de open punten zijn in de code nagelopen, en het plan is uitgebreid met architectuur, opleveringen en controlepunten.*
+*Versie 2.2, 13 november 2026: onderdeel 17 en fase J toegevoegd. Versie 2.1 (13 november): onderdeel 16 en fase I. Versie 2 (12 november) Versie 1 was een eerste overzicht; deze versie is uitgewerkt per onderdeel, de open punten zijn in de code nagelopen, en het plan is uitgebreid met architectuur, opleveringen en controlepunten.*
 
 ## Waar deze lijst vandaan komt
 
@@ -11,6 +11,7 @@ De lijst is een **functielijst**, geen bouwtekening. Bronnen:
 - voor onderdeel 14: de openbare helpsite van een mediabeheer- en workflowplatform voor video en tv (versie rond 2021–2022; de site wordt niet meer bijgehouden);
 - voor onderdeel 15: de openbare artikelen op de supportsite van dezelfde leverancier, over zijn radio- en nieuwsproducten. Het meeste staat achter een klantenlogin; alleen de openbare artikelen zijn gelezen (13 november 2026).
 - voor onderdeel 16: nog eens twaalf openbare artikelen van die supportsite (13 november 2026). Ze gaan over gebruikersbeheer, de gebruikershandleiding van het mediabeheer, de koppeling met een videomontageprogramma, ondertitels, databaseversies, geteste geluidskaarten, trainingen, certificaten, systeemaanbevelingen, Windows-instellingen, DCOM-beveiliging en de eisen voor eigen hosting. Het artikel over de technische opbouw bestaat alleen uit bijlagen (PDF); die zijn niet gedownload.
+- voor onderdeel 17: het openbare helpcentrum van een andere leverancier van radio-playoutsoftware, de categorie over zijn nieuwste playoutversie (13 november 2026). Van de 92 artikelen zijn de titels van 73 bekeken en 26 gelezen; de rest zat achter "alles bekijken"-links.
 
 Er is **niets gedecompileerd, uitgepakt of uit programmacode gehaald**. De licentie van dat pakket verbiedt reverse-engineeren, en het past bij onze eigen clean-room-afspraak. Daaruit volgt:
 
@@ -331,6 +332,42 @@ Deze artikelen gaan minder over uitzenden en meer over **hoe een omroepsysteem b
 
 **Les voor de architectuur:** dat systeem praat tussen machines nog deels via DCOM. Toen Microsoft DCOM strenger beveiligde, moesten alle installaties hun instellingen aanpassen, anders vielen koppelingen weg. Ze stappen nu over op gRPC. Dat bevestigt onze keuze voor **één HTTP-API voor alles**: geen afhankelijkheid van Windows-specifieke protocollen tussen machines.
 
+### 17. Programma's, luisteraars en planning (vijfde bron)
+
+Een helpcentrum van een playoutpakket voor kleine en middelgrote stations. Het meeste kennen we al (cue-punten, hooks, voicetracking, inlezen met controle, dubbele nummers, "wanneer laatst gespeeld", Stream Deck, verwijderen met behoud van gegevens, plaatshouders). Nieuw voor ons:
+
+**Programma's en luisteraars**
+
+| | Functie | Stand bij ons | Prio |
+|---|---|---|---|
+| ⬜ | **Programma's met presentatoren en rollen**: per programma naam, korte naam, omschrijving, afbeelding en kleur; presentatoren met een rol (presentator, co-presentator, nieuwslezer, weer, verkeer, gast), één als gezicht van het programma; aan of uit voor de planning en openbaar of niet voor website en apps | stemrollen (presentator, nieuws, weer) per station; geen programma-indeling | H |
+| ⬜ | **AI-profiel per programma**: doelgroep, tempo, toon en woorden die de AI-presentator vermijdt; de stem en persona volgen het programma | persona's per dagdeel | M |
+| ⬜ | Een nieuw programma als concept laten invullen door het taalmodel (naam, omschrijving, AI-profiel), daarna nakijken | ontbreekt | L |
+| ⬜ | Programmagegevens naar buiten: wat er nu en straks op de radio is, en een programmagids voor website en apps | "nu op de radio" via de API, zonder programma's | M |
+| ⬜ | **Verzoeknummers van luisteraars**: een formulier op de eigen website (ook in te sluiten), met een keuze uit de eigen bibliotheek en een limiet per luisteraar; in de studio een wachtrij (te beoordelen, goedgekeurd, afgewezen, gepland) | wensenlijst uit Spotify; geen verzoekstroom | M |
+| ⬜ | **Vervangbare plek in een klok**: een goedgekeurd verzoek of een voicetrack neemt die plek vanzelf in; zonder verzoek speelt wat de klok koos | ontbreekt | M |
+
+**Spelen en overgangen**
+
+| | Functie | Stand bij ons | Prio |
+|---|---|---|---|
+| ⬜ | **Lus in een item**: een stuk van een bed herhaalt zich (met een maximum) zolang er gepraat wordt; bij verder gaan springt het naar het einde of speelt het de lus uit | lussen alleen in de DJ-modus | M |
+| ⬜ | **Bed stopt vanzelf**: een item laat bij het starten lopende items met een gekozen label wegfaden (de outro haalt het bed weg) | ontbreekt | L |
+| ⬜ | **Trimmen voor één overgang**: begin of einde inkorten voor alleen deze overgang, zonder het item zelf te veranderen | hoort bij de overgangseditor (B1) | M |
+| ⬜ | Voorgeproduceerd programma als eigen soort item (lang, telt niet mee in de rotatie, eigen pictogram) | soorten: muziek, jingle, stem | L |
+| ⬜ | Normalisatiedoel per soort item (eigen LUFS-doel voor muziek, jingles en spraak), alleen als afspeelversterking | één doel voor alles | L |
+
+**Muziekplanning en reclame**
+
+| | Functie | Stand bij ons | Prio |
+|---|---|---|---|
+| ⬜ | **Muziekkenmerken in de planning**: energie, tempo en sfeer met eigen niveaus per station, en klokregels die ze gebruiken (geen twee trage nummers na elkaar, energie opbouwen naar het uur) | zoeken op energie en stemming kan; de planner gebruikt ze niet | M |
+| ⬜ | Meerdere artiesten per nummer, met een eigen weergave ("X met Y") die ook voor de artiestenscheiding telt | één artiestveld | L |
+| ⬜ | **Branchescheiding in reclameblokken**: labels (bijv. auto's, supermarkt) zodat concurrenten niet in hetzelfde blok komen | dezelfde adverteerder niet twee keer in een blok | M |
+| ⬜ | Speelschema van een campagne als raster per uur en weekdag, met tijdbanden en op te slaan voorkeuzes voor andere campagnes | aantallen per dag en per uur | L |
+| ➖ | Licentiecodes per pc en per station, proefperiode | open bron | — |
+| ➖ | Koppelingen met de muziekdiensten van die leverancier | eigen diensten van een ander | — |
+
 ### Wat REA-Radio-DJ al heeft en dat pakket niet
 
 - AI-presentator met lokaal taalmodel en eigen stem, met een spraakcontrole.
@@ -494,6 +531,18 @@ Zonder dit heeft uitbreiden geen zin.
 | 9. **Dagelijkse reservekopie van de database** met bewaartermijn en een terugzet-test | — | S | na een kapotte schijf staat de bibliotheek van gisteren binnen een uur terug |
 | 10. Hulp op afstand via een uitgaande verbinding die het station aan- en uitzet, met toegangslog | — | M | de beheerder kan helpen zonder open poort; het station ziet wie er was |
 
+### Fase J — Programma's, luisteraars en planning (uit onderdeel 17)
+
+| Werk | Bouwsteen | Grootte | Klaar als |
+|---|---|---|---|
+| 1. **Programma's** met presentatoren, rollen en een AI-profiel; stem en persona volgen het programma | agenda | M | in "De Zondagmiddag" spreekt het weer met de stem van de vaste weervrouw |
+| 2. Programmagids en "nu op de radio" naar buiten (API en webpagina) | webpagina's | S | de website toont het programma van nu en straks |
+| 3. **Verzoeknummers** via een webformulier, met wachtrij in de studio en een vervangbare klokplek | webpagina's | M | een verzoek van de website staat na goedkeuring vanzelf in het volgende uur |
+| 4. **Lus in een item** en bed dat vanzelf stopt | — | S | een bed loopt door tot de presentator klaar is en verdwijnt als de outro start |
+| 5. **Muziekkenmerken in de klokregels** (energie, tempo, sfeer) | expressietaal | M | een uur bouwt hoorbaar op, zonder twee trage nummers na elkaar |
+| 6. **Branchescheiding** in reclameblokken en een speelschema als raster | — | S | twee autobedrijven staan nooit in hetzelfde blok |
+| 7. Normalisatiedoel per soort item, voorgeproduceerd programma als soort, meerdere artiesten | — | S | spraak klinkt even hard als muziek zonder elk item na te lopen |
+
 ### Volgorde en afhankelijkheden
 
 ```
@@ -505,6 +554,7 @@ A ──► B ──► C ──► E
 - **H1 en H4** gebruiken dezelfde tijdlijn als de overgangseditor (**B1**). Bouw de tijdlijn één keer, met plek voor meerdere sporen.
 - **H2** past in de agenda-laag van **C1**.
 - **I7 (bewerkingsslot)** moet er zijn vóór **E2** (studio's elkaar laten bedienen). **I1–I2** passen goed bij **A** (bedrijfszeker).
+- **J1 (programma's)** bouwt voort op de agenda-laag van **C1** en op de stemrollen; **J3** gebruikt dezelfde webbasis als **E3** en **G**. **J5** gaat sneller met de expressietaal (**D1**).
 
 - **G** hangt voor de webpagina's (3, 4) samen met **E3**: dezelfde webbasis. G1 (takenoverzicht) is klein en helpt meteen bij de bedrijfszekerheid uit A.
 
