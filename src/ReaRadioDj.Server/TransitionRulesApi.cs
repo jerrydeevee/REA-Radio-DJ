@@ -9,6 +9,14 @@ namespace ReaRadioDj.Server;
 public static class TransitionRulesApi
 {
     public const string Key = "transition-rules";
+    public const string LimitsKey = "play-limits";
+
+    public static IReadOnlyList<PlayLimit> LoadLimits(StationDb db)
+    {
+        if (db.GetSetting(LimitsKey) is not { } json) return [];
+        try { return JsonSerializer.Deserialize<List<PlayLimit>>(json, JsonSerializerOptions.Web) ?? []; }
+        catch (JsonException) { return []; }
+    }
 
     public static IReadOnlyList<TransitionRule> Load(StationDb db)
     {
@@ -26,6 +34,7 @@ public static class TransitionRulesApi
     public static void Map(RouteGroupBuilder api, StationDb db, PlayoutEngine engine)
     {
         engine.TransitionRules = Load(db);
+        engine.PlayLimits = LoadLimits(db);
         api.MapGet("/transition-rules", (MediaLibrary library) => Results.Ok(new
         {
             rules = engine.TransitionRules,
@@ -45,6 +54,14 @@ public static class TransitionRulesApi
             engine.TransitionRules = body;
             db.SetSetting(Key, JsonSerializer.Serialize(engine.TransitionRules, JsonSerializerOptions.Web));
             return Results.Ok(engine.TransitionRules);
+        });
+        // longest play time per kind or category, and short items that always play out
+        api.MapGet("/play-limits", () => Results.Ok(engine.PlayLimits));
+        api.MapPut("/play-limits", (List<PlayLimit> body) =>
+        {
+            engine.PlayLimits = body;
+            db.SetSetting(LimitsKey, JsonSerializer.Serialize(engine.PlayLimits, JsonSerializerOptions.Web));
+            return Results.Ok(engine.PlayLimits);
         });
     }
 }

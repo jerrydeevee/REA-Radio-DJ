@@ -13,6 +13,14 @@ namespace ReaRadioDj.Core.Audio;
 /// </summary>
 public sealed record TransitionRule(string From, string To, string Mode, double Seconds = 0, bool Enabled = true);
 
+/// <summary>
+/// How long one kind of item (a side as in <see cref="TransitionRule"/>) may play: at most <see cref="MaxSeconds"/>
+/// (0 = no limit; then the next item starts and this one fades out), and items shorter than
+/// <see cref="NoFadeUnder"/> seconds always play to their end without a fade (0 = off). Holds on top of the
+/// transition rules; a hand-made transition wins.
+/// </summary>
+public sealed record PlayLimit(string Side, double MaxSeconds = 0, double NoFadeUnder = 0, bool Enabled = true);
+
 public static class TransitionRules
 {
     public static readonly string[] Modes = ["auto", "cut", "overlap", "fade", "tempo"];
@@ -83,6 +91,40 @@ public static class TransitionRules
         foreach (var r in rules)
             if (r.Enabled && Matches(r.From, current) && Matches(r.To, next)) return r.Mode == "auto" ? null : r;
         return null;
+    }
+
+    /// <summary>Fade of an item that is stopped by its maximum play time, when its own fade is shorter.</summary>
+    public const double LimitFade = 3;
+
+    /// <summary>Drops limits with an unknown side or without any effect and keeps the seconds within reason.</summary>
+    public static IReadOnlyList<PlayLimit> CleanLimits(IEnumerable<PlayLimit> limits) =>
+        [.. limits.Select(l => l with { Side = Side(l.Side),
+                                       MaxSeconds = Math.Clamp(double.IsFinite(l.MaxSeconds) ? l.MaxSeconds : 0, 0, 3600),
+                                       NoFadeUnder = Math.Clamp(double.IsFinite(l.NoFadeUnder) ? l.NoFadeUnder : 0, 0, 600) })
+                  .Where(l => l.Side.Length > 0 && (l.MaxSeconds > 0 || l.NoFadeUnder > 0))];
+
+    /// <summary>The first enabled limit (top of the list first) for this item, or null.</summary>
+    public static PlayLimit? FindLimit(IReadOnlyList<PlayLimit> limits, LogItem item)
+    {
+        foreach (var l in limits)
+            if (l.Enabled && Matches(l.Side, item)) return l;
+        return null;
+    }
+
+    /// <summary>
+    /// The mix point and fade after a play limit, and whether a fade planned at the cue points must go (the item
+    /// now ends before it, or must not fade at all).
+    /// </summary>
+    public static (double MixAt, double Fade, bool DropFade) Limit(PlayLimit? limit, double from, double to, double mixAt, double fade)
+    {
+        if (limit is null) return (mixAt, fade, false);
+        if (limit.NoFadeUnder > 0 && to - from < limit.NoFadeUnder) return (to, 0, true);
+        if (limit.MaxSeconds > 0 && mixAt > from + limit.MaxSeconds)
+        {
+            double at = from + limit.MaxSeconds;
+            return (at, Math.Clamp(Math.Max(fade, LimitFade), 0.3, Math.Max(0.3, to - at)), true);
+        }
+        return (mixAt, fade, false);
     }
 
     /// <summary>

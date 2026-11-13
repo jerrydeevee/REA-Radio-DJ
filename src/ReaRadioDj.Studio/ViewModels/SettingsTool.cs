@@ -375,6 +375,46 @@ public sealed partial class SettingsTool : StudioTool
                 From = Side(r.From), To = Side(r.To), Mode = RuleModes.FirstOrDefault(m => m.Key == r.Mode),
                 Seconds = (decimal)r.Seconds, Enabled = r.Enabled,
             });
+        await LoadLimitsAsync();
+    }
+
+    // ---- longest play time per kind of item and category
+    public ObservableCollection<PlayLimitRow> PlayLimits { get; } = [];
+    [ObservableProperty] private string _limitStatus = "";
+
+    private sealed record LimitWire(string Side, double MaxSeconds, double NoFadeUnder, bool Enabled);
+
+    private async Task LoadLimitsAsync()
+    {
+        if (await Hub.Client.GetAsync<List<LimitWire>>("/api/play-limits") is not { } list) return;
+        PlayLimits.Clear();
+        foreach (var l in list)
+            PlayLimits.Add(new PlayLimitRow
+            {
+                Side = Side(l.Side), MaxSeconds = (decimal)l.MaxSeconds, NoFadeUnder = (decimal)l.NoFadeUnder, Enabled = l.Enabled,
+            });
+    }
+
+    [RelayCommand]
+    private void AddLimit() => PlayLimits.Add(new PlayLimitRow { Side = RuleSides.FirstOrDefault(s => s.Key == "jingle"), MaxSeconds = 30 });
+
+    [RelayCommand] private void RemoveLimit(PlayLimitRow? row) { if (row is not null) PlayLimits.Remove(row); }
+
+    [RelayCommand]
+    private void MoveLimitUp(PlayLimitRow? row)
+    {
+        if (row is null || PlayLimits.IndexOf(row) is not (> 0 and var i)) return;
+        PlayLimits.Move(i, i - 1);
+    }
+
+    [RelayCommand]
+    private async Task SaveLimits()
+    {
+        var body = PlayLimits.Where(l => l.Side is not null)
+            .Select(l => new LimitWire(l.Side!.Key, (double)l.MaxSeconds, (double)l.NoFadeUnder, l.Enabled)).ToList();
+        var saved = await Hub.Client.SendForAsync<List<LimitWire>>(HttpMethod.Put, "/api/play-limits", body);
+        LimitStatus = saved is null ? "Opslaan mislukt." : $"{saved.Count} speelduurregels bewaard; ze gelden vanaf het volgende item.";
+        await LoadLimitsAsync();
     }
 
     // A category that no longer exists still shows, so the rule is not lost unnoticed.
@@ -935,6 +975,15 @@ public sealed partial class TransitionRuleRow : ObservableObject
     [ObservableProperty] private decimal _seconds = 2;
     [ObservableProperty] private bool _enabled = true;
     public bool HasSeconds => Mode?.Key is "overlap" or "fade" or "tempo";
+}
+
+/// <summary>One play limit in the settings: this kind or category plays at most so long, short ones play out.</summary>
+public sealed partial class PlayLimitRow : ObservableObject
+{
+    [ObservableProperty] private KeyChoice? _side;
+    [ObservableProperty] private decimal _maxSeconds;
+    [ObservableProperty] private decimal _noFadeUnder;
+    [ObservableProperty] private bool _enabled = true;
 }
 
 /// <summary>Instellingen › Uiterlijk: the colour of one kind of item (muziek, jingles, ...), applied and saved at once.</summary>

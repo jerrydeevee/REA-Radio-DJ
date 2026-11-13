@@ -77,7 +77,7 @@ Het belang staat in de kolom **Prio** voor Radio Aa en Hunze: **H** hoog, **M** 
 | ✅ | Cue-editor: in, vol niveau, intro, outro, mix (volgende), fade-uit, uit; hookpunten | cue-editor | — |
 | ✅ | Automatisch cues bepalen op drempels (dB voor in, volgende en uit; min/max fadelengtes) | bij het inlezen | — |
 | ✅ | Mengregels per soort item en per nummer | overgangsregels per soort | — |
-| ⬜ | **Maximale speelduur per soort** (bijv. jingles nooit langer dan 30 s) en **korte items niet faden** | na te bouwen in de overgangsregels | M |
+| ✅ | **Maximale speelduur per soort** (bijv. jingles nooit langer dan 30 s) en **korte items niet faden** | Instellingen › Mixen › Speelduur per soort en categorie | M |
 | 🟡 | Gebeurtenissen op een plek in een nummer: volume-omhullende of opdracht | in de cue-editor | — |
 | ⬜ | **Inzet-overgang**: een kort item (bijv. een station-ID) automatisch over het einde of het begin van een nummer leggen, met demping, tot een maximale lengte | ontbreekt | M |
 | ⬜ | **Overgangseditor met twee sporen**: einde van A en begin van B onder elkaar, B verslepen, een voice-over ertussen leggen of direct inspreken, automatische demping, tempo aanpassen | **grootste ontbrekende stuk in de bediening** | H |
@@ -436,7 +436,7 @@ Zonder dit heeft uitbreiden geen zin.
 | Werk | Grootte | Klaar als |
 |---|---|---|
 | Luistertests: DJ-modus, AI-nieuws op de zender, opnemen met bewaartermijn | S | bevindingen verwerkt, niets hoorbaar mis |
-| ASIO-stuurprogramma dat niet start: terugval naar WASAPI met melding | S | engine blijft spelen, studio toont de melding |
+| 🟡 ASIO-stuurprogramma dat niet start: terugval naar WASAPI met melding | S | engine blijft spelen, studio toont de melding — bij het starten gebeurt dit al (zender en voorluisteren vallen terug op de Windows-kaart, met melding); nog open: een kaart die tijdens het spelen wegvalt, en een test met echte ASIO-apparatuur |
 | ✅ **Bewaking van de geluidskaart** (volume en demping van het apparaat) | S | ander programma zet de kaart zacht → melding en terugzetten |
 | ✅ **Opnemen met signaaldetectie** (drempel en nalooptijd) | S | alleen de presentatorpraat staat in de opname |
 | Testen tegen echte apparatuur: SIP bij de aanbieder, Ember+ tegen LUCI/Lawo, Mackie Control | M | elk apparaat werkt of heeft een bekende beperking op papier |
@@ -447,7 +447,7 @@ Zonder dit heeft uitbreiden geen zin.
 | Werk | Bouwsteen | Grootte | Klaar als |
 |---|---|---|---|
 | 1. **Overgangseditor met twee sporen**, met voice-over-spoor, direct inspreken en automatische demping | tijdlijn | L | een voicetrack tussen twee nummers maken en beluisteren zonder de cue-editor |
-| 2. **Inzet-overgang** (station-ID over het einde van een nummer) en **maximale speelduur / niet faden per soort** | tijdlijn + overgangsregels | M | een ID valt automatisch over de outro, gedempt |
+| 2. **Inzet-overgang** (station-ID over het einde van een nummer) en ✅ **maximale speelduur / niet faden per soort** | tijdlijn + overgangsregels | M | een ID valt automatisch over de outro, gedempt |
 | 3. ✅ **Presentatortekst per item**, groot in beeld tijdens het afspelen | — | S | tekst bij een reclame staat in de Live-balk zolang die speelt |
 | 4. **Flexibele mixergraaf**: vrij aantal kanalen, subgroepen, profielen met presets | mixergraaf | L | een extra microfoon en een groepsbus toevoegen zonder code; preset wisselen in één klik |
 | 5. Hook-container met opener, scheider en afsluiter | — | S | een "straks hoor je…"-teaser uit drie hooks |

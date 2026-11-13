@@ -312,6 +312,15 @@ public sealed class PlayoutEngine : IDisposable
         set => _transitionRules = Audio.TransitionRules.Clean(value);
     }
 
+    private volatile IReadOnlyList<PlayLimit> _playLimits = [];
+
+    /// <summary>Longest play time per kind of item and category, and short items that are never faded.</summary>
+    public IReadOnlyList<PlayLimit> PlayLimits
+    {
+        get => _playLimits;
+        set => _playLimits = Audio.TransitionRules.CleanLimits(value);
+    }
+
     /// <summary>A command at a place in a track was reached (raised on the engine thread; do not block it).</summary>
     public event Action<LogItem, TrackEvent>? TrackEventReached;
 
@@ -360,7 +369,7 @@ public sealed class PlayoutEngine : IDisposable
         private readonly bool _ruleable;
         private TransitionRule? _rule;
         /// <summary>Position where a scheduled fade-out starts (fade-out cue or the end of a hook).</summary>
-        public double? FadeAt { get; }
+        public double? FadeAt { get; private set; }
         private readonly double _scheduledFade;
         public bool NextStarted { get; set; }
 
@@ -460,6 +469,8 @@ public sealed class PlayoutEngine : IDisposable
                 FadeLength = Math.Clamp(Math.Min(mix.FadeOut, To - MixAt), 0.3, 10);
                 if (cues.FadeOut is double fo && fo > From && fo < To) { FadeAt = fo; _scheduledFade = To - fo; }
                 _ruleable = true;
+                _limit = Audio.TransitionRules.FindLimit(engine._playLimits, item);
+                Limit();
             }
 
             _autoMixAt = MixAt;
@@ -533,6 +544,17 @@ public sealed class PlayoutEngine : IDisposable
             // On the beat: the next song starts on a beat of this one.
             if (rule?.Mode == "tempo" && _beat is { } b && _engine._log.PeekNext()?.Media is { Kind: MediaKind.Song })
                 MixAt = Math.Min(To, Audio.TransitionRules.NextBeat(MixAt, b.FirstBeat, 60 / b.Bpm));
+            Limit();
+        }
+
+        // The longest play time of this kind, and "short items play out", on top of the rule.
+        private readonly PlayLimit? _limit;
+
+        private void Limit()
+        {
+            if (_limit is null) return;
+            (MixAt, FadeLength, bool drop) = Audio.TransitionRules.Limit(_limit, From, To, MixAt, FadeLength);
+            if (drop) FadeAt = null;
         }
 
         /// <summary>The insert to start now, once.</summary>
