@@ -40,10 +40,10 @@
         </StackPanel>
         </UniformGrid>
       </StackPanel>
-      <Grid Grid.Column="2" ColumnDefinitions="Auto,Auto,Auto" Height="168">
+      <Grid Grid.Column="2" ColumnDefinitions="Auto,Auto" Height="168">
         <Slider Grid.Column="0" Orientation="Vertical" Minimum="0" Maximum="100" Value="{Binding Fader}" ToolTip.Tip="Kanaalfader" />
-        <ProgressBar Grid.Column="1" Orientation="Vertical" Value="{Binding LevelLeft}" Maximum="100" MinWidth="8" Width="8" MinHeight="0" Foreground="{DynamicResource OkBrush}" Margin="4,8,3,8" />
-        <ProgressBar Grid.Column="2" Orientation="Vertical" Value="{Binding LevelRight}" Maximum="100" MinWidth="8" Width="8" MinHeight="0" Foreground="{DynamicResource OkBrush}" Margin="0,8" />
+        <ctl:LevelMeter Grid.Column="1" Orientation="Vertical" Left="{Binding LevelLeft}" Right="{Binding LevelRight}" FullScale="100"
+                        Width="16" Margin="4,8,0,8" ToolTip.Tip="Niveau van dit deck (dBFS)" />
       </Grid>
     </Grid>
     <ToggleButton Classes="bar" IsChecked="{Binding Pfl, Mode=OneWay}" Command="{Binding TogglePflCommand}" HorizontalAlignment="Stretch"

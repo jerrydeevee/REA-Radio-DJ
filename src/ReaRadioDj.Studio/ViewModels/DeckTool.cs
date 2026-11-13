@@ -81,13 +81,23 @@ public sealed partial class DeckVm(int index) : ObservableObject
     [ObservableProperty] private double _left;
     [ObservableProperty] private string _endState = "normal";
     [ObservableProperty] private bool _flash;
-    [ObservableProperty] private bool _empty = true;
+    [ObservableProperty] [NotifyPropertyChangedFor(nameof(Silent))] private bool _empty = true;
     [ObservableProperty] private ushort[]? _peaks;
     [ObservableProperty] private double _blockSeconds = 0.02;
     [ObservableProperty] private IReadOnlyList<WaveMarker> _markers = [];
     [ObservableProperty] private double _position = -1;
     [ObservableProperty] private double _cueIn;
     [ObservableProperty] private double _cueOut;
+    /// <summary>The level of what is on air (linear 0..1), for the signal bar of deck A.</summary>
+    [ObservableProperty] private double _levelLeft;
+    [ObservableProperty] private double _levelRight;
+    /// <summary>The ON AIR lamp follows the sound: dim in a quiet passage, full when it plays loud.</summary>
+    [ObservableProperty] private double _lamp = 0.35;
+    /// <summary>True while sound comes out (above -45 dBFS), so a deck that is "on air" but silent is easy to spot.</summary>
+    [ObservableProperty] [NotifyPropertyChangedFor(nameof(Silent))] private bool _sounding;
+    /// <summary>Deck A has an item but no sound comes out: shown as "geen geluid".</summary>
+    public bool Silent => IsOnAir && !Empty && !Sounding;
+    private DateTime _lastSound = DateTime.UtcNow;
     private long _mediaId;
     /// <summary>Log item id for B and C (to remove it); 0 for A.</summary>
     public long LogId { get; private set; }
@@ -102,6 +112,19 @@ public sealed partial class DeckVm(int index) : ObservableObject
     {
         Empty = true; Status = status; Title = ""; Artist = ""; Type = ""; Counter = "--:--"; Sub = ""; Intro = "";
         Left = 0; EndState = "normal"; Flash = false; Position = -1; Peaks = null; Markers = []; _mediaId = 0;
+        Signal(0, 0);
+    }
+
+    public void Signal(double left, double right)
+    {
+        LevelLeft = left;
+        LevelRight = right;
+        double db = Controls.LevelMeter.ToDb(Math.Max(left, right));
+        bool now = db > -45;
+        if (now) _lastSound = DateTime.UtcNow;
+        // a pause of a moment (between words, a rest in the song) is not "no sound"
+        Sounding = now || DateTime.UtcNow - _lastSound < TimeSpan.FromSeconds(3);
+        Lamp = now ? 0.45 + 0.55 * Math.Clamp((db + 30) / 30, 0, 1) : 0.3;
     }
 
     public void OnAir(NowPlayingDto c, DateTime now)
@@ -203,7 +226,7 @@ public sealed partial class DeckTool : StudioTool
 
     protected override void OnState(StateDto s)
     {
-        if (s.Engine.Current is { } c) Decks[0].OnAir(c, s.Time);
+        if (s.Engine.Current is { } c) { Decks[0].OnAir(c, s.Time); Decks[0].Signal(s.Engine.LevelLeft, s.Engine.LevelRight); }
         else Decks[0].Clear(s.Engine.AutoPlay ? "WACHTEN" : "STIL");
         for (int i = 1; i < 3; i++)
         {

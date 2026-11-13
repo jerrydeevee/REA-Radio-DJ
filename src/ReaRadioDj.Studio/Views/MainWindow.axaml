@@ -223,9 +223,8 @@
             </StackPanel>
           </Button>
         </StackPanel>
-        <StackPanel Grid.Column="4" Width="72" VerticalAlignment="Center" Spacing="4" Margin="16,0,0,0" ToolTip.Tip="Niveau van het programma, links en rechts">
-          <ProgressBar Value="{Binding LevelLeft}" Maximum="100" MinHeight="6" MinWidth="0" Foreground="{DynamicResource OkBrush}" />
-          <ProgressBar Value="{Binding LevelRight}" Maximum="100" MinHeight="6" MinWidth="0" Foreground="{DynamicResource OkBrush}" />
+        <StackPanel Grid.Column="4" Width="96" VerticalAlignment="Center" Spacing="4" Margin="16,0,0,0" ToolTip.Tip="Niveau van het programma, links en rechts (dBFS; oranje vanaf -9, rood vanaf -3)">
+          <ctl:LevelMeter Left="{Binding LevelLeft}" Right="{Binding LevelRight}" FullScale="100" Height="14" />
           <TextBlock Text="{Binding LufsText}" FontSize="11" Foreground="{DynamicResource MutedTextBrush}" HorizontalAlignment="Center" ToolTip.Tip="{Binding LufsTip}" />
         </StackPanel>
         <Border Grid.Column="5" BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1,0,0,0" Padding="16,0,0,0" Margin="16,0,0,0">

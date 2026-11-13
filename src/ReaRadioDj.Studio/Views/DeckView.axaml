@@ -47,7 +47,12 @@
                           IsVisible="{Binding Intro, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
                     <TextBlock Text="{Binding Intro}" Classes="mono" FontWeight="Bold" Foreground="#11161D" />
                   </Border>
+                  <!-- on air: a lamp that glows with the sound -->
+                  <Ellipse Width="10" Height="10" Fill="#F25F5C" Opacity="{Binding Lamp}" Margin="0,0,6,0" VerticalAlignment="Center"
+                           IsVisible="{Binding IsOnAir}" ToolTip.Tip="Brandt mee met het geluid; blijft gedimd als er niets uit komt" />
                   <TextBlock Text="{Binding Status}" Foreground="{Binding Brush}" FontWeight="Bold" FontSize="12" VerticalAlignment="Center" />
+                  <TextBlock Text="geen geluid" Classes="muted" FontSize="11" Margin="8,0,0,0" VerticalAlignment="Center"
+                             IsVisible="{Binding Silent}" />
                   <TextBlock Classes="muted decktype" Text="{Binding Type}" FontSize="12" Margin="8,0,0,0" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
                 </DockPanel>
                 <TextBlock Text="{Binding Title}" FontSize="16" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
@@ -64,6 +69,9 @@
                                     Playhead="{Binding Position}" CueIn="{Binding CueIn}" CueOut="{Binding CueOut}"
                                     ShowCursor="False" ReadOnlyMarkers="True" EmptyText="—" />
                 </Border>
+                <!-- signal bar: the level of what is on air -->
+                <ctl:LevelMeter Left="{Binding LevelLeft}" Right="{Binding LevelRight}" Height="9" IsVisible="{Binding IsOnAir}"
+                                ToolTip.Tip="Signaal van wat er op de lucht is (links en rechts, dBFS)" />
                 <ProgressBar Classes="countdown" Value="{Binding Left}" Maximum="100" MinHeight="6" MinWidth="0" IsVisible="{Binding IsOnAir}"
                              Classes.warn="{Binding EndState, Converter={x:Static vm:Brushes.Is}, ConverterParameter=warn}"
                              Classes.end="{Binding EndState, Converter={x:Static vm:Brushes.Is}, ConverterParameter=end}"

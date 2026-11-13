@@ -1,6 +1,7 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:ReaRadioDj.Studio.ViewModels"
+             xmlns:ctl="using:ReaRadioDj.Studio.Controls"
              xmlns:c="using:ReaRadioDj.Contracts"
              x:Class="ReaRadioDj.Studio.Views.MixerView"
              x:DataType="vm:MixerTool">
@@ -18,10 +19,10 @@
                            ToolTip.Tip="{Binding Name}" />
                 <TextBlock Classes="muted" FontSize="10" Text="{Binding BusLabel}" HorizontalAlignment="Center" />
                 <!-- the fader grows and shrinks with the panel, so ZENDER stays in view without scrolling -->
-                <Grid ColumnDefinitions="*,6,6" Height="{Binding $parent[UserControl].Bounds.Height, Converter={x:Static vm:Brushes.FaderHeight}}">
+                <Grid ColumnDefinitions="*,Auto" Height="{Binding $parent[UserControl].Bounds.Height, Converter={x:Static vm:Brushes.FaderHeight}}">
                   <Slider Grid.Column="0" Orientation="Vertical" Minimum="0" Maximum="125" Value="{Binding Volume}" HorizontalAlignment="Center" />
-                  <ProgressBar Grid.Column="1" Orientation="Vertical" Maximum="100" Value="{Binding Left}" MinWidth="5" Width="5" Foreground="#3DBD7D" />
-                  <ProgressBar Grid.Column="2" Orientation="Vertical" Maximum="100" Value="{Binding Right}" MinWidth="5" Width="5" Foreground="#3DBD7D" Margin="1,0,0,0" />
+                  <ctl:LevelMeter Grid.Column="1" Orientation="Vertical" Left="{Binding Left}" Right="{Binding Right}" FullScale="100"
+                                  Width="30" ShowScale="True" ToolTip.Tip="Niveau links en rechts (dBFS)" />
                 </Grid>
                 <TextBlock Classes="mono" FontSize="11" HorizontalAlignment="Center" Text="{Binding Volume, StringFormat='{}{0:0}%'}" />
                 <!-- two by two, so nothing falls off a narrow strip -->
