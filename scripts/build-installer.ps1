@@ -41,7 +41,7 @@ foreach ($d in @("engine\data", "engine\media")) {
   $path = Join-Path $Staging $d
   if (Test-Path $path) { Remove-Item $path -Recurse -Force }
 }
-Copy-Item (Join-Path $root "LICENSE"), (Join-Path $root "NOTICE.md"), (Join-Path $root "README.md") $Staging
+Copy-Item (Join-Path $root "LICENSE"), (Join-Path $root "NOTICE.md"), (Join-Path $root "README.md"), (Join-Path $root "CHANGELOG.md") $Staging
 
 @"
 REA-Radio-DJ $version
@@ -49,6 +49,7 @@ $('=' * (13 + $version.Length))
 
 Vrije radio-playout met een AI-presentator. Gemaakt door ICT Holland (DVC-it) voor Radio Aa en Hunze.
 Broncode en documentatie: https://github.com/jerrydeevee/REA-Radio-DJ
+Wat er nieuw is: CHANGELOG.md
 
 Status: proof of concept. Nog niet bedoeld voor een echte zender.
 

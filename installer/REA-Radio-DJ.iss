@@ -69,6 +69,7 @@ Source: "{#Staging}\studio\*"; DestDir: "{app}\studio"; Flags: ignoreversion rec
 Source: "{#Staging}\LICENSE"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#Staging}\NOTICE.md"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#Staging}\README.md"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#Staging}\CHANGELOG.md"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#Staging}\LEESMIJ.txt"; DestDir: "{app}"; Flags: ignoreversion isreadme
 
 [Dirs]
