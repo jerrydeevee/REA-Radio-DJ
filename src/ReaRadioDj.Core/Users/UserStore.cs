@@ -16,7 +16,20 @@ public enum UserRole
     Admin = 2,
 }
 
-public sealed record StationUser(long Id, string Name, UserRole Role, bool Enabled, string PinHash, string PinSalt);
+/// <summary>
+/// A user of the studio. <see cref="Until"/> is the last day they may sign in (a trainee, a guest presenter, a
+/// stand-in); null = no end. A switched-off or expired user stays in the list, so their name keeps its history.
+/// </summary>
+public sealed record StationUser(long Id, string Name, UserRole Role, bool Enabled, string PinHash, string PinSalt, DateOnly? Until = null)
+{
+    /// <summary>Switched on and not past the last day.</summary>
+    public bool CanSignIn(DateOnly today) => Enabled && (Until is not { } u || today <= u);
+
+    public bool Expired(DateOnly today) => Until is { } u && today > u;
+
+    /// <summary>The moment (UTC) the account ends: the end of its last day, local time; null = no end.</summary>
+    public DateTime? EndsUtc => Until is { } u ? u.AddDays(1).ToDateTime(TimeOnly.MinValue, DateTimeKind.Local).ToUniversalTime() : null;
+}
 
 /// <summary>
 /// The people who sign in at the studio with their own name and PIN. The PIN is stored only as a salted
@@ -57,7 +70,7 @@ public sealed class UserStore(StationDb db)
         pin is null || pin.Length is < 4 or > 12 || !pin.All(char.IsAsciiDigit) ? "De pincode is 4 tot 12 cijfers." : null;
 
     /// <summary>Adds (id 0) or changes a user. An empty PIN keeps the old one. Returns the user or the reason it was refused.</summary>
-    public (StationUser? User, string? Error) Save(long id, string name, UserRole role, bool enabled, string? pin)
+    public (StationUser? User, string? Error) Save(long id, string name, UserRole role, bool enabled, string? pin, DateOnly? until = null)
     {
         name = (name ?? "").Trim();
         if (name.Length is 0 or > 40) return (null, "Geef een naam (hoogstens 40 tekens).");
@@ -77,9 +90,12 @@ public sealed class UserStore(StationDb db)
                 return (null, others.Any(u => u.Enabled)
                     ? "Er moet altijd een actieve beheerder overblijven."
                     : "De eerste gebruiker moet een beheerder zijn.");
+            // the station never locks itself out on a date: one administrator stays without an end
+            if (!(enabled && role == UserRole.Admin && until is null) && !others.Any(u => u.Enabled && u.Role == UserRole.Admin && u.Until is null))
+                return (null, "Er moet altijd een actieve beheerder zonder einddatum overblijven.");
             string hash = old?.PinHash ?? "", salt = old?.PinSalt ?? "";
             if (!string.IsNullOrEmpty(pin)) (hash, salt) = Hash(pin);
-            var user = new StationUser(old?.Id ?? (list.Count == 0 ? 1 : list.Max(u => u.Id) + 1), name, role, enabled, hash, salt);
+            var user = new StationUser(old?.Id ?? (list.Count == 0 ? 1 : list.Max(u => u.Id) + 1), name, role, enabled, hash, salt, until);
             others.Add(user);
             Store(others.OrderBy(u => u.Id).ToList());
             return (user, null);
@@ -95,16 +111,19 @@ public sealed class UserStore(StationDb db)
             var rest = list.Where(u => u.Id != id).ToList();
             if (rest.Count > 0 && !rest.Any(u => u.Enabled && u.Role == UserRole.Admin))
                 return "Er moet altijd een actieve beheerder overblijven.";
+            if (rest.Count > 0 && !rest.Any(u => u.Enabled && u.Role == UserRole.Admin && u.Until is null))
+                return "Er moet altijd een actieve beheerder zonder einddatum overblijven.";
             Store(rest);
             return null;
         }
     }
 
-    /// <summary>The user with this name and PIN, or null (unknown, wrong PIN or switched off).</summary>
-    public StationUser? Verify(string? name, string? pin)
+    /// <summary>The user with this name and PIN, or null (unknown, wrong PIN, switched off or past the last day).</summary>
+    public StationUser? Verify(string? name, string? pin, DateOnly? today = null)
     {
         if (string.IsNullOrWhiteSpace(name) || string.IsNullOrEmpty(pin)) return null;
-        var user = All().FirstOrDefault(u => u.Enabled && string.Equals(u.Name, name.Trim(), StringComparison.OrdinalIgnoreCase));
+        var day = today ?? DateOnly.FromDateTime(DateTime.Now);
+        var user = All().FirstOrDefault(u => u.CanSignIn(day) && string.Equals(u.Name, name.Trim(), StringComparison.OrdinalIgnoreCase));
         if (user is null || user.PinSalt.Length == 0) return null;
         byte[] salt, expected;
         try { salt = Convert.FromBase64String(user.PinSalt); expected = Convert.FromBase64String(user.PinHash); }

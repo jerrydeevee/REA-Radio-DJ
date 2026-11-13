@@ -32,6 +32,10 @@ Elk venster is te verslepen, te docken of los te laten zweven, ook op een tweede
   de log was. De engine kan met Windows mee starten, los van de studio.
 - **Bewaking van de geluidskaart**: zet Windows of een ander programma de kaart van de zender zachter of dempt
   hem, dan komt er een melding, of de engine zet hem meteen terug.
+- **Zachte start met grens**: een zacht nieuws- of reclameblok wacht op het einde van het item, maar hoogstens zo lang
+  als ingesteld (*Instellingen › Mixen*); duurt het langer, dan start het blok meteen en faadt het item uit.
+- **Speelduur per soort en categorie**: een langste speelduur (bijv. jingles hoogstens 30 seconden), en korte items die
+  altijd helemaal uitspelen zonder te faden.
 - **Presentatortekst**: per nummer, reclame of aankondiging een tekst die je erbij zegt; zolang het item speelt staat
   hij groot in de Live-balk.
 - **Stiltedetectie** op de zender: drempel, duur en actie (melden, automatisering starten of iets uit een
@@ -99,6 +103,7 @@ Elk venster is te verslepen, te docken of los te laten zweven, ook op een tweede
 - **Alleen het praten opnemen** als luistercontrole: de microfoon of een ingang, alleen zolang die open staat en er
   geluid is (drempel en nalooptijd), met een halve seconde vóór de inzet; één MP3 per uur zonder de muziek ertussen.
 - **Streams** naar meerdere Icecast- en SHOUTcast-servers tegelijk, met titelupdates in een eigen opmaak.
+- **Programmalog afdrukken of exporteren** (PDF en CSV) met de verwachte begintijden: *Programmalog › Exporteren*.
 - **As-run** en een programmalog als tekstbestand per dag; rapportage auteursrechten (CSV en PDF),
   reclame-afspeelrapporten per adverteerder en uitzendstatistiek.
 
@@ -137,7 +142,10 @@ Elk venster is te verslepen, te docken of los te laten zweven, ook op een tweede
 - **Gebruikers en rechten**: aanmelden met een eigen naam en pincode, rollen presentator, technicus en beheerder
   (*Instellingen › Gebruikers*); de instellingen zijn dan alleen voor beheerders. *Studio › Studio vergrendelen*
   (Ctrl+L) houdt de uitzending gaande en de studio dicht tot de pincode; de as-run laat per presentator zien wat er
-  is uitgezonden. Pincode kwijt: start de engine op die computer met `--users-off`.
+  is uitgezonden. Een account kan een **laatste dag** krijgen (stagiair, invaller); daarna kan die persoon zich niet
+  meer aanmelden en wordt hij afgemeld. Wie stopt kun je uitschakelen in plaats van verwijderen. Na een instelbaar
+  aantal verkeerde pincodes wordt een naam een tijd geblokkeerd; een beheerder kan dat opheffen. Pincode kwijt: start
+  de engine op die computer met `--users-off`.
 
 ## Installeren (Windows 10/11, x64)
 
@@ -271,6 +279,9 @@ Alles wat je in de studio kunt, kan ook met tekstcommando's (`NEXT`, `AUTO OFF`,
 
 - **HTTP**: `POST /api/command` met `{"text":"NEXT"}`, of een webadres per knop: `/api/do/next`, `/api/do/cart/1/5`
 - **TCP** (poort 8601): één commando per regel, antwoord `OK …` of `ERR …`; met wachtwoord eerst `AUTH <wachtwoord>`
+- **Opdrachtregel**: `rea-cmd NEXT`, `rea-cmd "AUTO OFF" "CART 1 5"` of `rea-cmd --file commando's.txt` (staat naast de
+  engine). Het wachtwoord komt uit de omgevingsvariabele `REA_CONTROL_PASSWORD`; afsluitcode 0 = alles OK, 1 = een
+  commando gaf ERR, 2 = geen verbinding. Handig in een taakplanner of script.
 - **OSC** (UDP 8602): `/rea/next`, `/rea/cart/1/5`, `/rea/mic/toggle`, `/rea/cmd "AUTO OFF"` (waarde 0 = loslaten, genegeerd)
 - **UDP** (poort 8603): één commando per pakket, met antwoord terug
 - **MIDI, serieel, Livewire en Ember+**: knoppen en faders op een commando, lampjes en tallies op een toestand

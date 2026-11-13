@@ -60,6 +60,10 @@ public sealed partial class SettingsTool : StudioTool
     [ObservableProperty] private decimal _maxOverlap = 8;
     [ObservableProperty] private decimal _fadeOut = 2.5m;
     [ObservableProperty] private decimal _duckLevel = 30;
+    /// <summary>The longest a soft fixed-time event waits for the item on air (0 = always wait).</summary>
+    [ObservableProperty] private decimal _softMaxWait;
+    private bool _softLoaded;
+    private sealed record SoftStartWire(double MaxWaitSeconds);
 
     // Guarding the broadcast
     [ObservableProperty] private bool _silenceEnabled = true;
@@ -376,6 +380,7 @@ public sealed partial class SettingsTool : StudioTool
                 Seconds = (decimal)r.Seconds, Enabled = r.Enabled,
             });
         await LoadLimitsAsync();
+        if (await Hub.Client.GetAsync<SoftStartWire>("/api/soft-start") is { } soft) { SoftMaxWait = (decimal)soft.MaxWaitSeconds; _softLoaded = true; }
     }
 
     // ---- longest play time per kind of item and category
@@ -641,6 +646,7 @@ public sealed partial class SettingsTool : StudioTool
             SilenceEnabled, (double)SilenceDb, (double)SilenceSeconds, SilenceActionNames[Math.Clamp(SilenceAction, 0, SilenceActionNames.Length - 1)], SilenceCategory?.Id));
 
         if (_masterLoaded) await Hub.Client.PutAsync("/api/master", new MasterDto(LimiterOn, (double)LimiterCeiling));
+        if (_softLoaded) await Hub.Client.PutAsync("/api/soft-start", new SoftStartWire((double)SoftMaxWait));
 
         if (AudioLoaded)
         {

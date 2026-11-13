@@ -60,6 +60,22 @@ public static class StudioApi
 
         // ------------------------------------------------------------ log
         api.MapGet("/log", (PlayoutLog log) => log.Upcoming.Select(i => Item(i, default)));
+        // the coming log as a file, with the expected start times: CSV for a spreadsheet, PDF to print
+        api.MapGet("/log/export.csv", (PlayoutLog log, PlayoutEngine engine) =>
+        {
+            var now = DateTime.Now;
+            var rows = ReaRadioDj.Core.Studio.LogExport.Rows(log.Upcoming, now.AddSeconds(engine.GetState().SecondsToNext));
+            var csv = ReaRadioDj.Core.Studio.LogExport.Csv(rows, options.StationName);
+            return Results.File(System.Text.Encoding.UTF8.GetPreamble().Concat(System.Text.Encoding.UTF8.GetBytes(csv)).ToArray(),
+                "text/csv", $"programmalog-{now:yyyy-MM-dd-HHmm}.csv");
+        });
+        api.MapGet("/log/export.pdf", (PlayoutLog log, PlayoutEngine engine) =>
+        {
+            var now = DateTime.Now;
+            var rows = ReaRadioDj.Core.Studio.LogExport.Rows(log.Upcoming, now.AddSeconds(engine.GetState().SecondsToNext));
+            return Results.File(ReaRadioDj.Core.Studio.LogExport.Pdf(rows, options.StationName, now), "application/pdf",
+                $"programmalog-{now:yyyy-MM-dd-HHmm}.pdf");
+        });
         api.MapDelete("/log/{id:long}", (long id, PlayoutLog log) => log.Remove(id) ? Results.Ok() : Results.NotFound());
         api.MapPost("/log/{id:long}/up", (long id, PlayoutLog log) => log.Move(id, -1) ? Results.Ok() : Results.BadRequest());
         api.MapPost("/log/{id:long}/down", (long id, PlayoutLog log) => log.Move(id, +1) ? Results.Ok() : Results.BadRequest());

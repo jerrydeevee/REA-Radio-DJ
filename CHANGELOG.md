@@ -1,5 +1,19 @@
 # Wijzigingen
 
+## 1.2.0 (in ontwikkeling)
+
+### Nieuw
+- **Alleen het praten opnemen**: een opname van de microfoon of een ingangskanaal die alleen loopt als het kanaal
+  open is en er geluid is (drempel en nalooptijd), één MP3 per uur.
+- **Bewaking van de geluidskaart**: zet Windows of een ander programma de kaart van de zender zachter of dempt het hem,
+  dan komt er een melding, of de engine zet hem meteen terug.
+- **Presentatortekst** per item, groot in de Live-balk zolang het item speelt.
+- **Speelduur per soort en categorie**: een langste speelduur, en korte items die zonder faden uitspelen.
+- **Zachte start met grens**: een zacht blok wacht hoogstens de ingestelde tijd op het einde van het item.
+- **Gebruikers met een laatste dag**, en een instelbare blokkade na verkeerde pincodes die een beheerder kan opheffen.
+- **Programmalog afdrukken of exporteren** als PDF en CSV, met de verwachte begintijden.
+- **`rea-cmd`**: commando's naar de engine vanaf de opdrachtregel of uit een script.
+
 ## 1.1.0 (13 november 2026)
 
 Tweede openbare uitgave, de eerste met een Windows-setup. Status: proof of concept, nog niet bedoeld voor een echte

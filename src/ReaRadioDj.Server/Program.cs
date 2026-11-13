@@ -109,6 +109,7 @@ builder.Services.AddSingleton(sp => new VoiceTracker(sp.GetRequiredService<Playo
 builder.Services.AddSingleton<Cartwall>();
 builder.Services.AddSingleton<AsRunLog>();
 builder.Services.AddSingleton<ReaRadioDj.Core.Users.UserStore>();
+builder.Services.AddSingleton(sp => UsersApi.CreateGuard(sp.GetRequiredService<StationDb>()));
 builder.Services.AddSingleton(new ReaRadioDj.Core.Users.SessionStore());
 builder.Services.AddSingleton<PlayoutEngine>();
 builder.Services.AddSingleton(sp => new IcecastStreamer(options.Stream, options.StationName, sp.GetService<ILogger<IcecastStreamer>>()));
@@ -232,6 +233,7 @@ TitleLogApi.Map(api, options);
 PathsApi.Map(api, app.Services.GetRequiredService<StationDb>());
 StreamTargetsApi.Map(api, app.Services.GetRequiredService<StationDb>(), app.Services.GetRequiredService<ReaRadioDj.Core.Streaming.StreamGroup>());
 TransitionRulesApi.Map(api, app.Services.GetRequiredService<StationDb>(), app.Services.GetRequiredService<PlayoutEngine>());
+SoftStartApi.Map(api, app.Services.GetRequiredService<StationDb>(), app.Services.GetRequiredService<AutomationService>());
 // The station's own recordings: the program per hour, the microphone per take, with a retention time.
 DeviceWatch.Map(api);
 api.MapGet("/recordings/settings", (AirRecorder r) => RecordingDto(r));

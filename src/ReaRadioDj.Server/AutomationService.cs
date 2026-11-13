@@ -305,6 +305,11 @@ public sealed class AutomationService(
 
     void IEventSink.PlayNow(LogItem item, double fade) => engine.PlayNow(item, fade);
 
+    double? IEventSink.SecondsToNext() => engine.GetState() is { Current: not null } s ? s.SecondsToNext : null;
+
+    /// <summary>The longest a soft event waits for the item on air (zero: always wait).</summary>
+    public TimeSpan SoftMaxWait { get => _events.SoftMaxWait; set => _events.SoftMaxWait = value; }
+
     void IEventSink.InsertNext(LogItem item) => log.InsertAfterBlock(item);
 
     void IEventSink.PlayOverlay(LogItem item)

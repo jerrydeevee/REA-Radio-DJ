@@ -107,6 +107,8 @@ public interface IEventSink
     IReadOnlyList<LogItem>? PrepareNews(long blockId) => null;
     /// <summary>The items of an ad break (opener, spots, closer), or null when no campaign needs a spot now.</summary>
     IReadOnlyList<LogItem>? PrepareAds(long breakId, DateTime at) => null;
+    /// <summary>Seconds until the item on air reaches its mix point, or null when nothing plays.</summary>
+    double? SecondsToNext() => null;
 }
 
 public sealed record UpcomingEvent(long Id, string Name, DateTime At, EventTiming Timing, bool Prepared);
@@ -125,6 +127,15 @@ public sealed class EventRunner
     private readonly Dictionary<(long, DateTime), DateTime> _retryAt = [];
     public static readonly TimeSpan NewsRetry = TimeSpan.FromSeconds(30);
     private readonly object _gate = new();
+
+    /// <summary>
+    /// The longest a soft event waits for the item on air (zero: always wait). When the item still has longer to go,
+    /// the event starts at once and the item fades out, so the news is not ten minutes late after a long song.
+    /// </summary>
+    public TimeSpan SoftMaxWait { get; set; }
+
+    /// <summary>Fade of an item that is ended because a soft event may not wait longer.</summary>
+    public const double SoftFade = 2;
 
     public static TimeSpan LateWindow(EventTiming t) => t == EventTiming.Soft ? TimeSpan.FromMinutes(2) : TimeSpan.FromSeconds(5);
 
@@ -213,7 +224,7 @@ public sealed class EventRunner
         }
     }
 
-    private static void Fire(TimedEvent e, IReadOnlyList<LogItem> items, IEventSink sink)
+    private void Fire(TimedEvent e, IReadOnlyList<LogItem> items, IEventSink sink)
     {
         if (e.Action == EventAction.News && items.Any(i => i.Type == LogItemType.AiBreak && i.BreakState != BreakState.Ready))
         {
@@ -226,6 +237,12 @@ public sealed class EventRunner
             // Everything after the first item goes to the top of the log first (last one first), so they follow in order.
             for (int i = items.Count - 1; i >= 1; i--) sink.InsertNext(items[i]);
             if (e.Timing == EventTiming.Hard) sink.PlayNow(items[0], 0.5);
+            else if (SoftMaxWait > TimeSpan.Zero && sink.SecondsToNext() is double left && left > SoftMaxWait.TotalSeconds)
+            {
+                sink.PlayNow(items[0], SoftFade);
+                sink.Notify($"{e.Name} gestart (zacht; het item op de zender had nog {Math.Round(left):0} s en is weggedraaid)");
+                return;
+            }
             else sink.InsertNext(items[0]);
         }
         sink.Notify($"{e.Name} gestart ({e.Timing switch { EventTiming.Hard => "hard", EventTiming.Soft => "zacht", _ => "overlay" }})");

@@ -166,6 +166,9 @@
           <NumericUpDown Value="{Binding FadeOut}" Minimum="0" Maximum="15" Increment="0.5" FormatString="0.0" />
           <TextBlock Classes="field" Text="Muziek onder een stem die over het einde praat (% van het volume)" />
           <NumericUpDown Value="{Binding DuckLevel}" Minimum="0" Maximum="100" Increment="5" FormatString="0" />
+          <TextBlock Classes="field" Text="Zachte start op een vaste tijd: wacht hoogstens (seconden, 0 = altijd uitspelen)" />
+          <NumericUpDown Value="{Binding SoftMaxWait}" Minimum="0" Maximum="900" Increment="15" FormatString="0" />
+          <TextBlock Classes="help" Text="Een zacht nieuwsblok of reclameblok wacht tot het item op de zender klaar is. Duurt dat langer dan dit, dan start het blok meteen en faadt het item in 2 seconden uit." />
           <TextBlock Classes="title" Text="Overgangen per soort en categorie" Margin="0,20,0,4" />
           <TextBlock Classes="help" Text="Bijvoorbeeld: van een jingle naar een nummer achter elkaar, of van categorie Klassiek naar alles met 6 seconden overlap. De bovenste regel die past telt; zonder regel geldt het gemeten mixpunt. Een overgang die je met de hand maakte gaat altijd voor. Deze regels worden direct opgeslagen met de knop hieronder, los van Opslaan bovenaan." />
           <ItemsControl ItemsSource="{Binding TransitionRules}" Margin="0,6,0,0">
@@ -577,7 +580,8 @@
                       <TextBlock Text="{Binding Name}" FontWeight="SemiBold" />
                       <StackPanel Orientation="Horizontal" Spacing="6">
                         <TextBlock Classes="muted" FontSize="12" Text="{Binding RoleText}" />
-                        <TextBlock Classes="muted" FontSize="12" Text="· uitgeschakeld" IsVisible="{Binding !Enabled}" />
+                        <TextBlock Classes="muted" FontSize="12" Text="{Binding StateText, StringFormat='· {0}'}"
+                                   IsVisible="{Binding StateText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
                       </StackPanel>
                     </StackPanel>
                   </DataTemplate>
@@ -593,6 +597,8 @@
               <ComboBox ItemsSource="{Binding Roles}" SelectedItem="{Binding EditRole}" MinWidth="180" />
               <TextBlock Classes="field" Text="Pincode (4 tot 12 cijfers)" />
               <TextBox Text="{Binding EditPin}" PasswordChar="●" Watermark="leeg = pincode niet wijzigen" />
+              <TextBlock Classes="field" Text="Laatste dag (leeg = geen einde)" />
+              <TextBox Text="{Binding EditUntil}" Watermark="bijv. 2026-12-31" Width="200" ToolTip.Tip="Voor een stagiair, gastpresentator of invaller: na deze dag kan hij zich niet meer aanmelden" HorizontalAlignment="Left" />
               <CheckBox Content="Mag zich aanmelden" IsChecked="{Binding EditEnabled}" Margin="0,10,0,0" />
               <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,14,0,0">
                 <Button Classes="bar primary" Content="Opslaan" Command="{Binding SaveCommand}" />
@@ -600,9 +606,31 @@
               </StackPanel>
               <TextBlock Classes="help" Text="{Binding Status}" Margin="0,8,0,0" />
               <TextBlock Classes="help" Margin="0,12,0,0"
-                         Text="Gebruikers worden meteen opgeslagen (de knop onderaan is voor de andere tabbladen). Pincode vergeten en geen beheerder meer? Start de engine op deze computer met --users-off; dan wordt er niets gecontroleerd tot de volgende start." />
+                         Text="Gebruikers worden meteen opgeslagen (de knop onderaan is voor de andere tabbladen). Iemand die stopt kun je beter uitschakelen dan verwijderen: de naam blijft dan in de lijst en bij zijn uitzendingen. Na de laatste dag kan iemand zich niet meer aanmelden en wordt hij afgemeld. Er blijft altijd een beheerder zonder einddatum. Pincode vergeten en geen beheerder meer? Start de engine op deze computer met --users-off; dan wordt er niets gecontroleerd tot de volgende start." />
             </StackPanel>
           </Grid>
+          <TextBlock Classes="title" Text="Blokkeren na verkeerde pincodes" Margin="0,20,0,4" />
+          <TextBlock Classes="help" Text="Na te veel verkeerde pincodes achter elkaar kan die naam zich een tijd niet aanmelden. Een beheerder kan een blokkade hier meteen opheffen." />
+          <WrapPanel Margin="0,6,0,0">
+            <TextBlock Text="Blokkeren na" VerticalAlignment="Center" Margin="0,0,6,0" />
+            <NumericUpDown Value="{Binding LockAttempts}" Minimum="3" Maximum="20" Increment="1" FormatString="0" Width="120" />
+            <TextBlock Text="pogingen, voor" VerticalAlignment="Center" Margin="6,0,6,0" />
+            <NumericUpDown Value="{Binding LockSeconds}" Minimum="10" Maximum="3600" Increment="30" FormatString="0" Width="130" />
+            <TextBlock Text="seconden" VerticalAlignment="Center" Margin="6,0,10,0" />
+            <Button Classes="small" Content="Opslaan" Command="{Binding SaveLocksCommand}" />
+          </WrapPanel>
+          <ItemsControl ItemsSource="{Binding Locked}" Margin="0,8,0,0">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="vm:LockedNameVm">
+                <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,0,0,4">
+                  <TextBlock Text="{Binding Text}" VerticalAlignment="Center" />
+                  <Button Classes="small" Content="Opheffen" Command="{Binding $parent[ItemsControl].DataContext.LiftCommand}" CommandParameter="{Binding Name}" />
+                </StackPanel>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+          <TextBlock Classes="muted" Text="Er is nu niemand geblokkeerd." IsVisible="{Binding !Locked.Count}" />
+          <TextBlock Classes="help" Text="{Binding LockStatus}" />
         </StackPanel></ScrollViewer>
       </TabItem>
 

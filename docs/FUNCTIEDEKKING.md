@@ -109,7 +109,7 @@ Het belang staat in de kolom **Prio** voor Radio Aa en Hunze: **H** hoog, **M** 
 | ✅ | Vaste tijden: hard (onderbreken), zacht (na het huidige item), overlay | vaste gebeurtenissen | — |
 | ✅ | Herinneringen, alarmen en commando's op tijd | vaste gebeurtenissen | — |
 | ⬜ | **Programma's op datum** (eenmalig of met herhaling, zoals in een agenda), met eindtijd | wij plannen per weekdag en uur | H |
-| ⬜ | **Maximale vertraging bij een zachte start**: is het huidige nummer bijna klaar, dan uitspelen; anders wegdraaien | zacht wacht nu altijd | M |
+| ✅ | **Maximale vertraging bij een zachte start**: is het huidige nummer bijna klaar, dan uitspelen; anders wegdraaien | Instellingen › Mixen; het item faadt in 2 s uit | M |
 | ⬜ | Overlay tot een eindtijd of één ronde, daarna gaat het onderbroken programma verder | overlay speelt één item of blok | M |
 | ⬜ | Handmatige start: het programma meldt zich op tijd, de presentator start het | ontbreekt | L |
 | ⬜ | Overlay laten uitstellen of overslaan door de presentator vóór de start | ontbreekt | M |
@@ -151,7 +151,7 @@ Het belang staat in de kolom **Prio** voor Radio Aa en Hunze: **H** hoog, **M** 
 | 🟡 | MIDI met leren, serieel, Livewire, Ember+, Mackie Control | gebouwd; nog niet tegen echte apparaten getest | H |
 | 🟡 | **Commandotaal**: velden zoals {artiest} {titel} {tijd} zijn er; **voorwaarden, rekenen, tekstfuncties en datum/tijd-opmaak ontbreken** | EventRules en PlayoutOutputs | M |
 | ⬜ | Commandoschema met **gebeurtenissen per bron** (speler, mengkanaal, stream, MIDI, OSC, serieel met patroonherkenning) die elk hun eigen velden aanbieden | gebeurtenissen per soort item zijn er | M |
-| ⬜ | Commando's vanaf de opdrachtregel naar de engine sturen | klein programma op de bestaande TCP-poort | L |
+| ✅ | Commando's vanaf de opdrachtregel naar de engine sturen | `rea-cmd` op de TCP-poort, met afsluitcodes voor scripts | L |
 | ⬜ | USB-GPIO-kaarten (contactsluitingen), D&R Airence/Webstation | stap 8 | M |
 | ⬜ | GPIO als losse dienst op een andere pc (koppelt apparaten en praat met de engine via het netwerk) | onze hardwarelaag zit in de engine | L |
 | ⬜ | Toegangslimiet per afstandsbediener (welke commando's mag die client) | er is één wachtwoord | M |
@@ -175,7 +175,7 @@ Het belang staat in de kolom **Prio** voor Radio Aa en Hunze: **H** hoog, **M** 
 | ⬜ | Logopmaak met kop, regel en slot, filter per soort item, containers wel of niet uitklappen | eigen opmaak per regel is er | L |
 | ✅ | Uitzendstatistiek per dag, week en maand; rapport auteursrechten (CSV, PDF); reclamebewijs | | — |
 | ⬜ | **Vrije analyse**: draaitabel en grafieken over de hele geschiedenis | uitbreiding van de statistiek | L |
-| ⬜ | Log en planning afdrukken of exporteren (PDF/HTML) | alleen het muziekrapport heeft PDF | M |
+| 🟡 | Log en planning afdrukken of exporteren (PDF/HTML) | de programmalog als PDF en CSV met verwachte begintijden; de planning (klokken, weekschema) nog niet | M |
 | ✅ | Reservekopie en terugzetten van instellingen | | — |
 | ⬜ | Eigen rapportsjablonen (opmaak zelf maken) | wij hebben vaste rapporten | L |
 
@@ -212,7 +212,7 @@ Het pakket levert naast de studio een aantal losse programma's. Bij ons horen di
 | Meekijkprogramma | remote-app / meekijkscherm | ⬜ |
 | Bewaker die de studio herstart | watchdog | ✅ |
 | Losse studioklok | venster Klok | 🟡 |
-| Commando's vanaf de opdrachtregel | `rea-cmd` | ⬜ |
+| Commando's vanaf de opdrachtregel | `rea-cmd` | ✅ |
 | Afspeellijsten omzetten | import van open formaten | 🟡 |
 
 ### 14. Mediabeheer en workflows (tweede bron)
@@ -291,9 +291,9 @@ Deze artikelen gaan minder over uitzenden en meer over **hoe een omroepsysteem b
 | | Functie | Stand bij ons | Prio |
 |---|---|---|---|
 | ✅ | Gebruikers met één rol, pincode, blokkeren na mislukte pogingen | 5 fouten → 30 s blokkade | — |
-| ⬜ | Blokkeerduur en aantal pogingen instelbaar; beheerder kan een blokkade opheffen | vaste waarden | L |
-| ⬜ | **Account met einddatum** (stagiair, gastpresentator, invaller) | ontbreekt | M |
-| ⬜ | **Uitschakelen in plaats van verwijderen**: oude gebruikers blijven zichtbaar in as-run en statistiek | ontbreekt | M |
+| ✅ | Blokkeerduur en aantal pogingen instelbaar; beheerder kan een blokkade opheffen | Instellingen › Gebruikers; blokkades vervallen bij een herstart van de engine | L |
+| ✅ | **Account met einddatum** (stagiair, gastpresentator, invaller) | laatste dag per gebruiker; daarna geen aanmelding en de sessie stopt; er blijft altijd een beheerder zonder einde | M |
+| ✅ | **Uitschakelen in plaats van verwijderen**: oude gebruikers blijven zichtbaar in as-run en statistiek | uitschakelen bestond al; de lijst toont nu "uitgeschakeld", "verlopen" en "tot en met", en de hulptekst raadt uitschakelen aan | M |
 | ⬜ | **Activiteitenlog per gebruiker**: wie heeft wat gewijzigd (log, planning, bibliotheek, instellingen) | systeemlog zonder gebruiker per actie | M |
 | ⬜ | **Geschiedenis per item**: wie veranderde welk veld wanneer | ongedaan maken bestaat, maar zonder overzicht | L |
 | ⬜ | Beheerder kan "meekijken als" een gebruiker (zien wat die ziet), en dat wordt gelogd | ontbreekt | L |
