@@ -31,6 +31,7 @@ public sealed class DockFactory : Factory
         ("clipboard", "Klembord", () => new ClipboardTool()),
         ("cues", "Cue-editor", () => new CueEditorTool()),
         ("mixer", "Mixer en routing", () => new MixerTool()),
+        ("output", "Uitsturing", () => new OutputTool()),
         ("planner", "Planner", () => new PlannerTool()),
         ("asrun", "As-run", () => new AsRunTool()),
         ("airstats", "Uitzendstatistiek", () => new AirStatsTool()),
@@ -67,7 +68,7 @@ public sealed class DockFactory : Factory
         ("Planning", ["planner", "ads", "news", "import", "sources", "wishlist"]),
         ("AI-presentator en stemmen", ["presenter", "voice"]),
         ("DJ", ["dj", "sampler", "automix", "djmidi", "soloist"]),
-        ("Geluid, verbindingen en hardware", ["mixer", "connections", "stream", "hardware", "buttons", "control"]),
+        ("Geluid, verbindingen en hardware", ["mixer", "output", "connections", "stream", "hardware", "buttons", "control"]),
         ("Overzichten", ["asrun", "airstats", "messages"]),
         ("Beheer", ["settings"]),
     ];
