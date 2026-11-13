@@ -202,6 +202,16 @@ app.Use(async (http, next) =>
 UsersApi.UseAccessCheck(app, args.Contains("--users-off"));
 if (args.Contains("--users-off"))
     app.Services.GetRequiredService<MessageCenter>().Warning("Gestart met --users-off: aanmelden en rechten worden niet gecontroleerd.");
+{
+    // Songs coming up on the log get their details and cover before they play (first time only).
+    var upcomingLog = app.Services.GetRequiredService<PlayoutLog>();
+    var meta = app.Services.GetRequiredService<MetadataService>();
+    upcomingLog.Changed += () =>
+    {
+        try { meta.OnUpcoming(PlayoutLog.Flat(upcomingLog.Upcoming).Select(i => i.Media).OfType<ReaRadioDj.Core.Model.MediaItem>()); }
+        catch (Exception ex) { app.Logger.LogWarning(ex, "Looking up upcoming songs could not start"); }
+    };
+}
 app.UseDefaultFiles();
 // The browser studio changes with the code; always let the browser revalidate it.
 app.UseStaticFiles(new StaticFileOptions { OnPrepareResponse = c => c.Context.Response.Headers.CacheControl = "no-cache" });

@@ -70,6 +70,9 @@ public sealed class MediaLibrary
     private Timer? _nightly;
     private DateTime _lastNightly = DateTime.Today;
     private volatile bool _rescanWanted;
+    /// <summary>Files that could not be read (path -> size and time): not tried again until they change.</summary>
+    private readonly System.Collections.Concurrent.ConcurrentDictionary<string, (long Size, long Modified)> _unreadable =
+        new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, FolderState> _folderState = new(StringComparer.OrdinalIgnoreCase);
     private int _recognised;
 
@@ -386,6 +389,28 @@ public sealed class MediaLibrary
             .Where(x => Inside(x.Path, root))
             .ToDictionary(x => x.Path, StringComparer.OrdinalIgnoreCase);
 
+        // Unchanged files only need "present" again: that is done in one transaction per batch, not one per file
+        // (tens of thousands of separate writes kept the database busy for minutes after every start).
+        var unchanged = new List<(string Path, long Category)>();
+        void Flush()
+        {
+            if (unchanged.Count == 0) return;
+            _db.Transaction((c, tx) =>
+            {
+                using var cmd = StationDb.Command(c,
+                    "UPDATE media SET missing = 0, retired = 0, category_id = COALESCE(category_id, $c) WHERE path = $p AND (missing <> 0 OR retired <> 0 OR category_id IS NULL)",
+                    ("$c", 0L), ("$p", ""));
+                cmd.Transaction = tx;
+                foreach (var (path, category) in unchanged)
+                {
+                    cmd.Parameters["$c"].Value = category;
+                    cmd.Parameters["$p"].Value = path;
+                    cmd.ExecuteNonQuery();
+                }
+            });
+            unchanged.Clear();
+        }
+
         int done = 0;
         foreach (var file in files)
         {
@@ -398,16 +423,19 @@ public sealed class MediaLibrary
                 bool isNew = !known.TryGetValue(info.FullName, out var k);
                 if (!isNew && k.Size == info.Length && k.Modified == info.LastWriteTimeUtc.Ticks)
                 {
-                    _db.Execute("UPDATE media SET missing = 0, retired = 0, category_id = COALESCE(category_id, $c) WHERE path = $p",
-                        ("$c", categoryId), ("$p", info.FullName));
+                    unchanged.Add((info.FullName, categoryId));
+                    if (unchanged.Count >= 1000) Flush();
                     if (!k.HasRights) StoreRights(k.Id, info.FullName); // files from before rights metadata existed
                     continue;
                 }
+                if (_unreadable.TryGetValue(info.FullName, out var bad) && bad == (info.Length, info.LastWriteTimeUtc.Ticks)) continue;
                 if (StillBeingWritten(info)) { _rescanWanted = true; continue; }
-                Import(info, folder.Kind, categoryId, keepCues: k.Manual, isNew, folder.WriteTags, fixedCategory: folder.Category.Length > 0);
+                try { Import(info, folder.Kind, categoryId, keepCues: k.Manual, isNew, folder.WriteTags, fixedCategory: folder.Category.Length > 0); }
+                catch (Audio.BassException) { _unreadable[info.FullName] = (info.Length, info.LastWriteTimeUtc.Ticks); throw; }
             }
             catch (Exception ex) { _log.LogWarning(ex, "Skipping {File}", file); }
         }
+        Flush();
 
         // Files that disappeared stay in the database (as-run and cartwalls refer to them) but are not played.
         var present = files.ToHashSet(StringComparer.OrdinalIgnoreCase);
@@ -731,6 +759,7 @@ public sealed class MediaLibrary
             for (int i = 0; i < all.Count; i++)
                 if (issues.TryGetValue(all[i].Media.Id, out var p)) all[i] = all[i] with { Issues = p };
         _all = all;
+        _albumFolders.Clear();
         LibrarySearch.Warm(all);
         var now = DateTime.Now;
         var playable = _all.Where(d => d.IsPlayable(now)).Select(d => d.Media).ToList();
@@ -739,6 +768,13 @@ public sealed class MediaLibrary
     }
 
     public MediaItem? Get(long id) => GetDetails(id)?.Media;
+
+    /// <summary>The details as loaded at the last scan or edit (no database access; null when unknown).</summary>
+    public MediaDetails? Cached(long id)
+    {
+        foreach (var d in _all) if (d.Media.Id == id) return d;
+        return null;
+    }
 
     private static readonly string[] CoverNames = ["cover", "folder", "front", "albumart", "album"];
 
@@ -767,8 +803,17 @@ public sealed class MediaLibrary
         }
         try
         {
+            // A cover found online by the metadata lookup, kept in the data folder (the music file stays as it is).
+            var found = FoundCoverPath(id);
+            if (File.Exists(found)) { var b = File.ReadAllBytes(found); if (CoverMime(b) is { } mime) return (b, mime); }
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { _log.LogDebug("No found cover for {Id}: {Message}", id, ex.Message); }
+        try
+        {
             var dir = Path.GetDirectoryName(m.Path);
             if (dir is null) return null;
+            // A folder picture belongs to an album folder; in a large mixed folder ("Various") it is not this song's cover.
+            if (!IsAlbumFolder(dir)) return null;
             foreach (var name in CoverNames)
                 foreach (var ext in new[] { ".jpg", ".jpeg", ".png" })
                 {
@@ -778,15 +823,29 @@ public sealed class MediaLibrary
                 }
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { _log.LogDebug("No cover file for {File}: {Message}", m.Path, ex.Message); }
-        try
-        {
-            // A cover found online by the metadata lookup, kept in the data folder (the music file stays as it is).
-            var found = FoundCoverPath(id);
-            if (File.Exists(found)) { var b = File.ReadAllBytes(found); if (CoverMime(b) is { } mime) return (b, mime); }
-        }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { _log.LogDebug("No found cover for {Id}: {Message}", id, ex.Message); }
         return null;
     }
+
+    /// <summary>Most albums have fewer tracks; a folder with more songs of different albums is a mixed folder.</summary>
+    public const int AlbumFolderMax = 40;
+
+    /// <summary>
+    /// Whether a folder picture can be the cover of the songs in it: at most <see cref="AlbumFolderMax"/> library items,
+    /// or all with the same album. Counted from the library, not from the disk (a network folder can be slow).
+    /// </summary>
+    public bool IsAlbumFolder(string folder) => _albumFolders.GetOrAdd(Path.TrimEndingDirectorySeparator(folder), full =>
+    {
+        var albums = _all.Where(d => string.Equals(Path.GetDirectoryName(d.Media.Path), full, StringComparison.OrdinalIgnoreCase))
+            .Select(d => d.Album).ToList();
+        return IsAlbumFolder(albums);
+    });
+
+    private readonly System.Collections.Concurrent.ConcurrentDictionary<string, bool> _albumFolders = new(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>The rule of <see cref="IsAlbumFolder(string)"/> for the albums of the items in one folder.</summary>
+    public static bool IsAlbumFolder(IReadOnlyCollection<string> albums) =>
+        albums.Count <= AlbumFolderMax
+        || (albums.First() is { Length: > 0 } a && albums.All(x => string.Equals(x, a, StringComparison.OrdinalIgnoreCase)));
 
     /// <summary>Where a cover found online is kept for an item: covers\{id}.img in the data folder.</summary>
     public string FoundCoverPath(long id) => Path.Combine(_options.DataFolder, "covers", id.ToString(System.Globalization.CultureInfo.InvariantCulture) + ".img");

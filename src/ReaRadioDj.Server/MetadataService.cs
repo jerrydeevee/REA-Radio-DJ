@@ -72,10 +72,35 @@ public sealed class MetadataService(MediaLibrary library, StationDb db, SpotifyS
     public void OnPlayed(MediaItem m)
     {
         if (m.Id <= 0 || m.Kind != MediaKind.Song || !AutoOnPlay || _autoQueued.ContainsKey(m.Id)) return;
+        RecheckOnce();
         if (db.Scalar<string>("SELECT meta_checked FROM media_rights WHERE media_id = $id", ("$id", m.Id)) is { Length: > 0 }) return;
         if (!_autoQueued.TryAdd(m.Id, 0)) return;
         _autoQueue.Writer.TryWrite(m.Id);
         if (Interlocked.Exchange(ref _autoStarted, 1) == 0) _ = Task.Run(AutoLoopAsync);
+    }
+
+    /// <summary>
+    /// Songs coming up on the log are looked up ahead (same rules as on air), so their details and cover are there
+    /// before they play. Only the first few, to keep the pace of the online services.
+    /// </summary>
+    public void OnUpcoming(IEnumerable<MediaItem> upcoming)
+    {
+        foreach (var m in upcoming.Take(UpcomingAhead)) OnPlayed(m);
+    }
+
+    public const int UpcomingAhead = 4;
+
+    /// <summary>Version of the lookup rules; songs checked under older rules without a match are looked up once more.</summary>
+    public const string RulesVersion = "2";
+    private const string RulesSetting = "metadata.rules";
+    private int _rechecked;
+
+    private void RecheckOnce()
+    {
+        if (Interlocked.Exchange(ref _rechecked, 1) != 0 || db.GetSetting(RulesSetting) == RulesVersion) return;
+        // Older rules tried the sound only after the tags failed, and marked a song checked before the lookup ended.
+        db.Execute("UPDATE media_rights SET meta_checked = '' WHERE mbid = '' AND meta_checked <> ''");
+        db.SetSetting(RulesSetting, RulesVersion);
     }
 
     private async Task AutoLoopAsync()
@@ -97,9 +122,9 @@ public sealed class MetadataService(MediaLibrary library, StationDb db, SpotifyS
         var k = KnownOf(d, r);
         var m = d.Media;
         bool needCover = library.Cover(id) is null;
-        MarkChecked(id); // once, whether it is found or not
-        if (!k.Incomplete && !needCover && !MetadataMatch.IsPlaceholder(m.Title)) return;
+        if (!k.Incomplete && !needCover && !MetadataMatch.IsPlaceholder(m.Title)) { MarkChecked(id); return; }
         var p = await LookupOneAsync(m, k, acoustId.Usable, ct);
+        MarkChecked(id); // once the lookup has ended, found or not; a failure or a restart in between tries again
         if (p is null || !p.AddsSomething) return;
         _proposals.TryRemove(id, out _);
         if (await WriteAsync(p, ct)) library.Reload();
@@ -179,11 +204,14 @@ public sealed class MetadataService(MediaLibrary library, StationDb db, SpotifyS
 
     public void Stop() => _cts?.Cancel();
 
-    /// <summary>Looks up one song: by artist and title, else by sound. Null when it is not found.</summary>
+    /// <summary>
+    /// Looks up one song. With AcoustID the sound is checked first: the recording it hears is the truth, also when the
+    /// tags are wrong. Without a sound match (or without AcoustID) artist and title are searched. Null when not found.
+    /// </summary>
     private async Task<MetaProposal?> LookupOneAsync(MediaItem m, Known k, bool bySound, CancellationToken ct)
     {
-        var match = MetadataMatch.IsPlaceholder(m.Title) ? null : await FindAsync(m.Artist, m.Title, m.Duration, ct);
-        if (match is null && bySound) match = await BySoundAsync(m, ct);
+        var match = bySound ? await BySoundAsync(m, ct) : null;
+        if (match is null && !MetadataMatch.IsPlaceholder(m.Title)) match = await FindAsync(m.Artist, m.Title, m.Duration, ct);
         if (match is null) return null;
         bool hasCover = match.CoverCandidates.Count == 0 || library.Cover(m.Id) is not null;
         match = await DetailsAsync(match, k.Genre.Length == 0, k.Composer.Length == 0, !hasCover,
