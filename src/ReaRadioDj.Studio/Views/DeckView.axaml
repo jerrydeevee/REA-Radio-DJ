@@ -40,7 +40,8 @@
             <Grid ColumnDefinitions="42,*">
               <TextBlock Grid.Column="0" Text="{Binding Letter}" FontSize="30" FontWeight="Black" Foreground="#11161D"
                          HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,4,0,0" />
-              <Border Grid.Column="1" Background="{DynamicResource CardBrush}" CornerRadius="0,4,4,0">
+              <Border Grid.Column="1" Background="{DynamicResource CardBrush}"
+                      CornerRadius="{Binding $parent[Border].CornerRadius, Converter={x:Static ctl:CornerConverters.InnerRight}}">
               <StackPanel Margin="8,6" Spacing="4">
                 <DockPanel Classes="deckhead">
                   <Border DockPanel.Dock="Right" Background="#F0B429" CornerRadius="{DynamicResource Radius3}" Padding="6,1"
