@@ -25,6 +25,7 @@ public sealed class DeviceWatch(AudioRouter router, StationDb db, MessageCenter 
     public const string Key = "devicewatch";
     private static readonly TimeSpan Every = TimeSpan.FromSeconds(2);
     private readonly DeviceVolumeGuard _guard = new();
+    private readonly AsioWatchdog _asio = new();
     private readonly object _gate = new();
     private DeviceWatchSettings _settings = new();
     private List<DeviceWatchCardDto> _cards = [];
@@ -60,6 +61,8 @@ public sealed class DeviceWatch(AudioRouter router, StationDb db, MessageCenter 
             {
                 try { Check(); }
                 catch (Exception ex) { logger.LogWarning(ex, "Sound card watch failed"); }
+                try { CheckAsio(DateTime.UtcNow); }
+                catch (Exception ex) when (ex is not OperationCanceledException) { logger.LogWarning(ex, "ASIO watch failed"); }
             }
             while (await timer.WaitForNextTickAsync(ct));
         }
@@ -121,6 +124,40 @@ public sealed class DeviceWatch(AudioRouter router, StationDb db, MessageCenter 
             cards.Add(new DeviceWatchCardDto(name, uses, Math.Round(v.Level * 100.0, 1), v.Muted, note));
         }
         lock (_gate) _cards = cards;
+    }
+
+    /// <summary>
+    /// An ASIO driver that stops while the station plays asks no audio any more, so that output is silent: start it
+    /// again, report it once when that does not work, and keep trying (always on; ASIO is not in the Windows mixer).
+    /// </summary>
+    private void CheckAsio(DateTime now)
+    {
+        if (!router.IsStarted || !AsioRuntime.IsAvailable) return;
+        var status = AsioRuntime.Status();
+        if (status.Count == 0) return;
+        var buses = new List<OutputBus> { router.Program, router.Preview };
+        buses.AddRange(router.Strips.Select(s => s.Bus));
+        var names = AsioRuntime.GetDevices().ToDictionary(d => d.Index, d => d.Name);
+        foreach (var (device, running) in status)
+        {
+            var action = _asio.Check(device, running, now);
+            if (action == AsioWatchAction.Restart) action = _asio.AfterRestart(device, AsioRuntime.TryRestart(device));
+            if (action == AsioWatchAction.None) continue;
+            string name = names.GetValueOrDefault(device, $"ASIO {device}");
+            string uses = string.Join(", ", buses.Where(b => b is not null && b.Asio is { } a && a.Device == device).Select(b => b.Name).Distinct());
+            if (uses.Length == 0) uses = "een uitgang";
+            if (action == AsioWatchAction.Lost)
+            {
+                messages.Warning($"De ASIO-kaart {name} speelt niet meer: {uses} is stil. REA-Radio-DJ probeert hem elke {AsioWatchdog.RetryEvery.TotalSeconds:0} seconden opnieuw te starten. "
+                    + "Komt hij niet terug, kijk dan of de kaart is aangesloten en niet door een ander programma wordt gebruikt, of kies de Windows-kaart (Instellingen › Geluid) en start de engine opnieuw.");
+                logger.LogError("ASIO device {Device} ({Name}) stopped and did not start again", device, name);
+            }
+            else
+            {
+                messages.Warning($"De ASIO-kaart {name} stond even stil en speelt weer ({uses}).");
+                logger.LogWarning("ASIO device {Device} ({Name}) stopped and runs again", device, name);
+            }
+        }
     }
 
     public static void Map(RouteGroupBuilder api)

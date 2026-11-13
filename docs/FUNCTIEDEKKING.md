@@ -32,7 +32,7 @@ Het belang staat in de kolom **Prio** voor Radio Aa en Hunze: **H** hoog, **M** 
 | | Functie | Stand bij ons | Prio |
 |---|---|---|---|
 | ✅ | 24/7-bedrijf, 32-bit float-verwerking | engine (BASS) los van de studio, met watchdog | — |
-| 🟡 | WDM/WASAPI en ASIO 2.0, meerkanaalskaarten | ASIO per uitgang gebouwd; een stuurprogramma dat niet start wordt nog niet opgevangen met een terugval | H |
+| 🟡 | WDM/WASAPI en ASIO 2.0, meerkanaalskaarten | ASIO per uitgang; bij het starten terugval op de Windows-kaart, tijdens het spelen bewaakt en herstart; nog niet getest met echte ASIO-apparatuur | H |
 | ✅ | Afspelen van MP1/2/3, WAV, OGG, FLAC, AAC/M4A, Opus, WMA, APE, MPC, internetstreams | via BASS en plug-ins | — |
 | ⬜ | Broadcast Wave: BEXT- en CART-gegevens lezen **en schrijven**, RF64 (wav boven 4 GB) | niet in de code gevonden | M |
 | ✅ | ReplayGain (piek en waargenomen luidheid), LUFS, BPM, toonsoort | bij het inlezen | — |
@@ -276,7 +276,7 @@ De openbare artikelen geven vooral een beeld van **hoe een groot radiosysteem is
 | ⬜ | **Noodrecorder**: één knop die direct opneemt wat er binnenkomt (telefoon, lijn, microfoon) | ontbreekt | M |
 | ⬜ | **Geplande opnames van een ingang of stream** (bijv. elke dag om 12:00 het regionale nieuws opnemen en klaarzetten) | ontbreekt | H |
 | ⬜ | **Montageprogramma met meerdere sporen**: voice-over-spoor, automatisch dempen, volume-omhullende, stilte wegknippen, knippen en plakken, J/K/L | ontbreekt; hoort bij de bouwsteen tijdlijn | M |
-| ⬜ | **Lijst met geteste apparatuur**: per geluidskaart en per functie (uitzenden, opnemen, ASIO) wat werkt | ontbreekt; geheugen-regel: tests alleen met apparaat 0 | M |
+| 🟡 | **Lijst met geteste apparatuur**: per geluidskaart en per functie (uitzenden, opnemen, ASIO) wat werkt | de lijst staat in docs/TESTPLAN.md, nog leeg tot de eerste tests | M |
 | ⬜ | Kleine nieuwsredactie: berichten met tekst en geluid, een draaiboek voor het bulletin, leesscherm (prompter) | nieuwsblokken bestaan; berichten en draaiboek ontbreken | M |
 | ⬜ | Veilige toegang van buiten (thuisstudio, voicetracking op afstand) via een VPN zoals WireGuard, in plaats van poorten openzetten | advies en documentatie | M |
 | ➖ | Cloud-gateway met BGP/OSPF, dubbel uitgevoerd | te groot voor een lokale omroep | — |
@@ -435,12 +435,12 @@ Zonder dit heeft uitbreiden geen zin.
 
 | Werk | Grootte | Klaar als |
 |---|---|---|
-| Luistertests: DJ-modus, AI-nieuws op de zender, opnemen met bewaartermijn | S | bevindingen verwerkt, niets hoorbaar mis |
-| 🟡 ASIO-stuurprogramma dat niet start: terugval naar WASAPI met melding | S | engine blijft spelen, studio toont de melding — bij het starten gebeurt dit al (zender en voorluisteren vallen terug op de Windows-kaart, met melding); nog open: een kaart die tijdens het spelen wegvalt, en een test met echte ASIO-apparatuur |
+| 🟡 Luistertests: DJ-modus, AI-nieuws op de zender, opnemen met bewaartermijn | S | bevindingen verwerkt, niets hoorbaar mis — het testplan staat in docs/TESTPLAN.md (L1–L8); uitvoeren en beluisteren kan alleen in de studio |
+| 🟡 ASIO-stuurprogramma dat niet start: terugval naar WASAPI met melding | S | engine blijft spelen, studio toont de melding — bij het starten gebeurt dit (terugval op de Windows-kaart, met melding); valt een kaart tijdens het spelen weg, dan herstart de engine hem en meldt het, en probeert het elke 10 s opnieuw. Nog open: overschakelen naar de Windows-kaart zonder herstart, en de test met echte ASIO-apparatuur (TESTPLAN A1–A5) |
 | ✅ **Bewaking van de geluidskaart** (volume en demping van het apparaat) | S | ander programma zet de kaart zacht → melding en terugzetten |
 | ✅ **Opnemen met signaaldetectie** (drempel en nalooptijd) | S | alleen de presentatorpraat staat in de opname |
-| Testen tegen echte apparatuur: SIP bij de aanbieder, Ember+ tegen LUCI/Lawo, Mackie Control | M | elk apparaat werkt of heeft een bekende beperking op papier |
-| Cosmetische ronde over de hele studio | M | in een smal of laag paneel is alles vindbaar |
+| 🟡 Testen tegen echte apparatuur: SIP bij de aanbieder, Ember+ tegen LUCI/Lawo, Mackie Control | M | elk apparaat werkt of heeft een bekende beperking op papier — de tests staan in docs/TESTPLAN.md (H1–H7); uitvoeren kan alleen met de apparatuur |
+| ✅ Cosmetische ronde over de hele studio | M | in een smal of laag paneel is alles vindbaar — alle zes werkruimtes nagelopen op 1280×720; klok, bibliotheek en as-run hersteld |
 
 ### Fase B — Bediening en geluid op niveau
 
@@ -520,7 +520,7 @@ Zonder dit heeft uitbreiden geen zin.
 | 2. **Geplande opnames** van een ingang, VoIP-lijn of stream, met een categorie als bestemming | agenda | M | het regionale nieuws van 12:00 staat elke dag vanzelf klaar |
 | 3. **Noodrecorder**: één knop (ook als commando en op de hardware) die direct opneemt wat er binnenkomt | — | S | een onverwacht telefoontje staat volledig in de opname |
 | 4. **Montageprogramma met meerdere sporen**: voice-over-spoor met inspreken, automatisch dempen, omhullende, stilte wegknippen, knippen/plakken, J/K/L | tijdlijn | L | een nieuwsitem met intro, interview en muziekbed maken zonder ander programma |
-| 5. **Lijst met geteste apparatuur** in de documentatie, bijgehouden bij elke test | — | S | de beheerder weet vooraf welke kaart werkt |
+| 5. 🟡 **Lijst met geteste apparatuur** in de documentatie, bijgehouden bij elke test (docs/TESTPLAN.md) | — | S | de beheerder weet vooraf welke kaart werkt |
 | 6. Kleine nieuwsredactie: berichten met tekst en geluid, draaiboek voor het bulletin, leesscherm | webpagina's | M | de nieuwslezer leest van het scherm en start de geluidsfragmenten vanuit het draaiboek |
 | 7. Handleiding voor veilige toegang van buiten via WireGuard | — | S | voicetracking op afstand werkt zonder open poorten |
 

@@ -31,7 +31,8 @@ Elk venster is te verslepen, te docken of los te laten zweven, ook op een tweede
 - **Watchdog**: een klein bewakingsproces start de engine opnieuw na een crash of vastloper, en hij gaat verder waar
   de log was. De engine kan met Windows mee starten, los van de studio.
 - **Bewaking van de geluidskaart**: zet Windows of een ander programma de kaart van de zender zachter of dempt
-  hem, dan komt er een melding, of de engine zet hem meteen terug.
+  hem, dan komt er een melding, of de engine zet hem meteen terug. Stopt een ASIO-kaart tijdens het spelen, dan
+  start de engine hem opnieuw en meldt het; komt hij niet terug, dan probeert hij het elke 10 seconden.
 - **Zachte start met grens**: een zacht nieuws- of reclameblok wacht op het einde van het item, maar hoogstens zo lang
   als ingesteld (*Instellingen › Mixen*); duurt het langer, dan start het blok meteen en faadt het item uit.
 - **Speelduur per soort en categorie**: een langste speelduur (bijv. jingles hoogstens 30 seconden), en korte items die
@@ -262,6 +263,9 @@ Bijna 400 tests dekken onder meer cuepunten, klokplanning, vaste tijden, de data
 de commandobus, hardwaresignalen, RTP en SIP. De audiotests draaien alleen als BASS aanwezig is: ze spelen echte
 audio af op het stille apparaat (engine, cartwall, standby, ducken, opnemen, bibliotheekscan) en starten een
 nep-Icecast-server voor de stream.
+
+Wat alleen met oren of met echte apparatuur te controleren is (DJ-modus, AI-nieuws, ASIO, SIP, Ember+, Mackie
+Control), staat in [docs/TESTPLAN.md](docs/TESTPLAN.md), met een lijst om geteste apparatuur bij te houden.
 
 ## Licentie
 

@@ -13,6 +13,13 @@
 - **Gebruikers met een laatste dag**, en een instelbare blokkade na verkeerde pincodes die een beheerder kan opheffen.
 - **Programmalog afdrukken of exporteren** als PDF en CSV, met de verwachte begintijden.
 - **`rea-cmd`**: commando's naar de engine vanaf de opdrachtregel of uit een script.
+- **ASIO-bewaking**: stopt een ASIO-kaart tijdens het spelen, dan start de engine hem opnieuw, met een melding; komt
+  hij niet terug, dan een waarschuwing en elke 10 seconden een nieuwe poging.
+- **Testplan** (`docs/TESTPLAN.md`) voor luistertests en echte apparatuur, met een lijst geteste apparatuur.
+
+### Opgelost
+- In een laag venster lag de analoge klok over de tellers, en de lijst van de bibliotheek over het zoekveld.
+- In de as-run stond bij items zonder gemeten speelduur een losse "s".
 
 ## 1.1.0 (13 november 2026)
 
