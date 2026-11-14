@@ -154,7 +154,7 @@ Het belang staat in de kolom **Prio** voor Radio Aa en Hunze: **H** hoog, **M** 
 | ✅ | Commando's vanaf de opdrachtregel naar de engine sturen | `rea-cmd` op de TCP-poort, met afsluitcodes voor scripts | L |
 | ⬜ | USB-GPIO-kaarten (contactsluitingen), D&R Airence/Webstation | stap 8 | M |
 | ⬜ | GPIO als losse dienst op een andere pc (koppelt apparaten en praat met de engine via het netwerk) | onze hardwarelaag zit in de engine | L |
-| ⬜ | Toegangslimiet per afstandsbediener (welke commando's mag die client) | er is één wachtwoord | M |
+| ✅ | Toegangslimiet per afstandsbediener (welke commando's mag die client) | eigen sleutel of vast adres, per groep commando's; Instellingen › Op afstand | M |
 | ➖ | Joystickpoort | verouderd | — |
 
 ### 10. Meerdere studio's en meekijken
@@ -473,7 +473,7 @@ Zonder dit heeft uitbreiden geen zin.
 |---|---|---|---|
 | 1. **Expressietaal** met velden, voorwaarden en functies in alle gebeurtenissen en titelupdates | expressietaal | M | "als soort = jingle dan geen titelupdate" zonder code |
 | 2. Gebeurtenissen per bron: speler, mengkanaal, stream, MIDI, OSC, serieel met patroonherkenning | expressietaal | M | een fader-start op de tafel start de juiste speler |
-| 3. Toegangslimiet per afstandsbediener | — | S | de tablet mag geen instellingen wijzigen |
+| 3. ✅ Toegangslimiet per afstandsbediener | — | S | de tablet mag geen instellingen wijzigen |
 | 4. ✅ `rea-cmd` op de opdrachtregel | — | S | een ander programma stuurt "NEXT" |
 | 5. USB-GPIO en D&R Airence/Webstation via de algemene hardwarelaag (alleen met het openbare protocol) | — | M | knoppen en lampjes werken op de echte tafel |
 

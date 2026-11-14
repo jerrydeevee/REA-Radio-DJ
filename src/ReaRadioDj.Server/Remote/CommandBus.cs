@@ -81,6 +81,31 @@ public sealed class CommandBus(
         new("HELP", "Lijst met commando's", "Info"),
     ];
 
+    /// <summary>The command groups, in the order of the list (for the limits of a remote control).</summary>
+    public static readonly IReadOnlyList<string> Groups = Commands.Select(c => c.Group).Distinct().ToList();
+
+    private static readonly Dictionary<string, string> GroupByVerb = Commands
+        .GroupBy(c => c.Syntax.Split(' ')[0].ToUpperInvariant())
+        .ToDictionary(g => g.Key, g => g.First().Group, StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>The group of a command text by its first word ("CART 1 5" → Cartwall), or null for an unknown command.</summary>
+    public static string? GroupOf(string? text)
+    {
+        var first = (text ?? "").Trim().Split(' ', 2)[0];
+        return first.Length > 0 && GroupByVerb.TryGetValue(first, out var g) ? g : null;
+    }
+
+    /// <summary>Runs one command for a remote control with limits (null = no limits).</summary>
+    public CommandResult Run(string? text, string source, RemoteClient? client)
+    {
+        if (client is not null && !RemoteClients.Allows(client, GroupOf(text)))
+        {
+            logger.LogInformation("Command '{Text}' from {Source} refused for remote control {Name}", text, source, client.Name);
+            return CommandResult.Fail($"niet toegestaan voor {client.Name}" + (GroupOf(text) is { } g ? $" ({g})" : ""));
+        }
+        return Run(text, client is null ? source : $"{source} ({client.Name})");
+    }
+
     /// <summary>Runs one command. <paramref name="source"/> names the interface (tcp, osc, http, studio, planner).</summary>
     public CommandResult Run(string? text, string source)
     {

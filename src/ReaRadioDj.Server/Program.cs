@@ -94,6 +94,7 @@ builder.Services.AddSingleton(new DjStore(Path.Combine(options.DataFolder, "dj.j
 builder.Services.AddSingleton<DjMixer>();
 builder.Services.AddSingleton<DjHandover>();
 builder.Services.AddSingleton<StandbyFlag>();
+builder.Services.AddSingleton<RemoteClientStore>();
 builder.Services.AddSingleton<AutoBackupService>();
 builder.Services.AddHostedService(sp => sp.GetRequiredService<AutoBackupService>());
 builder.Services.AddSingleton<DeviceWatch>();
@@ -231,6 +232,7 @@ UsersApi.Map(api);
 DjApi.Map(api);
 SystemApi.Map(api, options, args);
 PortsApi.Map(api, options);
+RemoteClientsApi.Map(api);
 OutputsApi.Map(api, options);
 TitleLogApi.Map(api, options);
 PathsApi.Map(api, app.Services.GetRequiredService<StationDb>());
@@ -272,10 +274,12 @@ api.MapGet("/commands", () => CommandBus.Commands);
 // /api/do/mic/toggle; ?text=AUTO%20OFF runs any text. With a control password, add ?key=<password>.
 api.MapGet("/do/{**path}", (string? path, string? text, string? key, CommandBus bus, HttpContext http) =>
 {
-    if (!string.IsNullOrEmpty(options.Control.Password) && !RemoteControl.SamePassword(key ?? "", options.Control.Password))
+    // a remote control with its own key or address (found by the access check) runs with its own limits
+    var client = http.Items[RemoteClientStore.Key] as ReaRadioDj.Core.Remote.RemoteClient;
+    if (client is null && !string.IsNullOrEmpty(options.Control.Password) && !RemoteControl.SamePassword(key ?? "", options.Control.Password))
         return Results.Json(new { ok = false, text = "wachtwoord" }, statusCode: 401);
     var command = !string.IsNullOrWhiteSpace(text) ? text : string.Join(' ', (path ?? "").Split('/', StringSplitOptions.RemoveEmptyEntries));
-    var r = bus.Run(command, $"http {http.Connection.RemoteIpAddress}");
+    var r = bus.Run(command, $"http {http.Connection.RemoteIpAddress}", client);
     return r.Ok ? Results.Ok(r) : Results.BadRequest(r);
 });
 api.MapGet("/event-commands", (EventCommandService s) => new

@@ -21,6 +21,9 @@
 - **Poortenoverzicht** in *Instellingen › Systeem*, met een firewallopdracht voor de poorten die open moeten.
 - **Afspeellijst als bron in een klok** (M3U, M3U8, PLS, XSPF): op volgorde of willekeurig, alleen bestanden uit de
   bibliotheek; de lijst wordt opnieuw gelezen als hij verandert. Databaseschema 24.
+- **Afstandsbedieners met eigen rechten**: een tablet, knoppenkast of ander programma krijgt een eigen sleutel (of
+  wordt herkend aan zijn vaste adres) en mag alleen de gekozen groepen commando's gebruiken, via TCP, UDP, OSC en
+  `/api/do`. Over HTTP mag hij verder alleen meekijken. Sleutels worden alleen als hash bewaard en één keer getoond.
 
 ### Opgelost
 - In een laag venster lag de analoge klok over de tellers, en de lijst van de bibliotheek over het zoekveld.

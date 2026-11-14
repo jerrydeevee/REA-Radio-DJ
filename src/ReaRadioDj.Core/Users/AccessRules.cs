@@ -20,6 +20,7 @@ public static class AccessRules
         ("/api/users", UserRole.Admin),
         ("/api/system", UserRole.Admin),
         ("/api/backup", UserRole.Admin),
+        ("/api/remote-clients", UserRole.Admin),
         ("/api/settings", UserRole.Admin),
         ("/api/voice/services", UserRole.Admin),
         ("/api/voice/server", UserRole.Admin),

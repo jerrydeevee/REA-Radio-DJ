@@ -1,4 +1,4 @@
-<UserControl xmlns="https://github.com/avaloniaui"
+﻿<UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:ReaRadioDj.Studio.ViewModels"
              xmlns:c="using:ReaRadioDj.Contracts"
@@ -472,6 +472,47 @@
           <TextBlock Classes="help" Text="{Binding ControlPasswordHint}" />
           <CheckBox Content="Wachtwoord verwijderen" IsChecked="{Binding ClearControlPassword}" Margin="0,8,0,0" />
           <TextBlock Classes="help" TextWrapping="Wrap" Text="Adres en poorten worden actief na een herstart van de engine. Zet een wachtwoord als je op het hele netwerk luistert. Het wachtwoord geldt ook voor de webpagina en de remote-app (/remote/): vanaf een andere computer vraagt elke handeling om dit wachtwoord of een aanmelding met pincode. Zonder wachtwoord en zonder gebruikers kan een andere computer alleen meekijken." />
+
+          <TextBlock Classes="title" Text="Afstandsbedieners met eigen rechten" Margin="0,24,0,4" />
+          <TextBlock Classes="help" TextWrapping="Wrap" Text="Een tablet, knoppenkast of ander programma dat maar een deel mag, bijvoorbeeld alleen de cartwall. Hij meldt zich met zijn eigen sleutel in plaats van het wachtwoord (TCP: AUTH sleutel, UDP: sleutel vóór het commando, web: ?key=sleutel bij /api/do), of zonder sleutel aan zijn vaste adres. Hij mag alleen de gekozen groepen commando's gebruiken (STATUS en HELP altijd) en verder alleen meekijken. Geldt meteen na Opslaan in dit blok." />
+          <StackPanel DataContext="{Binding Remotes}" x:DataType="vm:RemoteClientsVm">
+          <ItemsControl ItemsSource="{Binding Clients}" Margin="0,8,0,0">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="vm:RemoteClientRowVm">
+                <Border Background="{DynamicResource CardBrush}" CornerRadius="6" Padding="10" Margin="0,0,0,8">
+                  <StackPanel Spacing="6">
+                    <DockPanel>
+                      <Button DockPanel.Dock="Right" Classes="small" Content="✕" ToolTip.Tip="Verwijderen (na Opslaan)"
+                              Command="{Binding RemoveCommand}" />
+                      <CheckBox DockPanel.Dock="Left" IsChecked="{Binding Enabled}" ToolTip.Tip="Aan" Margin="0,0,8,0" />
+                      <TextBox Text="{Binding Name}" Watermark="naam, bijv. Tablet studio 2" />
+                    </DockPanel>
+                    <TextBox Text="{Binding Addresses}" Watermark="adressen, bijv. 192.168.1.50 of 192.168.1.0/24 (leeg = elk adres, alleen met sleutel)" />
+                    <ItemsControl ItemsSource="{Binding Groups}">
+                      <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+                      <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="vm:GroupChoiceVm">
+                          <CheckBox Content="{Binding Name}" IsChecked="{Binding On}" Margin="0,0,14,0" />
+                        </DataTemplate>
+                      </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                      <TextBlock Classes="muted" FontSize="11" Text="{Binding KeyText}" VerticalAlignment="Center" />
+                      <Button Classes="small" Content="Nieuwe sleutel" Command="{Binding MakeKeyCommand}" />
+                      <Button Classes="small" Content="Sleutel weg" IsVisible="{Binding HasKey}" Command="{Binding ClearKeyCommand}" />
+                    </StackPanel>
+                    <TextBox Text="{Binding NewKey}" IsReadOnly="True" FontFamily="Consolas" IsVisible="{Binding ShowNewKey}" />
+                  </StackPanel>
+                </Border>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+          <StackPanel Orientation="Horizontal" Spacing="8">
+            <Button Classes="bar" Content="Afstandsbediener toevoegen" Command="{Binding AddCommand}" IsEnabled="{Binding Loaded}" />
+            <Button Classes="bar" Content="Opslaan" Command="{Binding SaveCommand}" IsEnabled="{Binding Loaded}" />
+          </StackPanel>
+          <TextBlock Classes="help" Text="{Binding Status}" Margin="0,6,0,0" />
+          </StackPanel>
         </StackPanel></ScrollViewer>
       </TabItem>
 

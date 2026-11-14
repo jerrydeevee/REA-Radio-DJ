@@ -679,6 +679,14 @@ public sealed record AutoBackupFileDto(string Name, DateTime Time, long Bytes);
 
 public sealed record AutoBackupSettingsDto(bool Enabled, string Folder, string Time, int KeepDays);
 
+/// <summary>A remote control with its own limits; the key itself never leaves the engine except once, when it is made.</summary>
+public sealed record RemoteClientDto(string Id, string Name, bool Enabled, bool HasKey, string Addresses, IReadOnlyList<string> Groups);
+
+public sealed record RemoteClientsDto(IReadOnlyList<RemoteClientDto> Clients, IReadOnlyList<string> Groups);
+
+/// <summary>A new key for a remote control: shown once.</summary>
+public sealed record RemoteClientKeyDto(string Id, string Key);
+
 /// <summary>A port the engine uses: "in" (others connect) or "uit" (the engine connects); reach "netwerk", "alleen deze pc" or "naar buiten".</summary>
 public sealed record PortDto(int Port, string Protocol, string Direction, string What, string Reach, bool Active, string Note);
 

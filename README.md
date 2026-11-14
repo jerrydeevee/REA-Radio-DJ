@@ -297,6 +297,12 @@ Alles wat je in de studio kunt, kan ook met tekstcommando's (`NEXT`, `AUTO OFF`,
 - **MIDI, serieel, Livewire en Ember+**: knoppen en faders op een commando, lampjes en tallies op een toestand
 - **Sneltoetsen** in de studio (vrij in te stellen) en **vaste tijden** in de planner (actie *Commando uitvoeren*)
 
+Een afstandsbediener die maar een deel mag (een tablet alleen de cartwall, een knoppenkast alleen `NEXT`) zet je onder
+**Instellingen › Op afstand › Afstandsbedieners met eigen rechten**. Hij krijgt een eigen sleutel in plaats van het
+wachtwoord (TCP `AUTH <sleutel>`, UDP `<sleutel> NEXT`, web `/api/do/next?key=<sleutel>`, `rea-cmd` via
+`REA_CONTROL_PASSWORD`) of wordt zonder sleutel herkend aan zijn vaste adres. Hij mag alleen de aangevinkte groepen
+commando's gebruiken; `STATUS` en `HELP` mogen altijd.
+
 Standaard luistert dit alleen op deze computer. Voor het netwerk in `appsettings.json`:
 
 ```json

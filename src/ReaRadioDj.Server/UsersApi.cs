@@ -17,6 +17,21 @@ public static class UsersApi
 
     public static bool Enforced { get; private set; } = true;
 
+    /// <summary>What a remote control with limits may do over HTTP: read, and commands through /api/do.</summary>
+    public static class RemoteHttp
+    {
+        public static bool Allowed(string method, string path)
+        {
+            path = path.TrimEnd('/').ToLowerInvariant();
+            bool read = HttpMethods.IsGet(method) || HttpMethods.IsHead(method) || HttpMethods.IsOptions(method);
+            bool command = path == "/api/do" || path.StartsWith("/api/do/", StringComparison.Ordinal);
+            // reading the users or the remote controls is not for a remote control
+            bool secret = path.StartsWith("/api/users", StringComparison.Ordinal) || path.StartsWith("/api/remote-clients", StringComparison.Ordinal)
+                || path.StartsWith("/api/backup", StringComparison.Ordinal);
+            return command || read && !secret;
+        }
+    }
+
     /// <summary>The check on every request to /api; added before the endpoints.</summary>
     public static void UseAccessCheck(WebApplication app, bool usersOff)
     {
@@ -28,6 +43,22 @@ public static class UsersApi
             {
                 var ip = http.Connection.RemoteIpAddress;
                 string? key = http.Request.Headers[NetworkRules.KeyHeader].ToString() is { Length: > 0 } h ? h : http.Request.Query["key"].ToString();
+                // A remote control with its own limits (its key, or its address without a session): only commands
+                // through /api/do, and only the groups it may use; reading stays open.
+                bool signedIn = http.RequestServices.GetRequiredService<SessionStore>().Get(http.Request.Headers[UserRoles.SessionHeader].ToString()) is not null;
+                if (!signedIn && http.RequestServices.GetRequiredService<Remote.RemoteClientStore>()
+                        .Find(key, ip is { IsIPv4MappedToIPv6: true } v4 ? v4.MapToIPv4() : ip) is { } client)
+                {
+                    http.Items[Remote.RemoteClientStore.Key] = client;
+                    if (!RemoteHttp.Allowed(http.Request.Method, http.Request.Path.Value ?? ""))
+                    {
+                        http.Response.StatusCode = StatusCodes.Status403Forbidden;
+                        await http.Response.WriteAsJsonAsync($"De afstandsbediening {client.Name} mag alleen commando's geven (via /api/do).");
+                        return;
+                    }
+                    await next();
+                    return;
+                }
                 var access = NetworkRules.Check(ip is null || System.Net.IPAddress.IsLoopback(ip), http.Request.Method, http.Request.Path.Value ?? "",
                     http.RequestServices.GetRequiredService<SessionStore>().Get(http.Request.Headers[UserRoles.SessionHeader].ToString()) is not null,
                     key, http.RequestServices.GetRequiredService<ReaRadioDj.Core.ReaRadioDjOptions>().Control.Password,
