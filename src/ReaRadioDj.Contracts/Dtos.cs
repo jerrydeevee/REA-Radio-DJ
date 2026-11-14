@@ -687,6 +687,13 @@ public sealed record RemoteClientsDto(IReadOnlyList<RemoteClientDto> Clients, IR
 /// <summary>A new key for a remote control: shown once.</summary>
 public sealed record RemoteClientKeyDto(string Id, string Key);
 
+/// <summary>A program recording (one clock hour) and the time it covers.</summary>
+public sealed record RecordedFileDto(string Name, DateTime Start, DateTime End);
+/// <summary>Cut the stretch From-To out of the program recording into a library item.</summary>
+public sealed record RecordingCutRequest(DateTime From, DateTime To, string? Title, string? Artist);
+/// <summary>The new library item: its file name and length.</summary>
+public sealed record RecordingCutDto(string File, double Seconds);
+
 /// <summary>A port the engine uses: "in" (others connect) or "uit" (the engine connects); reach "netwerk", "alleen deze pc" or "naar buiten".</summary>
 public sealed record PortDto(int Port, string Protocol, string Direction, string What, string Reach, bool Active, string Note);
 

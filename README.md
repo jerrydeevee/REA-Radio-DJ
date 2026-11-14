@@ -109,6 +109,9 @@ Elk venster is te verslepen, te docken of los te laten zweven, ook op een tweede
 - De uitzending als MP3 per klokuur en de microfoon apart, optioneel direct in de bibliotheek, met bewaartermijn.
 - **Alleen het praten opnemen** als luistercontrole: de microfoon of een ingang, alleen zolang die open staat en er
   geluid is (drempel en nalooptijd), met een halve seconde vóór de inzet; één MP3 per uur zonder de muziek ertussen.
+- **Uit de uitzending knippen**: het interview van net als item in de bibliotheek. Kies een dag en een begin- en
+  eindtijd (of *laatste 10 min*); het stuk mag over het uur heen lopen. Werkt met de uitzendopname (Instellingen ›
+  Opnemen).
 - **Streams** naar meerdere Icecast- en SHOUTcast-servers tegelijk, met titelupdates in een eigen opmaak.
 - **Programmalog afdrukken of exporteren** (PDF en CSV) met de verwachte begintijden: *Programmalog › Exporteren*.
 - **As-run** en een programmalog als tekstbestand per dag; rapportage auteursrechten (CSV en PDF),

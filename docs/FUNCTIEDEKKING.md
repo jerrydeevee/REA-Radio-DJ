@@ -272,7 +272,7 @@ De openbare artikelen geven vooral een beeld van **hoe een groot radiosysteem is
 | ✅ | Uitzendspeler met carts; engine als aparte uitzenddienst | engine + studio | — |
 | ✅ | Cue-editor, voorluisteren, klembord | | — |
 | 🟡 | Handmatige recorder en voicetrack-opname | opnemen naar de bibliotheek is er; een losse recorder met trimmen ontbreekt | M |
-| ⬜ | **Doorlopende opname waaruit je achteraf een stuk knipt** (bijv. een interview van 10 minuten geleden als item in de bibliotheek zetten) | uuropnames bestaan; knippen naar de bibliotheek ontbreekt | H |
+| 🟡 | **Doorlopende opname waaruit je achteraf een stuk knipt** (bijv. een interview van 10 minuten geleden als item in de bibliotheek zetten) | venster *Uit de uitzending knippen*: van-tot op tijd, ook over het uur; een golfvorm om het stuk aan te wijzen ontbreekt nog | H |
 | ⬜ | **Noodrecorder**: één knop die direct opneemt wat er binnenkomt (telefoon, lijn, microfoon) | ontbreekt | M |
 | ⬜ | **Geplande opnames van een ingang of stream** (bijv. elke dag om 12:00 het regionale nieuws opnemen en klaarzetten) | ontbreekt | H |
 | ⬜ | **Montageprogramma met meerdere sporen**: voice-over-spoor, automatisch dempen, volume-omhullende, stilte wegknippen, knippen en plakken, J/K/L | ontbreekt; hoort bij de bouwsteen tijdlijn | M |
@@ -516,7 +516,7 @@ Zonder dit heeft uitbreiden geen zin.
 
 | Werk | Bouwsteen | Grootte | Klaar als |
 |---|---|---|---|
-| 1. **Doorlopende opname met terugknippen**: in de opname van de afgelopen uren een stuk aanwijzen (golfvorm, tijd) en als item in de bibliotheek zetten | tijdlijn | M | het interview van 10 minuten geleden staat binnen een minuut als item klaar |
+| 1. 🟡 **Doorlopende opname met terugknippen** (op tijd klaar; golfvorm nog niet): in de opname van de afgelopen uren een stuk aanwijzen (golfvorm, tijd) en als item in de bibliotheek zetten | tijdlijn | M | het interview van 10 minuten geleden staat binnen een minuut als item klaar |
 | 2. **Geplande opnames** van een ingang, VoIP-lijn of stream, met een categorie als bestemming | agenda | M | het regionale nieuws van 12:00 staat elke dag vanzelf klaar |
 | 3. **Noodrecorder**: één knop (ook als commando en op de hardware) die direct opneemt wat er binnenkomt | — | S | een onverwacht telefoontje staat volledig in de opname |
 | 4. **Montageprogramma met meerdere sporen**: voice-over-spoor met inspreken, automatisch dempen, omhullende, stilte wegknippen, knippen/plakken, J/K/L | tijdlijn | L | een nieuwsitem met intro, interview en muziekbed maken zonder ander programma |

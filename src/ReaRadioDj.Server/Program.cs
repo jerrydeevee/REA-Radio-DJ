@@ -254,6 +254,18 @@ static ReaRadioDj.Contracts.RecordingSettingsDto RecordingDto(AirRecorder r)
     return new(s.Program, s.Mic, s.MicToLibrary, s.Bitrate, s.KeepDays, s.Folder, r.Folder, st.Program, st.Mic, st.Error ?? "",
         s.Speech, s.SpeechThresholdDb, s.SpeechHangSeconds, sp.File, sp.Recording, sp.Takes, s.SpeechSource);
 }
+// Cutting a stretch out of the program recording into the library (the interview of ten minutes ago as an item).
+api.MapGet("/recordings/program", (DateTime? date, RecordingService service) =>
+{
+    var day = (date ?? DateTime.Today).Date;
+    return service.ProgramFiles(day, day.AddDays(1)).Where(f => f.End > day && f.Start < day.AddDays(1))
+        .Select(f => new ReaRadioDj.Contracts.RecordedFileDto(Path.GetFileName(f.Path), f.Start, f.End)).ToList();
+});
+api.MapPost("/recordings/cut", async (ReaRadioDj.Contracts.RecordingCutRequest req, RecordingService service) =>
+{
+    var (file, seconds, error) = await service.CutToLibraryAsync(req.From, req.To, req.Title ?? "", req.Artist ?? "", DateTime.Now);
+    return error is null ? Results.Ok(new ReaRadioDj.Contracts.RecordingCutDto(Path.GetFileName(file!), seconds)) : Results.BadRequest(error);
+});
 ChannelsApi.Map(api, options);
 VoiceApi.Map(api);
 VoiceLibraryApi.Map(api, options);

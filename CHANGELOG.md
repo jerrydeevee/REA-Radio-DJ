@@ -24,6 +24,8 @@
 - **Afstandsbedieners met eigen rechten**: een tablet, knoppenkast of ander programma krijgt een eigen sleutel (of
   wordt herkend aan zijn vaste adres) en mag alleen de gekozen groepen commando's gebruiken, via TCP, UDP, OSC en
   `/api/do`. Over HTTP mag hij verder alleen meekijken. Sleutels worden alleen als hash bewaard en één keer getoond.
+- **Uit de uitzending knippen**: een stuk uit de uitzendopname (van-tot op tijd, ook over het uur heen) als nieuw item
+  in de bibliotheek, met titel en artiest, bij de jingles in de categorie Opnamen.
 
 ### Opgelost
 - In een laag venster lag de analoge klok over de tellers, en de lijst van de bibliotheek over het zoekveld.
