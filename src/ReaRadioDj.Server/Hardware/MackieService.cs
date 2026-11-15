@@ -167,9 +167,10 @@ internal sealed class EngineMackieMixer(AudioRouter router, CommandBus bus, Play
     private const string DeckPrefix = "deck:";
     private const double GainRange = 12;   // dB either way: the encoder ring shows -12..+12
     // Live: speler A and B, the cartwall, the AI presenter, mic 1 and the inputs (mic 2); the rest after the first eight.
+    // No automation fader: live the players and their faders take over from the automation.
     private static readonly string[] Front = [AudioRouter.StandbyStrip, "standby2", AudioRouter.CartStrip, AudioRouter.PresenterStrip, AudioRouter.MicStrip];
     private static readonly string[] Back = [AudioRouter.Voip1Strip, AudioRouter.Voip2Strip, "standby3", "standby4",
-        AudioRouter.LogStrip, AudioRouter.OverlayStrip, AudioRouter.DjStrip];
+        AudioRouter.OverlayStrip, AudioRouter.DjStrip];
     private static readonly string[] DjOrder = [AudioRouter.DjStrip, AudioRouter.MicStrip, AudioRouter.PflStrip, AudioRouter.LogStrip];
 
     public IReadOnlyList<MackieStripState> Strips() =>

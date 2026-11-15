@@ -137,7 +137,7 @@ de mic komt bij openen terug op zijn oude stand.
 | 5 | Mic 1 |
 | 6 | Mic 2 (eerste ingang onder *Hardware › Ingangen*) |
 | 7–8 | VoIP 1 en 2 |
-| daarna (Bank) | Automatisering, Overlay, DJ, Speler C/D |
+| daarna (Bank) | Speler C/D, Overlay, DJ (geen automatiseringsfader: live nemen de spelers het over) |
 
 Elke standby-speler heeft een eigen kanaal. **Met de hand** (automatisering uit) vult de log speler A en B, een
 klare AI-break gaat naar de AI-presentator. Fader open = speler start, dicht = stop; PLAY start de speler die het
