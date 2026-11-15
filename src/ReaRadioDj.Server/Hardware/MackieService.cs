@@ -27,11 +27,11 @@ public sealed class MackieService : BackgroundService
     private MackieSettings _settings;
 
     public MackieService(StationDb db, AudioRouter router, CommandBus bus, PlayoutEngine engine, PlayoutLog log, ReaRadioDjOptions options,
-        MessageCenter messages, ILogger<MackieService> logger)
+        MessageCenter messages, DjMixer dj, ILogger<MackieService> logger)
     {
         _db = db;
         _logger = logger;
-        _mixer = new EngineMackieMixer(router, bus, engine, log, db, options, messages);
+        _mixer = new EngineMackieMixer(router, bus, engine, log, db, options, messages, dj);
         _settings = Read() ?? new MackieSettings();
     }
 
@@ -78,7 +78,7 @@ public sealed class MackieService : BackgroundService
     /// <summary>A surface came up: it gets everything at once.</summary>
     public void Attach(long deviceId, Action<MackieOutput> send)
     {
-        var surface = new MackieSurface(_mixer, _settings, _bank);
+        var surface = new MackieSurface(_mixer, _settings, _bank) { Log = Note };
         _surfaces[deviceId] = (surface, send);
         Regroup();
         lock (surface) foreach (var o in surface.Refresh(force: true)) send(o);
@@ -161,25 +161,50 @@ public sealed class MackieService : BackgroundService
 
 /// <summary>The engine's mixer as a Mackie surface sees it: the fixed channels first, then the inputs.</summary>
 internal sealed class EngineMackieMixer(AudioRouter router, CommandBus bus, PlayoutEngine engine, PlayoutLog log, StationDb db, ReaRadioDjOptions options,
-    MessageCenter messages) : IMackieMixer
+    MessageCenter messages, DjMixer dj) : IMackieMixer
 {
+    private const string DeckPrefix = "deck:";
+    private const double GainRange = 12;   // dB either way: the encoder ring shows -12..+12
     private static readonly string[] Order = [AudioRouter.LogStrip, AudioRouter.StandbyStrip, AudioRouter.CartStrip, AudioRouter.OverlayStrip,
         AudioRouter.DjStrip, AudioRouter.MicStrip, AudioRouter.Voip1Strip, AudioRouter.Voip2Strip];
+    private static readonly string[] DjOrder = [AudioRouter.DjStrip, AudioRouter.MicStrip, AudioRouter.PflStrip, AudioRouter.LogStrip];
 
-    public IReadOnlyList<MackieStripState> Strips()
+    public IReadOnlyList<MackieStripState> Strips() =>
+        router.IsStarted ? Order.Where(router.HasStrip).Select(router.Strip).Concat(router.InputStrips).Select(State).ToList() : [];
+
+    public IReadOnlyList<MackieStripState> DjStrips()
     {
         if (!router.IsStarted) return [];
-        var strips = Order.Where(router.HasStrip).Select(router.Strip).Concat(router.InputStrips).ToList();
-        return strips.Select(s =>
+        var decks = dj.Decks.Select(d =>
         {
-            var (l, r) = s.Levels();
-            return new MackieStripState(s.Id, s.Name, s.Volume, s.Muted, s.Processor.Settings.Pan, s.OnAir, s.Recorder.IsRecording, Math.Max(l, r));
-        }).ToList();
+            var info = d.Info;
+            return new MackieStripState(DeckPrefix + d.Id, "Deck " + d.Id, (float)d.Fader, false, d.Gain / GainRange, false, false,
+                Math.Max(info.LevelLeft, info.LevelRight), d.Id, d.Playing, d.Synced, d.Pfl, Top: 1f);
+        });
+        return decks.Concat(DjOrder.Where(router.HasStrip).Select(router.Strip).Select(State)).ToList();
     }
 
-    public void SetVolume(string id, float volume) { if (router.HasStrip(id)) router.Strip(id).SetVolume(volume); }
+    public bool DjOnAir => dj.OnAir;
+
+    private static MackieStripState State(MixerStrip s)
+    {
+        var (l, r) = s.Levels();
+        return new MackieStripState(s.Id, s.Name, s.Volume, s.Muted, s.Processor.Settings.Pan, s.OnAir, s.Recorder.IsRecording, Math.Max(l, r));
+    }
+
+    private DjDeck? Deck(string id) => id.StartsWith(DeckPrefix, StringComparison.Ordinal) ? dj.Find(id[DeckPrefix.Length..]) : null;
+
+    public void SetVolume(string id, float volume)
+    {
+        if (Deck(id) is { } deck) deck.SetFader(volume);
+        else if (router.HasStrip(id)) router.Strip(id).SetVolume(volume);
+    }
     public void SetMute(string id, bool muted) { if (router.HasStrip(id)) { var s = router.Strip(id); s.SetVolume(s.Volume, muted); } }
-    public void SetPan(string id, double pan) => ChannelsApi.Update(router, db, options, id, s => s with { Pan = pan });
+    public void SetPan(string id, double pan)
+    {
+        if (Deck(id) is { } deck) deck.SetGain(Math.Round(pan * GainRange, 1));
+        else ChannelsApi.Update(router, db, options, id, s => s with { Pan = pan });
+    }
     public void SetOnAir(string id, bool onAir) => ChannelsApi.SetOnAir(router, db, options, id, onAir);
 
     public void SetRecording(string id, bool recording)
@@ -187,7 +212,7 @@ internal sealed class EngineMackieMixer(AudioRouter router, CommandBus bus, Play
         if (ChannelsApi.SetRecording(router, options, messages, id, recording) is { } problem) messages.Warning(problem);
     }
 
-    public void Run(string command) => bus.Run(command, "mackie");
+    public string? Run(string command) => bus.Run(command, "mackie") is { Ok: false } r ? r.Text : null;
     public IReadOnlyList<MackieLogItem> Upcoming() => log.Upcoming.Select(i => new MackieLogItem(i.Id, i.Label)).ToList();
     public void StartFromLog(long id) { if (log.MoveTo(id, 0)) engine.Next(); }
     public bool Playing => engine.GetState().Playing.Count > 0;

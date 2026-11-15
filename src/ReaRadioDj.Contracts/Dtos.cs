@@ -433,7 +433,8 @@ public sealed record HwPortsDto(List<string> Midi, List<string> Serial);
 /// Choices for Mackie Control surfaces: the channel on the master fader ("" = none), transport buttons, meters, which
 /// devices are extenders (eight strips more, e.g. iCON V1-X) and whether those stand left of the main panel.
 /// </summary>
-public sealed record MackieSettingsDto(string MasterStrip, bool Transport, bool Meters, List<long>? Extenders = null, bool ExtendersLeft = false);
+public sealed record MackieSettingsDto(string MasterStrip, bool Transport, bool Meters, List<long>? Extenders = null, bool ExtendersLeft = false,
+    bool DjFaderStart = true);
 
 /// <summary>A mixer channel a Mackie surface can show, in strip order.</summary>
 public sealed record MackieChannelDto(string Id, string Name);

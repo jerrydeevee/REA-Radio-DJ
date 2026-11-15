@@ -36,7 +36,7 @@ public static class Mackie
 
     // Button notes (MIDI channel 1). Strip buttons: base + strip 0-7.
     public const int Rec = 0x00, Solo = 0x08, Mute = 0x10, Select = 0x18, VPotPush = 0x20;
-    public const int BankLeft = 0x2E, BankRight = 0x2F, ChannelLeft = 0x30, ChannelRight = 0x31;
+    public const int BankLeft = 0x2E, BankRight = 0x2F, ChannelLeft = 0x30, ChannelRight = 0x31, Flip = 0x32;
     public const int Rewind = 0x5B, Forward = 0x5C, Stop = 0x5D, Play = 0x5E, Record = 0x5F, Cycle = 0x56;
     public const int TouchBase = 0x68;   // 0x68-0x6F strips, 0x70 master
     public const int VPotCc = 0x10, RingCc = 0x30, JogCc = 0x3C;
@@ -133,11 +133,11 @@ public static class Mackie
         }
     }
 
-    /// <summary>Fader position for a volume 0..1.25 (the studio fader goes to 125 %).</summary>
-    public static int Position(float volume) => (int)Math.Round(Math.Clamp(volume, 0f, 1.25f) / 1.25f * FaderMax);
-    public static float Volume(int position)
+    /// <summary>Fader position for a volume 0..top (the studio fader goes to 125 %, a DJ deck fader to 100 %).</summary>
+    public static int Position(float volume, float top = 1.25f) => (int)Math.Round(Math.Clamp(volume, 0f, top) / top * FaderMax);
+    public static float Volume(int position, float top = 1.25f)
     {
-        float v = Math.Clamp(position, 0, FaderMax) / (float)FaderMax * 1.25f;
+        float v = Math.Clamp(position, 0, FaderMax) / (float)FaderMax * top;
         return Math.Abs(v - 1f) < 0.002f ? 1f : v;   // the 100 % step lands on 100 % exactly
     }
 }
@@ -145,20 +145,31 @@ public static class Mackie
 /// <summary>An item further on in the log, as the surface shows it.</summary>
 public sealed record MackieLogItem(long Id, string Label);
 
-/// <summary>What the surface shows of one mixer channel.</summary>
-public sealed record MackieStripState(string Id, string Name, float Volume, bool Muted, double Pan, bool OnAir, bool Recording, float Peak);
+/// <summary>
+/// What the surface shows of one mixer channel. A DJ deck (<see cref="Deck"/> = "A"-"D") has its own buttons: the
+/// fader is the deck fader (0..<see cref="Top"/> = 1), the encoder its gain (<see cref="Pan"/> = gain / 12 dB).
+/// </summary>
+public sealed record MackieStripState(string Id, string Name, float Volume, bool Muted, double Pan, bool OnAir, bool Recording, float Peak,
+    string? Deck = null, bool Playing = false, bool Sync = false, bool Pfl = false, float Top = 1.25f);
+
+/// <summary>What the strips of the panels are: the broadcast mixer, or the DJ desk with the decks on the first strips.</summary>
+public enum MackieLayout { Broadcast, Dj }
 
 /// <summary>The mixer as the surface sees it (the engine fills this in; the tests use a fake).</summary>
 public interface IMackieMixer
 {
     IReadOnlyList<MackieStripState> Strips();
+    /// <summary>The strips of the DJ layout: deck A-D first, then the DJ master, mic, PFL and log.</summary>
+    IReadOnlyList<MackieStripState> DjStrips();
+    /// <summary>The DJ desk is on air (the panels then switch to the DJ layout by themselves).</summary>
+    bool DjOnAir { get; }
     void SetVolume(string id, float volume);
     void SetMute(string id, bool muted);
     void SetPan(string id, double pan);
     void SetOnAir(string id, bool onAir);
     void SetRecording(string id, bool recording);
-    /// <summary>A command on the command bus (NEXT, STOP, AUTO TOGGLE).</summary>
-    void Run(string command);
+    /// <summary>A command on the command bus (NEXT, STOP, AUTO TOGGLE); returns why it failed, or null when it worked.</summary>
+    string? Run(string command);
     /// <summary>What comes next in the log, the next item first (browsed with the jog wheel).</summary>
     IReadOnlyList<MackieLogItem> Upcoming();
     /// <summary>Puts a log item on top and starts it now, mixing out of what plays (as NEXT does).</summary>
@@ -180,6 +191,11 @@ public sealed record MackieSettings
     public IReadOnlyList<long> Extenders { get; init; } = [];
     /// <summary>The extenders stand left of the main panel (their strips come first).</summary>
     public bool ExtendersLeft { get; init; }
+    /// <summary>
+    /// Fader start in the DJ layout: opening a deck's fader starts it, closing it pauses it; and a deck started on the
+    /// screen with its fader closed gets its fader opened (the motor follows).
+    /// </summary>
+    public bool DjFaderStart { get; init; } = true;
 }
 
 /// <summary>
@@ -190,6 +206,10 @@ public sealed class MackieBank
 {
     private readonly object _gate = new();
     public int First { get; private set; }
+    /// <summary>What the strips show; every panel of the group follows.</summary>
+    public MackieLayout Layout { get; private set; }
+    private bool? _djOnAir;
+    private bool _followed;   // the DJ layout came from the desk going on air (not from FLIP)
     /// <summary>Strips of all panels together (8 per panel).</summary>
     public int Width { get; set; } = Mackie.Strips;
     /// <summary>Goes up on every move, so each panel knows it has to show everything again.</summary>
@@ -202,6 +222,40 @@ public sealed class MackieBank
             First = Math.Clamp(First + by, 0, Math.Max(0, channels - Width));
             Version++;
         }
+    }
+
+    /// <summary>Another layout: the bank starts at the first strip again and everything is shown anew.</summary>
+    public void SetLayout(MackieLayout layout) => Switch(layout, followed: false);
+
+    private bool Switch(MackieLayout layout, bool followed)
+    {
+        lock (_gate)
+        {
+            if (layout == Layout) { if (!followed) _followed = false; return false; }   // a layout chosen by hand stays chosen by hand
+            _followed = followed && layout == MackieLayout.Dj;
+            Layout = layout;
+            First = 0;
+            Version++;
+            return true;
+        }
+    }
+
+    /// <summary>
+    /// Follows the DJ desk: going on air gives the DJ layout; going off air gives the broadcast layout again, but only
+    /// when the DJ layout came from going on air (one chosen with FLIP stays). Returns the change, or null.
+    /// </summary>
+    public string? Follow(bool djOnAir)
+    {
+        bool back;
+        lock (_gate)
+        {
+            bool changed = (_djOnAir ?? false) != djOnAir;   // a desk that is on air already when the panel comes up counts too
+            _djOnAir = djOnAir;
+            if (!changed) return null;
+            back = !djOnAir && _followed && Layout == MackieLayout.Dj;
+        }
+        if (djOnAir) return Switch(MackieLayout.Dj, followed: true) ? "indeling: DJ (DJ-tafel op de zender)" : null;
+        return back && Switch(MackieLayout.Broadcast, followed: false) ? "indeling: uitzending (DJ-tafel van de zender)" : null;
     }
 
     /// <summary>Keeps the bank inside the channels (when channels come and go).</summary>
@@ -228,9 +282,14 @@ public sealed class MackieSurface(IMackieMixer mixer, MackieSettings settings, M
     private int _version = -1;
     private long? _choice;
     private DateTime _choiceUntil;
+    private readonly Dictionary<string, bool> _decksPlaying = [];
+    private const float Closed = 0.001f, StartAt = 0.1f;
+    private readonly HashSet<string> _closedDecks = [];   // deck faders seen closed: opening them past StartAt starts the deck
 
     /// <summary>How long an item chosen with the jog wheel stays on the display, and stays what PLAY starts.</summary>
     public static readonly TimeSpan ChoiceTime = TimeSpan.FromSeconds(8);
+    /// <summary>What the surface did by itself (switched layout, opened a fader), for the list of what happened.</summary>
+    public Action<string>? Log { get; set; }
     /// <summary>The time (the tests set their own).</summary>
     public Func<DateTime> Clock { get; set; } = () => DateTime.UtcNow;
 
@@ -244,6 +303,9 @@ public sealed class MackieSurface(IMackieMixer mixer, MackieSettings settings, M
     /// <summary>The first mixer channel on strip 1 of this panel (0-based).</summary>
     public int Bank => Group.First + Offset;
 
+    /// <summary>The strips of the layout the group is in.</summary>
+    private IReadOnlyList<MackieStripState> All() => Group.Layout == MackieLayout.Dj ? mixer.DjStrips() : mixer.Strips();
+
     /// <summary>The channel on a strip (0-7), or null for an empty strip.</summary>
     public MackieStripState? StripAt(IReadOnlyList<MackieStripState> all, int strip) =>
         Bank + strip < all.Count ? all[Bank + strip] : null;
@@ -252,7 +314,7 @@ public sealed class MackieSurface(IMackieMixer mixer, MackieSettings settings, M
     public string? Handle(uint message)
     {
         if (Mackie.Parse(message) is not { } input) return null;
-        var all = mixer.Strips();
+        var all = All();
         switch (input)
         {
             case MackieTouch t:
@@ -261,14 +323,15 @@ public sealed class MackieSurface(IMackieMixer mixer, MackieSettings settings, M
                 return null;
             case MackieFader f when f.Strip == Mackie.MasterFader:
                 if (Extender || Master(all) is not { } master) return null;
-                mixer.SetVolume(master.Id, Mackie.Volume(f.Position));
+                mixer.SetVolume(master.Id, Mackie.Volume(f.Position, master.Top));
                 _sent[FaderKey(f.Strip)] = (uint)f.Position;
                 return null;
             case MackieFader f:
                 if (StripAt(all, f.Strip) is not { } s) return null;
-                mixer.SetVolume(s.Id, Mackie.Volume(f.Position));
+                float volume = Mackie.Volume(f.Position, s.Top);
+                mixer.SetVolume(s.Id, volume);
                 _sent[FaderKey(f.Strip)] = (uint)f.Position;
-                return null;
+                return s.Deck is { } deck && Settings.DjFaderStart ? FaderStart(s, deck, volume) : null;
             case MackieVPot v:
                 if (StripAt(all, v.Strip) is not { } p) return null;
                 mixer.SetPan(p.Id, Math.Round(Math.Clamp(p.Pan + v.Delta * 0.05, -1, 1), 2));
@@ -279,6 +342,25 @@ public sealed class MackieSurface(IMackieMixer mixer, MackieSettings settings, M
                 return Press(b.Note, all);
         }
         return null;
+    }
+
+    /// <summary>
+    /// Fader start: a closed deck fader that opens past <see cref="StartAt"/> starts the deck (a tap that moves it a
+    /// little does not), one that closes pauses it.
+    /// </summary>
+    private string? FaderStart(MackieStripState s, string deck, float volume)
+    {
+        if (s.Volume <= Closed) _closedDecks.Add(deck);
+        if (volume <= Closed)
+        {
+            _closedDecks.Add(deck);
+            if (s.Volume <= Closed || !s.Playing) return null;
+            _decksPlaying[deck] = false;
+            return Deck(deck, "PAUSE", "fader dicht, pauze");
+        }
+        if (volume < StartAt || !_closedDecks.Remove(deck) || s.Playing) return null;
+        _decksPlaying[deck] = true;   // started by the fader: no need to open it
+        return Deck(deck, "PLAY", "faderstart");
     }
 
     /// <summary>The jog wheel walks through what comes next in the log; the display shows the choice for a while.</summary>
@@ -318,6 +400,14 @@ public sealed class MackieSurface(IMackieMixer mixer, MackieSettings settings, M
     private string? Press(int note, IReadOnlyList<MackieStripState> all)
     {
         int strip = note & 0x07;
+        if (note < Mackie.VPotPush && StripAt(all, strip) is { Deck: { } deck })
+            return (note & ~0x07) switch
+            {
+                Mackie.Rec => Deck(deck, "CUE", "cue"),
+                Mackie.Solo => Deck(deck, "PFL", "voorbeluisteren"),
+                Mackie.Mute => Deck(deck, "TOGGLE", "spelen/pauze"),
+                _ => Deck(deck, "SYNC", "sync"),
+            };
         switch (note & ~0x07)
         {
             case Mackie.Rec when StripAt(all, strip) is { } s:
@@ -335,6 +425,9 @@ public sealed class MackieSurface(IMackieMixer mixer, MackieSettings settings, M
         }
         switch (note)
         {
+            case Mackie.Flip:
+                Group.SetLayout(Group.Layout == MackieLayout.Dj ? MackieLayout.Broadcast : MackieLayout.Dj);
+                return Group.Layout == MackieLayout.Dj ? "indeling: DJ" : "indeling: uitzending";
             case Mackie.BankLeft: return MoveBank(-Group.Width, all);
             case Mackie.BankRight: return MoveBank(Group.Width, all);
             case Mackie.ChannelLeft: return MoveBank(-1, all);
@@ -343,8 +436,12 @@ public sealed class MackieSurface(IMackieMixer mixer, MackieSettings settings, M
             case Mackie.Stop when Settings.Transport && !Extender: mixer.Run("STOP"); return "STOP";
             case Mackie.Cycle when Settings.Transport && !Extender: mixer.Run("AUTO TOGGLE"); return "AUTO TOGGLE";
         }
-        return null;
+        // Not used (yet): named with its note, so a button on the panel can be found back.
+        return $"knop {note:X2}h: geen functie";
     }
+
+    private string Deck(string deck, string action, string what) =>
+        mixer.Run($"DJ {deck} {action}") is { } problem ? $"deck {deck}: {what} lukt niet: {problem}" : $"deck {deck}: {what}";
 
     private string MoveBank(int by, IReadOnlyList<MackieStripState> all)
     {
@@ -360,9 +457,11 @@ public sealed class MackieSurface(IMackieMixer mixer, MackieSettings settings, M
     /// <summary>What to send so the surface shows the mixer as it is now (only changes, unless forced).</summary>
     public List<MackieOutput> Refresh(bool force = false)
     {
-        var all = mixer.Strips();
+        if (Group.Follow(mixer.DjOnAir) is { } switched) Log?.Invoke(switched);
+        var all = All();
         Group.Fit(all.Count);
-        if (force || _version != Group.Version) { _sent.Clear(); _display.Clear(); _version = Group.Version; }
+        if (force || _version != Group.Version) { _sent.Clear(); _display.Clear(); _decksPlaying.Clear(); _version = Group.Version; }
+        if (Settings.DjFaderStart && Group.Layout == MackieLayout.Dj && !Extender && OpenStartedDecks(all)) all = All();
         var outs = new List<MackieOutput>();
         void Send(string key, MackieOutput o, uint value)
         {
@@ -375,24 +474,26 @@ public sealed class MackieSurface(IMackieMixer mixer, MackieSettings settings, M
         for (int i = 0; i < Mackie.Strips; i++)
         {
             var s = StripAt(all, i);
-            if (!_touched[i]) { int pos = s is null ? 0 : Mackie.Position(s.Volume); Send(FaderKey(i), Mackie.Fader(i, pos), (uint)pos); }
-            Lamp(Mackie.Rec + i, s?.Recording == true);
-            Lamp(Mackie.Mute + i, s?.Muted == true);
-            Lamp(Mackie.Select + i, s?.OnAir == true);
-            Lamp(Mackie.Solo + i, false);
+            if (!_touched[i]) { int pos = s is null ? 0 : Mackie.Position(s.Volume, s.Top); Send(FaderKey(i), Mackie.Fader(i, pos), (uint)pos); }
+            bool deck = s?.Deck is not null;
+            Lamp(Mackie.Rec + i, !deck && s?.Recording == true);
+            Lamp(Mackie.Mute + i, deck ? s!.Playing : s?.Muted == true);
+            Lamp(Mackie.Select + i, deck ? s!.Sync : s?.OnAir == true);
+            Lamp(Mackie.Solo + i, deck && s!.Pfl);
             var ring = s is null ? new MackieOutput((uint)(0xB0 | ((Mackie.RingCc + i) << 8))) : Mackie.PanRing(i, s.Pan);
             Send("ring" + i, ring, ring.Short);
         }
         var master = Extender ? null : Master(all);
         if (!_touched[Mackie.MasterFader] && !Extender)
         {
-            int mp = master is null ? 0 : Mackie.Position(master.Volume);
+            int mp = master is null ? 0 : Mackie.Position(master.Volume, master.Top);
             Send(FaderKey(Mackie.MasterFader), Mackie.Fader(Mackie.MasterFader, mp), (uint)mp);
         }
         if (!Extender)
         {
             Lamp(Mackie.Play, Settings.Transport && mixer.Playing);
             Lamp(Mackie.Cycle, Settings.Transport && mixer.AutoPlay);
+            Lamp(Mackie.Flip, Group.Layout == MackieLayout.Dj);
         }
 
         // Display: names on top, the fader in percent (or DEMP when muted) below. While an item is chosen with the jog
@@ -403,7 +504,8 @@ public sealed class MackieSurface(IMackieMixer mixer, MackieSettings settings, M
         {
             var s = StripAt(all, i);
             top.Append(Mackie.Cell(s?.Name ?? ""));
-            bottom.Append(Mackie.Cell(s is null ? "" : s.Muted ? "DEMP" : $"{Math.Round(s.Volume * 100):0}%".PadLeft(5)));
+            string playing = s?.Deck is not null && s.Playing ? ">" : "";
+            bottom.Append(Mackie.Cell(s is null ? "" : s.Muted ? "DEMP" : $"{playing}{Math.Round(s.Volume * 100):0}%".PadLeft(5)));
         }
         string topRow = top.ToString();
         if (!Extender && _choice is not null)
@@ -421,11 +523,31 @@ public sealed class MackieSurface(IMackieMixer mixer, MackieSettings settings, M
         return outs;
     }
 
+    /// <summary>A deck started on the screen while its fader was closed gets its fader opened (fader start the other way round).</summary>
+    private bool OpenStartedDecks(IReadOnlyList<MackieStripState> all)
+    {
+        bool opened = false;
+        foreach (var s in all.ToList())
+        {
+            if (s.Deck is not { } deck) continue;
+            // Only a start seen here counts: a deck that already played when the layout came up keeps its fader.
+            bool known = _decksPlaying.TryGetValue(deck, out bool was);
+            _decksPlaying[deck] = s.Playing;
+            if (known && s.Playing && !was && s.Volume <= Closed)
+            {
+                mixer.SetVolume(s.Id, s.Top);
+                Log?.Invoke($"deck {deck}: gestart, fader open");
+                opened = true;
+            }
+        }
+        return opened;
+    }
+
     /// <summary>Level meters: sent every time (the surface lets them fall by itself).</summary>
     public List<MackieOutput> Meters()
     {
         if (!Settings.Meters) return [];
-        var all = mixer.Strips();
+        var all = All();
         var outs = new List<MackieOutput>();
         for (int i = 0; i < Mackie.Strips; i++)
             if (StripAt(all, i) is { } s) outs.Add(Mackie.Meter(i, Mackie.Segments(s.Peak)));
