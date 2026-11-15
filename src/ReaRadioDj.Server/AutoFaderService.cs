@@ -8,7 +8,8 @@ namespace ReaRadioDj.Server;
 /// ended; the mic goes down when it is closed and back up when it opens. While automix mixes with the channel faders it
 /// moves the deck faders itself, so the decks are left to it then.
 /// </summary>
-public sealed class AutoFaderService(AudioRouter router, StudioPlayers players, DjMixer dj, PlayoutEngine engine, ILogger<AutoFaderService> logger) : BackgroundService
+public sealed class AutoFaderService(AudioRouter router, StudioPlayers players, DjMixer dj, PlayoutEngine engine, Voip.VoipService voip,
+    ILogger<AutoFaderService> logger) : BackgroundService
 {
     private readonly FaderFollow _follow = new();
     private readonly object _gate = new();
@@ -71,6 +72,13 @@ public sealed class AutoFaderService(AudioRouter router, StudioPlayers players, 
         bool pfl = players.Pfl.Info.State == PlayerState.Playing || dj.Decks.Any(d => d.Pfl) || dj.SamplerCue.Active.Count > 0;
         Strip(AudioRouter.PflStrip, pfl, idle: false);
         Strip(AudioRouter.MicStrip, router.MicOpen, idle: !router.MicOpen);
+        // A VoIP channel goes up when a call or line is connected and down when it is quiet again (not while it rings).
+        foreach (var id in new[] { AudioRouter.Voip1Strip, AudioRouter.Voip2Strip })
+        {
+            if (!router.HasStrip(id)) continue;
+            string phase = voip.Phase(id);
+            Strip(id, phase == "verbonden", idle: phase == "stil");
+        }
 
         bool automix = dj.Automix.On && dj.Automix.Faders;
         foreach (var d in dj.Decks)
