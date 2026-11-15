@@ -207,7 +207,7 @@ public sealed record MackieLogItem(long Id, string Label);
 /// </summary>
 public sealed record MackieStripState(string Id, string Name, float Volume, bool Muted, double Pan, bool OnAir, bool Recording, float Peak,
     string? Deck = null, bool Playing = false, bool Sync = false, bool Pfl = false, float Top = 1.25f,
-    string? Track = null, double Left = 0, string? Player = null, bool Next = false);
+    string? Track = null, double Left = 0, string? Player = null, bool Next = false, bool Sounding = false);
 
 /// <summary>A colour on the colour bar of an iCON panel, 0-127 per component.</summary>
 public readonly record struct MackieColor(int R, int G, int B)
@@ -663,13 +663,17 @@ public sealed class MackieSurface(IMackieMixer mixer, MackieSettings settings, M
         }
         if (Icon)
         {
-            var colors = Enumerable.Range(0, Mackie.Strips).Select(i => ColorOf(StripAt(all, i))).ToList();
+            // A channel that sounds flashes on the colour bar: its fader line is live.
+            bool dark = (Clock().Ticks / FlashStep.Ticks) % 2 == 1;
+            var colors = Enumerable.Range(0, Mackie.Strips).Select(i => ColorOf(StripAt(all, i), dark)).ToList();
             Show(ColorKey, string.Join(",", colors), _ => Mackie.IconColors(colors));
         }
         return outs;
     }
 
     private const int IconRow = 1000, TimeKey = 2000, ColorKey = 3000;
+    /// <summary>How fast a sounding channel flashes on the colour bar: this long bright, this long dim.</summary>
+    public static readonly TimeSpan FlashStep = TimeSpan.FromMilliseconds(500);
 
     private static string Fit(string text, int width) => text.Length <= width ? text : text[..Math.Max(0, width)];
 
@@ -697,9 +701,9 @@ public sealed class MackieSurface(IMackieMixer mixer, MackieSettings settings, M
 
     /// <summary>
     /// The colour of a strip on the colour bar: by kind of channel, dark when it is not on air (or muted), a deck
-    /// bright while it plays.
+    /// bright while it plays. A channel that sounds flashes: <paramref name="dark"/> is the dim half of the flash.
     /// </summary>
-    public static MackieColor ColorOf(MackieStripState? s)
+    public static MackieColor ColorOf(MackieStripState? s, bool dark = false)
     {
         if (s is null) return MackieColor.Off;
         var c = (s.Deck is not null ? "deck" : s.Id.StartsWith("standby", StringComparison.Ordinal) ? "standby" : s.Id) switch
@@ -717,6 +721,8 @@ public sealed class MackieSurface(IMackieMixer mixer, MackieSettings settings, M
         };
         // A deck or a player is bright while it plays; another channel while it is on air.
         bool lit = s.Deck is not null || s.Player is not null ? s.Playing : s.OnAir && !s.Muted;
+        bool sounding = s.Sounding || s.Deck is not null && s.Playing;
+        if (sounding) return dark ? c.Dim() : c;
         return lit ? c : c.Dim();
     }
 

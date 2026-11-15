@@ -10,12 +10,12 @@ Mackie Control-noten, en wat iMap naar het paneel schrijft (zie [ICON-V1M-PROTOC
 
 | Scherm | Wat het is | Nu | Voorstel |
 |--------|------------|----|----------|
-| Bovenste TFT (2 inch) | toont wat de software via Mackie Control naar het display stuurt | ✅ per fader een blokje: boven de resterende tijd, eronder de titel die op dat kanaal speelt (een lange titel schuift binnen het blokje). Log, standby, cart, overlay, PFL, DJ-master en decks; mic en VoIP blijven leeg. Tijdens het bladeren staat de keuze uit de log onderaan | — |
+| Bovenste TFT (2 inch) | toont wat de software via Mackie Control naar het display stuurt | ✅ per fader een blokje: boven de resterende tijd, eronder de titel die op dat kanaal speelt (een lange titel schuift binnen het blokje). Speelt er niets, dan wat er klaarstaat: een geladen speler, of met `> ` het item uit de log dat daar als volgende komt (in elke modus). Log, standby, cart, overlay, PFL, DJ-master en decks; mic en VoIP blijven leeg. Tijdens het bladeren staat de keuze uit de log onderaan | — |
 | Onderste TFT (1,14 inch, 8 vakjes boven de faders) | "tweede display" | 🟡 per strip naam en stand | — |
 | LED-tijddisplay | cijfers 9–2 zichtbaar | ✅ de klok (uu.mm.ss), punten na uren en minuten | — |
 | Meters (8 × mono, master stereo) | Mackie-meters | ✅ niveau per kanaal, 🟡 master = programma-uitgang | — |
-| Kleurbalk | kleur per strip | 🟡 kleur per soort kanaal; fel als het op de zender is (een deck: als het speelt), anders donker | — |
-| Aanraakscherm (7 inch, 24 knoppen × 5 lagen) | door REA geschreven indeling | ✅ blauw, groen en oranje = cartwall met cartnamen | 💡 paars (U1) en rood (U2) ook gebruiken, zie hieronder |
+| Kleurbalk | kleur per strip | ✅ kleur per soort kanaal; fel als het op de zender is, anders donker; **knippert** zolang er geluid door het kanaal gaat (log-item, speler, carts, open mic, deck) | — |
+| Aanraakscherm (7 inch, 24 knoppen × 5 lagen) | door REA geschreven indeling | ✅ vijf lagen, zie hieronder | — |
 
 ## Kanaalstrips (8×)
 

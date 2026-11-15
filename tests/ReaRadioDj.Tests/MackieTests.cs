@@ -644,6 +644,18 @@ public class MackieTests
     }
 
     [Fact]
+    public void A_channel_that_sounds_flashes_on_the_colour_bar()
+    {
+        var playing = new MackieStripState("standby", "Speler A", 1, false, 0, true, false, 0, Player: "1", Sounding: true);
+        var color = new MackieColor(0, 110, 127);
+        Assert.Equal(color, MackieSurface.ColorOf(playing));
+        Assert.Equal(color.Dim(), MackieSurface.ColorOf(playing, dark: true));
+        // Not sounding: no flash.
+        var mic = new MackieStripState("mic", "Mic", 1, false, 0, true, false, 0);
+        Assert.Equal(MackieSurface.ColorOf(mic), MackieSurface.ColorOf(mic, dark: true));
+    }
+
+    [Fact]
     public void An_icon_panel_gets_the_programme_on_its_master_meter()
     {
         var (surface, _) = IconPanel();

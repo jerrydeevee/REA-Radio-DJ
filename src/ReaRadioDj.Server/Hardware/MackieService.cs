@@ -218,7 +218,8 @@ internal sealed class EngineMackieMixer(AudioRouter router, CommandBus bus, Play
             Playing: info?.State == PlayerState.Playing,
             Pfl: info?.Media is { } m && pfl.State == PlayerState.Playing && pfl.Media?.Path == m.Path,
             Track: track, Left: left, Player: player is null ? null : player.Id == "presenter" ? "PRESENTER" : player.Id["standby".Length..],
-            Next: !engine.AutoPlay && log.PeekNext() is { Media: not null } next && engine.StripFor(next) == s.Id);
+            Next: !engine.AutoPlay && log.PeekNext() is { Media: not null } next && engine.StripFor(next) == s.Id,
+            Sounding: Sounding(s.Id, info, engine.GetState()));
     }
 
     /// <summary>The player that plays on a channel: speler A-D on theirs, the presenter player on the presenter's.</summary>
@@ -241,9 +242,16 @@ internal sealed class EngineMackieMixer(AudioRouter router, CommandBus bus, Play
         // The flow first: what the automation plays on this channel (music on speler A/B, jingles, AI).
         var state = engine.GetState();
         if (state.Playing.LastOrDefault(p => p.Strip == id) is { } flowItem) return (flowItem.Label, flowItem.To - flowItem.Position);
-        // By hand: the item that waits for this fader.
-        if (!engine.AutoPlay && log.PeekNext() is { Media: { } waiting } next && engine.StripFor(next) == id)
+        // Then what is on the channel itself (a loaded player, a cart); then the item of the log that comes here next,
+        // in every mode: "> " and its length.
+        var own = Own();
+        if (own.Item1 is not null) return own;
+        if (log.PeekNext() is { Media: { } waiting } next && engine.StripFor(next) == id)
             return ("> " + next.Label, waiting.CueOut - waiting.CueIn);
+        return (null, 0);
+
+        (string?, double) Own()
+        {
         switch (id)
         {
             case AudioRouter.LogStrip:
@@ -259,7 +267,20 @@ internal sealed class EngineMackieMixer(AudioRouter router, CommandBus bus, Play
             default:
                 return PlayerOf(id) is { } pl ? Player(pl) : (null, 0);
         }
+        }
     }
+
+    /// <summary>Sound goes through this channel now: an item of the log, a player, carts, the open mic.</summary>
+    private bool Sounding(string id, PlayerInfo? player, EngineState state) =>
+        state.Playing.Any(p => p.Strip == id) || player?.State == PlayerState.Playing || id switch
+        {
+            AudioRouter.CartStrip => players.Carts.Active.Count > 0,
+            AudioRouter.OverlayStrip => players.Overlays.Active.Count > 0,
+            AudioRouter.LogStrip => players.Live.Active.Count > 0,
+            AudioRouter.MicStrip => router.MicOpen,
+            AudioRouter.DjStrip => dj.OnAir && dj.Decks.Any(d => d.Info.Playing),
+            _ => false,
+        };
 
     private DjDeck? Deck(string id) => id.StartsWith(DeckPrefix, StringComparison.Ordinal) ? dj.Find(id[DeckPrefix.Length..]) : null;
 
