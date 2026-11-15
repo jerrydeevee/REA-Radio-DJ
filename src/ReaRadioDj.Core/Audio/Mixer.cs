@@ -250,6 +250,7 @@ public sealed class AudioRouter : IDisposable
     public void Start()
     {
         if (IsStarted) return;
+        StartNotes.AddRange(_options.Routing.DeviceNotes);
         BassRuntime.Initialize(_options.OutputDevice);
         AsioRuntime.BufferSamples = _options.Routing.AsioBuffer;
         Program = Bus("program", "Uitzending", _options.Routing.ProgramAsio, _options.OutputDevice);
