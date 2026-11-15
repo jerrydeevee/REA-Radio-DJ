@@ -79,6 +79,10 @@ public static class IconV1M
     /// <summary>The trigger a touch button sends (layer 0 = blue, button 0-23), as REA's hardware inputs write it.</summary>
     public static string Trigger(int layer, int button) => $"ch{layer + FirstChannel} note {button}";
 
+    /// <summary>A touch button's own note sent back (MIDI channel 1-16): velocity 127 lights it, 0 makes it dark.</summary>
+    public static MackieOutput PadNote(int channel, int note, bool on) =>
+        new((uint)(0x90 | ((channel - 1) & 0x0F) | ((note & 0x7F) << 8) | ((on ? 0x7F : 0) << 16)));
+
     /// <summary>The touch button for a trigger ("ch2 note 5" = blue 6), or null when no touch button sends it.</summary>
     public static (int Layer, int Button)? Button(string trigger) =>
         HwSignals.Parse(trigger) is { Kind: "note" } a && a.Channel - FirstChannel is >= 0 and < Layers && a.Number < ButtonsPerLayer

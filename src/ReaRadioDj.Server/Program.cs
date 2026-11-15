@@ -72,6 +72,7 @@ builder.Services.AddSingleton<MediaLibrary>();
 builder.Services.AddSingleton<PlannerStore>();
 builder.Services.AddSingleton<ReaRadioDj.Core.Hardware.HardwareStore>();
 builder.Services.AddSingleton<ReaRadioDj.Server.Hardware.DjMidiService>();
+builder.Services.AddSingleton<ReaRadioDj.Server.Hardware.IconPads>();
 builder.Services.AddSingleton<ReaRadioDj.Server.Hardware.MackieService>();
 builder.Services.AddHostedService(sp => sp.GetRequiredService<ReaRadioDj.Server.Hardware.MackieService>());
 builder.Services.AddSingleton<ReaRadioDj.Server.Hardware.HardwareService>();

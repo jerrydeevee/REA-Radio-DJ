@@ -86,6 +86,11 @@ REA's indeling. Een knop die je zelf op iets anders dan een cart hebt gezet, bli
 
 **Schakelaars** (op elke cartlaag dezelfde): Auto · Semi · Hand · Mic · Volgende · Overslaan.
 
+**Knoppen die blijven branden** (proef): REA stuurt de noot van een knop terug naar het paneel (velocity 127 = aan,
+0 = uit) zolang wat hij doet loopt: een cart die speelt, de modus die aan staat (Auto/Semi/Hand: de ene gaat uit als
+de andere aangaat), de open mic, een speler die speelt, DJ op de lucht, automix. Volgende, Overslaan en Carts stop
+doen iets eenmalig en branden niet. Of het paneel een knop hierdoor laat oplichten, moet op het paneel blijken.
+
 **Functies op U2:** Auto, Semi, Hand, Volgende, Overslaan, AI-break · Mic, Speler A–D, AI-presentator · Carts stop,
 Overlay stop, PFL stop, DJ op de lucht, Automix, Log vullen · VoIP 1 opnemen/ophangen/zender, VoIP 2 opnemen/ophangen/zender.
 

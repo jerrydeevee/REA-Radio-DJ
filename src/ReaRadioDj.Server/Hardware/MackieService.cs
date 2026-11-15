@@ -28,8 +28,9 @@ public sealed class MackieService : BackgroundService
     private MackieSettings _settings;
 
     public MackieService(StationDb db, AudioRouter router, CommandBus bus, PlayoutEngine engine, PlayoutLog log, ReaRadioDjOptions options,
-        MessageCenter messages, DjMixer dj, StudioPlayers players, ILogger<MackieService> logger)
+        MessageCenter messages, DjMixer dj, StudioPlayers players, IconPads pads, ILogger<MackieService> logger)
     {
+        _pads = pads;
         _db = db;
         _logger = logger;
         _mixer = new EngineMackieMixer(router, bus, engine, log, db, options, messages, dj, players);
@@ -81,6 +82,7 @@ public sealed class MackieService : BackgroundService
     {
         var surface = new MackieSurface(_mixer, _settings, _bank) { Log = Note, Icon = icon };
         _surfaces[deviceId] = (surface, send);
+        _pads.Reset();   // a panel that (re)connects gets the state of all its touch buttons
         Regroup();
         lock (surface) foreach (var o in surface.Refresh(force: true)) send(o);
     }
@@ -137,24 +139,28 @@ public sealed class MackieService : BackgroundService
         while (_recent.Count > 60) _recent.TryDequeue(out _);
     }
 
+    private readonly IconPads _pads;
+
     protected override async Task ExecuteAsync(CancellationToken ct)
     {
         int n = 0;
         while (!ct.IsCancellationRequested)
         {
-            try { if (!_surfaces.IsEmpty) Tick(meters: ++n % 3 == 0); }
+            try { if (!_surfaces.IsEmpty) Tick(meters: ++n % 3 == 0, pads: n % 5 == 0); }
             catch (Exception ex) { _logger.LogWarning(ex, "Mackie Control refresh"); }
             try { await Task.Delay(40, ct); } catch (OperationCanceledException) { break; }
         }
     }
 
-    private void Tick(bool meters)
+    private void Tick(bool meters, bool pads = false)
     {
-        foreach (var (surface, send) in _surfaces.Values)
+        foreach (var (id, (surface, send)) in _surfaces)
         {
             List<MackieOutput> outs;
             lock (surface) outs = surface.Refresh();
             if (meters) outs.AddRange(surface.Meters());
+            // The touch buttons of an iCON stay lit while what they do goes on (not on an extender: it has none).
+            if (pads && surface.Icon && !_settings.Extenders.Contains(id)) outs.AddRange(_pads.Step(id));
             foreach (var o in outs) send(o);
         }
     }

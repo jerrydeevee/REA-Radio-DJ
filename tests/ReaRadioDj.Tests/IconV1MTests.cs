@@ -90,6 +90,13 @@ public class IconV1MTests
         Assert.All(IconV1M.Functions, f => Assert.True(IconV1M.Label(f.Label).Trim().Length > 0));
     }
 
+    [Fact]
+    public void A_lit_touch_button_gets_its_own_note_back()
+    {
+        Assert.Equal(0x7F_00_90u + 0x01, IconV1M.PadNote(2, 0, true).Short);    // ch2 note 0 on
+        Assert.Equal(0x00_17_95u, IconV1M.PadNote(6, 23, false).Short);         // ch6 note 23 off
+    }
+
     [Theory]
     [InlineData("Jingle Hit", "Jingle  Hit     ")]
     [InlineData("Weerbericht", "Weerbericht     ")]

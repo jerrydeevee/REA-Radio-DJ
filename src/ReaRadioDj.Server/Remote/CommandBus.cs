@@ -178,7 +178,12 @@ public sealed class CommandBus(
 
             case "CART" when Long(w, 1) is long wall && Long(w, 2) is long slot:
                 if (wall is < 1 or > Cartwall.SamplerWall + 1 || slot is < 1 or > Cartwall.SlotsPerWall) return CommandResult.Fail("wand 1-2 (3 = DJ-sampler), knop 1-64");
-                return cartwall.Press((int)wall - 1, (int)slot - 1) ? CommandResult.Done() : CommandResult.Fail("knop is leeg");
+            {
+                // Pressing a cart that plays stops it: that is not an empty button.
+                bool wasPlaying = cartwall.Get((int)wall - 1)[(int)slot - 1].Playing;
+                return cartwall.Press((int)wall - 1, (int)slot - 1) ? CommandResult.Done()
+                    : wasPlaying ? CommandResult.Done("gestopt") : CommandResult.Fail("knop is leeg");
+            }
             case "CARTS" when Arg(1) == "STOP":
                 cartwall.StopAll();
                 return CommandResult.Done();
