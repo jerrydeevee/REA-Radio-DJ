@@ -42,6 +42,20 @@ public sealed partial class SettingsTool : StudioTool
     [ObservableProperty] private string _musicFolder = "";
     [ObservableProperty] private string _jingleFolder = "";
     [ObservableProperty] private bool _startAutomation;
+    [ObservableProperty] private bool _startSemi;
+    [ObservableProperty] private bool _flowOnFaders = true;
+    public string[] StartModeNames { get; } = ["Automatisch (AUTO)", "Semi: wacht als de DJ zelf iets speelt", "Met de hand (HAND)"];
+    /// <summary>The play mode the engine starts in: 0 AUTO, 1 SEMI, 2 HAND.</summary>
+    public int StartMode
+    {
+        get => !StartAutomation ? 2 : StartSemi ? 1 : 0;
+        set { StartAutomation = value != 2; StartSemi = value == 1; OnPropertyChanged(); }
+    }
+
+    /// <summary>The hardware, DJ controller and hotkeys, shown under Besturing.</summary>
+    public HardwareTool Hardware { get; } = new();
+    public DjMidiTool DjMidi { get; } = new();
+    public ControlTool Control { get; } = new();
 
     // Sound
     [ObservableProperty] private DeviceDto? _outputDevice;
@@ -680,6 +694,7 @@ public sealed partial class SettingsTool : StudioTool
     private void Show(SettingsDto s)
     {
         StationName = s.StationName; MusicFolder = s.MusicFolder; JingleFolder = s.JingleFolder; StartAutomation = s.StartAutomation;
+        StartSemi = s.StartSemi; FlowOnFaders = s.FlowOnFaders; OnPropertyChanged(nameof(StartMode));
         StandbyPlayers = s.StandbyPlayers;
         TargetLufs = (decimal)s.TargetLufs; CueInDb = (decimal)s.CueInDb; MixDb = (decimal)s.MixDb; CueOutDb = (decimal)s.CueOutDb;
         MaxOverlap = (decimal)s.MaxOverlap; FadeOut = (decimal)s.FadeOut; DuckLevel = Percent(s.DuckLevel);
@@ -708,7 +723,8 @@ public sealed partial class SettingsTool : StudioTool
             (int)ArtistSeparation, (int)SongSeparation, (int)LookAhead,
             StreamEnabled, StreamServer, StreamPassword, false, StreamBitrate, StreamGenre, StreamUrl,
             ControlBindAddress, (int)ControlTcpPort, (int)ControlOscPort, ControlPassword, false, ClearControlPassword,
-            SilenceEnabled, (double)SilenceDb, (double)SilenceSeconds, SilenceActionNames[Math.Clamp(SilenceAction, 0, SilenceActionNames.Length - 1)], SilenceCategory?.Id));
+            SilenceEnabled, (double)SilenceDb, (double)SilenceSeconds, SilenceActionNames[Math.Clamp(SilenceAction, 0, SilenceActionNames.Length - 1)], SilenceCategory?.Id,
+            StartSemi, FlowOnFaders));
 
         if (_masterLoaded) await Hub.Client.PutAsync("/api/master", new MasterDto(LimiterOn, (double)LimiterCeiling));
         if (_softLoaded) await Hub.Client.PutAsync("/api/soft-start", new SoftStartWire((double)SoftMaxWait));

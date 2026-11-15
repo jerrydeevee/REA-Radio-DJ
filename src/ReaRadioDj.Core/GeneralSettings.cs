@@ -15,7 +15,7 @@ public sealed record GeneralSettings(
     bool StreamEnabled, string StreamServer, string StreamPassword, int StreamBitrate, string StreamGenre, string StreamUrl,
     string ControlBindAddress, int ControlTcpPort, int ControlOscPort, string ControlPassword,
     bool SilenceEnabled = true, double SilenceDb = -45, double SilenceSeconds = 20, string SilenceAction = "autoplay",
-    long? SilenceCategoryId = null)
+    long? SilenceCategoryId = null, bool StartSemi = false, bool FlowOnFaders = true)
 {
     public const string Key = "general";
 
@@ -25,7 +25,8 @@ public sealed record GeneralSettings(
         o.Rotation.ArtistSeparation, o.Rotation.SongSeparation, o.Rotation.LookAhead,
         o.Stream.Enabled, o.Stream.Server, o.Stream.Password, o.Stream.Bitrate, o.Stream.Genre, o.Stream.Url,
         o.Control.BindAddress, o.Control.TcpPort, o.Control.OscPort, o.Control.Password,
-        o.Silence.Enabled, o.Silence.ThresholdDb, o.Silence.Seconds, o.Silence.Action, o.Silence.CategoryId);
+        o.Silence.Enabled, o.Silence.ThresholdDb, o.Silence.Seconds, o.Silence.Action, o.Silence.CategoryId,
+        o.StartSemi, o.Routing.FlowOnFaders);
 
     /// <summary>
     /// What the studio sent, made safe to use: everything out of range is pulled back, an empty name or folder keeps the
@@ -61,6 +62,8 @@ public sealed record GeneralSettings(
         o.MusicFolder = MusicFolder;
         o.JingleFolder = JingleFolder;
         o.StartAutomation = StartAutomation;
+        o.StartSemi = StartSemi;
+        o.Routing.FlowOnFaders = FlowOnFaders;
         o.Routing.StandbyPlayers = StandbyPlayers;
         o.Mix.TargetLufs = TargetLufs; o.Mix.CueInDb = CueInDb; o.Mix.MixDb = MixDb; o.Mix.CueOutDb = CueOutDb;
         o.Mix.MaxOverlap = MaxOverlap; o.Mix.FadeOut = FadeOut; o.Mix.DuckLevel = DuckLevel;

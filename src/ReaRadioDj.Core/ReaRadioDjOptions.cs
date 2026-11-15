@@ -28,6 +28,8 @@ public sealed class ReaRadioDjOptions
     /// <summary>-1 = default sound card, 0 = no sound card (stream only), 1.. = device index (see /api/devices).</summary>
     public int OutputDevice { get; set; } = -1;
     public bool StartAutomation { get; set; } = true;
+    /// <summary>With <see cref="StartAutomation"/>: start in SEMI (the flow waits while the DJ plays a track of their own) instead of AUTO.</summary>
+    public bool StartSemi { get; set; }
 
     public MixOptions Mix { get; set; } = new();
     public RoutingOptions Routing { get; set; } = new();

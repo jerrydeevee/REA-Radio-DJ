@@ -159,7 +159,7 @@ public sealed class PlayoutEngine : IDisposable
         _router.Start();
         _mixer = _router.Strip(AudioRouter.LogStrip).Handle;
         AutoPlay = _options.StartAutomation;
-        Mode = AutoPlay ? FlowMode.Auto : FlowMode.Hand;
+        Mode = !AutoPlay ? FlowMode.Hand : _options.StartSemi ? FlowMode.Semi : FlowMode.Auto;
         Interlocked.Exchange(ref _lastTick, Environment.TickCount64);
         _running = true;
         _thread = new Thread(Loop) { IsBackground = true, Name = "REA-Radio-DJ engine", Priority = ThreadPriority.AboveNormal };

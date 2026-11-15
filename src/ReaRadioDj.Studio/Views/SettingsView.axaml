@@ -2,6 +2,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:ReaRadioDj.Studio.ViewModels"
              xmlns:c="using:ReaRadioDj.Contracts"
+             xmlns:views="using:ReaRadioDj.Studio.Views"
              x:Class="ReaRadioDj.Studio.Views.SettingsView"
              x:DataType="vm:SettingsTool">
   <UserControl.Styles>
@@ -55,8 +56,11 @@
           <TextBlock Classes="field" Text="Map met jingles" />
           <TextBox Text="{Binding JingleFolder}" Watermark="bijv. D:\Radio\Jingles" />
           <TextBlock Classes="help" Text="Het pad zoals de computer van de engine het ziet. Na het opslaan van een andere map wordt de bibliotheek opnieuw ingelezen; submappen worden categorieën." />
-          <CheckBox Content="Automatisering starten zodra de engine start" IsChecked="{Binding StartAutomation}" Margin="0,14,0,0" />
-          <TextBlock Classes="help" Text="Uit: de engine start stil en wacht tot je Volgende of Automatisch kiest." />
+          <TextBlock Classes="field" Text="Speelwijze als de engine start" />
+          <ComboBox ItemsSource="{Binding StartModeNames}" SelectedIndex="{Binding StartMode}" MinWidth="320" />
+          <TextBlock Classes="help" Text="AUTO speelt alles vanzelf. SEMI ook, maar wacht zolang de DJ zelf een nummer op een speler afspeelt. HAND start stil en wacht tot je Volgende kiest of een fader opent." />
+          <CheckBox Content="Programmalog onder de faders (muziek op speler A/B, jingles op de cartwall, AI-breaks op de AI-presentator)" IsChecked="{Binding FlowOnFaders}" Margin="0,14,0,0" />
+          <TextBlock Classes="help" Text="Uit: alles van de programmalog speelt op het automatiseringskanaal. Werkt vanaf het volgende item." />
         </StackPanel></ScrollViewer>
       </TabItem>
 
@@ -518,6 +522,19 @@
         </StackPanel></ScrollViewer>
       </TabItem>
 
+      <TabItem Header="Besturing">
+        <TabControl TabStripPlacement="Top" Margin="8,0,0,0">
+          <TabItem Header="Hardware">
+            <views:HardwareView DataContext="{Binding Hardware}" />
+          </TabItem>
+          <TabItem Header="DJ-controller">
+            <views:DjMidiView DataContext="{Binding DjMidi}" />
+          </TabItem>
+          <TabItem Header="Sneltoetsen en gebeurtenissen">
+            <views:ControlView DataContext="{Binding Control}" />
+          </TabItem>
+        </TabControl>
+      </TabItem>
       <TabItem Header="Systeem">
         <ScrollViewer><StackPanel Classes="page" MaxWidth="900">
           <TextBlock Classes="title" Text="Bewaking" />
