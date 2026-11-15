@@ -128,7 +128,8 @@ motorfaders meebewegen; de crossfader telt dan niet mee.
 dan glijdt het deck in 8 seconden terug naar zijn eigen tempo.
 
 **Faders volgen het gebruik** (in de hele mixer): een kanaal waarop iets start, krijgt zijn fader open als die
-dicht stond (cartwall, overlay, standby, PFL, decks). Een leeg of afgelopen deck en een gesloten Mic 1 gaan naar 0;
+dicht stond (cartwall, overlay, standby, PFL, decks). Een leeg of afgelopen deck, een gesloten Mic 1, de cartwall
+na een cart of jingle en de AI-presentator na een break gaan weer naar 0;
 de mic komt bij openen terug op zijn oude stand.
 
 ## Live-indeling ✅

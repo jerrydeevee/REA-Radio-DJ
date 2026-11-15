@@ -12,6 +12,9 @@ public sealed class AutoFaderService(AudioRouter router, StudioPlayers players, 
 {
     private readonly FaderFollow _follow = new();
     private readonly object _gate = new();
+    /// <summary>When the engine last opened a channel for an item: a look at the engine taken just before still misses it.</summary>
+    private readonly Dictionary<string, long> _started = [];
+    private const long StartGraceMs = 1500;
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
@@ -20,7 +23,11 @@ public sealed class AutoFaderService(AudioRouter router, StudioPlayers players, 
         {
             if (!router.HasStrip(id)) return;
             var s = router.Strip(id);
-            lock (_gate) if (_follow.Step(id, true, false, s.Volume) is float v) s.SetVolume(v);
+            lock (_gate)
+            {
+                _started[id] = Environment.TickCount64;
+                if (_follow.Step(id, true, false, s.Volume) is float v) s.SetVolume(v);
+            }
         };
         using var timer = new PeriodicTimer(TimeSpan.FromMilliseconds(50));
         while (await timer.WaitForNextTickAsync(stoppingToken))
@@ -41,8 +48,11 @@ public sealed class AutoFaderService(AudioRouter router, StudioPlayers players, 
 
     private void StepLocked(IReadOnlyList<Core.Audio.NowPlaying> flow)
     {
-        bool Flow(string strip) => flow.Any(p => p.Strip == strip);
-        Strip(AudioRouter.CartStrip, players.Carts.Active.Count > 0 || Flow(AudioRouter.CartStrip), idle: false);
+        bool Flow(string strip) => flow.Any(p => p.Strip == strip)
+            || _started.TryGetValue(strip, out var at) && Environment.TickCount64 - at < StartGraceMs;
+        // The cartwall goes up for a cart or a jingle of the log and down again when it has played.
+        bool carts = players.Carts.Active.Count > 0 || Flow(AudioRouter.CartStrip);
+        Strip(AudioRouter.CartStrip, carts, idle: !carts);
         Strip(AudioRouter.OverlayStrip, players.Overlays.Active.Count > 0, idle: false);
         // A player's fader goes with it, like on a radio desk: up while it plays, down when it is empty or waits at
         // its start (stopped, or loaded from the log). Opening it by hand then starts the player (fader start).
@@ -55,9 +65,9 @@ public sealed class AutoFaderService(AudioRouter router, StudioPlayers players, 
         }
         var presenterState = players.Presenter.Info.State;
         bool breakPlays = Flow(AudioRouter.PresenterStrip);
-        // The automation needs the presenter channel open for its breaks: it only goes down by hand (automation off).
+        // The AI presenter goes up for a break and down again when it has spoken (the engine opens it for the next one).
         Strip(AudioRouter.PresenterStrip, presenterState == PlayerState.Playing || breakPlays,
-            idle: !engine.AutoPlay && !breakPlays && presenterState is PlayerState.Empty or PlayerState.Cued);
+            idle: !breakPlays && presenterState is PlayerState.Empty or PlayerState.Cued);
         bool pfl = players.Pfl.Info.State == PlayerState.Playing || dj.Decks.Any(d => d.Pfl) || dj.SamplerCue.Active.Count > 0;
         Strip(AudioRouter.PflStrip, pfl, idle: false);
         Strip(AudioRouter.MicStrip, router.MicOpen, idle: !router.MicOpen);
