@@ -411,6 +411,45 @@ public sealed class AudioTests : IDisposable
         Assert.NotNull(brk.Media);
         Assert.True(brk.Media!.CueOut - brk.Media.CueIn > 1, "the spoken break should last more than a second");
     }
+    [BassFact]
+    public async Task A_break_whose_voice_is_too_slow_is_made_quickly_before_its_air_time()
+    {
+        var options = Options();
+        var library = new MediaLibrary(options, Db());
+        var log = new PlayoutLog();
+        var brk = new LogItem { Type = LogItemType.AiBreak };
+        log.Append(brk);
+        log.Append(new LogItem { Type = LogItemType.Song, Media = new MediaItem { Path = "y", Kind = MediaKind.Song, Title = "Radar Love" } });
+        var slow = new HangingVoice();
+        var renderer = new BreakRenderer(options, log, library, null, slow, fallbackVoice: new ToneVoice());
+
+        using var cts = new CancellationTokenSource();
+        var normal = renderer.RenderAsync(brk, cts.Token);          // the slow voice never finishes
+        Assert.Empty(renderer.Rescue(secondsToNext: 300, cts.Token)); // far away: no hurry yet
+        await Task.WhenAll(renderer.Rescue(secondsToNext: 30, cts.Token));
+
+        Assert.Equal(BreakState.Ready, brk.BreakState);
+        Assert.Equal("template (spoed)", brk.ScriptSource);
+        Assert.Contains("Radar Love", brk.Script);
+        Assert.NotNull(brk.Media);
+
+        slow.Release.SetResult();   // the normal render comes in late: the quick one stays
+        await normal;
+        Assert.Equal("template (spoed)", brk.ScriptSource);
+        cts.Cancel();
+    }
+
+    private sealed class HangingVoice : ISpeechEngine
+    {
+        public readonly TaskCompletionSource Release = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public string Name => "traag";
+        public async Task SynthesizeAsync(string text, string wavPath, CancellationToken ct)
+        {
+            await Release.Task.WaitAsync(ct);
+            File.WriteAllBytes(wavPath, VoiceProcessor.Write(24000, 1, VoiceProcessorTests.Voice()));
+        }
+    }
+
     private sealed class FixedWriter(string text) : IScriptWriter
     {
         public string Name => "llm:test";

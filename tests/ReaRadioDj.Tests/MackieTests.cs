@@ -635,7 +635,8 @@ public class MackieTests
     [Fact]
     public void The_colour_bar_shows_the_kind_of_channel_and_whether_it_is_on_air()
     {
-        Assert.Equal(new MackieColor(127, 0, 0), MackieSurface.ColorOf(new MackieStripState("mic", "Mic", 1, false, 0, true, false, 0)));
+        Assert.Equal(new MackieColor(127, 0, 0), MackieSurface.ColorOf(new MackieStripState("mic", "Mic", 1, false, 0, true, false, 0, Sounding: true)));
+        Assert.Equal(new MackieColor(0, 127, 30), MackieSurface.ColorOf(new MackieStripState("voip1", "VoIP 1", 1, false, 0, true, false, 0)));
         Assert.Equal(new MackieColor(127, 0, 0).Dim(), MackieSurface.ColorOf(new MackieStripState("mic", "Mic", 1, false, 0, false, false, 0)));
         Assert.Equal(new MackieColor(90, 0, 127), MackieSurface.ColorOf(new MackieStripState("deck:A", "Deck A", 1, false, 0, false, false, 0, "A", Playing: true)));
         var (surface, _) = IconPanel();
@@ -653,6 +654,11 @@ public class MackieTests
         // Not sounding: no flash.
         var mic = new MackieStripState("mic", "Mic", 1, false, 0, true, false, 0);
         Assert.Equal(MackieSurface.ColorOf(mic), MackieSurface.ColorOf(mic, dark: true));
+        // A cartwall that is quiet is dim, even with its fader up: only a sounding one is bright (and flashes).
+        var cart = new MackieStripState("cart", "Cartwall", 1, false, 0, true, false, 0);
+        Assert.Equal(new MackieColor(127, 60, 0).Dim(), MackieSurface.ColorOf(cart));
+        Assert.Equal(new MackieColor(127, 60, 0), MackieSurface.ColorOf(cart with { Sounding = true }));
+        Assert.Equal(new MackieColor(127, 60, 0).Dim(), MackieSurface.ColorOf(cart with { Sounding = true }, dark: true));
     }
 
     [Fact]

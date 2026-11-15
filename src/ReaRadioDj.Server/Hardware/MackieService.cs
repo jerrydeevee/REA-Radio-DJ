@@ -214,7 +214,7 @@ internal sealed class EngineMackieMixer(AudioRouter router, CommandBus bus, Play
 
     private MackieStripState State(MixerStrip s)
     {
-        var (l, r) = s.Levels();
+        var (l, r) = s.PostFaderLevels();   // the meter above a channel follows its fader: closed = still
         var (track, left) = Track(s.Id);
         // A player on this channel: its fader starts it, SOLO pre-listens its track.
         var player = PlayerOf(s.Id);

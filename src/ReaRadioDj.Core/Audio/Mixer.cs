@@ -172,6 +172,17 @@ public sealed class MixerStrip
         return BASS_Mixer_ChannelGetLevelEx(Handle, l, 0.05f, BASS_LEVEL_STEREO) ? (l[0], l[1]) : (0, 0);
     }
 
+    /// <summary>
+    /// The level after the fader (what goes on to the bus): the level of what comes in times the volume the strip has
+    /// now (also while it slides). A closed or muted channel reads 0, however loud the mic or the track is.
+    /// </summary>
+    public (float Left, float Right) PostFaderLevels()
+    {
+        var (l, r) = Levels();
+        float gain = BASS_ChannelGetAttribute(Handle, BASS_ATTRIB_VOL, out float v) ? Math.Clamp(v, 0f, 1f) : (Muted ? 0f : Volume);
+        return (l * gain, r * gain);
+    }
+
     /// <summary>Moves the strip to another output bus; what plays on it carries on.</summary>
     internal void MoveTo(OutputBus bus)
     {

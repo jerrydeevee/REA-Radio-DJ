@@ -719,12 +719,17 @@ public sealed class MackieSurface(IMackieMixer mixer, MackieSettings settings, M
             "pfl" => new MackieColor(127, 127, 127),
             _ => new MackieColor(60, 60, 60),
         };
-        // A deck or a player is bright while it plays; another channel while it is on air.
-        bool lit = s.Deck is not null || s.Player is not null ? s.Playing : s.OnAir && !s.Muted;
+        // A channel that sounds flashes. A channel that plays things (players, carts, overlay, AI, mic, DJ) is dim while
+        // it is quiet, so the flash stands out; another channel (VoIP) is bright while it is on air.
         bool sounding = s.Sounding || s.Deck is not null && s.Playing;
         if (sounding) return dark ? c.Dim() : c;
-        return lit ? c : c.Dim();
+        if (Plays(s)) return c.Dim();
+        return s.OnAir && !s.Muted ? c : c.Dim();
     }
+
+    private static bool Plays(MackieStripState s) => s.Deck is not null || s.Player is not null
+        || s.Id.StartsWith("standby", StringComparison.Ordinal)
+        || s.Id is "log" or "cart" or "overlay" or "presenter" or "mic" or "dj" or "pfl";
 
     /// <summary>A deck started on the screen while its fader was closed gets its fader opened (fader start the other way round).</summary>
     private bool OpenStartedDecks(IReadOnlyList<MackieStripState> all)
