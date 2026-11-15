@@ -11,10 +11,25 @@ namespace ReaRadioDj.Server.Hardware;
 public static class IconPanel
 {
     /// <summary>Writes the set-up; returns whether it went out and what happened, in words for the studio.</summary>
-    public static (bool Ok, string Text) Write(HwDevice device, IReadOnlyList<HwInput> inputs, Cartwall cartwall, bool save = true)
+    public static (bool Ok, string Text) Write(HwDevice device, HardwareStore store, Cartwall cartwall, bool save = true)
     {
+        // REA's set-up: a free button, or one with a cart on it (the old cart layout), gets what REA puts there.
+        // A button set by hand to something else keeps it.
+        var mine = store.Inputs().Where(i => i.DeviceId == device.Id).ToList();
+        int added = 0;
+        for (int layer = 0; layer < IconV1M.Layers; layer++)
+            for (int button = 0; button < IconV1M.ButtonsPerLayer; button++)
+            {
+                if (IconV1M.DefaultCommand(layer, button) is not { } command) continue;
+                var here = mine.Where(i => IconV1M.Button(i.Trigger) == (layer, button)).ToList();
+                if (here.Any(i => i.OnCommand.Equals(command, StringComparison.OrdinalIgnoreCase))) continue;
+                if (here.Any(i => !IconV1M.IsCartCommand(i.OnCommand))) continue;
+                foreach (var old in here) store.DeleteInput(old.Id);
+                store.Save(new HwInput(0, device.Id, IconV1M.Trigger(layer, button), command));
+                added++;
+            }
         var commands = new Dictionary<(int, int), string>();
-        foreach (var input in inputs.Where(i => i.DeviceId == device.Id && i.OnCommand.Length > 0))
+        foreach (var input in store.Inputs().Where(i => i.DeviceId == device.Id && i.OnCommand.Length > 0))
             if (IconV1M.Button(input.Trigger) is { } b) commands.TryAdd(b, input.OnCommand);
         var steps = IconV1M.Write((layer, button) => commands.TryGetValue((layer, button), out var c) ? LabelOf(c, cartwall) : null, save);
 
@@ -26,7 +41,8 @@ public static class IconPanel
             if (!midi.Send(step.Message)) return (false, $"het paneel nam niet alles aan via “{port}”");
             Thread.Sleep(step.PauseMs);
         }
-        return (true, $"{commands.Count} van de {IconV1M.Layers * IconV1M.ButtonsPerLayer} aanraakknoppen ingesteld" + (save ? " en opgeslagen" : ""));
+        return (true, $"{commands.Count} van de {IconV1M.Layers * IconV1M.ButtonsPerLayer} aanraakknoppen ingesteld" + (save ? " en opgeslagen" : "")
+            + (added > 0 ? $" ({added} knoppen nieuw ingedeeld)" : ""));
     }
 
     /// <summary>The text for a button: a cart's name (or its title), otherwise the command itself.</summary>
@@ -40,7 +56,7 @@ public static class IconPanel
             var cart = cartwall.Get(wall - 1)[slot - 1];
             return cart.Slot.Label.Trim() is { Length: > 0 } label ? label : cart.Media?.Title is { Length: > 0 } title ? title : "";
         }
-        if (command.Trim().Equals("CARTS STOP", StringComparison.OrdinalIgnoreCase)) return "Carts stop";
+        if (IconV1M.FunctionLabel(command) is { } function) return function;
         return command.Trim();
     }
 }

@@ -55,11 +55,13 @@ Slotnummer = pagina × 28 + slot.
 | blauw | #66–#89 (pagina 2 slot 10 … pagina 3 slot 5) | 0–1 |
 | groen | #90–#113 | 2–3 |
 | oranje | #114–#137 | 4–5 |
+| paars (U1) | #138–#161 | 6–7 |
+| rood (U2) | #162–#185 | 8–9 |
 
 ## Teksten
 
-Per tekstpagina 12 knoppen van 16 ASCII-tekens: 2 regels van 8. Pagina's 6–9 bevatten
-andere labels. iMap vult bij een noottoewijzing zelf `Note N` in.
+Per tekstpagina 12 knoppen van 16 ASCII-tekens: 2 regels van 8. Pagina's 6–9 zijn U1 en U2
+(bij iMap de teksten van zijn sneltoetsen). iMap vult bij een noottoewijzing zelf `Note N` in.
 
 ## Nog onbekend
 

@@ -47,6 +47,8 @@ public class IconV1MTests
         Assert.Equal(new byte[] { 0x09, 0x09, 0x01, 0x17, 0x7F, 0, 0, 0 }, Slot(steps, 89));    // blue 24
         Assert.Equal(new byte[] { 0x09, 0x09, 0x02, 0x00, 0x7F, 0, 0, 0 }, Slot(steps, 90));    // green 1
         Assert.Equal(new byte[] { 0x09, 0x09, 0x03, 0x17, 0x7F, 0, 0, 0 }, Slot(steps, 137));   // orange 24
+        Assert.Equal(new byte[] { 0x09, 0x09, 0x04, 0x00, 0x7F, 0, 0, 0 }, Slot(steps, 138));   // purple (U1) 1
+        Assert.Equal(new byte[] { 0x09, 0x09, 0x05, 0x17, 0x7F, 0, 0, 0 }, Slot(steps, 185));   // red (U2) 24
         // The rest stays Mackie: the jog wheel on controller 60, fader 1 on pitch bend.
         Assert.Equal(new byte[] { 0x0B, 0x0B, 0x00, 0x3C, 0x41, 0x01, 0, 0 }, Slot(steps, 204));
         Assert.Equal(new byte[] { 0x0E, 0x0E, 0x00, 0, 0, 0, 0, 0 }, Slot(steps, 214));
@@ -62,7 +64,30 @@ public class IconV1MTests
         Assert.Equal("L0 B23          ", Text(1, 11));
         Assert.Equal("L1 B0           ", Text(2, 0));
         Assert.Equal("L2 B23          ", Text(5, 11));
-        Assert.Equal("Pointer         ", Text(6, 0));   // the labels after the touch layers stay
+        Assert.Equal("L3 B0           ", Text(6, 0));   // U1
+        Assert.Equal("L4 B23          ", Text(9, 11));  // U2
+    }
+
+    [Fact]
+    public void Each_cart_layer_is_a_page_of_16_jingles_with_the_same_switches_below()
+    {
+        Assert.Equal("CART 1 1", IconV1M.DefaultCommand(0, 0));
+        Assert.Equal("CART 1 16", IconV1M.DefaultCommand(0, 15));
+        Assert.Equal("CART 1 17", IconV1M.DefaultCommand(1, 0));
+        Assert.Equal("CART 1 64", IconV1M.DefaultCommand(IconV1M.U1, 15));
+        Assert.Null(IconV1M.DefaultCommand(0, 16));
+        Assert.Equal("CARTS STOP", IconV1M.DefaultCommand(2, 17));
+        for (int layer = 0; layer <= IconV1M.U1; layer++)
+        {
+            Assert.Equal("MODE AUTO", IconV1M.DefaultCommand(layer, 18));
+            Assert.Equal("SKIP", IconV1M.DefaultCommand(layer, 23));
+        }
+        Assert.Equal("MODE AUTO", IconV1M.DefaultCommand(IconV1M.U2, 0));
+        Assert.True(IconV1M.IsCartCommand("cart 2 5"));
+        Assert.False(IconV1M.IsCartCommand("NEXT"));
+        Assert.Equal(IconV1M.ButtonsPerLayer, IconV1M.Functions.Count);
+        Assert.Equal("Mic", IconV1M.FunctionLabel("mic toggle"));
+        Assert.All(IconV1M.Functions, f => Assert.True(IconV1M.Label(f.Label).Trim().Length > 0));
     }
 
     [Theory]
@@ -81,7 +106,9 @@ public class IconV1MTests
     {
         Assert.Equal((0, 5), IconV1M.Button("ch2 note 5"));
         Assert.Equal((2, 23), IconV1M.Button("ch4 note 23"));
-        Assert.Null(IconV1M.Button("ch5 note 0"));
+        Assert.Equal((3, 0), IconV1M.Button("ch5 note 0"));
+        Assert.Equal((4, 23), IconV1M.Button("ch6 note 23"));
+        Assert.Null(IconV1M.Button("ch7 note 0"));
         Assert.Null(IconV1M.Button("ch2 note 24"));
         Assert.Null(IconV1M.Button("ch2 cc 5"));
         Assert.Equal("ch3 note 7", IconV1M.Trigger(1, 7));

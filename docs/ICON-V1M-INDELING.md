@@ -71,21 +71,26 @@ Werkt alleen als *Transportknoppen bedienen de uitzending* aan staat.
 
 De lampjes van deze knoppen kan REA laten branden als de speler loopt.
 
-## Aanraakscherm: lagen
+## Aanraakscherm: lagen ✅
 
-| Laag | Stuurt | Nu | Voorstel |
-|------|--------|----|----------|
-| Blauw | kanaal 2, noot 0–23 | ✅ cart 1–24 | — |
-| Groen | kanaal 3, noot 0–23 | ✅ cart 25–48 | — |
-| Oranje | kanaal 4, noot 0–23 | ✅ cart 49–64, laatste knop = carts stoppen | — |
-| Paars (U1) | nu sneltoetsen van Bitwig | — | 💡 **uitzending**: NEXT, SKIP, BREAK, AUTO, MIC, STREAM, VoIP opnemen/ophangen, … (kanaal 5) |
-| Rood (U2) | nu sneltoetsen van Bitwig | — | 💡 **DJ**: deck A–D play/cue/sync, hotcues, automix, crossfader links/midden/rechts (kanaal 6) |
+*Indeling naar het paneel schrijven* (Hardware) zet alle vijf lagen op noten (kanaal 2–6, noot 0–23) en vult ze met
+REA's indeling. Een knop die je zelf op iets anders dan een cart hebt gezet, blijft zoals hij is.
 
-Het aanraakscherm heeft vijf lagen. Met U1 en U2 erbij kan de cartwall naar 5 × 24 = 120 knoppen, of U1/U2 krijgen de
-functies hierboven. Die keuze is nog open.
+| Laag | Kanaal | Knop 1–16 | Knop 17 | Knop 18 | Onderste rij (knop 19–24) |
+|------|--------|-----------|---------|---------|---------------------------|
+| Blauw | 2 | cart 1–16 (wand 1, pagina 1) | vrij | Carts stop | schakelaars |
+| Groen | 3 | cart 17–32 (pagina 2) | vrij | Carts stop | schakelaars |
+| Oranje | 4 | cart 33–48 (pagina 3) | vrij | Carts stop | schakelaars |
+| Paars (U1) | 5 | cart 49–64 (pagina 4) | vrij | Carts stop | schakelaars |
+| Rood (U2) | 6 | functies (zie hieronder) | | | |
 
-Of de lagen U1 en U2 ook noten kunnen sturen in plaats van sneltoetsen, moet nog op het paneel getest worden.
-Volgens de handleiding kan het, maar daarvoor moeten de 48 slots #138–#185 andere bytes krijgen.
+**Schakelaars** (op elke cartlaag dezelfde): Auto · Semi · Hand · Mic · Volgende · Overslaan.
+
+**Functies op U2:** Auto, Semi, Hand, Volgende, Overslaan, AI-break · Mic, Speler A–D, AI-presentator · Carts stop,
+Overlay stop, PFL stop, DJ op de lucht, Automix, Log vullen · VoIP 1 opnemen/ophangen/zender, VoIP 2 opnemen/ophangen/zender.
+
+Aangenomen: de knoppen staan in 4 rijen van 6, genummerd van links naar rechts en van boven naar onder. Of U1 en U2
+noten sturen in plaats van sneltoetsen (slots #138–#185) moet nog op het paneel blijken.
 
 ## DJ-indeling ✅
 

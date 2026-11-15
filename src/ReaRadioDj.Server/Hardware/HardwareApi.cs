@@ -74,7 +74,7 @@ public static class HardwareApi
         {
             if (store.Devices().FirstOrDefault(d => d.Id == id) is not { Kind: HwKind.Mackie } device)
                 return Results.BadRequest(new { error = "kies een apparaat van de soort Mackie Control" });
-            var (ok, text) = await Task.Run(() => IconPanel.Write(device, store.Inputs(), cartwall, save ?? true));
+            var (ok, text) = await Task.Run(() => IconPanel.Write(device, store, cartwall, save ?? true));
             return Results.Ok(new IconWriteDto(ok, text));
         });
 

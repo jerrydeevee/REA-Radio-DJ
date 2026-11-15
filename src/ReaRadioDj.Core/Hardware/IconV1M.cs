@@ -9,13 +9,65 @@ public sealed record IconStep(MackieOutput Message, int PauseMs);
 
 /// <summary>
 /// Writes REA's own set-up into an iCON V1-M, the way its editor iMap does (see docs/ICON-V1M-PROTOCOL.md): the
-/// three layers of touch buttons send notes on MIDI channel 2 (blue), 3 (green) and 4 (orange), note 0-23, with the
-/// text REA gives them. Everything else (the Mackie buttons, faders, jog wheel) stays as in the Mackie layout below,
+/// five layers of touch buttons send notes on MIDI channel 2 (blue), 3 (green), 4 (orange), 5 (purple, U1) and
+/// 6 (red, U2), note 0-23, with the text REA gives them. REA's own set-up (<see cref="DefaultCommand"/>): blue, green,
+/// orange and purple are page 1-4 of cartwall 1, 16 jingles each, with Carts stop and below a row of six switches that
+/// is the same on every layer; red holds the functions of the broadcast. Everything else (the Mackie buttons, faders, jog wheel) stays as in the Mackie layout below,
 /// taken from iMap. The panel gets the whole configuration at once, as iMap always sends it.
 /// </summary>
 public static class IconV1M
 {
-    public const int Layers = 3, ButtonsPerLayer = 24, FirstChannel = 2;
+    public const int Layers = 5, ButtonsPerLayer = 24, FirstChannel = 2;
+    /// <summary>The layers: blue, green, orange and purple (U1) the pages of cartwall 1, red (U2) the functions.</summary>
+    public const int U1 = 3, U2 = 4;
+
+    /// <summary>On a cart layer: the jingles (one cartwall page), then Carts stop, then the row of switches.</summary>
+    public const int JinglesPerLayer = 16, CartsStopButton = 17, FirstSwitch = 18;
+
+    /// <summary>The lower row of every cart layer (six pads): the play modes and what you switch most.</summary>
+    public static readonly IReadOnlyList<(string Command, string Label)> Switches =
+    [
+        ("MODE AUTO", "Auto"), ("MODE SEMI", "Semi"), ("MODE HAND", "Hand"), ("MIC TOGGLE", "Mic"), ("NEXT", "Volgende"), ("SKIP", "Overslaan"),
+    ];
+
+    /// <summary>The functions on U2, in the order of the buttons: the command and the text on the button.</summary>
+    public static readonly IReadOnlyList<(string Command, string Label)> Functions =
+    [
+        ("MODE AUTO", "Auto"), ("MODE SEMI", "Semi"), ("MODE HAND", "Hand"), ("NEXT", "Volgende"), ("SKIP", "Overslaan"), ("BREAK", "AI-break"),
+        ("MIC TOGGLE", "Mic"), ("PLAYER A TOGGLE", "Speler A"), ("PLAYER B TOGGLE", "Speler B"), ("PLAYER C TOGGLE", "Speler C"),
+        ("PLAYER D TOGGLE", "Speler D"), ("PLAYER PRESENTER TOGGLE", "AI-pres."),
+        ("CARTS STOP", "Carts stop"), ("OVERLAY STOP", "Overlay stop"), ("PLAYER PFL STOP", "PFL stop"), ("DJ ONAIR TOGGLE", "DJ op de lucht"),
+        ("DJ AUTOMIX TOGGLE", "Automix"), ("REPLAN", "Log vullen"),
+        ("VOIP 1 ANSWER", "VoIP 1 opnemen"), ("VOIP 1 HANGUP", "VoIP 1 ophangen"), ("VOIP 1 ONAIR TOGGLE", "VoIP 1 zender"),
+        ("VOIP 2 ANSWER", "VoIP 2 opnemen"), ("VOIP 2 HANGUP", "VoIP 2 ophangen"), ("VOIP 2 ONAIR TOGGLE", "VoIP 2 zender"),
+    ];
+
+    /// <summary>
+    /// What a button does in REA's set-up: on blue, green, orange and purple the 16 jingles of page 1-4 of cartwall 1
+    /// (cart 1-64), Carts stop, and the <see cref="Switches"/> on the lower row; on red the <see cref="Functions"/>.
+    /// Null = a free button.
+    /// </summary>
+    public static string? DefaultCommand(int layer, int button)
+    {
+        if (button is < 0 or >= ButtonsPerLayer) return null;
+        if (layer == U2) return button < Functions.Count ? Functions[button].Command : null;
+        if (layer is < 0 or > U1) return null;
+        if (button < JinglesPerLayer) return $"CART 1 {layer * JinglesPerLayer + button + 1}";
+        if (button == CartsStopButton) return "CARTS STOP";
+        return button >= FirstSwitch && button - FirstSwitch < Switches.Count ? Switches[button - FirstSwitch].Command : null;
+    }
+
+    /// <summary>The text of a function or switch ("MIC TOGGLE" → "Mic"), or null for another command.</summary>
+    public static string? FunctionLabel(string command) =>
+        Functions.Concat(Switches).Append((Command: "CARTS STOP", Label: "Carts stop"))
+            .FirstOrDefault(f => f.Command.Equals(command.Trim(), StringComparison.OrdinalIgnoreCase)).Label;
+
+    /// <summary>A command of the cart set-up (a cart or Carts stop): REA may move it when it lays out the layers.</summary>
+    public static bool IsCartCommand(string command)
+    {
+        var w = command.Trim().ToUpperInvariant().Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        return w is ["CART", _, _] or ["CARTS", "STOP"];
+    }
     private const int FirstTouchSlot = 66, SlotsPerPage = 28, SlotSize = 8, LabelsPerPage = 12, LabelSize = 16, LineSize = 8;
     private static readonly byte[] Header = [0xF0, 0x1D, 0x03, 0x10, 0x09];
     private const byte Slot = 0x21;   // seen in every write of iMap; probably the DAW slot that is written
@@ -88,7 +140,6 @@ public static class IconV1M
         for (int layer = 0; layer < Layers; layer++)
             for (int button = 0; button < ButtonsPerLayer; button++)
                 all.Append(Label(label(layer, button)));
-        foreach (var t in OtherLabels) all.Append(t);
         return Encoding.ASCII.GetBytes(all.ToString());
     }
 
@@ -110,8 +161,8 @@ public static class IconV1M
         return first.PadRight(LineSize) + rest.PadRight(LineSize);
     }
 
-    // The eight mapping pages of 28 slots (8 bytes each) as iMap wrote them for its Mackie layout. Slot 66-137 are the
-    // touch buttons (overwritten above); 204 is the jog wheel (controller 60), 214-222 the faders (pitch bend).
+    // The eight mapping pages of 28 slots (8 bytes each) as iMap wrote them for its Mackie layout. Slot 66-185 are the
+    // touch buttons (overwritten above; 138-185, U1 and U2, were keyboard shortcuts); 204 is the jog wheel (controller 60), 214-222 the faders (pitch bend).
     private static readonly string[] MackiePages =
     [
         "090900007F000000090900017F000000090900027F000000090900037F000000090900047F000000090900057F000000090900067F000000090900077F000000090900087F000000090900097F0000000909000A7F0000000909000B7F0000000909000C7F0000000909000D7F0000000909000E7F0000000909000F7F000000090900107F000000090900117F000000090900127F000000090900137F000000090900147F000000090900157F000000090900167F000000090900177F000000090900187F000000090900197F0000000909001A7F0000000909001B7F000000",
@@ -122,14 +173,5 @@ public static class IconV1M
         "40000020000000004000002100000000400000220000000041000015000000004100000800000000410000070000000041000006000000004100001B0000000041000019000000004000004C000000004100000A000000004300000A000000004100001D000000004100001C0000000041000012000000004100001A00000000410000140000000041000011000000004100001600000000430000160000000040000057000000004000005600000000400000050000000041000009000000004100000400000000430000040000000000000000000000000000000000000000",
         "4100001700000000430000170000000045000017000000004500000A0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000090900207F000000090900217F000000090900227F000000090900237F000000090900247F000000090900257F000000090900267F000000090900277F000000090900677F000000090900667F000000",
         "0B0B0010014100000B0B0011014100000B0B0012014100000B0B0013014100000B0B0014014100000B0B0015014100000B0B0016014100000B0B0017014100000B0B003C41010000090900687F000000090900697F0000000909006A7F0000000909006B7F0000000909006C7F0000000909006D7F0000000909006E7F0000000909006F7F000000090900707F0000000E0E0000000000000E0E0100000000000E0E0200000000000E0E0300000000000E0E0400000000000E0E0500000000000E0E0600000000000E0E0700000000000E0E0800000000000B0B0A007F000000",
-    ];
-
-    // Texts of the buttons after the three touch layers (text pages 6-9), as iMap wrote them.
-    private static readonly string[] OtherLabels =
-    [
-        "Pointer         ", "Time    Select  ", "Pen             ", "Eraser          ", "Knife           ", "Rename          ", "Split           ", "Dupli-  cate    ", "Copy            ", "Cut             ", "Paste           ", "Delete          ",
-        "Group           ", "Ungroup         ", "Undo            ", "Redo            ", "Open            ", "Close           ", "Quit            ", "New             ", "Save            ", "Save As         ", "Zoom In         ", "Zoom Out        ",
-        "Insert          ", "Auto    Fade    ", "Select  All     ", "DeselectAll     ", "                ", "                ", "Add     Inst.   ", "Add     Audio   ", "Add     Effect  ", "Add     Group   ", "                ", "                ",
-        "                ", "                ", "                ", "                ", "                ", "                ", "                ", "                ", "                ", "                ", "                ", "                ",
     ];
 }

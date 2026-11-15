@@ -32,13 +32,15 @@ public sealed class AutoFaderService(AudioRouter router, StudioPlayers players, 
 
     private void Step()
     {
-        lock (_gate) StepLocked();
+        if (!router.IsStarted) return;
+        // Asked before the lock: the engine opens a fader (StripStarting) while it holds its own lock, so asking the
+        // engine while holding ours could wait on each other for ever.
+        var flow = engine.GetState().Playing;
+        lock (_gate) StepLocked(flow);
     }
 
-    private void StepLocked()
+    private void StepLocked(IReadOnlyList<Core.Audio.NowPlaying> flow)
     {
-        if (!router.IsStarted) return;
-        var flow = engine.GetState().Playing;
         bool Flow(string strip) => flow.Any(p => p.Strip == strip);
         Strip(AudioRouter.CartStrip, players.Carts.Active.Count > 0 || Flow(AudioRouter.CartStrip), idle: false);
         Strip(AudioRouter.OverlayStrip, players.Overlays.Active.Count > 0, idle: false);
