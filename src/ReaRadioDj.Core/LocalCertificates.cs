@@ -19,6 +19,25 @@ public static class LocalCertificates
     public const string CaName = "REA-Radio-DJ lokale CA";
     private const string CaFile = "rea-ca.pfx", ServerFile = "rea-server.pfx";
 
+    /// <summary>
+    /// For one engine asking another (the backup studio's heartbeat): a certificate the computer trusts, or one made by
+    /// another station's own REA CA (not installed here). The name must still match and the dates must still be valid;
+    /// only the unknown root is forgiven.
+    /// </summary>
+    public static bool TrustedOrStation(X509Certificate2? cert, X509Chain? chain, System.Net.Security.SslPolicyErrors errors)
+    {
+        if (errors == System.Net.Security.SslPolicyErrors.None) return true;
+        if (cert is null || chain is null || errors != System.Net.Security.SslPolicyErrors.RemoteCertificateChainErrors) return false;
+        // The engine sends only its own certificate, so the chain usually ends at it: look at who made it.
+        var top = chain.ChainElements.Count > 1 ? chain.ChainElements[^1].Certificate.Subject : cert.Issuer;
+        if (!top.Contains("O=REA-Radio-DJ", StringComparison.Ordinal) || !top.Contains(CaName, StringComparison.Ordinal)) return false;
+        foreach (var status in chain.ChainStatus)
+            if (status.Status is not (X509ChainStatusFlags.UntrustedRoot or X509ChainStatusFlags.PartialChain
+                or X509ChainStatusFlags.RevocationStatusUnknown or X509ChainStatusFlags.OfflineRevocation or X509ChainStatusFlags.NoError))
+                return false;
+        return true;
+    }
+
     /// <summary>The certificate the engine serves HTTPS with (made or renewed when needed).</summary>
     public static X509Certificate2 Server(string dataFolder, ILogger? log = null)
     {

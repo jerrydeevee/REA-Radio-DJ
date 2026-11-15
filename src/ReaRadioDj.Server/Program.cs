@@ -140,6 +140,12 @@ builder.Services.AddSingleton(sp => new IcecastStreamer(options.Stream, options.
 builder.Services.AddSingleton(sp => new StreamGroup(sp.GetRequiredService<IcecastStreamer>(), options.StationName, sp.GetService<ILoggerFactory>()));
 builder.Services.AddHostedService<StreamKeepalive>();
 builder.Services.AddHttpClient();
+// The backup studio's heartbeat may ask the other engine over HTTPS with that station's own certificate.
+builder.Services.AddHttpClient("failover").ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
+{
+    ServerCertificateCustomValidationCallback = (_, cert, chain, errors) => ReaRadioDj.Core.LocalCertificates.TrustedOrStation(cert, chain, errors),
+    CheckCertificateRevocationList = false,
+});
 // Presenter voice: the default voice profile chooses Higgs TTS 3 (GPU server) or Windows speech.
 builder.Services.AddSingleton<VoiceStore>();
 builder.Services.AddSingleton<VoiceRoleStore>();

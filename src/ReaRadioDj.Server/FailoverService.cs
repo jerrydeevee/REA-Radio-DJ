@@ -83,8 +83,19 @@ public sealed class FailoverService(PlayoutEngine engine, SilenceWatch silence, 
         {
             var b = _monitor.Last;
             return new FailoverStatusDto(_settings.Role, _settings.Partner, _monitor.State, _monitor.HasAir, _monitor.LastAnswer,
-                b is null ? null : new FailoverBeatDto(b.Station, b.Role, b.Healthy, b.Playing, b.Silent, b.HasAir, DateTime.UtcNow), _error);
+                b is null ? null : new FailoverBeatDto(b.Station, b.Role, b.Healthy, b.Playing, b.Silent, b.HasAir, DateTime.UtcNow), _error ?? Unreachable());
         }
+    }
+
+    /// <summary>
+    /// The other studio has to reach this engine too (the main studio is asked by the backup, and the other way round):
+    /// that needs the web server on the network, unless both run on this computer.
+    /// </summary>
+    private string? Unreachable()
+    {
+        if (_settings.Role == "uit" || options.Control.WebOnNetwork) return null;
+        if (Uri.TryCreate(_settings.Partner, UriKind.Absolute, out var uri) && uri.IsLoopback) return null;
+        return "De andere studio kan deze engine niet bereiken: zet Instellingen › Op afstand › Engine op het netwerk aan (en herstart de engine).";
     }
 
     /// <summary>The operator takes over by hand (only on the backup).</summary>

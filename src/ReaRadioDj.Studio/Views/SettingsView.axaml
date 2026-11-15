@@ -654,7 +654,7 @@
           <StackPanel IsVisible="{Binding IsOn}">
             <TextBlock Classes="field" Text="Adres van de andere engine" />
             <TextBox Text="{Binding Partner}" Watermark="http://studio1:8600" />
-            <TextBlock Classes="help" Text="De andere engine moet op het netwerk luisteren (niet alleen 127.0.0.1)." />
+            <TextBlock Classes="help" Text="Beide engines moeten op het netwerk te bereiken zijn (Op afstand › Engine op het netwerk). Het adres mag http://pc:8600 zijn of https://pc:8443; het eigen certificaat van de andere studio wordt dan vertrouwd." />
             <TextBlock Classes="field" Text="Vragen elke (seconden)" />
             <NumericUpDown Value="{Binding IntervalSeconds}" Minimum="1" Maximum="30" Increment="1" FormatString="0" />
             <TextBlock Classes="field" Text="Overnemen als de hoofdstudio zo lang niet antwoordt (seconden)" />

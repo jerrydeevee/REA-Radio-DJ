@@ -41,4 +41,25 @@ public sealed class LocalCertificatesTests : IDisposable
         Assert.Equal(server.Thumbprint, again.Thumbprint);
         Assert.Equal(der, LocalCertificates.CaCertificate(_dir));
     }
+
+    [Fact]
+    public void Another_engine_trusts_a_stations_own_certificate_but_not_any_self_made_one()
+    {
+        using var server = LocalCertificates.Server(_dir);
+        using var chain = new X509Chain();
+        chain.ChainPolicy.RevocationMode = X509RevocationMode.NoCheck;
+        Assert.False(chain.Build(server));   // the CA is not installed on this computer
+        Assert.True(LocalCertificates.TrustedOrStation(server, chain, System.Net.Security.SslPolicyErrors.RemoteCertificateChainErrors));
+        Assert.False(LocalCertificates.TrustedOrStation(server, chain,
+            System.Net.Security.SslPolicyErrors.RemoteCertificateChainErrors | System.Net.Security.SslPolicyErrors.RemoteCertificateNameMismatch));
+
+        using var key = System.Security.Cryptography.RSA.Create(2048);
+        using var other = new CertificateRequest("CN=iemand", key, System.Security.Cryptography.HashAlgorithmName.SHA256,
+            System.Security.Cryptography.RSASignaturePadding.Pkcs1).CreateSelfSigned(DateTimeOffset.Now.AddDays(-1), DateTimeOffset.Now.AddDays(30));
+        using var otherChain = new X509Chain();
+        otherChain.ChainPolicy.RevocationMode = X509RevocationMode.NoCheck;
+        otherChain.Build(other);
+        Assert.False(LocalCertificates.TrustedOrStation(other, otherChain, System.Net.Security.SslPolicyErrors.RemoteCertificateChainErrors));
+        Assert.True(LocalCertificates.TrustedOrStation(other, otherChain, System.Net.Security.SslPolicyErrors.None));
+    }
 }

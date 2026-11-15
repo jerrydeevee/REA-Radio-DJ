@@ -59,6 +59,7 @@ public sealed partial class FailoverVm : ObservableObject
         PartnerText = st.Role == "uit" ? "" : st.Partner is { } p
             ? $"{p.Station} ({p.Role}) · {(p.Healthy ? "gezond" : "storing")} · {(p.Playing ? "speelt" : "speelt niet")}{(p.Silent ? " · stil" : "")}{(p.HasAir ? " · heeft de uitzending overgenomen" : "")}"
               + (st.LastAnswerUtc is DateTime t ? $" · laatste antwoord {t.ToLocalTime():HH:mm:ss}" : "")
+              + (st.Error is { } warning ? Environment.NewLine + warning : "")
             : $"Geen antwoord van {st.PartnerUrl}" + (st.Error is { } e ? $": {e}" : "");
     }
 
