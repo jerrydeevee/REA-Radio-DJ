@@ -152,24 +152,74 @@ public sealed class VoiceTracker(PlayoutLog log, IVoiceCapture capture, IVoicePr
         lock (_gate)
         {
             if (Take is not { } t) throw new InvalidOperationException("geen opname om te plaatsen");
-            int index = log.Upcoming.ToList().FindIndex(i => i.Id == t.BeforeItemId);
-            if (index < 0) throw new InvalidOperationException("het logitem na deze opname is al gespeeld of verwijderd");
-            var media = load(t.Path) with
-            {
-                Title = "Voicetrack",
-                Artist = "",
-                Cues = new CueSet { CueIn = 0, Mix = t.NextAt ?? t.Length, CueOut = t.Length }.Normalize(t.Length),
-            };
-            var item = new LogItem { Type = LogItemType.VoiceTrack, Media = media, Origin = "voicetrack", StartEarly = t.StartEarly };
-            // The voice talks about the items around it: keep those when the log is replanned.
-            var upcoming = log.Upcoming;
-            foreach (var neighbour in new[] { index > 0 ? upcoming[index - 1] : null, upcoming[index] })
-                if (neighbour is not null && neighbour.Origin.StartsWith("klok", StringComparison.Ordinal))
-                    neighbour.Origin = "vast voor voicetrack · " + neighbour.Origin;
-            log.Insert(index, item);
+            var item = Insert(t);
             Take = null;
             return item;
         }
+    }
+
+    /// <summary>The items around a slot, for a presenter who records somewhere else: what plays before and after it.</summary>
+    public (MediaItem? Previous, MediaItem? Next, LogItem Before) Slot(long beforeItemId)
+    {
+        var upcoming = log.Upcoming;
+        int index = upcoming.ToList().FindIndex(i => i.Id == beforeItemId);
+        if (index < 0) throw new InvalidOperationException("dat logitem staat niet (meer) in de log");
+        return (index > 0 ? upcoming[index - 1].Media : log.History.FirstOrDefault()?.Media, upcoming[index].Media, upcoming[index]);
+    }
+
+    /// <summary>
+    /// A voice track recorded somewhere else (the browser page of a presenter at home): a WAV with the voice from the
+    /// moment the previous item's outro started playing there, <paramref name="outro"/> seconds before its mix point,
+    /// and <paramref name="next"/> the moment the next item was started. Made like a take of the studio and placed at once.
+    /// </summary>
+    public LogItem PlaceRecording(byte[] wav, long beforeItemId, double outro, double? next)
+    {
+        var (rate, channels, samples) = VoiceProcessor.Read(wav);
+        if (channels > 1)
+        {
+            var mono = new float[samples.Length / channels];
+            for (int i = 0; i < mono.Length; i++)
+            {
+                float sum = 0;
+                for (int c = 0; c < channels; c++) sum += samples[i * channels + c];
+                mono[i] = sum / channels;
+            }
+            samples = mono;
+        }
+        var (prev, nextMedia, before) = Slot(beforeItemId);
+        outro = prev is { } p ? Math.Clamp(outro, 0, Math.Max(0, p.MixPoint - p.CueIn)) : 0;
+        var made = Make(samples, rate, outro, next is double n && n >= 0 ? n : null);
+        var id = Guid.NewGuid().ToString("N")[..12];
+        Directory.CreateDirectory(folder);
+        var path = System.IO.Path.Combine(folder, $"vt-{DateTime.Now:yyyyMMdd-HHmmss}-{id}.wav");
+        File.WriteAllBytes(path, VoiceProcessor.Write(rate, 1, made.Samples));
+        var take = new VoiceTake(id, path, made.Length, made.StartEarly, made.NextAt, before.Id,
+            prev?.DisplayName ?? "", nextMedia?.DisplayName ?? before.Label, made.PeakDb);
+        lock (_gate)
+        {
+            try { return Insert(take); }
+            catch { try { File.Delete(path); } catch (IOException) { } throw; }
+        }
+    }
+
+    private LogItem Insert(VoiceTake t)
+    {
+        int index = log.Upcoming.ToList().FindIndex(i => i.Id == t.BeforeItemId);
+        if (index < 0) throw new InvalidOperationException("het logitem na deze opname is al gespeeld of verwijderd");
+        var media = load(t.Path) with
+        {
+            Title = "Voicetrack",
+            Artist = "",
+            Cues = new CueSet { CueIn = 0, Mix = t.NextAt ?? t.Length, CueOut = t.Length }.Normalize(t.Length),
+        };
+        var item = new LogItem { Type = LogItemType.VoiceTrack, Media = media, Origin = "voicetrack", StartEarly = t.StartEarly };
+        // The voice talks about the items around it: keep those when the log is replanned.
+        var upcoming = log.Upcoming;
+        foreach (var neighbour in new[] { index > 0 ? upcoming[index - 1] : null, upcoming[index] })
+            if (neighbour is not null && neighbour.Origin.StartsWith("klok", StringComparison.Ordinal))
+                neighbour.Origin = "vast voor voicetrack · " + neighbour.Origin;
+        log.Insert(index, item);
+        return item;
     }
 
     public void DiscardTake()
