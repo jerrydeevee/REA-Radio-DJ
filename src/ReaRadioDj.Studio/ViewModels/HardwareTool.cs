@@ -251,6 +251,7 @@ public sealed partial class HardwareTool : StudioTool
     [ObservableProperty] private string _mackieChannels = "";
     [ObservableProperty] private string _mackieRecent = "";
     [ObservableProperty] private string _mackieTest = "";
+    [ObservableProperty] private string _iconResult = "";
     private bool _mackieLoading;
 
     private void ShowMackie(MackieDto m, bool settings)
@@ -302,6 +303,16 @@ public sealed partial class HardwareTool : StudioTool
         if (Id <= 0 || MackieTest.Trim().Length == 0) return;
         if (await Hub.Client.SendForAsync<MackieDto>(HttpMethod.Post, "/api/hardware/mackie/simulate", new MackieSimulateRequest(Id, MackieTest)) is { } m)
             ShowMackie(m, settings: false);
+    }
+
+    /// <summary>Writes REA's set-up into an iCON V1-M: touch buttons on the notes of the inputs, with their names.</summary>
+    [RelayCommand]
+    private async Task WriteIcon()
+    {
+        if (Id <= 0) return;
+        IconResult = "bezig…";
+        var r = await Hub.Client.SendForAsync<IconWriteDto>(HttpMethod.Post, $"/api/hardware/devices/{Id}/icon", null);
+        IconResult = r?.Text ?? "geen antwoord van de engine";
     }
 
     // ---------------------------------------------------------------- Ember+ tree

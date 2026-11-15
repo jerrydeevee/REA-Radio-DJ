@@ -1,5 +1,6 @@
 using ReaRadioDj.Contracts;
 using ReaRadioDj.Core.Hardware;
+using ReaRadioDj.Core.Studio;
 
 namespace ReaRadioDj.Server.Hardware;
 
@@ -67,6 +68,15 @@ public static class HardwareApi
             store.Devices().All(d => d.Id != r.DeviceId || d.Kind != HwKind.Mackie) ? Results.BadRequest(new { error = "kies een apparaat van de soort Mackie Control" })
             : s.Simulate(r.DeviceId, r.Messages ?? "") is null ? Results.BadRequest(new { error = "hexadecimale bytes, bijv. 90 10 7F (meerdere met komma's)" })
             : Results.Ok(Mackie(s, store, service)));
+
+        // ---- iCON V1-M: REA's own set-up for the touch buttons, written into the panel
+        g.MapPost("/devices/{id:long}/icon", async (long id, bool? save, HardwareStore store, Cartwall cartwall) =>
+        {
+            if (store.Devices().FirstOrDefault(d => d.Id == id) is not { Kind: HwKind.Mackie } device)
+                return Results.BadRequest(new { error = "kies een apparaat van de soort Mackie Control" });
+            var (ok, text) = await Task.Run(() => IconPanel.Write(device, store.Inputs(), cartwall, save ?? true));
+            return Results.Ok(new IconWriteDto(ok, text));
+        });
 
         // ---- DJ controller: what each control does, learning, presets
         var m = api.MapGroup("/dj/midi");

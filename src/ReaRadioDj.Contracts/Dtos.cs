@@ -449,6 +449,9 @@ public sealed record MackieDto(MackieSettingsDto Settings, IReadOnlyList<MackieC
 public sealed record MackieSimulateRequest(long DeviceId, string Messages);
 
 /// <summary>A DJ function a controller can operate. Kind: button, absolute (fader, knob) or relative (jog wheel).</summary>
+/// <summary>What writing REA's set-up into an iCON V1-M did.</summary>
+public sealed record IconWriteDto(bool Ok, string Text);
+
 public sealed record DjMidiControlDto(string Id, string Name, string Group, string Kind);
 
 /// <summary>A learned control: the function, the controller and what it sends ("ch1 cc 7"); Invert turns a fader around.</summary>
