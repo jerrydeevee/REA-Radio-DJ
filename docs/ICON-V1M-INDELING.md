@@ -10,7 +10,7 @@ Mackie Control-noten, en wat iMap naar het paneel schrijft (zie [ICON-V1M-PROTOC
 
 | Scherm | Wat het is | Nu | Voorstel |
 |--------|------------|----|----------|
-| Bovenste TFT (2 inch) | toont wat de software via Mackie Control naar het display stuurt | 🟡 boven: *Nu: …* met de resterende tijd; een lange titel schuift als lichtkrant door. Speelt de DJ-tafel op de zender, dan het deck dat het verst openstaat. Onder: *Straks: …*, tijdens het bladeren de keuze uit de log | — |
+| Bovenste TFT (2 inch) | toont wat de software via Mackie Control naar het display stuurt | ✅ per fader een blokje: boven de resterende tijd, eronder de titel die op dat kanaal speelt (een lange titel schuift binnen het blokje). Log, standby, cart, overlay, PFL, DJ-master en decks; mic en VoIP blijven leeg. Tijdens het bladeren staat de keuze uit de log onderaan | — |
 | Onderste TFT (1,14 inch, 8 vakjes boven de faders) | "tweede display" | 🟡 per strip naam en stand | — |
 | LED-tijddisplay | cijfers 9–2 zichtbaar | ✅ de klok (uu.mm.ss), punten na uren en minuten | — |
 | Meters (8 × mono, master stereo) | Mackie-meters | ✅ niveau per kanaal, 🟡 master = programma-uitgang | — |

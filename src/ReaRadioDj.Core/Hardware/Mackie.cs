@@ -180,7 +180,7 @@ public static class Mackie
         return (t.Length > 6 ? t[..6] : t).PadRight(6) + " ";
     }
 
-    private static IEnumerable<byte> Ascii(string text)
+    internal static IEnumerable<byte> Ascii(string text)
     {
         foreach (char c in text.Normalize(NormalizationForm.FormD))
         {
@@ -206,7 +206,8 @@ public sealed record MackieLogItem(long Id, string Label);
 /// fader is the deck fader (0..<see cref="Top"/> = 1), the encoder its gain (<see cref="Pan"/> = gain / 12 dB).
 /// </summary>
 public sealed record MackieStripState(string Id, string Name, float Volume, bool Muted, double Pan, bool OnAir, bool Recording, float Peak,
-    string? Deck = null, bool Playing = false, bool Sync = false, bool Pfl = false, float Top = 1.25f);
+    string? Deck = null, bool Playing = false, bool Sync = false, bool Pfl = false, float Top = 1.25f,
+    string? Track = null, double Left = 0);
 
 /// <summary>A colour on the colour bar of an iCON panel, 0-127 per component.</summary>
 public readonly record struct MackieColor(int R, int G, int B)
@@ -602,12 +603,19 @@ public sealed class MackieSurface(IMackieMixer mixer, MackieSettings settings, M
             // The strips go on the display above the faders; the main display is for what plays and what comes next.
             Show(IconRow, topRow, t => Mackie.IconDisplay(0, t));
             Show(IconRow + 56, bottomRow, t => Mackie.IconDisplay(56, t));
-            var air = mixer.Air();
-            string left = air.Now is { } now ? "Nu: " + now : "Er speelt niets";
-            string time = Mackie.Countdown(air.Remaining) is { Length: > 0 } c ? $" -{c[..^2]}:{c[^2..]}" : "";
-            Show(0, Mackie.Row(Scroll(left, 56 - time.Length) + time), t => Mackie.Display(0, t));
-            string next = mixer.Upcoming() is { Count: > 0 } up ? "Straks: " + up[0].Label : "Straks: niets meer gepland";
-            Show(56, choice ?? Mackie.Row(next), t => Mackie.Display(56, t));
+            // The main display: per fader what plays on that channel, the time left on top, the title scrolling below.
+            var times = new StringBuilder();
+            var titles = new StringBuilder();
+            for (int i = 0; i < Mackie.Strips; i++)
+            {
+                var s = StripAt(all, i);
+                string track = s?.Track is { Length: > 0 } t ? t : "";
+                string c = track.Length > 0 ? Mackie.Countdown(s!.Left) : "";
+                times.Append(Mackie.Cell(c.Length > 0 ? $"-{c[..^2]}:{c[^2..]}" : ""));
+                titles.Append(Scroll(i, track, 6) + " ");
+            }
+            Show(0, times.ToString(), t => Mackie.Display(0, t));
+            Show(56, choice ?? titles.ToString(), t => Mackie.Display(56, t));
             // The clock on the red time display: " 14.25.07 ".
             string clock = LocalTime().ToString("HHmmss", System.Globalization.CultureInfo.InvariantCulture);
             if (!_display.TryGetValue(TimeKey, out var shown) || shown != clock)
@@ -633,23 +641,23 @@ public sealed class MackieSurface(IMackieMixer mixer, MackieSettings settings, M
 
     private static string Fit(string text, int width) => text.Length <= width ? text : text[..Math.Max(0, width)];
 
-    private string? _scrollText;
-    private DateTime _scrollStart;
+    private readonly Dictionary<int, (string Text, DateTime Start)> _scrolls = [];
     /// <summary>How fast a title that does not fit scrolls by: one character per step.</summary>
     public static readonly TimeSpan ScrollStep = TimeSpan.FromMilliseconds(300);
     /// <summary>How long a new title stands still before it starts to scroll.</summary>
     public static readonly TimeSpan ScrollWait = TimeSpan.FromSeconds(2);
 
     /// <summary>
-    /// A text in a window of <paramref name="width"/> characters: as it is when it fits, otherwise scrolling by like a
+    /// A text in a window of <paramref name="width"/> characters (one window per <paramref name="key"/>): as it is when it fits, otherwise scrolling by like a
     /// news ticker (it starts again from the beginning when the text changes).
     /// </summary>
-    private string Scroll(string text, int width)
+    private string Scroll(int key, string text, int width)
     {
         width = Math.Max(0, width);
-        if (text.Length <= width) { _scrollText = null; return text.PadRight(width); }
-        if (_scrollText != text) { _scrollText = text; _scrollStart = Clock(); }
-        var since = Clock() - _scrollStart - ScrollWait;
+        text = new string(Mackie.Ascii(text).Select(b => (char)b).ToArray());
+        if (text.Length <= width) { _scrolls.Remove(key); return text.PadRight(width); }
+        if (!_scrolls.TryGetValue(key, out var was) || was.Text != text) _scrolls[key] = was = (text, Clock());
+        var since = Clock() - was.Start - ScrollWait;
         string loop = text + "   ";
         int at = since <= TimeSpan.Zero ? 0 : (int)(since.Ticks / ScrollStep.Ticks % loop.Length);
         return (loop + loop)[at..(at + width)];

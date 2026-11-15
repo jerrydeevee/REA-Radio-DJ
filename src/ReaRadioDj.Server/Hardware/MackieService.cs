@@ -27,11 +27,11 @@ public sealed class MackieService : BackgroundService
     private MackieSettings _settings;
 
     public MackieService(StationDb db, AudioRouter router, CommandBus bus, PlayoutEngine engine, PlayoutLog log, ReaRadioDjOptions options,
-        MessageCenter messages, DjMixer dj, ILogger<MackieService> logger)
+        MessageCenter messages, DjMixer dj, StudioPlayers players, ILogger<MackieService> logger)
     {
         _db = db;
         _logger = logger;
-        _mixer = new EngineMackieMixer(router, bus, engine, log, db, options, messages, dj);
+        _mixer = new EngineMackieMixer(router, bus, engine, log, db, options, messages, dj, players);
         _settings = Read() ?? new MackieSettings();
     }
 
@@ -161,7 +161,7 @@ public sealed class MackieService : BackgroundService
 
 /// <summary>The engine's mixer as a Mackie surface sees it: the fixed channels first, then the inputs.</summary>
 internal sealed class EngineMackieMixer(AudioRouter router, CommandBus bus, PlayoutEngine engine, PlayoutLog log, StationDb db, ReaRadioDjOptions options,
-    MessageCenter messages, DjMixer dj) : IMackieMixer
+    MessageCenter messages, DjMixer dj, StudioPlayers players) : IMackieMixer
 {
     private const string DeckPrefix = "deck:";
     private const double GainRange = 12;   // dB either way: the encoder ring shows -12..+12
@@ -179,7 +179,8 @@ internal sealed class EngineMackieMixer(AudioRouter router, CommandBus bus, Play
         {
             var info = d.Info;
             return new MackieStripState(DeckPrefix + d.Id, "Deck " + d.Id, (float)d.Fader, false, d.Gain / GainRange, false, false,
-                Math.Max(info.LevelLeft, info.LevelRight), d.Id, d.Playing, d.Synced, d.Pfl, Top: 1f);
+                Math.Max(info.LevelLeft, info.LevelRight), d.Id, d.Playing, d.Synced, d.Pfl, Top: 1f,
+                Track: info.Media?.DisplayName, Left: info.Duration - info.Position);
         });
         return decks.Concat(DjOrder.Where(router.HasStrip).Select(router.Strip).Select(State)).ToList();
     }
@@ -198,10 +199,36 @@ internal sealed class EngineMackieMixer(AudioRouter router, CommandBus bus, Play
         return new MackieAir(now?.Label, now is null ? 0 : now.To - now.Position, state.LevelLeft, state.LevelRight);
     }
 
-    private static MackieStripState State(MixerStrip s)
+    private MackieStripState State(MixerStrip s)
     {
         var (l, r) = s.Levels();
-        return new MackieStripState(s.Id, s.Name, s.Volume, s.Muted, s.Processor.Settings.Pan, s.OnAir, s.Recorder.IsRecording, Math.Max(l, r));
+        var (track, left) = Track(s.Id);
+        return new MackieStripState(s.Id, s.Name, s.Volume, s.Muted, s.Processor.Settings.Pan, s.OnAir, s.Recorder.IsRecording, Math.Max(l, r),
+            Track: track, Left: left);
+    }
+
+    /// <summary>What plays on a channel, for its block on the iCON screen: the title and the time it still has.</summary>
+    private (string? Track, double Left) Track(string id)
+    {
+        static (string?, double) Clip(IReadOnlyList<ClipInfo> active) =>
+            active.Count > 0 && active[^1] is var c ? (c.Media.DisplayName is { Length: > 0 } n ? n : c.Label, c.Loop ? 0 : c.Length - c.Position) : (null, 0);
+        static (string?, double) Player(ManualPlayer p) =>
+            p.Info is { State: PlayerState.Playing, Media: { } m } i ? (m.DisplayName, i.CueOut - i.Position) : (null, 0);
+        switch (id)
+        {
+            case AudioRouter.LogStrip:
+                if (engine.GetState().Current is { } now) return (now.Label, now.To - now.Position);
+                return Clip(players.Live.Active);
+            case AudioRouter.StandbyStrip:
+                return players.Standby.Select(Player).FirstOrDefault(t => t.Item1 is not null);
+            case AudioRouter.PflStrip: return Player(players.Pfl);
+            case AudioRouter.CartStrip: return Clip(players.Carts.Active);
+            case AudioRouter.OverlayStrip: return Clip(players.Overlays.Active);
+            case AudioRouter.DjStrip:
+                return dj.Decks.Select(d => d.Info).Where(i => i.Playing && i.Media is not null).MaxBy(i => i.Fader) is { } deck
+                    ? (deck.Media!.DisplayName, deck.Duration - deck.Position) : (null, 0);
+            default: return (null, 0);
+        }
     }
 
     private DjDeck? Deck(string id) => id.StartsWith(DeckPrefix, StringComparison.Ordinal) ? dj.Find(id[DeckPrefix.Length..]) : null;

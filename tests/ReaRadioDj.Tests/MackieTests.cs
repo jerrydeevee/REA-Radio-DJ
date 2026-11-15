@@ -491,38 +491,31 @@ public class MackieTests
     }
 
     [Fact]
-    public void An_icon_panel_shows_the_strips_above_the_faders_and_what_plays_on_top()
+    public void An_icon_panel_shows_the_strips_above_the_faders_and_per_fader_what_plays_on_top()
     {
-        var (surface, _) = IconPanel();
+        var (surface, mixer) = IconPanel();
+        mixer.List[0] = mixer.List[0] with { Track = "Kort", Left = 205 };
         var outs = surface.Refresh(force: true);
         var second = outs.Where(o => o.SysEx is [0xF0, 0x00, 0x02, 0x4E, 0x15, 0x13, ..]).ToList();
         Assert.StartsWith("Kanaal Kanaal", Text(second[0]));
         var main = outs.Where(o => o.SysEx is [0xF0, 0x00, 0x00, 0x66, 0x14, 0x12, ..]).Select(Text).ToList();
-        Assert.StartsWith("Nu: Artiest X - Nu", main[0]);
-        Assert.EndsWith(" -3:25", main[0]);
-        Assert.Equal(56, main[0].Length);
-        Assert.StartsWith("Straks: Artiest A - Een", main[1]);
+        // Block 1: the time left on top, the title below; block 2 plays nothing.
+        Assert.Equal("-3:25  " + new string(' ', 49), main[0]);
+        Assert.Equal("Kort   " + new string(' ', 49), main[1]);
     }
 
     [Fact]
-    public void A_long_title_scrolls_on_the_top_screen()
+    public void A_long_title_scrolls_in_its_own_block()
     {
         var (surface, mixer) = IconPanel();
         var now = new DateTime(2026, 11, 15, 13, 0, 0, DateTimeKind.Utc);
         surface.Clock = () => now;
-        string title = "Een artiest met een hele lange naam - En een titel die echt niet op het scherm past";
-        mixer.OnAir = mixer.OnAir with { Now = title };
-        string Top() => surface.Refresh(force: true).Where(o => o.SysEx is [0xF0, 0x00, 0x00, 0x66, 0x14, 0x12, 0, ..]).Select(Text).Single();
-        string first = Top();
-        Assert.StartsWith("Nu: Een artiest", first);
-        Assert.EndsWith(" -3:25", first);
+        mixer.List[1] = mixer.List[1] with { Track = "Artiest X - Lange titel", Left = 65 };
+        string Titles() => surface.Refresh(force: true).Where(o => o.SysEx is [0xF0, 0x00, 0x00, 0x66, 0x14, 0x12, 56, ..]).Select(Text).Single();
+        Assert.Equal("Artiest X - Lange titel"[..6], Titles()[7..13]);
         now += MackieSurface.ScrollWait + MackieSurface.ScrollStep * 4;
-        string later = Top();
-        Assert.StartsWith("Een artiest", later);
-        Assert.EndsWith(" -3:25", later);
-        Assert.Equal(56, later.Length);
-        mixer.OnAir = mixer.OnAir with { Now = "Kort" };
-        Assert.StartsWith("Nu: Kort ", Top());
+        Assert.Equal("Artiest X - Lange titel"[4..10], Titles()[7..13]);
+        Assert.Equal(new string(' ', 7), Titles()[..7]);
     }
 
     [Fact]
