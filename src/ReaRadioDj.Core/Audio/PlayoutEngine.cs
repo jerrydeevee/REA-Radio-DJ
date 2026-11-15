@@ -7,10 +7,16 @@ using static ReaRadioDj.Core.Audio.BassNative;
 namespace ReaRadioDj.Core.Audio;
 
 public sealed record NowPlaying(long Id, string Type, string Label, string Artist, string Title, string Category, string Origin,
-    double Position, double From, double To, double MixAt, double? Intro, double? FadeAt, string? Script, long MediaId);
+    double Position, double From, double To, double MixAt, double? Intro, double? FadeAt, string? Script, long MediaId, string Strip = "");
 
 public sealed record EngineState(bool Running, bool AutoPlay, NowPlaying? Current, IReadOnlyList<NowPlaying> Playing,
-    float LevelLeft, float LevelRight, double SecondsToNext);
+    float LevelLeft, float LevelRight, double SecondsToNext, FlowMode Mode = FlowMode.Auto, bool Held = false);
+
+/// <summary>
+/// How the flow plays: AUTO everything by itself; SEMI by itself, but it waits while the DJ plays a track of their own;
+/// HAND the DJ starts every item.
+/// </summary>
+public enum FlowMode { Auto, Semi, Hand }
 
 /// <summary>
 /// The on-air engine. Every log item is a decoding source in the automation strip of the studio mixer. A 10 ms
@@ -35,7 +41,36 @@ public sealed class PlayoutEngine : IDisposable
     private Thread? _thread;
     private volatile bool _running;
     private int _mixer;
-    private int _presenter;   // the channel of the AI presenter: AI breaks play there
+    private string _lastMusic = "";   // the player channel the last song went to (the next one takes the other)
+
+    /// <summary>
+    /// Called (on the engine thread, before the item sounds) with the channel an item is about to start on, so its
+    /// fader can be opened in time.
+    /// </summary>
+    public Action<string>? StripStarting { get; set; }
+
+    /// <summary>
+    /// The channel an item plays on: music in turn on speler A and B, jingles on the cartwall, AI breaks and voice
+    /// tracks on the AI presenter. Without those channels (or with <see cref="RoutingOptions.FlowOnFaders"/> off) on the
+    /// automation channel.
+    /// </summary>
+    public string StripFor(LogItem item) => Route(item, peek: true);
+
+    private string Route(LogItem item, bool peek)
+    {
+        string Have(string id) => _router.HasStrip(id) ? id : AudioRouter.LogStrip;
+        if (!_options.Routing.FlowOnFaders) return AudioRouter.LogStrip;
+        switch (item.Type)
+        {
+            case LogItemType.Jingle: return Have(AudioRouter.CartStrip);
+            case LogItemType.AiBreak or LogItemType.VoiceTrack: return Have(AudioRouter.PresenterStrip);
+        }
+        string a = AudioRouter.PlayerStrip(1), b = AudioRouter.PlayerStrip(2);
+        if (!_router.HasStrip(a) || !_router.HasStrip(b)) return Have(a);
+        string next = _lastMusic == a ? b : a;
+        if (!peek) _lastMusic = next;
+        return next;
+    }
 
     /// <summary>Supplies a replacement when an AI break is not ready in time (usually a station jingle).</summary>
     public Func<MediaItem?>? FallbackProvider { get; set; }
@@ -56,6 +91,32 @@ public sealed class PlayoutEngine : IDisposable
 
     /// <summary>True = automatic (the next item starts at the mix point); false = live-assist.</summary>
     public bool AutoPlay { get; private set; }
+
+    /// <summary>AUTO, SEMI or HAND (HAND = <see cref="AutoPlay"/> off).</summary>
+    public FlowMode Mode { get; private set; }
+
+    /// <summary>SEMI: the DJ plays a track of their own, the flow waits after what it plays now.</summary>
+    public bool Held { get; private set; }
+
+    /// <summary>The next item starts by itself.</summary>
+    private bool Runs => AutoPlay && !Held;
+
+    /// <summary>Switches the play mode without interrupting what plays.</summary>
+    public void SetMode(FlowMode mode)
+    {
+        lock (_gate)
+        {
+            Mode = mode;
+            AutoPlay = mode != FlowMode.Hand;
+            if (mode != FlowMode.Semi) Held = false;
+        }
+    }
+
+    /// <summary><see cref="SetMode"/> for a minimal API: returns the mode.</summary>
+    public string SetModeAnd(FlowMode mode) { SetMode(mode); return mode.ToString().ToUpperInvariant(); }
+
+    /// <summary>SEMI: the flow waits (true) or goes on (false). Does nothing in the other modes.</summary>
+    public void Hold(bool held) { lock (_gate) Held = held && Mode == FlowMode.Semi; }
 
     private long _lastTick = Environment.TickCount64;
 
@@ -97,8 +158,8 @@ public sealed class PlayoutEngine : IDisposable
         if (_running) return;
         _router.Start();
         _mixer = _router.Strip(AudioRouter.LogStrip).Handle;
-        _presenter = _router.HasStrip(AudioRouter.PresenterStrip) ? _router.Strip(AudioRouter.PresenterStrip).Handle : _mixer;
         AutoPlay = _options.StartAutomation;
+        Mode = AutoPlay ? FlowMode.Auto : FlowMode.Hand;
         Interlocked.Exchange(ref _lastTick, Environment.TickCount64);
         _running = true;
         _thread = new Thread(Loop) { IsBackground = true, Name = "REA-Radio-DJ engine", Priority = ThreadPriority.AboveNormal };
@@ -109,10 +170,10 @@ public sealed class PlayoutEngine : IDisposable
     }
 
     /// <summary>Automatic mode on; starts the next item right away when nothing plays.</summary>
-    public void Play() { lock (_gate) AutoPlay = true; }
+    public void Play() { lock (_gate) { AutoPlay = true; if (Mode == FlowMode.Hand) Mode = FlowMode.Auto; } }
 
     /// <summary>Switches between automatic and live-assist without interrupting what plays.</summary>
-    public void SetAutoPlay(bool on) { lock (_gate) AutoPlay = on; }
+    public void SetAutoPlay(bool on) => SetMode(on ? (Mode == FlowMode.Hand ? FlowMode.Auto : Mode) : FlowMode.Hand);
 
     /// <summary>Stops automation and fades out everything that is playing.</summary>
     public void Stop() => Stop(1.0);
@@ -123,6 +184,8 @@ public sealed class PlayoutEngine : IDisposable
         lock (_gate)
         {
             AutoPlay = false;
+            Mode = FlowMode.Hand;
+            Held = false;
             foreach (var d in _decks.Concat(_inserts)) d.FadeOutNow(fadeSeconds);
         }
     }
@@ -148,7 +211,7 @@ public sealed class PlayoutEngine : IDisposable
         lock (_gate)
         {
             var current = _decks.LastOrDefault();
-            if (current is null) { AutoPlay = true; return; }
+            if (current is null) { AutoPlay = true; if (Mode == FlowMode.Hand) Mode = FlowMode.Auto; return; }
             current.NextStarted = true;
             current.FadeOutNow(0.8);
             StartNext(current);
@@ -173,8 +236,8 @@ public sealed class PlayoutEngine : IDisposable
             var playing = _inserts.Concat(_decks).Select(d => d.Describe()).ToList();
             var (l, r) = _router.IsStarted ? _router.Program.Levels() : (0f, 0f);
             var cur = _decks.LastOrDefault();
-            double toNext = cur is null ? 0 : Math.Max(0, (AutoPlay && !cur.NextStarted ? cur.MixAt : cur.To) - cur.Position);
-            return new EngineState(_running, AutoPlay, playing.LastOrDefault(), playing, l, r, Math.Round(toNext, 2));
+            double toNext = cur is null ? 0 : Math.Max(0, (Runs && !cur.NextStarted ? cur.MixAt : cur.To) - cur.Position);
+            return new EngineState(_running, AutoPlay, playing.LastOrDefault(), playing, l, r, Math.Round(toNext, 2), Mode, Held);
         }
     }
 
@@ -230,7 +293,7 @@ public sealed class PlayoutEngine : IDisposable
         var current = _decks.LastOrDefault();
         if (current is null)
         {
-            if (AutoPlay) StartNext(null);
+            if (Runs) StartNext(null);
             return;
         }
 
@@ -250,7 +313,7 @@ public sealed class PlayoutEngine : IDisposable
         // A voicetrack may start before the mix point: it talks over the outro, which is ducked under it.
         double early = !handMade && upcoming is { Type: LogItemType.VoiceTrack, StartEarly: > 0 } vt
             ? Math.Min(vt.StartEarly, Math.Max(0, current.MixAt - current.From)) : 0;
-        if (!current.NextStarted && AutoPlay && current.Position >= current.MixAt - early)
+        if (!current.NextStarted && Runs && current.Position >= current.MixAt - early)
         {
             current.NextStarted = true;
             if (handMade) { } // the volume lines do the rest
@@ -360,6 +423,8 @@ public sealed class PlayoutEngine : IDisposable
 
         public LogItem Item { get; }
         public MediaItem Media { get; }
+        /// <summary>The mixer channel this item plays on.</summary>
+        public string Strip { get; }
         public double From { get; }
         public double To { get; }
         public double MixAt { get; private set; }
@@ -379,6 +444,7 @@ public sealed class PlayoutEngine : IDisposable
         {
             Item = item;
             Media = media;
+            Strip = engine.Route(item, peek: false);
             var mix = engine._options.Mix;
             var cues = media.Cues;
             _gain = engine.LoudnessGain(media);
@@ -478,7 +544,8 @@ public sealed class PlayoutEngine : IDisposable
             _autoMixAt = MixAt;
             _autoFade = FadeLength;
             Breakpoints();
-            int channel = item.Type == LogItemType.AiBreak ? engine._presenter : engine._mixer;
+            try { engine.StripStarting?.Invoke(Strip); } catch { /* the fader is a nicety: the item plays anyway */ }
+            int channel = engine._router.Strip(Strip).Handle;
             BassRuntime.Check(BASS_Mixer_StreamAddChannel(channel, _handle, BASS_MIXER_CHAN_NORAMPIN | BASS_STREAM_AUTOFREE),
                 "BASS_Mixer_StreamAddChannel");
             if (fadeIn > 0 && _unduckAt is null) BASS_ChannelSlideAttribute(_handle, BASS_ATTRIB_VOL, _gain, (uint)(fadeIn * 1000));
@@ -654,6 +721,6 @@ public sealed class PlayoutEngine : IDisposable
         }
 
         public NowPlaying Describe() => new(Item.Id, Item.Type.ToString(), Item.Label, Media.Artist, Media.Title, Media.Category,
-            Item.Origin, Math.Round(Position, 2), From, To, MixAt, Media.Intro, FadeAt, Item.Script, Media.Id);
+            Item.Origin, Math.Round(Position, 2), From, To, MixAt, Media.Intro, FadeAt, Item.Script, Media.Id, Strip);
     }
 }

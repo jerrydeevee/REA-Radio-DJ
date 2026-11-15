@@ -133,7 +133,7 @@ public sealed record DjMixerRequest(double? Crossfader = null, string? Curve = n
     bool? Quantize = null, double? CueMix = null, bool? Limiter = null, double? LimiterDb = null);
 
 public sealed record EngineDto(bool Running, bool AutoPlay, NowPlayingDto? Current, IReadOnlyList<NowPlayingDto> Playing,
-    float LevelLeft, float LevelRight, double SecondsToNext);
+    float LevelLeft, float LevelRight, double SecondsToNext, string Mode = "AUTO", bool Held = false);
 
 public sealed record NowPlayingDto(long Id, string Type, string Label, string Artist, string Title, string Category, string Origin,
     double Position, double From, double To, double MixAt, double? Intro, double? FadeAt, string? Script, long MediaId,
@@ -148,7 +148,7 @@ public sealed record LogItemDto(long Id, string Type, string Label, string? Arti
     List<LogItemDto>? Children = null);
 
 public sealed record PlayerDto(string Id, string Name, string State, long? MediaId, string? Label, double Position, double CueIn,
-    double CueOut, double? Intro, IReadOnlyList<string> Stack);
+    double CueOut, double? Intro, IReadOnlyList<string> Stack, bool Flow = false);
 
 public sealed record ClipDto(string Key, string Label, long? MediaId, double Position, double Length, bool Loop);
 
@@ -274,6 +274,9 @@ public sealed record MediaRequest(long MediaId);
 public sealed record SeekRequest(double Seconds);
 
 public sealed record SwitchRequest(bool On);
+
+/// <summary>The play mode: AUTO, SEMI or HAND.</summary>
+public sealed record ModeRequest(string Mode);
 
 public sealed record VolumeRequest(float Volume, bool? Muted);
 

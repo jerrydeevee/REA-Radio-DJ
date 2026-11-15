@@ -182,7 +182,7 @@ public class MackieTests
         surface.Handle(Note(Mackie.Play, true));
         surface.Handle(Note(Mackie.Stop, true));
         surface.Handle(Note(Mackie.Cycle, true));
-        Assert.Equal(["NEXT", "STOP", "AUTO TOGGLE"], mixer.Commands);
+        Assert.Equal(["NEXT", "STOP", "MODE CYCLE"], mixer.Commands);
         surface.Handle(Bend(8, 0));
         Assert.Equal(0f, mixer.List[4].Volume);
     }
@@ -364,15 +364,35 @@ public class MackieTests
     }
 
     [Fact]
-    public void By_hand_play_starts_the_player_that_waits_longest()
+    public void Play_starts_the_next_item_of_the_flow_also_by_hand()
     {
         var (surface, mixer) = LivePanel();
         mixer.AutoPlay = false;
         surface.Handle(Note(Mackie.Play, true));
-        Assert.Equal("PLAYER NEXT", mixer.Commands[^1]);
-        mixer.AutoPlay = true;
-        surface.Handle(Note(Mackie.Play, true));
         Assert.Equal("NEXT", mixer.Commands[^1]);
+    }
+
+    [Fact]
+    public void By_hand_the_fader_of_the_waiting_flow_item_starts_it()
+    {
+        var (surface, mixer) = LivePanel();
+        mixer.AutoPlay = false;
+        mixer.List[1] = mixer.List[1] with { Next = true };
+        surface.Handle(Bend(1, Mackie.Position(0.8f)));
+        Assert.Equal("NEXT", mixer.Commands[^1]);
+        Assert.DoesNotContain("PLAYER 2 PLAY", mixer.Commands);
+    }
+
+    [Fact]
+    public void Loop_cycles_the_play_mode_and_its_lamp_shows_it()
+    {
+        var (surface, mixer) = LivePanel();
+        surface.Handle(Note(Mackie.Cycle, true));
+        Assert.Equal("MODE CYCLE", mixer.Commands[^1]);
+        mixer.AutoPlay = false;
+        Assert.Contains(Mackie.Led(Mackie.Cycle, false), surface.Refresh());
+        mixer.AutoPlay = true;
+        Assert.Contains(Mackie.Led(Mackie.Cycle, true), surface.Refresh());
     }
 
     // ---------------------------------------------------------------- DJ layout

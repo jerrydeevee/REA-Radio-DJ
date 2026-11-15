@@ -11,9 +11,17 @@ namespace ReaRadioDj.Server;
 public sealed class AutoFaderService(AudioRouter router, StudioPlayers players, DjMixer dj, PlayoutEngine engine, ILogger<AutoFaderService> logger) : BackgroundService
 {
     private readonly FaderFollow _follow = new();
+    private readonly object _gate = new();
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
+        // The automation tells which channel an item starts on before it sounds: its fader opens right then.
+        engine.StripStarting = id =>
+        {
+            if (!router.HasStrip(id)) return;
+            var s = router.Strip(id);
+            lock (_gate) if (_follow.Step(id, true, false, s.Volume) is float v) s.SetVolume(v);
+        };
         using var timer = new PeriodicTimer(TimeSpan.FromMilliseconds(50));
         while (await timer.WaitForNextTickAsync(stoppingToken))
         {
@@ -24,18 +32,27 @@ public sealed class AutoFaderService(AudioRouter router, StudioPlayers players, 
 
     private void Step()
     {
+        lock (_gate) StepLocked();
+    }
+
+    private void StepLocked()
+    {
         if (!router.IsStarted) return;
-        Strip(AudioRouter.CartStrip, players.Carts.Active.Count > 0, idle: false);
+        var flow = engine.GetState().Playing;
+        bool Flow(string strip) => flow.Any(p => p.Strip == strip);
+        Strip(AudioRouter.CartStrip, players.Carts.Active.Count > 0 || Flow(AudioRouter.CartStrip), idle: false);
         Strip(AudioRouter.OverlayStrip, players.Overlays.Active.Count > 0, idle: false);
         // A player's fader goes with it, like on a radio desk: up while it plays, down when it is empty or waits at
         // its start (stopped, or loaded from the log). Opening it by hand then starts the player (fader start).
         for (int n = 1; n <= players.Standby.Count; n++)
         {
             var state = players.Standby[n - 1].Info.State;
-            Strip(AudioRouter.PlayerStrip(n), state == PlayerState.Playing, idle: state is PlayerState.Empty or PlayerState.Cued);
+            bool flowHere = Flow(AudioRouter.PlayerStrip(n));
+            Strip(AudioRouter.PlayerStrip(n), state == PlayerState.Playing || flowHere,
+                idle: !flowHere && state is PlayerState.Empty or PlayerState.Cued);
         }
         var presenterState = players.Presenter.Info.State;
-        bool breakPlays = engine.GetState().Playing.Any(p => p.Type == nameof(Core.Model.LogItemType.AiBreak));
+        bool breakPlays = Flow(AudioRouter.PresenterStrip);
         // The automation needs the presenter channel open for its breaks: it only goes down by hand (automation off).
         Strip(AudioRouter.PresenterStrip, presenterState == PlayerState.Playing || breakPlays,
             idle: !engine.AutoPlay && !breakPlays && presenterState is PlayerState.Empty or PlayerState.Cued);

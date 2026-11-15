@@ -475,6 +475,9 @@ public sealed class AudioRouter : IDisposable
         return 1;
     }
 
+    /// <summary>The channels the music of the automation plays on: the automation channel and speler A-D.</summary>
+    public IEnumerable<string> MusicFlowStrips => new[] { LogStrip }.Concat(Enumerable.Range(1, PlayerCount).Select(PlayerStrip)).Where(HasStrip);
+
     /// <summary>The channels that go down under the open mic.</summary>
     private IEnumerable<string> MusicStrips =>
         new[] { LogStrip, CartStrip, DjStrip }.Concat(Enumerable.Range(1, PlayerCount).Select(PlayerStrip)).Where(HasStrip);

@@ -54,7 +54,7 @@ Werkt alleen als *Transportknoppen bedienen de uitzending* aan staat.
 |------|-------------|----|----------|
 | PLAY | 0x5E | ✅ NEXT, of de keuze van het jogwiel | — |
 | STOP | 0x5D | 🟡 STOP (uitfaden) | — |
-| LOOP | 0x56 | 🟡 automatisch of live-assist | — |
+| LOOP | 0x56 | ✅ modus AUTO → SEMI → HAND (lampje aan / knippert / uit) | — |
 | ◀◀ | 0x5B | — | 💡 PFL van het volgende item in de log |
 | ▶▶ | 0x5C | — | 💡 SKIP (snel uitfaden) |
 | REC | 0x5F | — | 💡 microfoon aan/uit (talkover) |
@@ -139,7 +139,18 @@ de mic komt bij openen terug op zijn oude stand.
 | 7–8 | VoIP 1 en 2 |
 | daarna (Bank) | Speler C/D, Overlay, DJ (geen automatiseringsfader: live nemen de spelers het over) |
 
-Elke standby-speler heeft een eigen kanaal. **Met de hand** (automatisering uit) vult de log speler A en B, een
-klare AI-break gaat naar de AI-presentator. Fader open = speler start, dicht = stop; PLAY start de speler die het
-langst klaarstaat; SOLO luistert het nummer van die speler voor op de PFL. Uit te zetten met *Live met de hand*
-bij *Hardware › Mackie*.
+**De flow onder de faders.** Alles uit de programmalog speelt altijd onder een fader, ook volautomatisch:
+muziek om en om onder Speler A en B (fader 1 en 2), een jingle onder de Cartwall, een AI-break of voicetrack onder
+de AI-presentator (fader 4). De fader van dat kanaal gaat open als het item begint en dicht als het klaar is. In de
+studio staat het item in de spelerkaart van Speler A/B ("uit programmalog"); kleuren: A rood, B geel, C blauw.
+
+**Modi** (studio: Auto / Semi / Hand, iCON: LOOP, commando `MODE AUTO|SEMI|HAND|CYCLE`):
+
+| Modus | Wat er gebeurt |
+|-------|----------------|
+| AUTO | De log loopt helemaal vanzelf. |
+| SEMI | De log loopt vanzelf; de DJ valt in met jingles, tracks, mic of AI. Start de DJ een eigen track op een speler, dan wacht de log na wat hij nu speelt en gaat verder als die track klaar is. |
+| HAND | De DJ start elk item. Het volgende item staat met `> ` op het schermpje van zijn fader; fader open of PLAY start het. |
+
+Een speler die je zelf laadt (Speler C/D of A/B als ze leeg zijn): fader open = start, dicht = stop; SOLO luistert
+voor op de PFL. Uit te zetten met *Live met de hand* bij *Hardware › Mackie*.

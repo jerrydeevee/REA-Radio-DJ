@@ -39,7 +39,7 @@ public static class Snapshot
             Engine(state, sp.GetService<PresenterTexts>()),
             upcoming,
             log.History.Take(20).Select(i => Item(i, default)).ToList(),
-            players.Standby.Select(p => Player(p.Info)).ToList(),
+            players.Standby.Select((p, i) => Player(p.Info, state.Playing.LastOrDefault(n => n.Strip == AudioRouter.PlayerStrip(i + 1)))).ToList(),
             Player(players.Pfl.Info),
             players.Carts.Active.Concat(sp.GetRequiredService<Cartwall>().SamplerActive).Select(Clip).ToList(),
             players.Overlays.Active.Select(Clip).ToList(),
@@ -63,7 +63,8 @@ public static class Snapshot
         Enum.TryParse<T>(text, ignoreCase: true, out var v) ? v : fallback;
 
     public static EngineDto Engine(EngineState s, PresenterTexts? texts = null) => new(s.Running, s.AutoPlay,
-        s.Current is null ? null : Now(s.Current, texts), s.Playing.Select(n => Now(n, texts)).ToList(), s.LevelLeft, s.LevelRight, s.SecondsToNext);
+        s.Current is null ? null : Now(s.Current, texts), s.Playing.Select(n => Now(n, texts)).ToList(), s.LevelLeft, s.LevelRight, s.SecondsToNext,
+        s.Mode.ToString().ToUpperInvariant(), s.Held);
 
     private static NowPlayingDto Now(NowPlaying n, PresenterTexts? texts) => new(n.Id, Lower(n.Type), n.Label, n.Artist, n.Title, n.Category, n.Origin,
         n.Position, n.From, n.To, n.MixAt, n.Intro, n.FadeAt, n.Script, n.MediaId, texts?.Get(n.MediaId));
@@ -88,6 +89,10 @@ public static class Snapshot
         }
         return list;
     }
+
+    public static PlayerDto Player(PlayerInfo p, NowPlaying? flow) => p.State == PlayerState.Empty && flow is not null
+        ? new(p.Id, p.Name, "playing", flow.MediaId > 0 ? flow.MediaId : null, flow.Label, flow.Position, flow.From, flow.To, flow.Intro, [], Flow: true)
+        : Player(p);
 
     public static PlayerDto Player(PlayerInfo p) => new(p.Id, p.Name, Name(p.State), p.Media is { Id: > 0 } m ? m.Id : null,
         p.Media?.DisplayName, p.Position, p.CueIn, p.CueOut, p.Media?.Intro, p.Stack.Select(x => x.DisplayName).ToList());

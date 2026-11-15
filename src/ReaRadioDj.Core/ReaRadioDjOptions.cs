@@ -117,6 +117,11 @@ public sealed class RoutingOptions
     /// <summary>Automation level under overlays and overlay carts, 0..1.</summary>
     public double OverlayDuckLevel { get; set; } = 0.35;
     public int StandbyPlayers { get; set; } = 2;
+    /// <summary>
+    /// The flow under the faders: the automation plays music in turn on speler A and B, jingles on the cartwall and AI
+    /// breaks on the AI presenter, each under its own fader. Off: everything on the automation channel.
+    /// </summary>
+    public bool FlowOnFaders { get; set; } = true;
     /// <summary>Mixer channels that have an output of their own (channel id → "dev:&lt;device&gt;:&lt;pair&gt;"); the rest goes on air.</summary>
     public Dictionary<string, string> StripOutputs { get; set; } = [];
     /// <summary>

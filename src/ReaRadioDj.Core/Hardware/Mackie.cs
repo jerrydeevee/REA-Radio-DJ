@@ -207,7 +207,7 @@ public sealed record MackieLogItem(long Id, string Label);
 /// </summary>
 public sealed record MackieStripState(string Id, string Name, float Volume, bool Muted, double Pan, bool OnAir, bool Recording, float Peak,
     string? Deck = null, bool Playing = false, bool Sync = false, bool Pfl = false, float Top = 1.25f,
-    string? Track = null, double Left = 0, string? Player = null);
+    string? Track = null, double Left = 0, string? Player = null, bool Next = false);
 
 /// <summary>A colour on the colour bar of an iCON panel, 0-127 per component.</summary>
 public readonly record struct MackieColor(int R, int G, int B)
@@ -246,6 +246,8 @@ public interface IMackieMixer
     void StartFromLog(long id);
     bool Playing { get; }
     bool AutoPlay { get; }
+    /// <summary>AUTO, SEMI or HAND.</summary>
+    string Mode => AutoPlay ? "AUTO" : "HAND";
     /// <summary>Automix on the DJ desk is on (it opens and closes the deck faders itself).</summary>
     bool DjAutomix { get; }
 }
@@ -416,6 +418,9 @@ public sealed class MackieSurface(IMackieMixer mixer, MackieSettings settings, M
                 mixer.SetVolume(s.Id, volume);
                 _sent[FaderKey(f.Strip)] = (uint)f.Position;
                 if (s.Deck is { } deck && Settings.DjFaderStart) return FaderStart(s, deck, volume, a => Deck(deck, a, a == "PLAY" ? "faderstart" : "fader dicht, pauze"));
+                // By hand: the flow item that waits for this channel starts when its fader opens.
+                if (s.Next && Settings.LiveAssist)
+                    return FaderStart(s, "next:" + s.Id, volume, a => a == "PLAY" ? (mixer.Run("NEXT") is { } why ? $"faderstart lukt niet: {why}" : "faderstart: volgende") : "fader dicht");
                 if (s.Player is { } player && Settings.LiveAssist)
                     return FaderStart(s, "player:" + player, volume, a => Player(player, a == "PLAY" ? "PLAY" : "STOP", a == "PLAY" ? "faderstart" : "fader dicht, stop"));
                 return null;
@@ -484,8 +489,6 @@ public sealed class MackieSurface(IMackieMixer mixer, MackieSettings settings, M
         int at = Choice(mixer.Upcoming(), out var item);
         _choice = null;
         if (at > 0 && item is not null) { mixer.StartFromLog(item.Id); return $"start {item.Label}"; }
-        // Live, by hand: the player that waits longest.
-        if (Settings.LiveAssist && !mixer.AutoPlay && mixer.Run("PLAYER NEXT") is null) return "volgende speler";
         mixer.Run("NEXT");
         return "NEXT";
     }
@@ -533,7 +536,7 @@ public sealed class MackieSurface(IMackieMixer mixer, MackieSettings settings, M
                 return mixer.Run("DJ AUTOMIX TOGGLE") is { } fail ? $"automix: {fail}" : mixer.DjAutomix ? "automix aan" : "automix uit";
             case Mackie.Play when Settings.Transport && !Extender: return Play();
             case Mackie.Stop when Settings.Transport && !Extender: mixer.Run("STOP"); return "STOP";
-            case Mackie.Cycle when Settings.Transport && !Extender: mixer.Run("AUTO TOGGLE"); return "AUTO TOGGLE";
+            case Mackie.Cycle when Settings.Transport && !Extender: mixer.Run("MODE CYCLE"); return "modus " + mixer.Mode;
         }
         // Not used (yet): named with its note, so a button on the panel can be found back.
         return $"knop {note:X2}h: geen functie";
@@ -592,7 +595,13 @@ public sealed class MackieSurface(IMackieMixer mixer, MackieSettings settings, M
         if (!Extender)
         {
             Lamp(Mackie.Play, Settings.Transport && mixer.Playing);
-            Lamp(Mackie.Cycle, Settings.Transport && (Group.Layout == MackieLayout.Dj ? mixer.DjAutomix : mixer.AutoPlay));
+            if (Group.Layout == MackieLayout.Dj || !Settings.Transport) Lamp(Mackie.Cycle, Settings.Transport && mixer.DjAutomix);
+            else
+            {
+                // LOOP shows the mode: on = AUTO, flashing = SEMI, off = HAND.
+                string mode = mixer.Mode;
+                Send("led" + Mackie.Cycle, Mackie.Led(Mackie.Cycle, mode != "HAND", flash: mode == "SEMI"), mode switch { "AUTO" => 1u, "SEMI" => 2u, _ => 0u });
+            }
             Lamp(Mackie.Flip, Group.Layout == MackieLayout.Dj);
         }
 

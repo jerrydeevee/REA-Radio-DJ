@@ -53,6 +53,8 @@ public static class StudioApi
         api.MapPost("/transport/next", (PlayoutEngine e) => { e.Next(); return Results.Ok(); });
         api.MapPost("/transport/skip", (PlayoutEngine e) => { e.Skip(); return Results.Ok(); });
         api.MapPost("/transport/autoplay", (SwitchRequest r, PlayoutEngine e) => { e.SetAutoPlay(r.On); return Results.Ok(); });
+        api.MapPost("/transport/mode", (ModeRequest r, PlayoutEngine e) =>
+            Enum.TryParse<FlowMode>(r.Mode, ignoreCase: true, out var m) ? Results.Ok(e.SetModeAnd(m)) : Results.BadRequest("AUTO, SEMI of HAND"));
         // Old names, used by the first browser studio.
         api.MapPost("/play", (PlayoutEngine e) => { e.Play(); return Results.Ok(); });
         api.MapPost("/stop", (PlayoutEngine e) => { e.Stop(); return Results.Ok(); });

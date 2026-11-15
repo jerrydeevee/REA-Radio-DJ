@@ -217,7 +217,8 @@ internal sealed class EngineMackieMixer(AudioRouter router, CommandBus bus, Play
         return new MackieStripState(s.Id, s.Name, s.Volume, s.Muted, s.Processor.Settings.Pan, s.OnAir, s.Recorder.IsRecording, Math.Max(l, r),
             Playing: info?.State == PlayerState.Playing,
             Pfl: info?.Media is { } m && pfl.State == PlayerState.Playing && pfl.Media?.Path == m.Path,
-            Track: track, Left: left, Player: player is null ? null : player.Id == "presenter" ? "PRESENTER" : player.Id["standby".Length..]);
+            Track: track, Left: left, Player: player is null ? null : player.Id == "presenter" ? "PRESENTER" : player.Id["standby".Length..],
+            Next: !engine.AutoPlay && log.PeekNext() is { Media: not null } next && engine.StripFor(next) == s.Id);
     }
 
     /// <summary>The player that plays on a channel: speler A-D on theirs, the presenter player on the presenter's.</summary>
@@ -237,13 +238,17 @@ internal sealed class EngineMackieMixer(AudioRouter router, CommandBus bus, Play
         // A player shows its track also while it waits (loaded, paused): the time is what is left from where it stands.
         static (string?, double) Player(ManualPlayer p) =>
             p.Info is { State: not PlayerState.Empty, Media: { } m } i ? (m.DisplayName, i.CueOut - i.Position) : (null, 0);
+        // The flow first: what the automation plays on this channel (music on speler A/B, jingles, AI).
+        var state = engine.GetState();
+        if (state.Playing.LastOrDefault(p => p.Strip == id) is { } flowItem) return (flowItem.Label, flowItem.To - flowItem.Position);
+        // By hand: the item that waits for this fader.
+        if (!engine.AutoPlay && log.PeekNext() is { Media: { } waiting } next && engine.StripFor(next) == id)
+            return ("> " + next.Label, waiting.CueOut - waiting.CueIn);
         switch (id)
         {
             case AudioRouter.LogStrip:
-                if (engine.GetState().Current is { } now) return (now.Label, now.To - now.Position);
                 return Clip(players.Live.Active);
             case AudioRouter.PresenterStrip:
-                if (engine.GetState().Playing.FirstOrDefault(p => p.Type == nameof(LogItemType.AiBreak)) is { } brk) return (brk.Label, brk.To - brk.Position);
                 return Player(players.Presenter);
             case AudioRouter.PflStrip: return Player(players.Pfl);
             case AudioRouter.CartStrip: return Clip(players.Carts.Active);
@@ -281,5 +286,6 @@ internal sealed class EngineMackieMixer(AudioRouter router, CommandBus bus, Play
     public void StartFromLog(long id) { if (log.MoveTo(id, 0)) engine.Next(); }
     public bool Playing => engine.GetState().Playing.Count > 0;
     public bool AutoPlay => engine.AutoPlay;
+    public string Mode => engine.Mode.ToString().ToUpperInvariant();
     public bool DjAutomix => dj.Automix.On;
 }

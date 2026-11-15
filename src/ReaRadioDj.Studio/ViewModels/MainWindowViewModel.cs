@@ -333,7 +333,20 @@ public sealed partial class MainWindowViewModel : ObservableObject
 
     public bool StationDiffers => !string.Equals(Station, "REA-Radio-DJ", StringComparison.OrdinalIgnoreCase);
     partial void OnStationChanged(string value) => OnPropertyChanged(nameof(StationDiffers));
-    public string ModeText => AutoPlay ? "AUTOMATISCH" : "LIVE-ASSIST";
+    public string ModeText => Mode switch { "AUTO" => "AUTOMATISCH", "SEMI" => Held ? "SEMI · wacht op DJ" : "SEMI", _ => "HAND" };
+    [ObservableProperty] private string _mode = "AUTO";
+    [ObservableProperty] private bool _held;
+    public bool IsAuto => Mode == "AUTO";
+    public bool IsSemi => Mode == "SEMI";
+    public bool IsHand => Mode == "HAND";
+    partial void OnModeChanged(string value)
+    {
+        OnPropertyChanged(nameof(ModeText));
+        OnPropertyChanged(nameof(IsAuto));
+        OnPropertyChanged(nameof(IsSemi));
+        OnPropertyChanged(nameof(IsHand));
+    }
+    partial void OnHeldChanged(bool value) => OnPropertyChanged(nameof(ModeText));
     public string StatusLine => string.IsNullOrEmpty(Hub.Status) ? Hub.ConnectionText : $"{Hub.ConnectionText} · {Hub.Status}";
 
     partial void OnAutoPlayChanged(bool value) => OnPropertyChanged(nameof(ModeText));
@@ -351,11 +364,15 @@ public sealed partial class MainWindowViewModel : ObservableObject
         }
     }
 
-    /// <summary>"auto" or "assist": the two halves of the mode switch.</summary>
+    /// <summary>"auto", "semi" or "hand": the three parts of the mode switch.</summary>
     [RelayCommand]
-    private Task SetMode(string? mode) => (mode == "auto") == AutoPlay
-        ? Task.CompletedTask
-        : Hub.Client.PostAsync("/api/transport/autoplay", new SwitchRequest(mode == "auto"));
+    private Task SetMode(string? mode)
+    {
+        var m = (mode ?? "auto").ToUpperInvariant();
+        if (m == "ASSIST") m = "HAND";
+        Mode = m;   // shows at once; the next state confirms it
+        return Hub.Client.PostAsync("/api/transport/mode", new ModeRequest(m));
+    }
 
     // ------------------------------------------------------------ newer version
 
@@ -456,6 +473,8 @@ public sealed partial class MainWindowViewModel : ObservableObject
         Clock = s.Time.ToString("HH:mm:ss");
         ClockName = s.Clock is null ? "geen klok" : $"klok: {s.Clock}";
         AutoPlay = s.Engine.AutoPlay;
+        Mode = s.Engine.Mode;
+        Held = s.Engine.Held;
         OnAir = s.Engine.Current is not null;
         MicOpen = s.Mixer.Mic.Open;
         MicStatus = $"Microfoon: {s.Mixer.Mic.Status}";

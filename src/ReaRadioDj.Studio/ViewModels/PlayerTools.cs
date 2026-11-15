@@ -61,6 +61,10 @@ public sealed partial class PlayerCard : ObservableObject
     [ObservableProperty] private string _sub = "";
     [ObservableProperty] private string _remainingTime = "—";
     [ObservableProperty] private bool _loaded;
+    /// <summary>The colour of the player: speler A red, B yellow, C blue (null for the others).</summary>
+    [ObservableProperty] private IBrush? _playerBrush;
+    /// <summary>What plays is an item of the program log, playing on this player's channel.</summary>
+    [ObservableProperty] private bool _flow;
 
     private void ShowState(bool loaded, double left)
     {
@@ -80,6 +84,14 @@ public sealed partial class PlayerCard : ObservableObject
     public void Update(PlayerDto p)
     {
         Name = p.Name;
+        PlayerBrush = p.Id switch
+        {
+            "standby1" => Brushes.FromHex("#E5484D"),
+            "standby2" => Brushes.FromHex("#F5C518"),
+            "standby3" => Brushes.FromHex("#3B82F6"),
+            _ => null,
+        };
+        Flow = p.Flow;
         State = p.State;
         Playing = p.State == "playing";
         MediaId = p.MediaId;

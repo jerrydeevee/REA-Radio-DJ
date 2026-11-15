@@ -139,6 +139,22 @@ public sealed class CommandBus(
             case "STOP": engine.Stop(); return CommandResult.Done();
             case "AUTO":
                 return Switch(Arg(1), engine.AutoPlay, on => engine.SetAutoPlay(on), "automatisch");
+            case "MODE":
+            {
+                // MODE AUTO|SEMI|HAND, or MODE CYCLE (AUTO > SEMI > HAND > AUTO).
+                var arg = Arg(1).ToUpperInvariant();
+                FlowMode? mode = arg switch
+                {
+                    "AUTO" or "AUTOMATISCH" => FlowMode.Auto,
+                    "SEMI" => FlowMode.Semi,
+                    "HAND" or "MANUAL" or "ASSIST" => FlowMode.Hand,
+                    "CYCLE" or "" => engine.Mode switch { FlowMode.Auto => FlowMode.Semi, FlowMode.Semi => FlowMode.Hand, _ => FlowMode.Auto },
+                    _ => null,
+                };
+                if (mode is not { } flowMode) return CommandResult.Fail("MODE AUTO, SEMI of HAND");
+                engine.SetMode(flowMode);
+                return CommandResult.Done("modus " + flowMode.ToString().ToUpperInvariant());
+            }
             case "BREAK":
                 log.Insert(0, new LogItem { Type = LogItemType.AiBreak, Origin = "commando" });
                 return CommandResult.Done("AI-break als volgende");

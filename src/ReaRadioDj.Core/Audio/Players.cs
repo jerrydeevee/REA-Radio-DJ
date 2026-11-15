@@ -127,7 +127,7 @@ public sealed class ClipBank : ITickable
         Stop(key, 0);
         var clip = new Clip(_strip, media, AudioRouter.LoudnessGain(media, _targetLufs), media.CueIn, media.CueOut, false, loop);
         lock (_gate) _clips[key] = (clip, label, duckMusic);
-        if (duckMusic) _router.Strip(AudioRouter.LogStrip).Duck("clip:" + key, (float)duckLevel, 300);
+        if (duckMusic) foreach (var id in _router.MusicFlowStrips) _router.Strip(id).Duck("clip:" + key, (float)duckLevel, 300);
         Started?.Invoke(key, media);
     }
 
@@ -176,7 +176,7 @@ public sealed class ClipBank : ITickable
         }
         double played = (DateTime.Now - c.Clip.Started).TotalSeconds;
         c.Clip.Free();
-        if (c.Duck) _router.Strip(AudioRouter.LogStrip).Duck("clip:" + key, null, 600);
+        if (c.Duck) foreach (var id in _router.MusicFlowStrips) _router.Strip(id).Duck("clip:" + key, null, 600);
         Ended?.Invoke(key, c.Clip.Media, played);
     }
 }

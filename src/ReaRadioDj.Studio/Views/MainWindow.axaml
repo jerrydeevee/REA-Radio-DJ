@@ -199,12 +199,14 @@
           </Button>
           <Border BorderBrush="{DynamicResource ControlBorderBrush}" BorderThickness="1" CornerRadius="{DynamicResource Radius8}" ClipToBounds="True" VerticalAlignment="Center">
             <StackPanel Orientation="Horizontal">
-              <ToggleButton Classes="seg" Content="Automatisch" IsChecked="{Binding AutoPlay, Mode=OneWay}" Command="{Binding SetModeCommand}" CommandParameter="auto"
-                            ToolTip.Tip="De engine start elk volgend item zelf" />
-              <ToggleButton Classes="seg" IsChecked="{Binding !AutoPlay, Mode=OneWay}" Command="{Binding SetModeCommand}" CommandParameter="assist"
-                            ToolTip.Tip="Live-assist: jij start elk volgend item">
+              <ToggleButton Classes="seg" Content="Auto" IsChecked="{Binding IsAuto, Mode=OneWay}" Command="{Binding SetModeCommand}" CommandParameter="auto"
+                            ToolTip.Tip="AUTO: de programmalog loopt helemaal vanzelf" />
+              <ToggleButton Classes="seg" Content="Semi" IsChecked="{Binding IsSemi, Mode=OneWay}" Command="{Binding SetModeCommand}" CommandParameter="semi"
+                            ToolTip.Tip="SEMI: de log loopt vanzelf, jij valt in met jingles, tracks, mic of AI; speelt jouw eigen track, dan wacht de log" />
+              <ToggleButton Classes="seg" IsChecked="{Binding IsHand, Mode=OneWay}" Command="{Binding SetModeCommand}" CommandParameter="hand"
+                            ToolTip.Tip="HAND: jij start elk item (fader open, PLAY of Volgende)">
                 <StackPanel Orientation="Horizontal" Spacing="8">
-                  <TextBlock Text="Assist" VerticalAlignment="Center" />
+                  <TextBlock Text="Hand" VerticalAlignment="Center" />
                   <Border Classes="key"><TextBlock Text="F6" /></Border>
                 </StackPanel>
               </ToggleButton>
