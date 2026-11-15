@@ -110,6 +110,13 @@ public static class Mackie
         return new MackieOutput(0, [.. bytes]);
     }
 
+    /// <summary>A whole display row (56 characters), plain ASCII.</summary>
+    public static string Row(string text)
+    {
+        var t = new string(Ascii(text).Select(b => (char)b).ToArray());
+        return t.Length > 56 ? t[..56] : t.PadRight(56);
+    }
+
     /// <summary>Seven characters per strip: six of the text and a space between strips.</summary>
     public static string Cell(string text)
     {
@@ -135,6 +142,9 @@ public static class Mackie
     }
 }
 
+/// <summary>An item further on in the log, as the surface shows it.</summary>
+public sealed record MackieLogItem(long Id, string Label);
+
 /// <summary>What the surface shows of one mixer channel.</summary>
 public sealed record MackieStripState(string Id, string Name, float Volume, bool Muted, double Pan, bool OnAir, bool Recording, float Peak);
 
@@ -149,6 +159,10 @@ public interface IMackieMixer
     void SetRecording(string id, bool recording);
     /// <summary>A command on the command bus (NEXT, STOP, AUTO TOGGLE).</summary>
     void Run(string command);
+    /// <summary>What comes next in the log, the next item first (browsed with the jog wheel).</summary>
+    IReadOnlyList<MackieLogItem> Upcoming();
+    /// <summary>Puts a log item on top and starts it now, mixing out of what plays (as NEXT does).</summary>
+    void StartFromLog(long id);
     bool Playing { get; }
     bool AutoPlay { get; }
 }
@@ -212,6 +226,13 @@ public sealed class MackieSurface(IMackieMixer mixer, MackieSettings settings, M
     private readonly Dictionary<string, uint> _sent = [];
     private readonly Dictionary<int, string> _display = [];
     private int _version = -1;
+    private long? _choice;
+    private DateTime _choiceUntil;
+
+    /// <summary>How long an item chosen with the jog wheel stays on the display, and stays what PLAY starts.</summary>
+    public static readonly TimeSpan ChoiceTime = TimeSpan.FromSeconds(8);
+    /// <summary>The time (the tests set their own).</summary>
+    public Func<DateTime> Clock { get; set; } = () => DateTime.UtcNow;
 
     public MackieSettings Settings { get; set; } = settings;
     /// <summary>The bank shared with the other panels of this group.</summary>
@@ -252,10 +273,46 @@ public sealed class MackieSurface(IMackieMixer mixer, MackieSettings settings, M
                 if (StripAt(all, v.Strip) is not { } p) return null;
                 mixer.SetPan(p.Id, Math.Round(Math.Clamp(p.Pan + v.Delta * 0.05, -1, 1), 2));
                 return null;
+            case MackieJog j when Settings.Transport && !Extender:
+                return Browse(j.Delta);
             case MackieButton { Pressed: true } b:
                 return Press(b.Note, all);
         }
         return null;
+    }
+
+    /// <summary>The jog wheel walks through what comes next in the log; the display shows the choice for a while.</summary>
+    private string? Browse(int delta)
+    {
+        if (delta == 0) return null;
+        var log = mixer.Upcoming();
+        if (log.Count == 0) { _choice = null; return "log: niets meer gepland"; }
+        int at = Choice(log, out _);
+        at = Math.Clamp((at < 0 ? -1 : at) + delta, 0, log.Count - 1);
+        _choice = log[at].Id;
+        _choiceUntil = Clock() + ChoiceTime;
+        return $"log {at + 1}: {log[at].Label}";
+    }
+
+    /// <summary>Where the chosen item stands in the log (0 = next), or -1 when nothing is chosen (any more).</summary>
+    private int Choice(IReadOnlyList<MackieLogItem> log, out MackieLogItem? item)
+    {
+        item = null;
+        if (_choice is not { } id || Clock() >= _choiceUntil) { _choice = null; return -1; }
+        for (int i = 0; i < log.Count; i++)
+            if (log[i].Id == id) { item = log[i]; return i; }
+        _choice = null;   // it played or was removed
+        return -1;
+    }
+
+    /// <summary>PLAY: the item chosen with the jog wheel, otherwise the next one.</summary>
+    private string Play()
+    {
+        int at = Choice(mixer.Upcoming(), out var item);
+        _choice = null;
+        if (at > 0 && item is not null) { mixer.StartFromLog(item.Id); return $"start {item.Label}"; }
+        mixer.Run("NEXT");
+        return "NEXT";
     }
 
     private string? Press(int note, IReadOnlyList<MackieStripState> all)
@@ -282,7 +339,7 @@ public sealed class MackieSurface(IMackieMixer mixer, MackieSettings settings, M
             case Mackie.BankRight: return MoveBank(Group.Width, all);
             case Mackie.ChannelLeft: return MoveBank(-1, all);
             case Mackie.ChannelRight: return MoveBank(1, all);
-            case Mackie.Play when Settings.Transport && !Extender: mixer.Run("NEXT"); return "NEXT";
+            case Mackie.Play when Settings.Transport && !Extender: return Play();
             case Mackie.Stop when Settings.Transport && !Extender: mixer.Run("STOP"); return "STOP";
             case Mackie.Cycle when Settings.Transport && !Extender: mixer.Run("AUTO TOGGLE"); return "AUTO TOGGLE";
         }
@@ -338,7 +395,8 @@ public sealed class MackieSurface(IMackieMixer mixer, MackieSettings settings, M
             Lamp(Mackie.Cycle, Settings.Transport && mixer.AutoPlay);
         }
 
-        // Display: names on top, the fader in percent (or DEMP when muted) below.
+        // Display: names on top, the fader in percent (or DEMP when muted) below. While an item is chosen with the jog
+        // wheel the top row shows that item instead.
         var top = new StringBuilder();
         var bottom = new StringBuilder();
         for (int i = 0; i < Mackie.Strips; i++)
@@ -347,7 +405,14 @@ public sealed class MackieSurface(IMackieMixer mixer, MackieSettings settings, M
             top.Append(Mackie.Cell(s?.Name ?? ""));
             bottom.Append(Mackie.Cell(s is null ? "" : s.Muted ? "DEMP" : $"{Math.Round(s.Volume * 100):0}%".PadLeft(5)));
         }
-        foreach (var (offset, text) in new[] { (0, top.ToString()), (56, bottom.ToString()) })
+        string topRow = top.ToString();
+        if (!Extender && _choice is not null)
+        {
+            var log = mixer.Upcoming();
+            if (Choice(log, out var item) is int at and >= 0 && item is not null)
+                topRow = Mackie.Row($"{(at == 0 ? "Volgende" : $"{at + 1}/{log.Count}")}: {item.Label}");
+        }
+        foreach (var (offset, text) in new[] { (0, topRow), (56, bottom.ToString()) })
         {
             if (_display.TryGetValue(offset, out var was) && was == text) continue;
             _display[offset] = text;

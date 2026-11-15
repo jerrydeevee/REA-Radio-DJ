@@ -4,6 +4,7 @@ using ReaRadioDj.Core;
 using ReaRadioDj.Core.Audio;
 using ReaRadioDj.Core.Data;
 using ReaRadioDj.Core.Hardware;
+using ReaRadioDj.Core.Scheduling;
 using ReaRadioDj.Server.Remote;
 
 namespace ReaRadioDj.Server.Hardware;
@@ -25,12 +26,12 @@ public sealed class MackieService : BackgroundService
     private readonly MackieBank _bank = new();
     private MackieSettings _settings;
 
-    public MackieService(StationDb db, AudioRouter router, CommandBus bus, PlayoutEngine engine, ReaRadioDjOptions options,
+    public MackieService(StationDb db, AudioRouter router, CommandBus bus, PlayoutEngine engine, PlayoutLog log, ReaRadioDjOptions options,
         MessageCenter messages, ILogger<MackieService> logger)
     {
         _db = db;
         _logger = logger;
-        _mixer = new EngineMackieMixer(router, bus, engine, db, options, messages);
+        _mixer = new EngineMackieMixer(router, bus, engine, log, db, options, messages);
         _settings = Read() ?? new MackieSettings();
     }
 
@@ -159,7 +160,7 @@ public sealed class MackieService : BackgroundService
 }
 
 /// <summary>The engine's mixer as a Mackie surface sees it: the fixed channels first, then the inputs.</summary>
-internal sealed class EngineMackieMixer(AudioRouter router, CommandBus bus, PlayoutEngine engine, StationDb db, ReaRadioDjOptions options,
+internal sealed class EngineMackieMixer(AudioRouter router, CommandBus bus, PlayoutEngine engine, PlayoutLog log, StationDb db, ReaRadioDjOptions options,
     MessageCenter messages) : IMackieMixer
 {
     private static readonly string[] Order = [AudioRouter.LogStrip, AudioRouter.StandbyStrip, AudioRouter.CartStrip, AudioRouter.OverlayStrip,
@@ -187,6 +188,8 @@ internal sealed class EngineMackieMixer(AudioRouter router, CommandBus bus, Play
     }
 
     public void Run(string command) => bus.Run(command, "mackie");
+    public IReadOnlyList<MackieLogItem> Upcoming() => log.Upcoming.Select(i => new MackieLogItem(i.Id, i.Label)).ToList();
+    public void StartFromLog(long id) { if (log.MoveTo(id, 0)) engine.Next(); }
     public bool Playing => engine.GetState().Playing.Count > 0;
     public bool AutoPlay => engine.AutoPlay;
 }

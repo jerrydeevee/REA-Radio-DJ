@@ -17,6 +17,9 @@ public class MackieTests
         public void SetOnAir(string id, bool o) => Change(id, s => s with { OnAir = o });
         public void SetRecording(string id, bool r) => Change(id, s => s with { Recording = r });
         public void Run(string command) => Commands.Add(command);
+        public List<MackieLogItem> Log = [new(11, "Artiest A - Een"), new(12, "Artiest B - Twee"), new(13, "Artiest C - Drie")];
+        public IReadOnlyList<MackieLogItem> Upcoming() => Log;
+        public void StartFromLog(long id) => Commands.Add($"START {id}");
         public bool Playing { get; set; }
         public bool AutoPlay { get; set; }
     }
@@ -168,6 +171,62 @@ public class MackieTests
         Assert.Equal(["NEXT", "STOP", "AUTO TOGGLE"], mixer.Commands);
         surface.Handle(Bend(8, 0));
         Assert.Equal(0f, mixer.List[4].Volume);
+    }
+
+    private static uint Jog(int ticks) => Msg(0xB0, Mackie.JogCc, ticks < 0 ? 0x40 | -ticks : ticks);
+
+    private static string TopRow(List<MackieOutput> outs) =>
+        outs.Where(o => o.SysEx is { } x && x[6] == 0).Select(o => new string(o.SysEx![7..^1].Select(b => (char)b).ToArray())).LastOrDefault() ?? "";
+
+    [Fact]
+    public void The_jog_wheel_browses_the_log_and_play_starts_the_choice()
+    {
+        var mixer = new FakeMixer();
+        var now = new DateTime(2026, 11, 15, 10, 0, 0);
+        var surface = new MackieSurface(mixer, new MackieSettings { Transport = true }) { Clock = () => now };
+        surface.Refresh();
+
+        Assert.Equal("log 1: Artiest A - Een", surface.Handle(Jog(1)));
+        Assert.StartsWith("Volgende: Artiest A - Een", TopRow(surface.Refresh()));
+        Assert.Equal("log 3: Artiest C - Drie", surface.Handle(Jog(5)));   // stops at the end
+        Assert.Equal("log 2: Artiest B - Twee", surface.Handle(Jog(-1)));
+        Assert.StartsWith("2/3: Artiest B - Twee", TopRow(surface.Refresh()));
+
+        Assert.Equal("start Artiest B - Twee", surface.Handle(Note(Mackie.Play, true)));
+        Assert.Equal(["START 12"], mixer.Commands);
+        Assert.StartsWith("Kanaal", TopRow(surface.Refresh()));   // the names are back
+
+        surface.Handle(Note(Mackie.Play, true));                  // nothing chosen: the next item, as before
+        Assert.Equal(["START 12", "NEXT"], mixer.Commands);
+    }
+
+    [Fact]
+    public void A_choice_with_the_jog_wheel_runs_out()
+    {
+        var mixer = new FakeMixer();
+        var now = new DateTime(2026, 11, 15, 10, 0, 0);
+        var surface = new MackieSurface(mixer, new MackieSettings { Transport = true }) { Clock = () => now };
+        surface.Handle(Jog(3));
+        now += MackieSurface.ChoiceTime;
+        Assert.StartsWith("Kanaal", TopRow(surface.Refresh()));
+        surface.Handle(Note(Mackie.Play, true));
+        Assert.Equal(["NEXT"], mixer.Commands);   // not the item chosen a while ago
+
+        surface.Handle(Jog(2));
+        mixer.Log.RemoveAt(1);                    // the chosen item played or was removed
+        surface.Handle(Note(Mackie.Play, true));
+        Assert.Equal(["NEXT", "NEXT"], mixer.Commands);
+    }
+
+    [Fact]
+    public void The_jog_wheel_does_nothing_without_transport()
+    {
+        var mixer = new FakeMixer();
+        var surface = new MackieSurface(mixer, new MackieSettings());
+        Assert.Null(surface.Handle(Jog(1)));
+        mixer.Log.Clear();
+        surface.Settings = new MackieSettings { Transport = true };
+        Assert.Equal("log: niets meer gepland", surface.Handle(Jog(1)));
     }
 
     [Fact]
