@@ -77,6 +77,8 @@ public static class DjApi
             }
             if (r.Transition is { } t) am.SetTransition(t);
             if (r.Beats is double b) am.SetBeats(b);
+            if (r.Decks is int n) am.SetDecks(n);
+            if (r.Faders is bool f) am.SetFaders(f);
             if (r.On is bool on)
             {
                 // Automix plays decks A and B itself: deck A no longer follows the automation.
@@ -123,7 +125,7 @@ public static class DjApi
             case "range" when v is double r: deck.SetTempoRange(r); break;
             case "keylock": deck.SetKeyLock(c.On ?? !deck.KeyLock); break;
             case "bend" when v is double b: deck.Bend(b); break;
-            case "sync": if (!dj.Sync(deck)) return "geen ander spelend deck met een tempo om te volgen"; break;
+            case "sync": if (dj.Sync(deck) is { } why) return why; break;
             case "gain" when v is double g: deck.SetGain(g); break;
             case "fader" when v is double f: deck.SetFader(f); break;
             case "eqlow" or "eqmid" or "eqhigh" when v is double e: deck.SetEq(action[2..], e); break;
@@ -164,7 +166,8 @@ public static class DjApi
             m.Quantize, m.CueMix, m.Limiter, m.LimiterDb, automix is { } a ? Automix(a) : null);
 
     public static DjAutomixDto Automix(DjAutomixInfo a) => new(a.On, a.Transition, a.Beats,
-        a.Queue.Select(q => new DjAutomixItemDto(q.Id, q.Title, q.Artist, Math.Round(q.Duration, 1))).ToList(), a.State, a.Progress, a.SecondsToMix, a.OutDeck);
+        a.Queue.Select(q => new DjAutomixItemDto(q.Id, q.Title, q.Artist, Math.Round(q.Duration, 1))).ToList(), a.State, a.Progress, a.SecondsToMix, a.OutDeck,
+        a.Decks, a.Faders);
 
     public static DjDeckDto Deck(DjDeckInfo d) => new(d.Id, d.Media is { Id: > 0 } m ? m.Id : null, d.Media?.Title ?? "", d.Media?.Artist ?? "",
         d.Media is not null, d.Playing, d.Position, Math.Round(d.Duration, 3), d.Bpm, d.FirstBeat, d.Analysing, Math.Round(d.Tempo, 3), d.TempoRange,

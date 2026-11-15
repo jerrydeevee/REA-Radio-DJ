@@ -880,7 +880,7 @@ public sealed class DjMixer : ITickable, IDisposable
     /// </summary>
     public double? SecondsToNextBeat()
     {
-        var lead = Decks.Where(d => d.Playing && d.Bpm > 0).OrderByDescending(d => d.Fader * CrossfadeGain(Crossfader, d.Left, Curve)).FirstOrDefault();
+        var lead = Decks.Where(d => d.Playing && d.Bpm > 0).OrderByDescending(d => d.Fader * SideGain(d)).FirstOrDefault();
         if (lead is null) return null;
         return UntilNextBeat(lead.Position, lead.FirstBeat, 60 / lead.Bpm, 1 + lead.Tempo / 100);
     }
@@ -1015,19 +1015,67 @@ public sealed class DjMixer : ITickable, IDisposable
     /// <summary>The deck to follow: the loudest other deck that is playing and has a tempo.</summary>
     public DjDeck? MasterFor(DjDeck deck) => Decks
         .Where(d => !ReferenceEquals(d, deck) && d.Playing && d.Bpm > 0)
-        .OrderByDescending(d => d.Fader * CrossfadeGain(Crossfader, d.Left, Curve))
+        .OrderByDescending(d => d.Fader * SideGain(d))
         .FirstOrDefault();
 
-    public bool Sync(DjDeck deck) => MasterFor(deck) is { } master && deck.SyncTo(master);
+    /// <summary>What the crossfader lets through of a deck; nothing in the way while automix mixes with the channel faders.</summary>
+    public float SideGain(DjDeck d) => Automix.On && Automix.Faders ? 1f : CrossfadeGain(Crossfader, d.Left, Curve);
+
+    /// <summary>
+    /// Takes over the tempo and beat of the deck you hear, but only when the tempos lie close (within 8 %, or at half or
+    /// double tempo): a big jump in pitch is not a mix. Once that other deck is gone, this deck glides back to its own
+    /// tempo by itself. Returns why it cannot, or null.
+    /// </summary>
+    public string? Sync(DjDeck deck)
+    {
+        if (MasterFor(deck) is not { } master) return "geen ander spelend deck met een tempo om te volgen";
+        if (deck.Bpm > 0 && TransitionRules.TempoMatch(master.PlayingBpm, deck.Bpm) is null)
+            return $"tempo verschilt te veel ({deck.Bpm:0.#} tegen {master.PlayingBpm:0.#} BPM, meer dan 8 %)";
+        if (!deck.SyncTo(master)) return "geen tempo bekend van dit deck";
+        lock (_glides) _glides.Remove(deck);
+        return null;
+    }
+
+    private readonly Dictionary<DjDeck, (double From, DateTime Since, double Last)> _glides = [];
+
+    /// <summary>
+    /// A deck synced by hand that is left on its own (no other deck to be heard) glides back to its own tempo, smoothly
+    /// over <see cref="DjAutomix.GlideSeconds"/>. Touching the tempo yourself stops it.
+    /// </summary>
+    private void GlideBack()
+    {
+        lock (_glides)
+        {
+            if (Automix.On) { _glides.Clear(); return; }
+            var now = DateTime.UtcNow;
+            foreach (var d in Decks)
+            {
+                if (_glides.TryGetValue(d, out var g))
+                {
+                    if (!d.Playing || Math.Abs(d.Tempo - g.Last) > 0.001) { _glides.Remove(d); continue; }
+                    double elapsed = (now - g.Since).TotalSeconds;
+                    double t = elapsed >= DjAutomix.GlideSeconds ? 0 : DjAutomix.GlideTempo(g.From, elapsed);
+                    d.SetTempo(t);
+                    if (t == 0) _glides.Remove(d); else _glides[d] = g with { Last = d.Tempo };
+                }
+                else if (d.Synced && d.Playing && Math.Abs(d.Tempo) > 0.01 && Alone(d))
+                    _glides[d] = (d.Tempo, now, d.Tempo);
+            }
+        }
+    }
+
+    /// <summary>No other deck can be heard (playing, fader open).</summary>
+    private bool Alone(DjDeck deck) => !Decks.Any(o => !ReferenceEquals(o, deck) && o.Playing && o.Fader * SideGain(o) > 0.01);
 
     void ITickable.Tick()
     {
         foreach (var d in Decks)
         {
             d.Tick();
-            d.ApplyVolume(CrossfadeGain(Crossfader, d.Left, Curve), CueMix);
+            d.ApplyVolume(SideGain(d), CueMix);
         }
         Automix.Tick();
+        GlideBack();
     }
 
     public void Dispose()

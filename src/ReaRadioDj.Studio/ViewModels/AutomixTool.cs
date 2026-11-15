@@ -31,12 +31,16 @@ public sealed partial class AutomixTool : StudioTool
     [ObservableProperty] private bool _mixing;
     [ObservableProperty] private bool _empty = true;
     [ObservableProperty] private string _countText = "";
+    [ObservableProperty] private bool _fourDecks;
+    [ObservableProperty] private bool _faders = true;
 
     private Task Send(DjAutomixRequest r) => Hub.Client.PostAsync("/api/dj/automix", r);
 
     [RelayCommand] private Task Toggle() => Send(new DjAutomixRequest(On: !On));
     [RelayCommand] private Task SetTransition(string? type) => Send(new DjAutomixRequest(Transition: type));
     [RelayCommand] private Task Clear() => Send(new DjAutomixRequest(Clear: true));
+    [RelayCommand] private Task SetDecks(string? n) => Send(new DjAutomixRequest(Decks: n == "4" ? 4 : 2));
+    [RelayCommand] private Task ToggleFaders() => Send(new DjAutomixRequest(Faders: !Faders));
     [RelayCommand] private Task Remove(AutomixRow? row) => row is null ? Task.CompletedTask : Send(new DjAutomixRequest(Remove: row.Index));
     [RelayCommand] private Task Up(AutomixRow? row) =>
         row is null || row.Index == 0 ? Task.CompletedTask : Send(new DjAutomixRequest(MoveFrom: row.Index, MoveTo: row.Index - 1));
@@ -66,12 +70,14 @@ public sealed partial class AutomixTool : StudioTool
         On = a.On;
         Transition = a.Transition;
         _beats = a.Beats;
+        FourDecks = a.Decks == 4;
+        Faders = a.Faders;
         BeatsText = a.Transition == "cut" ? "op de tel" : $"{a.Beats:0} tellen";
         Mixing = a.State == "mixen";
         Progress = a.Progress * 100;
         StateText = a.State switch
         {
-            "uit" => "Automix staat uit: zet hem aan en de lijst speelt zichzelf op deck A en B",
+            "uit" => $"Automix staat uit: zet hem aan en de lijst speelt zichzelf op deck {(a.Decks == 4 ? "A t/m D" : "A en B")}",
             "leeg" => "De lijst is leeg: sleep nummers uit de bibliotheek hierheen",
             "klaar" => "Klaar om te starten",
             "mixen" => $"Mixt van deck {a.OutDeck} naar het volgende nummer…",

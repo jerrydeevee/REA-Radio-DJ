@@ -92,6 +92,7 @@ builder.Services.AddHostedService(sp => sp.GetRequiredService<ReaRadioDj.Server.
 builder.Services.AddSingleton<StudioPlayers>();
 builder.Services.AddSingleton(new DjStore(Path.Combine(options.DataFolder, "dj.json")));
 builder.Services.AddSingleton<DjMixer>();
+builder.Services.AddHostedService<ReaRadioDj.Server.AutoFaderService>();
 builder.Services.AddSingleton<DjHandover>();
 builder.Services.AddSingleton<StandbyFlag>();
 builder.Services.AddSingleton<RemoteClientStore>();

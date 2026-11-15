@@ -256,4 +256,5 @@ internal sealed class EngineMackieMixer(AudioRouter router, CommandBus bus, Play
     public void StartFromLog(long id) { if (log.MoveTo(id, 0)) engine.Next(); }
     public bool Playing => engine.GetState().Playing.Count > 0;
     public bool AutoPlay => engine.AutoPlay;
+    public bool DjAutomix => dj.Automix.On;
 }

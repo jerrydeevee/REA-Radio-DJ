@@ -230,7 +230,7 @@ public sealed class DjDeckTests : IDisposable
         for (int i = 0; i < 100 && (a.Info.Analysing || b.Info.Analysing); i++) Thread.Sleep(50);
         Assert.InRange(a.Bpm, 119, 121);
         b.Play();
-        Assert.True(desk.Sync(b));
+        Assert.Null(desk.Sync(b));
         Assert.True(b.Synced);
         Assert.InRange(b.PlayingBpm, a.PlayingBpm - 0.5, a.PlayingBpm + 0.5);
         Assert.InRange(b.Tempo, -6, -3.5);                                 // 126 down to 120

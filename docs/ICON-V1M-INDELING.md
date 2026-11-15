@@ -114,6 +114,18 @@ een knop stuurt.
 | 8 | VoIP 2 | Log |
 | master | gekozen kanaal | gekozen kanaal |
 
+**Automix in de DJ-indeling:** LOOP zet de automix aan of uit (het lampje brandt als hij aan staat), PLAY mixt
+meteen naar het volgende nummer. Dat werkt als *Transportknoppen bedienen de uitzending* aan staat. De automix
+gebruikt 2 decks (A, B) of 4 (A t/m D om de beurt). Met *Kanaalfaders* mixt hij met de deckfaders, zodat de
+motorfaders meebewegen; de crossfader telt dan niet mee.
+
+**SYNC** volgt alleen een deck dat minder dan 8 % in tempo verschilt (of half/dubbel tempo). Is het andere deck weg,
+dan glijdt het deck in 8 seconden terug naar zijn eigen tempo.
+
+**Faders volgen het gebruik** (in de hele mixer): een kanaal waarop iets start, krijgt zijn fader open als die
+dicht stond (cartwall, overlay, standby, PFL, decks). Een leeg of afgelopen deck en een gesloten Mic 1 gaan naar 0;
+de mic komt bij openen terug op zijn oude stand.
+
 **Let op: standby-speler 1 en 2.** Die hebben samen één kanaal (*Standby*), geen eigen fader. Een fader per speler,
 zoals "speler 1 op fader 1, speler 2 op fader 2", vraagt een eigen kanaal per speler. Dat is een wijziging in de
 mixer, en geen kleine.

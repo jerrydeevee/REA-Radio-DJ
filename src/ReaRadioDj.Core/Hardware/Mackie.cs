@@ -246,6 +246,8 @@ public interface IMackieMixer
     void StartFromLog(long id);
     bool Playing { get; }
     bool AutoPlay { get; }
+    /// <summary>Automix on the DJ desk is on (it opens and closes the deck faders itself).</summary>
+    bool DjAutomix { get; }
 }
 
 /// <summary>Choices for a Mackie Control surface (Instellingen › Hardware).</summary>
@@ -509,6 +511,10 @@ public sealed class MackieSurface(IMackieMixer mixer, MackieSettings settings, M
             case Mackie.BankRight: return MoveBank(Group.Width, all);
             case Mackie.ChannelLeft: return MoveBank(-1, all);
             case Mackie.ChannelRight: return MoveBank(1, all);
+            case Mackie.Play when Settings.Transport && !Extender && Group.Layout == MackieLayout.Dj && mixer.DjAutomix:
+                return mixer.Run("DJ AUTOMIX MIX") is { } why ? $"automix: {why}" : "automix: nu mixen";
+            case Mackie.Cycle when Settings.Transport && !Extender && Group.Layout == MackieLayout.Dj:
+                return mixer.Run("DJ AUTOMIX TOGGLE") is { } fail ? $"automix: {fail}" : mixer.DjAutomix ? "automix aan" : "automix uit";
             case Mackie.Play when Settings.Transport && !Extender: return Play();
             case Mackie.Stop when Settings.Transport && !Extender: mixer.Run("STOP"); return "STOP";
             case Mackie.Cycle when Settings.Transport && !Extender: mixer.Run("AUTO TOGGLE"); return "AUTO TOGGLE";
@@ -538,7 +544,8 @@ public sealed class MackieSurface(IMackieMixer mixer, MackieSettings settings, M
         var all = All();
         Group.Fit(all.Count);
         if (force || _version != Group.Version) { _sent.Clear(); _display.Clear(); _decksPlaying.Clear(); _version = Group.Version; }
-        if (Settings.DjFaderStart && Group.Layout == MackieLayout.Dj && !Extender && OpenStartedDecks(all)) all = All();
+        // Automix opens the deck faders itself, gradually: then the fader of a started deck must not jump open.
+        if (Settings.DjFaderStart && Group.Layout == MackieLayout.Dj && !Extender && !mixer.DjAutomix && OpenStartedDecks(all)) all = All();
         var outs = new List<MackieOutput>();
         void Send(string key, MackieOutput o, uint value)
         {
@@ -569,7 +576,7 @@ public sealed class MackieSurface(IMackieMixer mixer, MackieSettings settings, M
         if (!Extender)
         {
             Lamp(Mackie.Play, Settings.Transport && mixer.Playing);
-            Lamp(Mackie.Cycle, Settings.Transport && mixer.AutoPlay);
+            Lamp(Mackie.Cycle, Settings.Transport && (Group.Layout == MackieLayout.Dj ? mixer.DjAutomix : mixer.AutoPlay));
             Lamp(Mackie.Flip, Group.Layout == MackieLayout.Dj);
         }
 

@@ -25,6 +25,16 @@
       <Button Classes="bar" Content="◀" Command="{Binding BeatsStepCommand}" CommandParameter="-" Margin="0,0,4,6" ToolTip.Tip="Kortere overgang" />
       <TextBlock Classes="mono" FontWeight="Bold" Text="{Binding BeatsText}" VerticalAlignment="Center" MinWidth="80" TextAlignment="Center" Margin="0,0,4,6" />
       <Button Classes="bar" Content="▶" Command="{Binding BeatsStepCommand}" CommandParameter="+" Margin="0,0,8,6" ToolTip.Tip="Langere overgang" />
+      <Border BorderBrush="{DynamicResource ControlBorderBrush}" BorderThickness="1" CornerRadius="{DynamicResource Radius8}" ClipToBounds="True" Margin="0,0,8,6">
+        <StackPanel Orientation="Horizontal">
+          <ToggleButton Classes="seg" Content="2 decks" IsChecked="{Binding !FourDecks, Mode=OneWay}" Command="{Binding SetDecksCommand}" CommandParameter="2"
+                        ToolTip.Tip="De nummers wisselen tussen deck A en B" />
+          <ToggleButton Classes="seg" Content="4 decks" IsChecked="{Binding FourDecks, Mode=OneWay}" Command="{Binding SetDecksCommand}" CommandParameter="4"
+                        ToolTip.Tip="De nummers gaan om de beurt naar deck A, B, C en D" />
+        </StackPanel>
+      </Border>
+      <ToggleButton Classes="bar" Content="Kanaalfaders" IsChecked="{Binding Faders, Mode=OneWay}" Command="{Binding ToggleFadersCommand}" Margin="0,0,8,6"
+                    ToolTip.Tip="Aan: automix mixt met de kanaalfaders (de motorfaders van het iCON-paneel bewegen mee, de crossfader telt dan niet). Uit: met de crossfader" />
       <Button Classes="bar" Content="Nu mixen" Command="{Binding MixNowCommand}" Margin="0,0,8,6" ToolTip.Tip="Begin de overgang naar het volgende nummer nu" />
       <Button Classes="bar" Content="Lijst wissen" Command="{Binding ClearCommand}" Margin="0,0,0,6" />
     </WrapPanel>

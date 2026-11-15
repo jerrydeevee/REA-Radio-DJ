@@ -272,7 +272,7 @@ public sealed class AudioRouter : IDisposable
         // Microphone: a push stream fed by the recording callback, muted until the mic is opened.
         _push = BassRuntime.Check(BASS_StreamCreate((uint)BassRuntime.SampleRate, 2, BASS_SAMPLE_FLOAT | BASS_STREAM_DECODE, STREAMPROC_PUSH, IntPtr.Zero),
             "BASS_StreamCreate(push)");
-        var mic = new MixerStrip(MicStrip, "Microfoon", Program, _push);
+        var mic = new MixerStrip(MicStrip, "Mic 1", Program, _push);
         Add(mic);
         mic.Duck("closed", 0f, 0);
         SetMicChannel(_options.Routing.MicChannel);

@@ -118,13 +118,14 @@ public sealed record DjDto(double Crossfader, string Curve, bool OnAir, IReadOnl
 /// State: uit, leeg, klaar, speelt or mixen; Progress 0..1 while mixing; SecondsToMix until the next transition.
 /// </summary>
 public sealed record DjAutomixDto(bool On, string Transition, double Beats, IReadOnlyList<DjAutomixItemDto> Queue, string State,
-    double Progress, double? SecondsToMix, string? OutDeck);
+    double Progress, double? SecondsToMix, string? OutDeck, int Decks = 2, bool Faders = true);
 
 public sealed record DjAutomixItemDto(long Id, string Title, string Artist, double Duration);
 
 /// <summary>Automix settings and list changes; any field left out stays as it is. MediaIds are added (at Index when given).</summary>
 public sealed record DjAutomixRequest(bool? On = null, string? Transition = null, double? Beats = null, IReadOnlyList<long>? MediaIds = null,
-    int? Index = null, int? Remove = null, int? MoveFrom = null, int? MoveTo = null, bool? Clear = null, bool? MixNow = null);
+    int? Index = null, int? Remove = null, int? MoveFrom = null, int? MoveTo = null, bool? Clear = null, bool? MixNow = null,
+    int? Decks = null, bool? Faders = null);
 
 public sealed record DjCommand(long? MediaId = null, double? Value = null, int? Index = null, bool? On = null, string? Name = null);
 

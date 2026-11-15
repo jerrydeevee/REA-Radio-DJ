@@ -3,11 +3,12 @@ using ReaRadioDj.Core.Model;
 namespace ReaRadioDj.Core.Audio;
 
 public sealed record DjAutomixInfo(bool On, string Transition, double Beats, IReadOnlyList<MediaItem> Queue, string State,
-    double Progress, double? SecondsToMix, string? OutDeck);
+    double Progress, double? SecondsToMix, string? OutDeck, int Decks = 2, bool Faders = true);
 
 /// <summary>
-/// Automix on the DJ desk: a list of tracks that plays itself on decks A and B. While one deck plays, the next track
-/// waits on the other; at the mix point the desk makes the chosen transition and the crossfader moves over. Types:
+/// Automix on the DJ desk: a list of tracks that plays itself on decks A and B (or A-D in turn). While one deck plays,
+/// the next track waits on the next deck; at the mix point the desk makes the chosen transition, with the channel
+/// faders (the motor faders of a control panel move along; the crossfader then does not count) or the crossfader. Types:
 /// "fade" (crossfade), "cut" (on the beat, no overlap), "beat" (tempo and beat matched, then back to its own tempo),
 /// "echo" (the outgoing track echoes away) and "filter" (the outgoing track thins out through a high pass).
 /// </summary>
@@ -38,6 +39,10 @@ public sealed class DjAutomix
     public bool On { get; private set; }
     public string Transition { get; private set; } = Beat;
     public double Beats { get; private set; } = 16;
+    /// <summary>How many decks take turns: 2 (A, B) or 4 (A, B, C, D).</summary>
+    public int Decks { get; private set; } = 2;
+    /// <summary>Mix with the channel faders (true) or with the crossfader.</summary>
+    public bool Faders { get; private set; } = true;
 
     public DjAutomixInfo Info
     {
@@ -50,7 +55,7 @@ public sealed class DjAutomix
                 double? toMix = On && _mixingSince is null && _out is { Playing: true } o && (_in?.Media is not null || _queue.Count > 0)
                     ? Math.Max(0, (_mixStart - o.Position) / Rate(o)) : null;
                 return new(On, Transition, Beats, [.. _queue], state, Math.Round(progress, 3), toMix is double t ? Math.Round(t, 1) : null,
-                    _out is { Playing: true } p ? p.Id : null);
+                    _out is { Playing: true } p ? p.Id : null, Decks, Faders);
             }
         }
     }
@@ -60,12 +65,35 @@ public sealed class DjAutomix
         lock (_gate)
         {
             On = on;
-            if (!on) { FinishMix(abort: true); _out = _in = null; _glide = null; }
+            if (!on)
+            {
+                FinishMix(abort: true);
+                // The crossfader counts again: put it on the side of what plays, so nothing drops away.
+                if (Faders && _out is { Playing: true } o) _dj.SetCrossfader(o.Left ? 0 : 1);
+                _out = _in = null; _glide = null;
+            }
         }
     }
 
     public void SetTransition(string? type) { lock (_gate) if (Transitions.Contains(type)) { Transition = type!; _planned = null; } }
     public void SetBeats(double beats) { lock (_gate) { Beats = BeatChoices.MinBy(b => Math.Abs(b - beats)); _planned = null; } }
+    public void SetDecks(int decks) { lock (_gate) Decks = decks >= 4 ? 4 : 2; }
+    public void SetFaders(bool on)
+    {
+        lock (_gate)
+        {
+            if (Faders == on) return;
+            Faders = on;
+            // From faders to crossfader: the crossfader to the side of what plays.
+            if (!on && _out is { Playing: true } o) _dj.SetCrossfader(o.Left ? 0 : 1);
+        }
+    }
+
+    /// <summary>The decks that take turns, in order.</summary>
+    private List<DjDeck> Cycle() => (Decks == 4 ? new[] { "A", "B", "C", "D" } : ["A", "B"]).Select(id => _dj.Find(id)).OfType<DjDeck>().ToList();
+
+    /// <summary>The turn after <paramref name="index"/> (back to the first after the last; the first for a deck outside the turn).</summary>
+    public static int NextIndex(int index, int count) => count == 0 ? 0 : (index + 1) % count;
 
     public void Add(MediaItem media, int? at = null)
     {
@@ -161,7 +189,8 @@ public sealed class DjAutomix
         lock (_gate)
         {
             if (!On) return;
-            var a = _dj.Find("A")!; var b = _dj.Find("B")!;
+            var cycle = Cycle();
+            if (cycle.Count < 2) return;
             Glide();
 
             if (_mixingSince is DateTime since) { Step(since); return; }
@@ -169,15 +198,15 @@ public sealed class DjAutomix
             // Who plays: the deck that plays (the louder one when both do); otherwise start the first track.
             if (_out is null || !_out.Playing)
             {
-                var playing = new[] { a, b }.Where(d => d.Playing).OrderByDescending(d => DjMixer.CrossfadeGain(_dj.Crossfader, d.Left, _dj.Curve)).FirstOrDefault();
+                var playing = cycle.Where(d => d.Playing).OrderByDescending(d => d.Fader * _dj.SideGain(d)).FirstOrDefault();
                 if (playing is null)
                 {
                     if (_queue.Count == 0) { _out = null; return; }
-                    var first = _in?.Media is not null && !_in.Playing ? _in : a;
+                    var first = _in?.Media is not null && !_in.Playing ? _in : cycle[0];
                     if (first.Media is null) LoadNext(first);
                     if (first.Media is null) return;
-                    Prepare(first);
-                    _dj.SetCrossfader(first.Left ? 0 : 1);
+                    Prepare(first, open: true);
+                    if (!Faders) _dj.SetCrossfader(first.Left ? 0 : 1);
                     first.Play();
                     _out = first; _in = null; _planned = null;
                     return;
@@ -186,7 +215,7 @@ public sealed class DjAutomix
             }
 
             // The next track waits on the other deck.
-            var other = ReferenceEquals(_out, a) ? b : a;
+            var other = cycle[NextIndex(cycle.IndexOf(_out), cycle.Count)];
             if (other.Playing) return; // the DJ plays something there by hand
             if (other.Media is null || (_in is null && other.Position >= other.Info.Duration - 0.1)) LoadNext(other);
             _in = other.Media is null ? null : other;
@@ -209,14 +238,17 @@ public sealed class DjAutomix
         if (_queue.Count == 0) return;
         var next = _queue[0];
         _queue.RemoveAt(0);
-        try { deck.Load(next); Prepare(deck); }
+        try { deck.Load(next); Prepare(deck, open: false); }
         catch (BassException) { /* unplayable: skip it, the next tick takes the following one */ }
     }
 
-    /// <summary>A fresh deck for automix: full fader, no filter, no loop, at its own tempo.</summary>
-    private static void Prepare(DjDeck d)
+    /// <summary>
+    /// A fresh deck for automix: no filter, no loop. Its fader is open, except for a deck that waits while automix mixes
+    /// with the faders: that one comes up during the transition.
+    /// </summary>
+    private void Prepare(DjDeck d, bool open)
     {
-        d.SetFader(1);
+        d.SetFader(open || !Faders ? 1 : 0);
         d.SetFilter(0);
         d.ExitLoop();
     }
@@ -232,6 +264,7 @@ public sealed class DjAutomix
         if (_mixType is Beat or Cut or Echo && i.Bpm > 0)
             i.Seek(Math.Max(0, DjDeck.Snap(i.CuePoint, i.FirstBeat, 60 / i.Bpm)));
         if (_mixType == Beat) i.SyncTo(o);
+        if (Faders) i.SetFader(0);
         i.Play();
         // Just after the start the new deck has not filled its buffers yet; line up the beats a moment later.
         if (_mixType == Beat) _phaseAt = DateTime.UtcNow.AddMilliseconds(250);
@@ -241,7 +274,7 @@ public sealed class DjAutomix
             _savedFx = (o.FxType, o.FxOn, o.FxMix, o.FxBeats);
             o.SetFx(DjEffects.Echo, true, 0.7, 1);
         }
-        if (_mixType == Cut) { _dj.SetCrossfader(i.Left ? 0 : 1); FinishMix(); return; }
+        if (_mixType == Cut) { if (!Faders) _dj.SetCrossfader(i.Left ? 0 : 1); FinishMix(); return; }
         _mixingSince = DateTime.UtcNow;
     }
 
@@ -252,7 +285,13 @@ public sealed class DjAutomix
         double progress = _mixSeconds > 0 ? (DateTime.UtcNow - since).TotalSeconds / _mixSeconds : 1;
         // Echo: the outgoing track keeps echoing while the incoming one comes up; the dry sound goes first.
         double x = _mixType == Echo ? Math.Min(1, progress * 1.6) : progress;
-        _dj.SetCrossfader(CrossfaderAt(x, o.Left));
+        if (Faders)
+        {
+            // Equal power: the old fader goes down as the new one comes up, without a dip in the middle.
+            o.SetFader(Math.Cos(Math.Clamp(x, 0, 1) * Math.PI / 2));
+            i.SetFader(Math.Sin(Math.Clamp(x, 0, 1) * Math.PI / 2));
+        }
+        else _dj.SetCrossfader(CrossfaderAt(x, o.Left));
         if (_mixType == Filter) o.SetFilter(Math.Clamp(progress, 0, 1) * 0.85);
         if (progress >= 1 || !o.Playing) FinishMix();
     }
@@ -265,7 +304,8 @@ public sealed class DjAutomix
         _phaseAt = null;
         if (o is not null && i is not null && i.Playing && !abort)
         {
-            _dj.SetCrossfader(i.Left ? 0 : 1);
+            if (Faders) { i.SetFader(1); o.SetFader(0); }
+            else _dj.SetCrossfader(i.Left ? 0 : 1);
             o.Pause();
             o.SetFilter(0);
             if (_savedFx is { } fx) o.SetFx(fx.Type, fx.On, fx.Mix, fx.Beats);

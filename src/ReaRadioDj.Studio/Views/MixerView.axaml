@@ -159,7 +159,7 @@
         <DockPanel>
           <ToggleButton DockPanel.Dock="Right" Classes="mic" Content="🎤 MIC (F8)" IsChecked="{Binding MicOpen, Mode=OneWay}" Command="{Binding ToggleMicCommand}" />
           <StackPanel>
-            <TextBlock Classes="h" Text="Microfoon" />
+            <TextBlock Classes="h" Text="Mic 1" />
             <TextBlock Classes="muted" Text="{Binding MicStatus}" />
           </StackPanel>
         </DockPanel>

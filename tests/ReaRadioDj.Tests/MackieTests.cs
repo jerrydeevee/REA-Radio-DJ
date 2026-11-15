@@ -35,6 +35,7 @@ public class MackieTests
         public void StartFromLog(long id) => Commands.Add($"START {id}");
         public bool Playing { get; set; }
         public bool AutoPlay { get; set; }
+        public bool DjAutomix { get; set; }
     }
 
     private static uint Msg(int status, int d1, int d2) => (uint)(status | (d1 << 8) | (d2 << 16));
@@ -349,6 +350,29 @@ public class MackieTests
         Assert.Contains(Mackie.Led(Mackie.Flip, true), outs);
         Assert.Equal("indeling: uitzending", surface.Handle(Note(Mackie.Flip, true)));
         Assert.Equal(MackieLayout.Broadcast, surface.Group.Layout);
+    }
+
+    [Fact]
+    public void In_the_dj_layout_loop_switches_automix_and_play_mixes_now()
+    {
+        var (surface, mixer) = DjPanel();
+        surface.Settings = surface.Settings with { Transport = true };
+        surface.Handle(Note(Mackie.Cycle, true));
+        Assert.Equal("DJ AUTOMIX TOGGLE", mixer.Commands[^1]);
+        mixer.DjAutomix = true;
+        Assert.Contains(Mackie.Led(Mackie.Cycle, true), surface.Refresh());
+        surface.Handle(Note(Mackie.Play, true));
+        Assert.Equal("DJ AUTOMIX MIX", mixer.Commands[^1]);
+    }
+
+    [Fact]
+    public void While_automix_runs_a_started_deck_keeps_its_fader_for_the_automix()
+    {
+        var (surface, mixer) = DjPanel();
+        mixer.DjAutomix = true;
+        mixer.Dj[1] = mixer.Dj[1] with { Playing = true };   // automix starts deck B with its fader closed
+        surface.Refresh();
+        Assert.Equal(0f, mixer.Dj[1].Volume);
     }
 
     [Fact]
