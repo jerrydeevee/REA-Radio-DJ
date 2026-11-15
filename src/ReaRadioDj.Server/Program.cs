@@ -57,6 +57,9 @@ OutputsApi.Load(db, options);
 ChannelsApi.Load(db, options);
 RoutingSettings.Load(db, options);
 GeneralSettings.Load(db, options);
+// Instellingen › Op afstand: the web server on the whole network, on the port it was given (appsettings or --urls).
+if (options.Control.WebOnNetwork)
+    builder.WebHost.UseUrls(GeneralSettings.NetworkUrl(builder.Configuration["urls"]));
 PresenterSettings.Load(db, options);
 PresenterExtrasSettings.Load(db, options);
 CreativeSettings.Load(db, options);

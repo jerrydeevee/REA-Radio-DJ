@@ -44,6 +44,9 @@ public sealed partial class SettingsTool : StudioTool
     [ObservableProperty] private bool _startAutomation;
     [ObservableProperty] private bool _startSemi;
     [ObservableProperty] private bool _flowOnFaders = true;
+    [ObservableProperty] private bool _webOnNetwork;
+    /// <summary>Where other computers find this station: the computer's name and the engine's port.</summary>
+    public string NetworkAddress => $"http://{Environment.MachineName.ToLowerInvariant()}:{(Uri.TryCreate(Hub.Settings.EffectiveEngineUrl, UriKind.Absolute, out var u) ? u.Port : 8600)}/remote/";
     public string[] StartModeNames { get; } = ["Automatisch (AUTO)", "Semi: wacht als de DJ zelf iets speelt", "Met de hand (HAND)"];
     /// <summary>The play mode the engine starts in: 0 AUTO, 1 SEMI, 2 HAND.</summary>
     public int StartMode
@@ -694,7 +697,7 @@ public sealed partial class SettingsTool : StudioTool
     private void Show(SettingsDto s)
     {
         StationName = s.StationName; MusicFolder = s.MusicFolder; JingleFolder = s.JingleFolder; StartAutomation = s.StartAutomation;
-        StartSemi = s.StartSemi; FlowOnFaders = s.FlowOnFaders; OnPropertyChanged(nameof(StartMode));
+        StartSemi = s.StartSemi; FlowOnFaders = s.FlowOnFaders; WebOnNetwork = s.WebOnNetwork; OnPropertyChanged(nameof(StartMode));
         StandbyPlayers = s.StandbyPlayers;
         TargetLufs = (decimal)s.TargetLufs; CueInDb = (decimal)s.CueInDb; MixDb = (decimal)s.MixDb; CueOutDb = (decimal)s.CueOutDb;
         MaxOverlap = (decimal)s.MaxOverlap; FadeOut = (decimal)s.FadeOut; DuckLevel = Percent(s.DuckLevel);
@@ -724,7 +727,7 @@ public sealed partial class SettingsTool : StudioTool
             StreamEnabled, StreamServer, StreamPassword, false, StreamBitrate, StreamGenre, StreamUrl,
             ControlBindAddress, (int)ControlTcpPort, (int)ControlOscPort, ControlPassword, false, ClearControlPassword,
             SilenceEnabled, (double)SilenceDb, (double)SilenceSeconds, SilenceActionNames[Math.Clamp(SilenceAction, 0, SilenceActionNames.Length - 1)], SilenceCategory?.Id,
-            StartSemi, FlowOnFaders));
+            StartSemi, FlowOnFaders, WebOnNetwork));
 
         if (_masterLoaded) await Hub.Client.PutAsync("/api/master", new MasterDto(LimiterOn, (double)LimiterCeiling));
         if (_softLoaded) await Hub.Client.PutAsync("/api/soft-start", new SoftStartWire((double)SoftMaxWait));

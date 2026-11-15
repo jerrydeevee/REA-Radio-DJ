@@ -109,4 +109,20 @@ public sealed class SilenceDetectorTests
         Assert.Equal(-120, ReaRadioDj.Core.Audio.SilenceDetector.ToDb(0));
         Assert.Equal(-6.02, ReaRadioDj.Core.Audio.SilenceDetector.ToDb(0.5), 2);
     }
+
+    [Theory]
+    [InlineData("http://localhost:8600", "http://0.0.0.0:8600")]
+    [InlineData("http://127.0.0.1:8612;https://localhost:8613", "http://0.0.0.0:8612")]
+    [InlineData("http://+:80", "http://0.0.0.0:80")]
+    [InlineData(null, "http://0.0.0.0:8600")]
+    public void On_the_network_the_engine_keeps_its_port(string? configured, string expected) =>
+        Assert.Equal(expected, GeneralSettings.NetworkUrl(configured));
+
+    [Fact]
+    public void Switching_the_network_on_needs_a_restart()
+    {
+        var old = GeneralSettings.From(new ReaRadioDjOptions());
+        Assert.False(old.WebOnNetwork);
+        Assert.Contains("of de engine op het netwerk te bereiken is", (old with { WebOnNetwork = true }).NeedsRestart(old));
+    }
 }

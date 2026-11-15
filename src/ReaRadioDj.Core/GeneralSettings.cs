@@ -15,7 +15,7 @@ public sealed record GeneralSettings(
     bool StreamEnabled, string StreamServer, string StreamPassword, int StreamBitrate, string StreamGenre, string StreamUrl,
     string ControlBindAddress, int ControlTcpPort, int ControlOscPort, string ControlPassword,
     bool SilenceEnabled = true, double SilenceDb = -45, double SilenceSeconds = 20, string SilenceAction = "autoplay",
-    long? SilenceCategoryId = null, bool StartSemi = false, bool FlowOnFaders = true)
+    long? SilenceCategoryId = null, bool StartSemi = false, bool FlowOnFaders = true, bool WebOnNetwork = false)
 {
     public const string Key = "general";
 
@@ -26,7 +26,7 @@ public sealed record GeneralSettings(
         o.Stream.Enabled, o.Stream.Server, o.Stream.Password, o.Stream.Bitrate, o.Stream.Genre, o.Stream.Url,
         o.Control.BindAddress, o.Control.TcpPort, o.Control.OscPort, o.Control.Password,
         o.Silence.Enabled, o.Silence.ThresholdDb, o.Silence.Seconds, o.Silence.Action, o.Silence.CategoryId,
-        o.StartSemi, o.Routing.FlowOnFaders);
+        o.StartSemi, o.Routing.FlowOnFaders, o.Control.WebOnNetwork);
 
     /// <summary>
     /// What the studio sent, made safe to use: everything out of range is pulled back, an empty name or folder keeps the
@@ -64,6 +64,7 @@ public sealed record GeneralSettings(
         o.StartAutomation = StartAutomation;
         o.StartSemi = StartSemi;
         o.Routing.FlowOnFaders = FlowOnFaders;
+        o.Control.WebOnNetwork = WebOnNetwork;
         o.Routing.StandbyPlayers = StandbyPlayers;
         o.Mix.TargetLufs = TargetLufs; o.Mix.CueInDb = CueInDb; o.Mix.MixDb = MixDb; o.Mix.CueOutDb = CueOutDb;
         o.Mix.MaxOverlap = MaxOverlap; o.Mix.FadeOut = FadeOut; o.Mix.DuckLevel = DuckLevel;
@@ -83,7 +84,16 @@ public sealed record GeneralSettings(
         if (ControlBindAddress != old.ControlBindAddress || ControlTcpPort != old.ControlTcpPort || ControlOscPort != old.ControlOscPort)
             list.Add("adres en poorten van de bediening op afstand");
         if (StationName != old.StationName) list.Add("de stationsnaam in de stream");
+        if (WebOnNetwork != old.WebOnNetwork) list.Add("of de engine op het netwerk te bereiken is");
         return list;
+    }
+
+    /// <summary>The address to listen on the whole network, with the port of the configured address ("http://localhost:8600" → "http://0.0.0.0:8600").</summary>
+    public static string NetworkUrl(string? configured)
+    {
+        var first = (configured ?? "").Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).FirstOrDefault() ?? "";
+        first = first.Replace("://+", "://localhost").Replace("://*", "://localhost");
+        return Uri.TryCreate(first, UriKind.Absolute, out var u) ? $"{u.Scheme}://0.0.0.0:{u.Port}" : "http://0.0.0.0:8600";
     }
 
     public bool FoldersChanged(GeneralSettings old) =>

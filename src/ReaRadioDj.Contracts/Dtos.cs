@@ -298,7 +298,7 @@ public sealed record SettingsDto(
     bool StreamEnabled, string StreamServer, string StreamPassword, bool StreamPasswordSet, int StreamBitrate, string StreamGenre, string StreamUrl,
     string ControlBindAddress, int ControlTcpPort, int ControlOscPort, string ControlPassword, bool ControlPasswordSet, bool ClearControlPassword,
     bool SilenceEnabled = true, double SilenceDb = -45, double SilenceSeconds = 20, string SilenceAction = "autoplay",
-    long? SilenceCategoryId = null, bool StartSemi = false, bool FlowOnFaders = true);
+    long? SilenceCategoryId = null, bool StartSemi = false, bool FlowOnFaders = true, bool WebOnNetwork = false);
 
 /// <summary>The answer to saving the settings: what was stored, and what needs a restart or a rescan.</summary>
 public sealed record SettingsSavedDto(SettingsDto Settings, IReadOnlyList<string> NeedsRestart, bool Rescanning);
