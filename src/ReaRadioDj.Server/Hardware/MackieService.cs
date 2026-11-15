@@ -75,10 +75,10 @@ public sealed class MackieService : BackgroundService
     public IReadOnlyList<MackieStripState> Channels => _mixer.Strips();
     public int BankOf(long deviceId) => _surfaces.TryGetValue(deviceId, out var s) ? s.Surface.Bank : 0;
 
-    /// <summary>A surface came up: it gets everything at once.</summary>
-    public void Attach(long deviceId, Action<MackieOutput> send)
+    /// <summary>A surface came up: it gets everything at once. An iCON panel also gets its extra screens and colours.</summary>
+    public void Attach(long deviceId, Action<MackieOutput> send, bool icon = false)
     {
-        var surface = new MackieSurface(_mixer, _settings, _bank) { Log = Note };
+        var surface = new MackieSurface(_mixer, _settings, _bank) { Log = Note, Icon = icon };
         _surfaces[deviceId] = (surface, send);
         Regroup();
         lock (surface) foreach (var o in surface.Refresh(force: true)) send(o);
@@ -185,6 +185,18 @@ internal sealed class EngineMackieMixer(AudioRouter router, CommandBus bus, Play
     }
 
     public bool DjOnAir => dj.OnAir;
+
+    public MackieAir Air()
+    {
+        var state = engine.GetState();
+        if (dj.OnAir && dj.Decks.Select(d => d.Info).Where(i => i.Playing && i.Media is not null).MaxBy(i => i.Fader) is { } deck)
+        {
+            // The DJ is on air: the deck that is open furthest is what the listeners hear.
+            return new MackieAir($"Deck {deck.Id}: {deck.Media!.DisplayName}", deck.Duration - deck.Position, state.LevelLeft, state.LevelRight);
+        }
+        var now = state.Current;
+        return new MackieAir(now?.Label, now is null ? 0 : now.To - now.Position, state.LevelLeft, state.LevelRight);
+    }
 
     private static MackieStripState State(MixerStrip s)
     {

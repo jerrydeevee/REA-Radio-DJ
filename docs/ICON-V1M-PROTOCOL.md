@@ -70,3 +70,20 @@ andere labels. iMap vult bij een noottoewijzing zelf `Note N` in.
 ## Getest (15-11-2026)
 
 REA schrijft de indeling zelf (`IconV1M` en `IconPanel`). Dat werkt terwijl iMap draait. Teksten en noten komen aan. Na `EC 2D 01` blijft de indeling staan als de USB-kabel eruit en er weer in gaat. Een bevestiging van het paneel is niet nodig.
+
+## Schermen en kleuren (poort 1, naast Mackie Control)
+
+Bronnen: het officiële Logic-script van iCON (v0.9.1, `iCON V1-M.device/config.lua`) en de opensource-scripts van
+bjoluc voor Cubase (`IconColorManager`, `LcdManager`). Het scherm van elk bericht is op het paneel nagekeken (15-11-2026).
+
+| Bericht | Scherm | Inhoud |
+|---------|--------|--------|
+| `F0 00 00 66 14 12 <pos> <ASCII> F7` | bovenste TFT (2 inch) | gewoon Mackie-display, 2 rijen van 56 tekens (`pos` = rij × 56 + kolom) |
+| `F0 00 02 4E 15 13 <pos> <ASCII> F7` | klein display boven de faders (8 vakjes) | tweede display, ook 2 × 56 tekens, 7 per strip; ✅ getest |
+| `F0 00 02 4E 16 14 <8 × R G B> F7` | kleurbalk | kleur per strip, 0–127 per kleur; ✅ getest |
+| `D1 <(id << 4) + niveau>` | mastermeter | id 0 = links, 1 = rechts; niveau 0–12 |
+| `B0 <40h + n> <teken>` | LED-tijddisplay | cijfer n = 0–9 (tijd), 10–11 (toewijzing); teken `30h` + cijfer, `20h` = leeg, `+40h` = punt erachter; ✅ klok getest, cijfers 9–2 zichtbaar, de punten staan niet vast |
+
+In de Logic-scripts sturen de V1-X-extenders hun display ook met `14` (niet met `15` zoals bij een Mackie XT). Elk
+paneel heeft zijn eigen USB-poort, en daaraan herkent de software welk paneel het is. REA stuurt een extender nu `15`.
+Dat moet met een V1-X nog getest worden.

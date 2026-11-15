@@ -110,6 +110,62 @@ public static class Mackie
         return new MackieOutput(0, [.. bytes]);
     }
 
+    /// <summary>The second display of an iCON V1-M (the small one above the faders): 2 rows of 56 characters, like the main one.</summary>
+    public static MackieOutput IconDisplay(int offset, string text)
+    {
+        var bytes = new List<byte> { 0xF0, 0x00, 0x02, 0x4E, 0x15, 0x13, (byte)Math.Clamp(offset, 0, 111) };
+        bytes.AddRange(Ascii(text));
+        bytes.Add(0xF7);
+        return new MackieOutput(0, [.. bytes]);
+    }
+
+    /// <summary>The colour bar of an iCON V1-M: one colour per strip, 0-127 per component.</summary>
+    public static MackieOutput IconColors(IReadOnlyList<MackieColor> colors)
+    {
+        var bytes = new List<byte> { 0xF0, 0x00, 0x02, 0x4E, 0x16, 0x14 };
+        for (int i = 0; i < Strips; i++)
+        {
+            var c = i < colors.Count ? colors[i] : MackieColor.Off;
+            bytes.AddRange([(byte)Math.Clamp(c.R, 0, 127), (byte)Math.Clamp(c.G, 0, 127), (byte)Math.Clamp(c.B, 0, 127)]);
+        }
+        bytes.Add(0xF7);
+        return new MackieOutput(0, [.. bytes]);
+    }
+
+    /// <summary>
+    /// One digit of the time display (digit 0 = rightmost, 9 = leftmost): a digit or letter, space for blank, with
+    /// the dot after it lit or not.
+    /// </summary>
+    public static MackieOutput TimeDigit(int digit, char c, bool dot = false)
+    {
+        int value = c is >= '0' and <= '9' ? 0x30 + (c - '0')
+            : c is >= 'A' and <= 'Z' ? c - 'A' + 1 : c is >= 'a' and <= 'z' ? c - 'a' + 1 : c == '-' ? 0x2D : 0x20;
+        return new MackieOutput((uint)(0xB0 | ((0x40 + Math.Clamp(digit, 0, 9)) << 8) | ((value | (dot ? 0x40 : 0)) << 16)));
+    }
+
+    /// <summary>The master meter of an iCON V1-M (side 0 = left, 1 = right), 0-12 segments.</summary>
+    public static MackieOutput MasterMeter(int side, int segments) =>
+        new((uint)(0xD1 | (((side & 0x01) << 4 | Math.Clamp(segments, 0, 12)) << 8)));
+
+    /// <summary>Minutes and seconds still to go ("325" for 3:25), or "" when nothing plays.</summary>
+    public static string Countdown(double seconds)
+    {
+        if (seconds <= 0 || double.IsNaN(seconds)) return "";
+        int total = (int)Math.Ceiling(seconds);
+        return $"{total / 60}{total % 60:00}";
+    }
+
+    /// <summary>
+    /// The time display of an iCON V1-M shows eight digits, digit 9 (left) to 2 (right), grouped 3.2.3 with fixed
+    /// dots. A clock "HHmmss" goes on 8-3: " 14.25.07 ".
+    /// </summary>
+    public static IEnumerable<MackieOutput> Clock(string hhmmss)
+    {
+        string text = (" " + hhmmss.PadLeft(6)[..6] + "   ")[..10];   // positions 0-9 from the left = digits 9-0
+        // The dots after the hours (digit 7) and the minutes (digit 5): " 14.25.07 ".
+        for (int digit = 9; digit >= 0; digit--) yield return TimeDigit(digit, text[9 - digit], digit is 7 or 5);
+    }
+
     /// <summary>A whole display row (56 characters), plain ASCII.</summary>
     public static string Row(string text)
     {
@@ -152,6 +208,17 @@ public sealed record MackieLogItem(long Id, string Label);
 public sealed record MackieStripState(string Id, string Name, float Volume, bool Muted, double Pan, bool OnAir, bool Recording, float Peak,
     string? Deck = null, bool Playing = false, bool Sync = false, bool Pfl = false, float Top = 1.25f);
 
+/// <summary>A colour on the colour bar of an iCON panel, 0-127 per component.</summary>
+public readonly record struct MackieColor(int R, int G, int B)
+{
+    public static readonly MackieColor Off = new(0, 0, 0);
+    /// <summary>The same colour, darker: for a channel that is not on air.</summary>
+    public MackieColor Dim() => new(R / 6, G / 6, B / 6);
+}
+
+/// <summary>What is on air: the item playing (null when nothing plays), the time it still has, and the programme level.</summary>
+public sealed record MackieAir(string? Now, double Remaining, float Left, float Right);
+
 /// <summary>What the strips of the panels are: the broadcast mixer, or the DJ desk with the decks on the first strips.</summary>
 public enum MackieLayout { Broadcast, Dj }
 
@@ -163,6 +230,8 @@ public interface IMackieMixer
     IReadOnlyList<MackieStripState> DjStrips();
     /// <summary>The DJ desk is on air (the panels then switch to the DJ layout by themselves).</summary>
     bool DjOnAir { get; }
+    /// <summary>What plays now, for the screens of an iCON panel.</summary>
+    MackieAir Air();
     void SetVolume(string id, float volume);
     void SetMute(string id, bool muted);
     void SetPan(string id, double pan);
@@ -290,6 +359,8 @@ public sealed class MackieSurface(IMackieMixer mixer, MackieSettings settings, M
     public static readonly TimeSpan ChoiceTime = TimeSpan.FromSeconds(8);
     /// <summary>What the surface did by itself (switched layout, opened a fader), for the list of what happened.</summary>
     public Action<string>? Log { get; set; }
+    /// <summary>The local time for the clock on the time display (the tests set their own).</summary>
+    public Func<DateTime> LocalTime { get; set; } = () => DateTime.Now;
     /// <summary>The time (the tests set their own).</summary>
     public Func<DateTime> Clock { get; set; } = () => DateTime.UtcNow;
 
@@ -300,6 +371,11 @@ public sealed class MackieSurface(IMackieMixer mixer, MackieSettings settings, M
     public int Offset { get; set; }
     /// <summary>An extender: no master fader, no transport, its own display address.</summary>
     public bool Extender { get; set; }
+    /// <summary>
+    /// An iCON panel: the strips go on its second display (above the faders) and get a colour on its colour bar; the
+    /// main display shows what plays and comes next, the time display counts down, the master meter shows the programme.
+    /// </summary>
+    public bool Icon { get; set; }
     /// <summary>The first mixer channel on strip 1 of this panel (0-based).</summary>
     public int Bank => Group.First + Offset;
 
@@ -507,20 +583,99 @@ public sealed class MackieSurface(IMackieMixer mixer, MackieSettings settings, M
             string playing = s?.Deck is not null && s.Playing ? ">" : "";
             bottom.Append(Mackie.Cell(s is null ? "" : s.Muted ? "DEMP" : $"{playing}{Math.Round(s.Volume * 100):0}%".PadLeft(5)));
         }
-        string topRow = top.ToString();
+        string topRow = top.ToString(), bottomRow = bottom.ToString();
+        string? choice = null;
         if (!Extender && _choice is not null)
         {
             var log = mixer.Upcoming();
             if (Choice(log, out var item) is int at and >= 0 && item is not null)
-                topRow = Mackie.Row($"{(at == 0 ? "Volgende" : $"{at + 1}/{log.Count}")}: {item.Label}");
+                choice = Mackie.Row($"{(at == 0 ? "Volgende" : $"{at + 1}/{log.Count}")}: {item.Label}");
         }
-        foreach (var (offset, text) in new[] { (0, topRow), (56, bottom.ToString()) })
+        void Show(int key, string text, Func<string, MackieOutput> message)
         {
-            if (_display.TryGetValue(offset, out var was) && was == text) continue;
-            _display[offset] = text;
-            outs.Add(Mackie.Display(offset, text, Extender));
+            if (_display.TryGetValue(key, out var was) && was == text) return;
+            _display[key] = text;
+            outs.Add(message(text));
+        }
+        if (Icon && !Extender)
+        {
+            // The strips go on the display above the faders; the main display is for what plays and what comes next.
+            Show(IconRow, topRow, t => Mackie.IconDisplay(0, t));
+            Show(IconRow + 56, bottomRow, t => Mackie.IconDisplay(56, t));
+            var air = mixer.Air();
+            string left = air.Now is { } now ? "Nu: " + now : "Er speelt niets";
+            string time = Mackie.Countdown(air.Remaining) is { Length: > 0 } c ? $" -{c[..^2]}:{c[^2..]}" : "";
+            Show(0, Mackie.Row(Scroll(left, 56 - time.Length) + time), t => Mackie.Display(0, t));
+            string next = mixer.Upcoming() is { Count: > 0 } up ? "Straks: " + up[0].Label : "Straks: niets meer gepland";
+            Show(56, choice ?? Mackie.Row(next), t => Mackie.Display(56, t));
+            // The clock on the red time display: " 14.25.07 ".
+            string clock = LocalTime().ToString("HHmmss", System.Globalization.CultureInfo.InvariantCulture);
+            if (!_display.TryGetValue(TimeKey, out var shown) || shown != clock)
+            {
+                _display[TimeKey] = clock;
+                outs.AddRange(Mackie.Clock(clock));
+            }
+        }
+        else
+        {
+            Show(0, choice ?? topRow, t => Mackie.Display(0, t, Extender));
+            Show(56, bottomRow, t => Mackie.Display(56, t, Extender));
+        }
+        if (Icon)
+        {
+            var colors = Enumerable.Range(0, Mackie.Strips).Select(i => ColorOf(StripAt(all, i))).ToList();
+            Show(ColorKey, string.Join(",", colors), _ => Mackie.IconColors(colors));
         }
         return outs;
+    }
+
+    private const int IconRow = 1000, TimeKey = 2000, ColorKey = 3000;
+
+    private static string Fit(string text, int width) => text.Length <= width ? text : text[..Math.Max(0, width)];
+
+    private string? _scrollText;
+    private DateTime _scrollStart;
+    /// <summary>How fast a title that does not fit scrolls by: one character per step.</summary>
+    public static readonly TimeSpan ScrollStep = TimeSpan.FromMilliseconds(300);
+    /// <summary>How long a new title stands still before it starts to scroll.</summary>
+    public static readonly TimeSpan ScrollWait = TimeSpan.FromSeconds(2);
+
+    /// <summary>
+    /// A text in a window of <paramref name="width"/> characters: as it is when it fits, otherwise scrolling by like a
+    /// news ticker (it starts again from the beginning when the text changes).
+    /// </summary>
+    private string Scroll(string text, int width)
+    {
+        width = Math.Max(0, width);
+        if (text.Length <= width) { _scrollText = null; return text.PadRight(width); }
+        if (_scrollText != text) { _scrollText = text; _scrollStart = Clock(); }
+        var since = Clock() - _scrollStart - ScrollWait;
+        string loop = text + "   ";
+        int at = since <= TimeSpan.Zero ? 0 : (int)(since.Ticks / ScrollStep.Ticks % loop.Length);
+        return (loop + loop)[at..(at + width)];
+    }
+
+    /// <summary>
+    /// The colour of a strip on the colour bar: by kind of channel, dark when it is not on air (or muted), a deck
+    /// bright while it plays.
+    /// </summary>
+    public static MackieColor ColorOf(MackieStripState? s)
+    {
+        if (s is null) return MackieColor.Off;
+        var c = (s.Deck is not null ? "deck" : s.Id) switch
+        {
+            "log" => new MackieColor(0, 40, 127),
+            "standby" => new MackieColor(0, 110, 127),
+            "cart" => new MackieColor(127, 60, 0),
+            "overlay" => new MackieColor(127, 120, 0),
+            "dj" or "deck" => new MackieColor(90, 0, 127),
+            "mic" => new MackieColor(127, 0, 0),
+            "voip1" or "voip2" => new MackieColor(0, 127, 30),
+            "pfl" => new MackieColor(127, 127, 127),
+            _ => new MackieColor(60, 60, 60),
+        };
+        bool lit = s.Deck is not null ? s.Playing : s.OnAir && !s.Muted;
+        return lit ? c : c.Dim();
     }
 
     /// <summary>A deck started on the screen while its fader was closed gets its fader opened (fader start the other way round).</summary>
@@ -551,6 +706,12 @@ public sealed class MackieSurface(IMackieMixer mixer, MackieSettings settings, M
         var outs = new List<MackieOutput>();
         for (int i = 0; i < Mackie.Strips; i++)
             if (StripAt(all, i) is { } s) outs.Add(Mackie.Meter(i, Mackie.Segments(s.Peak)));
+        if (Icon && !Extender)
+        {
+            var air = mixer.Air();
+            outs.Add(Mackie.MasterMeter(0, Mackie.Segments(air.Left)));
+            outs.Add(Mackie.MasterMeter(1, Mackie.Segments(air.Right)));
+        }
         return outs;
     }
 }

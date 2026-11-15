@@ -115,7 +115,8 @@ public sealed class HardwareService(HardwareStore store, CommandBus bus, Playout
             };
             _open[d.Id] = c;
             opened = true;
-            if (c is MackieConnection { Alive: true } surface) mackie.Attach(d.Id, surface.Send);
+            if (c is MackieConnection { Alive: true } surface)
+                mackie.Attach(d.Id, surface.Send, icon: d.Port.Contains("iCON", StringComparison.OrdinalIgnoreCase));
             if (!c.Alive && c.Status != "verbinden…") logger.LogInformation("Hardware {Name}: {Status}", d.Name, c.Status);
         }
         if (opened || changed)

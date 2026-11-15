@@ -10,12 +10,11 @@ Mackie Control-noten, en wat iMap naar het paneel schrijft (zie [ICON-V1M-PROTOC
 
 | Scherm | Wat het is | Nu | Voorstel |
 |--------|------------|----|----------|
-| Bovenste TFT (2 inch) | toont wat de software via Mackie Control naar het display stuurt | ✅ kanaalnamen en standen, tijdens het bladeren de keuze uit de log | 💡 vaste bovenste regel: *wat er nu speelt* plus de resterende tijd; de onderste regel blijft voor de kanaalstanden |
-| Onderste TFT (1,14 inch, 8 vakjes boven de faders) | "tweede display" voor software die er een stuurt | ✅ toont nu hetzelfde als het bovenste scherm | 💡 per strip naam en stand, zodat het bovenste scherm vrij is voor de uitzending |
-| LED-tijddisplay | 10 cijfers (Mackie-timecode, CC 0x40–0x49) | — | 💡 aftellen tot het einde van het huidige nummer (of tot de intro is afgelopen), anders de klok. Zo werkt een klassieke radio-tafel. |
-| Toewijzingsdisplay (2 tekens, CC 0x4A–0x4B) | als het paneel het heeft | — | 💡 de stand van het paneel: `LG` = uitzending, `DJ` = DJ-tafel |
-| Meters (8 × mono, master stereo) | Mackie-meters | ✅ niveau per kanaal | master: programma-uitgang |
-| Kleurbalk | kanaalkleuren | — | protocol onbekend, eerst meten |
+| Bovenste TFT (2 inch) | toont wat de software via Mackie Control naar het display stuurt | 🟡 boven: *Nu: …* met de resterende tijd; een lange titel schuift als lichtkrant door. Speelt de DJ-tafel op de zender, dan het deck dat het verst openstaat. Onder: *Straks: …*, tijdens het bladeren de keuze uit de log | — |
+| Onderste TFT (1,14 inch, 8 vakjes boven de faders) | "tweede display" | 🟡 per strip naam en stand | — |
+| LED-tijddisplay | cijfers 9–2 zichtbaar | ✅ de klok (uu.mm.ss), punten na uren en minuten | — |
+| Meters (8 × mono, master stereo) | Mackie-meters | ✅ niveau per kanaal, 🟡 master = programma-uitgang | — |
+| Kleurbalk | kleur per strip | 🟡 kleur per soort kanaal; fel als het op de zender is (een deck: als het speelt), anders donker | — |
 | Aanraakscherm (7 inch, 24 knoppen × 5 lagen) | door REA geschreven indeling | ✅ blauw, groen en oranje = cartwall met cartnamen | 💡 paars (U1) en rood (U2) ook gebruiken, zie hieronder |
 
 ## Kanaalstrips (8×)
@@ -81,6 +80,9 @@ De lampjes van deze knoppen kan REA laten branden als de speler loopt.
 | Oranje | kanaal 4, noot 0–23 | ✅ cart 49–64, laatste knop = carts stoppen | — |
 | Paars (U1) | nu sneltoetsen van Bitwig | — | 💡 **uitzending**: NEXT, SKIP, BREAK, AUTO, MIC, STREAM, VoIP opnemen/ophangen, … (kanaal 5) |
 | Rood (U2) | nu sneltoetsen van Bitwig | — | 💡 **DJ**: deck A–D play/cue/sync, hotcues, automix, crossfader links/midden/rechts (kanaal 6) |
+
+Het aanraakscherm heeft vijf lagen. Met U1 en U2 erbij kan de cartwall naar 5 × 24 = 120 knoppen, of U1/U2 krijgen de
+functies hierboven. Die keuze is nog open.
 
 Of de lagen U1 en U2 ook noten kunnen sturen in plaats van sneltoetsen, moet nog op het paneel getest worden.
 Volgens de handleiding kan het, maar daarvoor moeten de 48 slots #138–#185 andere bytes krijgen.

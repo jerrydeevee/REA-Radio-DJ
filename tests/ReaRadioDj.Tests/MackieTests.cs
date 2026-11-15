@@ -15,6 +15,8 @@ public class MackieTests
             .Append(new MackieStripState("dj", "DJ", 1f, false, 0, true, false, 0)).ToList();
         public IReadOnlyList<MackieStripState> DjStrips() => Dj;
         public bool DjOnAir { get; set; }
+        public MackieAir OnAir = new("Artiest X - Nu", 205, 1f, 0.01f);
+        public MackieAir Air() => OnAir;
         private void Change(string id, Func<MackieStripState, MackieStripState> f)
         {
             var list = List.Any(s => s.Id == id) ? List : Dj;
@@ -475,5 +477,96 @@ public class MackieTests
         var surface = new MackieSurface(mixer, new MackieSettings());
         surface.Refresh(force: true);
         Assert.Equal(MackieLayout.Dj, surface.Group.Layout);
+    }
+
+    // ---------------------------------------------------------------- iCON screens
+
+    private static string Text(MackieOutput o) => System.Text.Encoding.ASCII.GetString(o.SysEx!, 7, o.SysEx!.Length - 8);
+
+    private static (MackieSurface Surface, FakeMixer Mixer) IconPanel()
+    {
+        var mixer = new FakeMixer();
+        var surface = new MackieSurface(mixer, new MackieSettings()) { Icon = true, LocalTime = () => new DateTime(2026, 11, 15, 14, 25, 7) };
+        return (surface, mixer);
+    }
+
+    [Fact]
+    public void An_icon_panel_shows_the_strips_above_the_faders_and_what_plays_on_top()
+    {
+        var (surface, _) = IconPanel();
+        var outs = surface.Refresh(force: true);
+        var second = outs.Where(o => o.SysEx is [0xF0, 0x00, 0x02, 0x4E, 0x15, 0x13, ..]).ToList();
+        Assert.StartsWith("Kanaal Kanaal", Text(second[0]));
+        var main = outs.Where(o => o.SysEx is [0xF0, 0x00, 0x00, 0x66, 0x14, 0x12, ..]).Select(Text).ToList();
+        Assert.StartsWith("Nu: Artiest X - Nu", main[0]);
+        Assert.EndsWith(" -3:25", main[0]);
+        Assert.Equal(56, main[0].Length);
+        Assert.StartsWith("Straks: Artiest A - Een", main[1]);
+    }
+
+    [Fact]
+    public void A_long_title_scrolls_on_the_top_screen()
+    {
+        var (surface, mixer) = IconPanel();
+        var now = new DateTime(2026, 11, 15, 13, 0, 0, DateTimeKind.Utc);
+        surface.Clock = () => now;
+        string title = "Een artiest met een hele lange naam - En een titel die echt niet op het scherm past";
+        mixer.OnAir = mixer.OnAir with { Now = title };
+        string Top() => surface.Refresh(force: true).Where(o => o.SysEx is [0xF0, 0x00, 0x00, 0x66, 0x14, 0x12, 0, ..]).Select(Text).Single();
+        string first = Top();
+        Assert.StartsWith("Nu: Een artiest", first);
+        Assert.EndsWith(" -3:25", first);
+        now += MackieSurface.ScrollWait + MackieSurface.ScrollStep * 4;
+        string later = Top();
+        Assert.StartsWith("Een artiest", later);
+        Assert.EndsWith(" -3:25", later);
+        Assert.Equal(56, later.Length);
+        mixer.OnAir = mixer.OnAir with { Now = "Kort" };
+        Assert.StartsWith("Nu: Kort ", Top());
+    }
+
+    [Fact]
+    public void A_plain_mackie_panel_keeps_the_strips_on_its_display()
+    {
+        var outs = new MackieSurface(new FakeMixer(), new MackieSettings()).Refresh(force: true);
+        Assert.DoesNotContain(outs, o => o.SysEx is [0xF0, 0x00, 0x02, 0x4E, ..]);
+        Assert.StartsWith("Kanaal", Text(outs.First(o => o.SysEx is [0xF0, 0x00, 0x00, 0x66, 0x14, 0x12, 0, ..])));
+    }
+
+    [Fact]
+    public void The_clock_runs_on_the_time_display()
+    {
+        var (surface, _) = IconPanel();
+        var outs = surface.Refresh(force: true);
+        var digits = outs.Where(o => o.SysEx is null && (o.Short & 0xFF) == 0xB0 && ((o.Short >> 8) & 0x7F) is >= 0x40 and <= 0x49)
+            .ToDictionary(o => (int)((o.Short >> 8) & 0x7F) - 0x40, o => (int)((o.Short >> 16) & 0x7F));
+        // " 14.25.07 ": digit 9 blank, 8-7 = 14, 6-5 = 25, 4-3 = 07, 2 blank.
+        Assert.Equal(0x20, digits[9]);
+        // Digits 7 and 5 carry the dot (+40h) between hours, minutes and seconds.
+        Assert.Equal(new[] { 0x31, 0x34 | 0x40, 0x32, 0x35 | 0x40, 0x30, 0x37 }, new[] { digits[8], digits[7], digits[6], digits[5], digits[4], digits[3] });
+        Assert.Equal(0x20, digits[2]);
+        Assert.DoesNotContain(surface.Refresh(), o => o.SysEx is null && (o.Short & 0xFF) == 0xB0 && ((o.Short >> 8) & 0x7F) >= 0x40 && ((o.Short >> 8) & 0x7F) <= 0x49);
+    }
+
+    [Fact]
+    public void The_colour_bar_shows_the_kind_of_channel_and_whether_it_is_on_air()
+    {
+        Assert.Equal(new MackieColor(127, 0, 0), MackieSurface.ColorOf(new MackieStripState("mic", "Mic", 1, false, 0, true, false, 0)));
+        Assert.Equal(new MackieColor(127, 0, 0).Dim(), MackieSurface.ColorOf(new MackieStripState("mic", "Mic", 1, false, 0, false, false, 0)));
+        Assert.Equal(new MackieColor(90, 0, 127), MackieSurface.ColorOf(new MackieStripState("deck:A", "Deck A", 1, false, 0, false, false, 0, "A", Playing: true)));
+        var (surface, _) = IconPanel();
+        var color = surface.Refresh(force: true).Single(o => o.SysEx is [0xF0, 0x00, 0x02, 0x4E, 0x16, 0x14, ..]);
+        Assert.Equal(6 + 24 + 1, color.SysEx!.Length);
+    }
+
+    [Fact]
+    public void An_icon_panel_gets_the_programme_on_its_master_meter()
+    {
+        var (surface, _) = IconPanel();
+        var meters = surface.Meters();
+        Assert.Contains(Mackie.MasterMeter(0, 12), meters);
+        Assert.Contains(Mackie.MasterMeter(1, Mackie.Segments(0.01f)), meters);
+        Assert.Equal(0xD1u, Mackie.MasterMeter(1, 5).Short & 0xFF);
+        Assert.Equal(0x15u, (Mackie.MasterMeter(1, 5).Short >> 8) & 0xFF);
     }
 }
