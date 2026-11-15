@@ -31,8 +31,13 @@ iMap stuurt bij **elke** wijziging de hele configuratie, nooit een los veld:
 
 Opslaan als gebruikersstandaard: short `EF 7F 7F`, dan short `EC 2D 01`.
 
-De `21` in `2C`/`25`/`2E`/`EC 22 21` is vermoedelijk het nummer van de actieve
-DAW-sleuf; nog niet bevestigd.
+De `21` in `2C`/`25`/`2E`/`EC 22 21` is de **DAW** die bij DAW-knop 1 hoort
+(bevestigd 15-11-2026: iMap stuurde bij de keuze Pro Tools dezelfde ronde met `23`
+en de toewijzingen en teksten van Pro Tools). De nummers volgen de lijst in iMap:
+`21` Bitwig, `22` Cubase, `23` Pro Tools, enzovoort. De naam die het paneel op het
+display van de masterfader zet ("Bitwig") stuurt iMap **niet** mee: die komt uit de
+firmware bij het DAW-nummer. Een eigen tekst daar ("REA Radio DJ") kan dus niet
+via deze ronde. REA schrijft altijd met `21` (Bitwig).
 
 ## Toewijzingsslot (8 bytes)
 
@@ -65,7 +70,7 @@ Per tekstpagina 12 knoppen van 16 ASCII-tekens: 2 regels van 8. Pagina's 6–9 z
 
 ## Nog onbekend
 
-- Wat `21` precies is en hoe je een DAW-modus of gebruikerssleuf kiest.
+- Wat het paneel toont bij een DAW-nummer buiten de lijst van iMap (niet geprobeerd).
 - Of het paneel iets terugstuurt (bevestiging); tijdens de opnames kwam er niets binnen.
 - Hoe het muiswiel (HID) van het jogwiel uitgaat. #204 stuurt wel CC 60 (REA ontvangt het), maar het paneel stuurt tegelijk ook het muiswiel.
 
