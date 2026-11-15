@@ -791,3 +791,10 @@ public sealed record FailoverStatusDto(string Role, string PartnerUrl, string St
 
 public sealed record FailoverSettingsDto(string Role, string Partner, int IntervalSeconds, int LostSeconds, bool TakeOverOnSilence,
     bool GiveBackAutomatically, int GiveBackSeconds, bool StartStream, string OnTakeOver, string OnGiveBack);
+
+/// <summary>Central library: "uit", "bron" (this engine is the library for the others) or "studio" (takes it over).</summary>
+/// <param name="Key">The control password of the source; empty in a GET (<paramref name="HasKey"/> says whether one is set), empty in a PUT keeps it.</param>
+public sealed record CentralSettingsDto(string Mode, string Address, string Key, bool HasKey, int IntervalMinutes, bool AlwaysFetch);
+
+public sealed record CentralStatusDto(string Mode, string State, DateTime? LastSync, string? Result, string? Error, int Items, int Playable,
+    int Fetching, string? Fetched, bool Busy);

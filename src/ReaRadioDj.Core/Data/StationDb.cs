@@ -10,7 +10,7 @@ namespace ReaRadioDj.Core.Data;
 /// </summary>
 public sealed class StationDb
 {
-    public const int SchemaVersion = 24;
+    public const int SchemaVersion = 25;
     private readonly string _connectionString;
 
     public StationDb(string path)
@@ -110,7 +110,7 @@ public sealed class StationDb
         {
             cmd.Transaction = tx;
             // Each step brings the database one version further; a new database runs them all.
-            cmd.CommandText = (version < 1 ? SchemaV1 : "") + (version < 2 ? SchemaV2 : "") + (version < 3 ? SchemaV3 : "") + (version < 4 ? SchemaV4 : "") + (version < 5 ? SchemaV5 : "") + (version < 6 ? SchemaV6 : "") + (version < 7 ? SchemaV7 : "") + (version < 8 ? SchemaV8 : "") + (version < 9 ? SchemaV9 : "") + (version < 10 ? SchemaV10 : "") + (version < 11 ? SchemaV11 : "") + (version < 12 ? SchemaV12 : "") + (version < 13 ? SchemaV13 : "") + (version < 14 ? SchemaV14 : "") + (version < 15 ? SchemaV15 : "") + (version < 16 ? SchemaV16 : "") + (version < 17 ? SchemaV17 : "") + (version < 18 ? SchemaV18 : "") + (version < 19 ? SchemaV19 : "") + (version < 20 ? SchemaV20 : "") + (version < 21 ? SchemaV21 : "") + (version < 22 ? SchemaV22 : "") + (version < 23 ? SchemaV23 : "") + (version < 24 ? SchemaV24 : "") + $"PRAGMA user_version = {SchemaVersion};";
+            cmd.CommandText = (version < 1 ? SchemaV1 : "") + (version < 2 ? SchemaV2 : "") + (version < 3 ? SchemaV3 : "") + (version < 4 ? SchemaV4 : "") + (version < 5 ? SchemaV5 : "") + (version < 6 ? SchemaV6 : "") + (version < 7 ? SchemaV7 : "") + (version < 8 ? SchemaV8 : "") + (version < 9 ? SchemaV9 : "") + (version < 10 ? SchemaV10 : "") + (version < 11 ? SchemaV11 : "") + (version < 12 ? SchemaV12 : "") + (version < 13 ? SchemaV13 : "") + (version < 14 ? SchemaV14 : "") + (version < 15 ? SchemaV15 : "") + (version < 16 ? SchemaV16 : "") + (version < 17 ? SchemaV17 : "") + (version < 18 ? SchemaV18 : "") + (version < 19 ? SchemaV19 : "") + (version < 20 ? SchemaV20 : "") + (version < 21 ? SchemaV21 : "") + (version < 22 ? SchemaV22 : "") + (version < 23 ? SchemaV23 : "") + (version < 24 ? SchemaV24 : "") + (version < 25 ? SchemaV25 : "") + $"PRAGMA user_version = {SchemaVersion};";
             cmd.ExecuteNonQuery();
         }
         tx.Commit();
@@ -142,6 +142,14 @@ public sealed class StationDb
     // a clock position that plays from a playlist file
     private const string SchemaV24 = """
         ALTER TABLE clock_items ADD COLUMN source TEXT NOT NULL DEFAULT '';
+        """;
+
+    // items taken over from a central library: which item of the source, and its stamp when taken over
+    private const string SchemaV25 = """
+        CREATE TABLE IF NOT EXISTS central_items(
+            media_id INTEGER PRIMARY KEY REFERENCES media(id) ON DELETE CASCADE,
+            central_id INTEGER NOT NULL UNIQUE,
+            stamp TEXT NOT NULL);
         """;
 
     private const string SchemaV22 = """

@@ -92,7 +92,7 @@ Het belang staat in de kolom **Prio** voor Radio Aa en Hunze: **H** hoog, **M** 
 | ✅ | Mappen als bibliotheek, automatisch bijwerken, ook op shares | Bibliotheek › Beheer | — |
 | ✅ | Externe database als bron (SQL) | Databronnen | — |
 | 🟡 | **Een afspeellijst (M3U/PLS/XSPF) als vaste bron**, en als één doorlopend item in de log | als bron in een klok (op volgorde of willekeurig, alleen bestanden uit de bibliotheek, opnieuw gelezen als de lijst verandert); als één doorlopend item in de log nog niet | M |
-| ⬜ | **Centrale bibliotheekdienst** voor meerdere studio's: één plek scant en meet, de studio's vragen op en halen het bestand over als het lokaal niet bereikbaar is | stap 7 | M |
+| ✅ | **Centrale bibliotheekdienst** voor meerdere studio's: één plek scant en meet, de studio's vragen op en halen het bestand over als het lokaal niet bereikbaar is | Instellingen › Centrale bibliotheek (bron/studio) | — |
 | ✅ | Snel zoeken met filters (artiest, jaar, BPM, energie, stemming, waardering, categorie) | zoektaal met chips | — |
 | 🟡 | Vergelijkbare nummers vinden | via toonsoort en BPM; echte gelijkenis ontbreekt | L |
 | ✅ | Uitgebreide tagvelden (componist, uitgever, ISRC, groepering, stemming, waardering) | detailpaneel | — |
@@ -164,7 +164,7 @@ Het belang staat in de kolom **Prio** voor Radio Aa en Hunze: **H** hoog, **M** 
 | ✅ | Hoofd- en reservestudio met hartslag en automatische overname | reservestudio (fa3f799) | — |
 | ⬜ | **Studio's elkaar laten bedienen** (log, planner en mengkanalen van een andere studio) | ontbreekt | M |
 | ⬜ | **Meekijkscherm**: vorige/huidige/volgende, tijden en de stand van alle spelers, op een tweede plek of op afstand | samen met de remote-app | M |
-| ⬜ | **Voicetracking op afstand** (thuis inspreken) | stap 9 | M |
+| ✅ | **Voicetracking op afstand** (thuis inspreken) | pagina /voicetrack/ | — |
 
 ### 11. Bedrijfszekerheid, logging en rapportage
 

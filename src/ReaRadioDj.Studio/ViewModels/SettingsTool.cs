@@ -513,6 +513,9 @@ public sealed partial class SettingsTool : StudioTool
     /// <summary>Settings › Reservestudio.</summary>
     public FailoverVm Failover { get; } = new();
 
+    /// <summary>Settings › Centrale bibliotheek.</summary>
+    public CentralVm Central { get; } = new();
+
     private async Task LoadAsync()
     {
         Status = "lezen…";
@@ -533,6 +536,7 @@ public sealed partial class SettingsTool : StudioTool
         await LoadDeviceWatchAsync();
         await LoadSystemAsync();
         await Failover.LoadAsync();
+        await Central.LoadAsync();
         await LoadOutputsAsync();
         await LoadDeskModeAsync();
         await LoadAudioAsync();
@@ -767,6 +771,7 @@ public sealed partial class SettingsTool : StudioTool
         StoreSoloist();
 
         string? failoverError = await Failover.SaveAsync();
+        string? centralError = await Central.SaveAsync();
 
         if (SystemLoaded)
         {
@@ -787,6 +792,7 @@ public sealed partial class SettingsTool : StudioTool
         if (saved.Rescanning) notes.Add("De bibliotheek wordt opnieuw ingelezen uit de nieuwe mappen.");
         if (saved.NeedsRestart.Count > 0) notes.Add("Actief na een herstart van de engine: " + string.Join(", ", saved.NeedsRestart) + ".");
         if (failoverError is not null) notes.Add(failoverError + ".");
+        if (centralError is not null) notes.Add(centralError + ".");
         if (autoBackupError is not null) notes.Add(autoBackupError);
         Status = string.Join(" ", notes);
     }

@@ -125,6 +125,8 @@ builder.Logging.AddProvider(SystemLog.Instance);
 builder.Services.AddHostedService(sp => sp.GetRequiredService<SilenceWatch>());
 builder.Services.AddSingleton<FailoverService>();
 builder.Services.AddHostedService(sp => sp.GetRequiredService<FailoverService>());
+builder.Services.AddSingleton<CentralService>();
+builder.Services.AddHostedService(sp => sp.GetRequiredService<CentralService>());
 // One microphone capture, shared by voicetracking and the own-voice recording (never both at once).
 builder.Services.AddSingleton<IVoiceCapture>(_ => new BassVoiceCapture());
 builder.Services.AddSingleton(sp => new VoiceTracker(sp.GetRequiredService<PlayoutLog>(), sp.GetRequiredService<IVoiceCapture>(),
@@ -141,11 +143,13 @@ builder.Services.AddSingleton(sp => new StreamGroup(sp.GetRequiredService<Icecas
 builder.Services.AddHostedService<StreamKeepalive>();
 builder.Services.AddHttpClient();
 // The backup studio's heartbeat may ask the other engine over HTTPS with that station's own certificate.
-builder.Services.AddHttpClient("failover").ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
-{
-    ServerCertificateCustomValidationCallback = (_, cert, chain, errors) => ReaRadioDj.Core.LocalCertificates.TrustedOrStation(cert, chain, errors),
-    CheckCertificateRevocationList = false,
-});
+// So may the central library (another engine with its own certificate).
+foreach (var name in new[] { "failover", "central" })
+    builder.Services.AddHttpClient(name).ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
+    {
+        ServerCertificateCustomValidationCallback = (_, cert, chain, errors) => ReaRadioDj.Core.LocalCertificates.TrustedOrStation(cert, chain, errors),
+        CheckCertificateRevocationList = false,
+    });
 // Presenter voice: the default voice profile chooses Higgs TTS 3 (GPU server) or Windows speech.
 builder.Services.AddSingleton<VoiceStore>();
 builder.Services.AddSingleton<VoiceRoleStore>();
@@ -302,6 +306,7 @@ VoiceApi.Map(api);
 VoiceLibraryApi.Map(api, options);
 PresenterApi.Map(api, options);
 VoiceTrackApi.Map(api, options);
+CentralApi.Map(api);
 TransitionApi.Map(api, options);
 NewsApi.Map(api);
 AdsApi.Map(api);

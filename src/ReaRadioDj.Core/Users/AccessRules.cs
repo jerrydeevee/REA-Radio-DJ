@@ -54,6 +54,8 @@ public static class AccessRules
         ("/api/voip/signals", UserRole.Technician),
         ("/api/stream", UserRole.Technician),
         ("/api/library/scan", UserRole.Technician),
+        // The central library: what this engine takes over, and from where (the source answers others with its password).
+        ("/api/central/settings", UserRole.Technician),
         // Programming: technician.
         ("/api/planner", UserRole.Technician),
         ("/api/categories", UserRole.Technician),

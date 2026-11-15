@@ -130,7 +130,7 @@ public class PlaylistTests
             var rule = new PlannerStore(db, library).Clocks.Single(c => c.Name == "Lijst").Rules.Single();
             Assert.Equal(ClockRuleKind.Playlist, rule.Kind);
             Assert.Equal(@"D:\Lijsten\avond.m3u", rule.Source);
-            Assert.Equal(24L, db.Scalar<long>("PRAGMA user_version"));
+            Assert.Equal((long)StationDb.SchemaVersion, db.Scalar<long>("PRAGMA user_version"));
         }
         finally
         {

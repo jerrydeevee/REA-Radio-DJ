@@ -748,6 +748,22 @@ public sealed class MediaLibrary
 
     // ---------------------------------------------------------------- reading
 
+    /// <summary>Re-reads the library and tells everybody (after a change made outside the library, such as the central library).</summary>
+    public void Refresh()
+    {
+        Reload();
+        Status = $"{Songs.Count} nummers, {Jingles.Count} jingles";
+        Changed?.Invoke();
+    }
+
+    /// <summary>Runs work on the library's tables while no scan runs (and keeps scans out meanwhile).</summary>
+    public T Exclusive<T>(Func<T> work, CancellationToken ct = default)
+    {
+        _scanLock.Wait(ct);
+        try { return work(); }
+        finally { _scanLock.Release(); }
+    }
+
     /// <summary>Re-reads the library from the database.</summary>
     public void Reload()
     {

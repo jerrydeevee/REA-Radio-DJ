@@ -674,6 +674,38 @@
         </StackPanel></ScrollViewer>
       </TabItem>
 
+      <TabItem Header="Centrale bibliotheek">
+        <ScrollViewer><StackPanel Classes="page" DataContext="{Binding Central}" x:DataType="vm:CentralVm">
+          <TextBlock Classes="title" Text="Centrale bibliotheek voor meerdere studio's" />
+          <TextBlock Classes="help" Text="Eén engine is de bron: die leest de muziek en jingles in en meet ze (cues, loudness, golfvorm, BPM, toonsoort). De andere studio's nemen die bibliotheek over, met alles wat gemeten is, zodat ze zelf niets hoeven te meten. Kan een studio het bestand op de plek van de bron bereiken (een share), dan speelt hij het daarvandaan; anders haalt hij het eerst op naar deze pc. Pas als een bestand er is, wordt het gespeeld. Hoe vaak een nummer gespeeld is, blijft per studio." />
+          <Border Classes="card" Padding="10,8" Margin="0,12,0,0" IsVisible="{Binding IsOn}">
+            <StackPanel Spacing="4">
+              <TextBlock FontWeight="SemiBold" Text="{Binding State}" TextWrapping="Wrap" />
+              <TextBlock Classes="help" Text="{Binding Detail}" IsVisible="{Binding Detail, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+              <Button Classes="bar" Content="Nu bijwerken" Command="{Binding SyncNowCommand}" IsVisible="{Binding IsStudio}" HorizontalAlignment="Left" Margin="0,6,0,0"
+                      ToolTip.Tip="Vraagt de bron meteen wat er nieuw of veranderd is" />
+              <TextBlock Classes="help" Foreground="{DynamicResource WarnBrush}" Text="{Binding Result}" IsVisible="{Binding Result, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+            </StackPanel>
+          </Border>
+          <TextBlock Classes="field" Text="Deze engine is" />
+          <ComboBox ItemsSource="{Binding Modes}" SelectedItem="{Binding Mode}" MinWidth="150" IsEnabled="{Binding Loaded}"
+                    ToolTip.Tip="uit = alleen de eigen mappen · bron = de bibliotheek voor de andere studio's · studio = neemt de bibliotheek van de bron over" />
+          <TextBlock Classes="help" IsVisible="{Binding !IsStudio}" Text="Als bron: stel een bedieningswachtwoord in (Op afstand) en zet Engine op het netwerk aan; de studio's gebruiken dat wachtwoord." />
+          <StackPanel IsVisible="{Binding IsStudio}">
+            <TextBlock Classes="field" Text="Adres van de bibliotheek-engine" />
+            <TextBox Text="{Binding Address}" Watermark="http://bibliotheek:8600" />
+            <TextBlock Classes="help" Text="http://pc:8600 of https://pc:8443; het eigen certificaat van die engine wordt vertrouwd." />
+            <TextBlock Classes="field" Text="Bedieningswachtwoord van de bibliotheek-engine" />
+            <TextBox Text="{Binding Key}" PasswordChar="●" Watermark="{Binding KeyWatermark}" />
+            <TextBlock Classes="field" Text="Bijwerken elke (minuten)" />
+            <NumericUpDown Value="{Binding IntervalMinutes}" Minimum="1" Maximum="1440" Increment="5" FormatString="0" />
+            <CheckBox Content="Alle bestanden naar deze pc halen, ook wat op een bereikbare share staat" IsChecked="{Binding AlwaysFetch}" Margin="0,10,0,0"
+                      ToolTip.Tip="Dan blijft deze studio spelen als het netwerk of de share wegvalt; kost schijfruimte in de datamap (map centraal)" />
+            <TextBlock Classes="help" Text="Wat de bron niet meer heeft, wordt hier niet meer gespeeld en de opgehaalde kopie verdwijnt. Eigen mappen (Bibliotheek › Mappen) blijven daarnaast gewoon werken." />
+          </StackPanel>
+        </StackPanel></ScrollViewer>
+      </TabItem>
+
       <TabItem Header="Gebruikers">
         <ScrollViewer><StackPanel Classes="page" MaxWidth="760" DataContext="{Binding Users}" x:DataType="vm:UsersPanelVm">
           <TextBlock Classes="title" Text="Gebruikers en rechten" />
