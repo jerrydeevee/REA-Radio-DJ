@@ -11,7 +11,7 @@ namespace ReaRadioDj.Server.Hardware;
 public static class IconPanel
 {
     /// <summary>Writes the set-up; returns whether it went out and what happened, in words for the studio.</summary>
-    public static (bool Ok, string Text) Write(HwDevice device, HardwareStore store, Cartwall cartwall, bool save = true)
+    public static (bool Ok, string Text) Write(HwDevice device, HardwareStore store, Cartwall cartwall, bool save = true, byte daw = IconV1M.NoDaw)
     {
         // REA's set-up: a free button, or one with a cart on it (the old cart layout), gets what REA puts there.
         // A button set by hand to something else keeps it.
@@ -31,7 +31,7 @@ public static class IconPanel
         var commands = new Dictionary<(int, int), string>();
         foreach (var input in store.Inputs().Where(i => i.DeviceId == device.Id && i.OnCommand.Length > 0))
             if (IconV1M.Button(input.Trigger) is { } b) commands.TryAdd(b, input.OnCommand);
-        var steps = IconV1M.Write((layer, button) => commands.TryGetValue((layer, button), out var c) ? LabelOf(c, cartwall) : null, save);
+        var steps = IconV1M.Write((layer, button) => commands.TryGetValue((layer, button), out var c) ? LabelOf(c, cartwall) : null, save, daw: daw);
 
         string port = IconV1M.ConfigPort(device.Port);
         using var midi = new MidiOutPort(port);

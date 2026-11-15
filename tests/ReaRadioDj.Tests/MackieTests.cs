@@ -384,6 +384,20 @@ public class MackieTests
     }
 
     [Fact]
+    public void The_mic_fader_opens_and_closes_the_mic()
+    {
+        var (surface, mixer) = LivePanel();
+        mixer.List[2] = new MackieStripState("mic", "Mic 1", 0f, false, 0, true, false, 0);
+        surface.Handle(Bend(2, Mackie.Position(0.05f)));
+        Assert.DoesNotContain("MIC ON", mixer.Commands);   // a touch does not open it
+        surface.Handle(Bend(2, Mackie.Position(0.8f)));
+        Assert.Equal("MIC ON", mixer.Commands[^1]);
+        mixer.List[2] = mixer.List[2] with { Volume = 0.8f, Sounding = true };
+        surface.Handle(Bend(2, 0));
+        Assert.Equal("MIC OFF", mixer.Commands[^1]);
+    }
+
+    [Fact]
     public void Loop_cycles_the_play_mode_and_its_lamp_shows_it()
     {
         var (surface, mixer) = LivePanel();

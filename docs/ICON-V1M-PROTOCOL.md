@@ -37,7 +37,9 @@ en de toewijzingen en teksten van Pro Tools). De nummers volgen de lijst in iMap
 `21` Bitwig, `22` Cubase, `23` Pro Tools, enzovoort. De naam die het paneel op het
 display van de masterfader zet ("Bitwig") stuurt iMap **niet** mee: die komt uit de
 firmware bij het DAW-nummer. Een eigen tekst daar ("REA Radio DJ") kan dus niet
-via deze ronde. REA schrijft altijd met `21` (Bitwig).
+via deze ronde. REA schrijft met `20`: dat nummer staat niet in de lijst van iMap en het paneel laat
+het vakje boven de masterfader dan leeg (geprobeerd 15-11-2026; de rest werkt gewoon).
+Met `?daw=33` (0x21) bij `POST /api/hardware/devices/{id}/icon` schrijft REA weer als Bitwig.
 
 ## Toewijzingsslot (8 bytes)
 
@@ -70,7 +72,6 @@ Per tekstpagina 12 knoppen van 16 ASCII-tekens: 2 regels van 8. Pagina's 6–9 z
 
 ## Nog onbekend
 
-- Wat het paneel toont bij een DAW-nummer buiten de lijst van iMap (niet geprobeerd).
 - Of het paneel iets terugstuurt (bevestiging); tijdens de opnames kwam er niets binnen.
 - Hoe het muiswiel (HID) van het jogwiel uitgaat. #204 stuurt wel CC 60 (REA ontvangt het), maar het paneel stuurt tegelijk ook het muiswiel.
 

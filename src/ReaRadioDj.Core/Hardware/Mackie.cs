@@ -418,6 +418,13 @@ public sealed class MackieSurface(IMackieMixer mixer, MackieSettings settings, M
                 mixer.SetVolume(s.Id, volume);
                 _sent[FaderKey(f.Strip)] = (uint)f.Position;
                 if (s.Deck is { } deck && Settings.DjFaderStart) return FaderStart(s, deck, volume, a => Deck(deck, a, a == "PLAY" ? "faderstart" : "fader dicht, pauze"));
+                // The mic channel: opening its fader opens the mic (talkover, the music goes down), closing it closes the mic.
+                if (s.Id == "mic" && Settings.LiveAssist)
+                {
+                    if (volume <= Closed && s.Sounding) return mixer.Run("MIC OFF") is { } no ? $"mic dicht lukt niet: {no}" : "mic dicht";
+                    if (volume >= StartAt && !s.Sounding) return mixer.Run("MIC ON") is { } no ? $"mic open lukt niet: {no}" : "mic open";
+                    return null;
+                }
                 // By hand: the flow item that waits for this channel starts when its fader opens.
                 if (s.Next && Settings.LiveAssist)
                     return FaderStart(s, "next:" + s.Id, volume, a => a == "PLAY" ? (mixer.Run("NEXT") is { } why ? $"faderstart lukt niet: {why}" : "faderstart: volgende") : "fader dicht");

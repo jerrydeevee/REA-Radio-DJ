@@ -49,6 +49,9 @@ public class IconV1MTests
         Assert.Equal(new byte[] { 0x09, 0x09, 0x03, 0x17, 0x7F, 0, 0, 0 }, Slot(steps, 137));   // orange 24
         Assert.Equal(new byte[] { 0x09, 0x09, 0x04, 0x00, 0x7F, 0, 0, 0 }, Slot(steps, 138));   // purple (U1) 1
         Assert.Equal(new byte[] { 0x09, 0x09, 0x05, 0x17, 0x7F, 0, 0, 0 }, Slot(steps, 185));   // red (U2) 24
+        // REA's DAW number (not in iMap's list): the name above the master fader stays blank.
+        Assert.Contains(steps, s => s.Message.SysEx is { } x && x.Length > 6 && x[5] == 0x2C && x[6] == IconV1M.NoDaw);
+        Assert.Contains(steps, s => s.Message.Short == (0xECu | 0x22u << 8 | (uint)IconV1M.NoDaw << 16));
         // The rest stays Mackie: the jog wheel on controller 60, fader 1 on pitch bend.
         Assert.Equal(new byte[] { 0x0B, 0x0B, 0x00, 0x3C, 0x41, 0x01, 0, 0 }, Slot(steps, 204));
         Assert.Equal(new byte[] { 0x0E, 0x0E, 0x00, 0, 0, 0, 0, 0 }, Slot(steps, 214));

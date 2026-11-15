@@ -70,7 +70,10 @@ public static class IconV1M
     }
     private const int FirstTouchSlot = 66, SlotsPerPage = 28, SlotSize = 8, LabelsPerPage = 12, LabelSize = 16, LineSize = 8;
     private static readonly byte[] Header = [0xF0, 0x1D, 0x03, 0x10, 0x09];
-    private const byte Slot = 0x21;   // seen in every write of iMap; probably the DAW slot that is written
+    /// <summary>The DAW of DAW button 1, in iMap's order (0x21 Bitwig, 0x22 Cubase, 0x23 Pro Tools ...). The panel shows its name above the master fader.</summary>
+    public const byte Bitwig = 0x21;
+    /// <summary>REA's own: a number that is not in iMap's list, so the panel leaves the name above the master fader blank (tested 15-11-2026).</summary>
+    public const byte NoDaw = 0x20;
     private const uint Ready = 0x7F7FEF;   // short EF 7F 7F before most steps
 
     /// <summary>The port the configuration goes to: the fourth MIDI output of the panel.</summary>
@@ -93,8 +96,9 @@ public static class IconV1M
     /// default" so the set-up stays after switching it off. <paramref name="label"/> gives the text of a button
     /// (layer, button); null or empty leaves it blank.
     /// </summary>
-    public static IReadOnlyList<IconStep> Write(Func<int, int, string?> label, bool save = true, byte[]? token = null)
+    public static IReadOnlyList<IconStep> Write(Func<int, int, string?> label, bool save = true, byte[]? token = null, byte daw = NoDaw)
     {
+        byte Slot = daw;
         token ??= RandomNumberGenerator.GetBytes(3).Select(b => (byte)(b & 0x7F)).ToArray();
         var steps = new List<IconStep>();
         void Long(int pause, params byte[] body) => steps.Add(new IconStep(new MackieOutput(0, [.. Header, .. body, 0xF7]), pause));
@@ -114,7 +118,7 @@ public static class IconV1M
         }
         Long(20, 0x2E, Slot, 0x00);
         Short(Ready);
-        Short(0x21_22_EC);
+        Short((uint)(0xEC | 0x22 << 8 | daw << 16));
         Long(50, [0x27, token[0], token[1], token[2], 0, 0, 0, 0, 0, 0]);
         if (save)
         {

@@ -70,11 +70,11 @@ public static class HardwareApi
             : Results.Ok(Mackie(s, store, service)));
 
         // ---- iCON V1-M: REA's own set-up for the touch buttons, written into the panel
-        g.MapPost("/devices/{id:long}/icon", async (long id, bool? save, HardwareStore store, Cartwall cartwall) =>
+        g.MapPost("/devices/{id:long}/icon", async (long id, bool? save, int? daw, HardwareStore store, Cartwall cartwall) =>
         {
             if (store.Devices().FirstOrDefault(d => d.Id == id) is not { Kind: HwKind.Mackie } device)
                 return Results.BadRequest(new { error = "kies een apparaat van de soort Mackie Control" });
-            var (ok, text) = await Task.Run(() => IconPanel.Write(device, store, cartwall, save ?? true));
+            var (ok, text) = await Task.Run(() => IconPanel.Write(device, store, cartwall, save ?? true, (byte)Math.Clamp(daw ?? IconV1M.NoDaw, 0, 0x7F)));
             return Results.Ok(new IconWriteDto(ok, text));
         });
 
