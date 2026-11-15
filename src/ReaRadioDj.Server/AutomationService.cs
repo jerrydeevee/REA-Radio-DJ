@@ -73,7 +73,7 @@ public sealed class AutomationService(
             End("log:" + item.Id, played);
             if (!_unheard.TryRemove(item.Id, out _)) adService.OnEnded(item, played);
         };
-        foreach (var p in players.Standby)
+        foreach (var p in players.LogPlayers)
         {
             p.Started += (pl, m) => Begin($"player:{pl.Id}", pl.Name, Kind(m), m, m.CueOut - m.CueIn);
             p.Ended += (pl, _, played) => End($"player:{pl.Id}", played);

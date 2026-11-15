@@ -245,6 +245,7 @@ public sealed partial class HardwareTool : StudioTool
     [ObservableProperty] private bool _mackieTransport;
     [ObservableProperty] private bool _mackieMeters = true;
     [ObservableProperty] private bool _mackieDjFaderStart = true;
+    [ObservableProperty] private bool _mackieLiveAssist = true;
     /// <summary>The selected device is an extender (eight strips more, e.g. iCON V1-X).</summary>
     [ObservableProperty] private bool _mackieExtender;
     [ObservableProperty] private bool _mackieExtendersLeft;
@@ -271,6 +272,7 @@ public sealed partial class HardwareTool : StudioTool
         MackieTransport = m.Settings.Transport;
         MackieMeters = m.Settings.Meters;
         MackieDjFaderStart = m.Settings.DjFaderStart;
+        MackieLiveAssist = m.Settings.LiveAssist;
         _mackieExtenders = m.Settings.Extenders ?? [];
         MackieExtender = _mackieExtenders.Contains(Id);
         MackieExtendersLeft = m.Settings.ExtendersLeft;
@@ -281,6 +283,7 @@ public sealed partial class HardwareTool : StudioTool
     partial void OnMackieTransportChanged(bool value) => _ = SaveMackieAsync();
     partial void OnMackieMetersChanged(bool value) => _ = SaveMackieAsync();
     partial void OnMackieDjFaderStartChanged(bool value) => _ = SaveMackieAsync();
+    partial void OnMackieLiveAssistChanged(bool value) => _ = SaveMackieAsync();
     partial void OnMackieExtendersLeftChanged(bool value) => _ = SaveMackieAsync();
 
     partial void OnMackieExtenderChanged(bool value)
@@ -295,7 +298,7 @@ public sealed partial class HardwareTool : StudioTool
     {
         if (_mackieLoading) return;
         if (await Hub.Client.SendForAsync<MackieDto>(HttpMethod.Put, "/api/hardware/mackie",
-                new MackieSettingsDto(MackieMaster?.Id ?? "", MackieTransport, MackieMeters, [.. _mackieExtenders], MackieExtendersLeft, MackieDjFaderStart)) is { } m)
+                new MackieSettingsDto(MackieMaster?.Id ?? "", MackieTransport, MackieMeters, [.. _mackieExtenders], MackieExtendersLeft, MackieDjFaderStart, MackieLiveAssist)) is { } m)
             ShowMackie(m, settings: false);
     }
 

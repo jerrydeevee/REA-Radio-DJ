@@ -60,7 +60,7 @@ public static class HardwareApi
             s.SetSettings(new MackieSettings
             {
                 MasterStrip = d.MasterStrip ?? "", Transport = d.Transport, Meters = d.Meters,
-                Extenders = d.Extenders ?? [.. s.Settings.Extenders], ExtendersLeft = d.ExtendersLeft, DjFaderStart = d.DjFaderStart,
+                Extenders = d.Extenders ?? [.. s.Settings.Extenders], ExtendersLeft = d.ExtendersLeft, DjFaderStart = d.DjFaderStart, LiveAssist = d.LiveAssist,
             });
             return Mackie(s, store, service);
         });
@@ -110,7 +110,7 @@ public static class HardwareApi
 
     private static MackieDto Mackie(MackieService s, HardwareStore store, HardwareService service) => new(
         new MackieSettingsDto(s.Settings.MasterStrip, s.Settings.Transport, s.Settings.Meters, [.. s.Settings.Extenders], s.Settings.ExtendersLeft,
-            s.Settings.DjFaderStart),
+            s.Settings.DjFaderStart, s.Settings.LiveAssist),
         s.Channels.Select(c => new MackieChannelDto(c.Id, c.Name)).ToList(),
         store.Devices().Where(d => d.Kind == HwKind.Mackie).Select(d =>
         {

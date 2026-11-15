@@ -126,6 +126,20 @@ dan glijdt het deck in 8 seconden terug naar zijn eigen tempo.
 dicht stond (cartwall, overlay, standby, PFL, decks). Een leeg of afgelopen deck en een gesloten Mic 1 gaan naar 0;
 de mic komt bij openen terug op zijn oude stand.
 
-**Let op: standby-speler 1 en 2.** Die hebben samen één kanaal (*Standby*), geen eigen fader. Een fader per speler,
-zoals "speler 1 op fader 1, speler 2 op fader 2", vraagt een eigen kanaal per speler. Dat is een wijziging in de
-mixer, en geen kleine.
+## Live-indeling ✅
+
+| Strip | Live |
+|-------|------|
+| 1 | Speler A |
+| 2 | Speler B |
+| 3 | Cartwall |
+| 4 | AI-presentator (de AI-breaks) |
+| 5 | Mic 1 |
+| 6 | Mic 2 (eerste ingang onder *Hardware › Ingangen*) |
+| 7–8 | VoIP 1 en 2 |
+| daarna (Bank) | Automatisering, Overlay, DJ, Speler C/D |
+
+Elke standby-speler heeft een eigen kanaal. **Met de hand** (automatisering uit) vult de log speler A en B, een
+klare AI-break gaat naar de AI-presentator. Fader open = speler start, dicht = stop; PLAY start de speler die het
+langst klaarstaat; SOLO luistert het nummer van die speler voor op de PFL. Uit te zetten met *Live met de hand*
+bij *Hardware › Mackie*.

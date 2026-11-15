@@ -35,6 +35,7 @@ public sealed class PlayoutEngine : IDisposable
     private Thread? _thread;
     private volatile bool _running;
     private int _mixer;
+    private int _presenter;   // the channel of the AI presenter: AI breaks play there
 
     /// <summary>Supplies a replacement when an AI break is not ready in time (usually a station jingle).</summary>
     public Func<MediaItem?>? FallbackProvider { get; set; }
@@ -96,6 +97,7 @@ public sealed class PlayoutEngine : IDisposable
         if (_running) return;
         _router.Start();
         _mixer = _router.Strip(AudioRouter.LogStrip).Handle;
+        _presenter = _router.HasStrip(AudioRouter.PresenterStrip) ? _router.Strip(AudioRouter.PresenterStrip).Handle : _mixer;
         AutoPlay = _options.StartAutomation;
         Interlocked.Exchange(ref _lastTick, Environment.TickCount64);
         _running = true;
@@ -476,7 +478,8 @@ public sealed class PlayoutEngine : IDisposable
             _autoMixAt = MixAt;
             _autoFade = FadeLength;
             Breakpoints();
-            BassRuntime.Check(BASS_Mixer_StreamAddChannel(engine._mixer, _handle, BASS_MIXER_CHAN_NORAMPIN | BASS_STREAM_AUTOFREE),
+            int channel = item.Type == LogItemType.AiBreak ? engine._presenter : engine._mixer;
+            BassRuntime.Check(BASS_Mixer_StreamAddChannel(channel, _handle, BASS_MIXER_CHAN_NORAMPIN | BASS_STREAM_AUTOFREE),
                 "BASS_Mixer_StreamAddChannel");
             if (fadeIn > 0 && _unduckAt is null) BASS_ChannelSlideAttribute(_handle, BASS_ATTRIB_VOL, _gain, (uint)(fadeIn * 1000));
         }

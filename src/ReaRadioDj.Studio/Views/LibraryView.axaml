@@ -113,8 +113,8 @@
         <Button Classes="small" Margin="0,0,4,4" Content="Achteraan" Command="{Binding EndCommand}" />
         <Button Classes="small" Margin="0,0,4,4" Content="📋 Klembord" Command="{Binding ToClipboardCommand}"
                 ToolTip.Tip="De selectie op het klembord zetten (Ctrl+Shift+C), om later uit te slepen" />
-        <Button Classes="small hide-narrow" Margin="0,0,4,4" Content="Standby 1" Command="{Binding StandbyCommand}" CommandParameter="standby1" />
-        <Button Classes="small hide-narrow" Margin="0,0,4,4" Content="Standby 2" Command="{Binding StandbyCommand}" CommandParameter="standby2" />
+        <Button Classes="small hide-narrow" Margin="0,0,4,4" Content="Speler A" Command="{Binding StandbyCommand}" CommandParameter="standby1" />
+        <Button Classes="small hide-narrow" Margin="0,0,4,4" Content="Speler B" Command="{Binding StandbyCommand}" CommandParameter="standby2" />
         <Button Classes="small" Margin="0,0,4,4" Content="▶ PFL" Command="{Binding PflCommand}" ToolTip.Tip="PFL op de koptelefoon (spatie)" />
         <Button Classes="small" Margin="0,0,4,4" Content="■ Stop" Command="{Binding PflStopCommand}" ToolTip.Tip="PFL stoppen (Esc)" />
         <Button Classes="small hide-narrow" Margin="0,0,4,4" Content="Overlay" Command="{Binding OverlayCommand}" ToolTip.Tip="Over de muziek heen (muziek dimt)" />

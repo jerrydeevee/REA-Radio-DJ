@@ -198,7 +198,14 @@ public sealed class MixerStrip
 public sealed class AudioRouter : IDisposable
 {
     public const string LogStrip = "log", StandbyStrip = "standby", CartStrip = "cart", OverlayStrip = "overlay",
-        MicStrip = "mic", PflStrip = "pfl", DjStrip = "dj", Voip1Strip = "voip1", Voip2Strip = "voip2";
+        MicStrip = "mic", PflStrip = "pfl", DjStrip = "dj", Voip1Strip = "voip1", Voip2Strip = "voip2", PresenterStrip = "presenter";
+
+    /// <summary>The channel of standby player <paramref name="n"/> (1-4): "standby" for player A, "standby2" for B, …</summary>
+    public static string PlayerStrip(int n) => n <= 1 ? StandbyStrip : $"standby{n}";
+    /// <summary>The name of standby player <paramref name="n"/>: Speler A, B, C, D.</summary>
+    public static string PlayerName(int n) => $"Speler {(char)('A' + Math.Clamp(n, 1, 4) - 1)}";
+    /// <summary>How many standby players (and so player channels) there are.</summary>
+    public int PlayerCount => Math.Clamp(_options.Routing.StandbyPlayers, 1, 4);
 
     private readonly ReaRadioDjOptions _options;
     private readonly ILogger _logger;
@@ -260,8 +267,11 @@ public sealed class AudioRouter : IDisposable
         catch (Exception ex) when (ex is BassException or DllNotFoundException) { _logger.LogWarning("Limiter not available: {Message}", ex.Message); StartNotes.Add($"Begrenzer niet beschikbaar: {ex.Message}"); }
 
         Add(MixerStrip.CreateSubMixer(LogStrip, "Automatisering", Program));
-        Add(MixerStrip.CreateSubMixer(StandbyStrip, "Standby", Program));
+        // Every standby player has its own channel (its own fader), so live they can be mixed like on a radio desk.
+        for (int n = 1; n <= PlayerCount; n++) Add(MixerStrip.CreateSubMixer(PlayerStrip(n), PlayerName(n), Program));
         Add(MixerStrip.CreateSubMixer(CartStrip, "Cartwall", Program));
+        // The AI presenter: the breaks of the automation, and live the presenter player.
+        Add(MixerStrip.CreateSubMixer(PresenterStrip, "AI-presentator", Program));
         Add(MixerStrip.CreateSubMixer(OverlayStrip, "Overlay", Program));
         Add(MixerStrip.CreateSubMixer(DjStrip, "DJ", Program));
         Add(MixerStrip.CreateSubMixer(PflStrip, "PFL", Preview));
@@ -465,6 +475,10 @@ public sealed class AudioRouter : IDisposable
         return 1;
     }
 
+    /// <summary>The channels that go down under the open mic.</summary>
+    private IEnumerable<string> MusicStrips =>
+        new[] { LogStrip, CartStrip, DjStrip }.Concat(Enumerable.Range(1, PlayerCount).Select(PlayerStrip)).Where(HasStrip);
+
     /// <summary>Talkover: opens the microphone and ducks the music strips (also works without an input device).</summary>
     public void SetMic(bool open)
     {
@@ -475,12 +489,12 @@ public sealed class AudioRouter : IDisposable
         if (open)
         {
             mic.Duck("closed", null, 40);
-            foreach (var id in new[] { LogStrip, StandbyStrip, CartStrip, DjStrip }) Strip(id).Duck("mic", duck, 250);
+            foreach (var id in MusicStrips) Strip(id).Duck("mic", duck, 250);
         }
         else
         {
             mic.Duck("closed", 0f, 120);
-            foreach (var id in new[] { LogStrip, StandbyStrip, CartStrip, DjStrip }) Strip(id).Duck("mic", null, 800);
+            foreach (var id in MusicStrips) Strip(id).Duck("mic", null, 800);
         }
         if (MicAvailable) MicStatus = open ? "open" : "dicht";
         MicChanged?.Invoke(open);

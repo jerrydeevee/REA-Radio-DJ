@@ -34,7 +34,7 @@ public class MackieTests
         public IReadOnlyList<MackieLogItem> Upcoming() => Log;
         public void StartFromLog(long id) => Commands.Add($"START {id}");
         public bool Playing { get; set; }
-        public bool AutoPlay { get; set; }
+        public bool AutoPlay { get; set; } = true;
         public bool DjAutomix { get; set; }
     }
 
@@ -326,6 +326,53 @@ public class MackieTests
         Assert.DoesNotContain(xt.Refresh(), o => (o.Short & 0xFF) == 0xE8 || o.Short == Mackie.Led(Mackie.Play, false).Short);
         main.Handle(Bend(8, 0));
         Assert.Equal(0f, mixer.List[0].Volume);
+    }
+
+    // ---------------------------------------------------------------- live: players on the faders
+
+    private static (MackieSurface Surface, FakeMixer Mixer) LivePanel()
+    {
+        var mixer = new FakeMixer();
+        mixer.List[0] = new MackieStripState("standby", "Speler A", 0f, false, 0, true, false, 0, Player: "1");
+        mixer.List[1] = new MackieStripState("standby2", "Speler B", 0f, false, 0, true, false, 0, Player: "2");
+        var surface = new MackieSurface(mixer, new MackieSettings { Transport = true });
+        surface.Refresh(force: true);
+        return (surface, mixer);
+    }
+
+    [Fact]
+    public void A_player_fader_that_opens_starts_the_player_and_closing_it_stops_it()
+    {
+        var (surface, mixer) = LivePanel();
+        surface.Handle(Bend(0, Mackie.Position(0.05f)));
+        Assert.DoesNotContain("PLAYER 1 PLAY", mixer.Commands);           // a touch does not start it
+        surface.Handle(Bend(0, Mackie.Position(0.8f)));
+        Assert.Contains("PLAYER 1 PLAY", mixer.Commands);
+        mixer.List[0] = mixer.List[0] with { Volume = 0.8f, Playing = true };
+        surface.Handle(Bend(0, 0));
+        Assert.Equal("PLAYER 1 STOP", mixer.Commands[^1]);
+    }
+
+    [Fact]
+    public void Solo_on_a_player_pre_listens_its_track()
+    {
+        var (surface, mixer) = LivePanel();
+        surface.Handle(Note(Mackie.Solo + 1, true));
+        Assert.Equal("PLAYER 2 PFL", mixer.Commands[^1]);
+        mixer.List[1] = mixer.List[1] with { Pfl = true };
+        Assert.Contains(Mackie.Led(Mackie.Solo + 1, true), surface.Refresh());
+    }
+
+    [Fact]
+    public void By_hand_play_starts_the_player_that_waits_longest()
+    {
+        var (surface, mixer) = LivePanel();
+        mixer.AutoPlay = false;
+        surface.Handle(Note(Mackie.Play, true));
+        Assert.Equal("PLAYER NEXT", mixer.Commands[^1]);
+        mixer.AutoPlay = true;
+        surface.Handle(Note(Mackie.Play, true));
+        Assert.Equal("NEXT", mixer.Commands[^1]);
     }
 
     // ---------------------------------------------------------------- DJ layout

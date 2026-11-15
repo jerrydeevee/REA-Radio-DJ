@@ -435,7 +435,7 @@ public sealed record HwPortsDto(List<string> Midi, List<string> Serial);
 /// devices are extenders (eight strips more, e.g. iCON V1-X) and whether those stand left of the main panel.
 /// </summary>
 public sealed record MackieSettingsDto(string MasterStrip, bool Transport, bool Meters, List<long>? Extenders = null, bool ExtendersLeft = false,
-    bool DjFaderStart = true);
+    bool DjFaderStart = true, bool LiveAssist = true);
 
 /// <summary>A mixer channel a Mackie surface can show, in strip order.</summary>
 public sealed record MackieChannelDto(string Id, string Name);

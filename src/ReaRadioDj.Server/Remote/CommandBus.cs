@@ -52,7 +52,8 @@ public sealed class CommandBus(
         new("MUTE <kanaal> ON|OFF|TOGGLE", "Kanaal dempen", "Mixer"),
         new("CART <wand> <knop>", "Cartknop indrukken (wand 1-2, knop 1-64)", "Cartwall"),
         new("CARTS STOP", "Alle carts stoppen", "Cartwall"),
-        new("PLAYER <1|2|PFL> PLAY|PAUSE|TOGGLE|STOP|EJECT", "Standby-speler of PFL bedienen", "Spelers"),
+        new("PLAYER <1-4|A-D|PRESENTER|PFL> PLAY|PAUSE|TOGGLE|STOP|EJECT|PFL", "Speler A-D, AI-presentator of PFL bedienen (PFL = voorbeluisteren)", "Spelers"),
+        new("PLAYER NEXT", "De volgende klaarstaande speler starten (handmatig: de log in speler A en B)", "Spelers"),
         new("PLAYER <1|2|PFL> LOAD <media-id>", "Item in een speler laden", "Spelers"),
         new("OVERLAY PLAY <media-id>", "Item als overlay over het programma", "Spelers"),
         new("OVERLAY STOP", "Overlays stoppen", "Spelers"),
@@ -335,10 +336,28 @@ public sealed class CommandBus(
 
     private CommandResult Player(string which, string action, long? mediaId)
     {
-        var id = which switch { "1" => "standby1", "2" => "standby2", "3" => "standby3", "PFL" => "pfl", _ => which.ToLowerInvariant() };
+        if (which == "NEXT")
+        {
+            if (players.NextCued() is not { } next) return CommandResult.Fail("geen speler met een nummer klaar");
+            next.Play();
+            return CommandResult.Done(next.Name);
+        }
+        var id = which switch
+        {
+            "1" or "A" => "standby1", "2" or "B" => "standby2", "3" or "C" => "standby3", "4" or "D" => "standby4",
+            "PFL" => "pfl", "PRESENTER" or "AI" => "presenter", _ => which.ToLowerInvariant(),
+        };
         if (players.Find(id) is not { } p) return CommandResult.Fail($"speler {which} bestaat niet");
         switch (action)
         {
+            case "PFL" when !ReferenceEquals(p, players.Pfl):
+                // Pre-listen: the track of this player on the PFL; again (while it plays) stops it.
+                if (p.Info.Media is not { } track) return CommandResult.Fail($"{p.Name} is leeg");
+                var pfl = players.Pfl.Info;
+                if (pfl.State == PlayerState.Playing && pfl.Media?.Path == track.Path) { players.Pfl.Stop(); return CommandResult.Done("PFL uit"); }
+                players.Pfl.Load(track);
+                players.Pfl.Play();
+                return CommandResult.Done($"PFL: {track.DisplayName}");
             case "PLAY": p.Play(); break;
             case "PAUSE": p.Pause(); break;
             case "TOGGLE": p.TogglePlay(); break;

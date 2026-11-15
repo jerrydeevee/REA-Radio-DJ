@@ -207,7 +207,7 @@ public sealed record MackieLogItem(long Id, string Label);
 /// </summary>
 public sealed record MackieStripState(string Id, string Name, float Volume, bool Muted, double Pan, bool OnAir, bool Recording, float Peak,
     string? Deck = null, bool Playing = false, bool Sync = false, bool Pfl = false, float Top = 1.25f,
-    string? Track = null, double Left = 0);
+    string? Track = null, double Left = 0, string? Player = null);
 
 /// <summary>A colour on the colour bar of an iCON panel, 0-127 per component.</summary>
 public readonly record struct MackieColor(int R, int G, int B)
@@ -268,6 +268,11 @@ public sealed record MackieSettings
     /// screen with its fader closed gets its fader opened (the motor follows).
     /// </summary>
     public bool DjFaderStart { get; init; } = true;
+    /// <summary>
+    /// Live: with the automation off the log fills speler A and B (and the AI breaks the presenter); a player fader
+    /// that opens starts its player, one that closes stops it, and PLAY starts the player that waits longest.
+    /// </summary>
+    public bool LiveAssist { get; init; } = true;
 }
 
 /// <summary>
@@ -410,7 +415,10 @@ public sealed class MackieSurface(IMackieMixer mixer, MackieSettings settings, M
                 float volume = Mackie.Volume(f.Position, s.Top);
                 mixer.SetVolume(s.Id, volume);
                 _sent[FaderKey(f.Strip)] = (uint)f.Position;
-                return s.Deck is { } deck && Settings.DjFaderStart ? FaderStart(s, deck, volume) : null;
+                if (s.Deck is { } deck && Settings.DjFaderStart) return FaderStart(s, deck, volume, a => Deck(deck, a, a == "PLAY" ? "faderstart" : "fader dicht, pauze"));
+                if (s.Player is { } player && Settings.LiveAssist)
+                    return FaderStart(s, "player:" + player, volume, a => Player(player, a == "PLAY" ? "PLAY" : "STOP", a == "PLAY" ? "faderstart" : "fader dicht, stop"));
+                return null;
             case MackieVPot v:
                 if (StripAt(all, v.Strip) is not { } p) return null;
                 mixer.SetPan(p.Id, Math.Round(Math.Clamp(p.Pan + v.Delta * 0.05, -1, 1), 2));
@@ -427,20 +435,24 @@ public sealed class MackieSurface(IMackieMixer mixer, MackieSettings settings, M
     /// Fader start: a closed deck fader that opens past <see cref="StartAt"/> starts the deck (a tap that moves it a
     /// little does not), one that closes pauses it.
     /// </summary>
-    private string? FaderStart(MackieStripState s, string deck, float volume)
+    /// <summary>Fader start for a deck or a player: <paramref name="run"/> gets "PLAY" or "PAUSE".</summary>
+    private string? FaderStart(MackieStripState s, string key, float volume, Func<string, string> run)
     {
-        if (s.Volume <= Closed) _closedDecks.Add(deck);
+        if (s.Volume <= Closed) _closedDecks.Add(key);
         if (volume <= Closed)
         {
-            _closedDecks.Add(deck);
+            _closedDecks.Add(key);
             if (s.Volume <= Closed || !s.Playing) return null;
-            _decksPlaying[deck] = false;
-            return Deck(deck, "PAUSE", "fader dicht, pauze");
+            _decksPlaying[key] = false;
+            return run("PAUSE");
         }
-        if (volume < StartAt || !_closedDecks.Remove(deck) || s.Playing) return null;
-        _decksPlaying[deck] = true;   // started by the fader: no need to open it
-        return Deck(deck, "PLAY", "faderstart");
+        if (volume < StartAt || !_closedDecks.Remove(key) || s.Playing) return null;
+        _decksPlaying[key] = true;   // started by the fader: no need to open it
+        return run("PLAY");
     }
+
+    private string Player(string player, string action, string what) =>
+        mixer.Run($"PLAYER {player} {action}") is { } why ? $"{player}: {what} lukt niet: {why}" : $"{player}: {what}";
 
     /// <summary>The jog wheel walks through what comes next in the log; the display shows the choice for a while.</summary>
     private string? Browse(int delta)
@@ -472,6 +484,8 @@ public sealed class MackieSurface(IMackieMixer mixer, MackieSettings settings, M
         int at = Choice(mixer.Upcoming(), out var item);
         _choice = null;
         if (at > 0 && item is not null) { mixer.StartFromLog(item.Id); return $"start {item.Label}"; }
+        // Live, by hand: the player that waits longest.
+        if (Settings.LiveAssist && !mixer.AutoPlay && mixer.Run("PLAYER NEXT") is null) return "volgende speler";
         mixer.Run("NEXT");
         return "NEXT";
     }
@@ -487,6 +501,8 @@ public sealed class MackieSurface(IMackieMixer mixer, MackieSettings settings, M
                 Mackie.Mute => Deck(deck, "TOGGLE", "spelen/pauze"),
                 _ => Deck(deck, "SYNC", "sync"),
             };
+        if ((note & ~0x07) == Mackie.Solo && StripAt(all, strip) is { Player: { } pl })
+            return Player(pl, "PFL", "voorbeluisteren");
         switch (note & ~0x07)
         {
             case Mackie.Rec when StripAt(all, strip) is { } s:
@@ -563,7 +579,7 @@ public sealed class MackieSurface(IMackieMixer mixer, MackieSettings settings, M
             Lamp(Mackie.Rec + i, !deck && s?.Recording == true);
             Lamp(Mackie.Mute + i, deck ? s!.Playing : s?.Muted == true);
             Lamp(Mackie.Select + i, deck ? s!.Sync : s?.OnAir == true);
-            Lamp(Mackie.Solo + i, deck && s!.Pfl);
+            Lamp(Mackie.Solo + i, (deck || s?.Player is not null) && s!.Pfl);
             var ring = s is null ? new MackieOutput((uint)(0xB0 | ((Mackie.RingCc + i) << 8))) : Mackie.PanRing(i, s.Pan);
             Send("ring" + i, ring, ring.Short);
         }

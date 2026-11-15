@@ -4,6 +4,7 @@ using ReaRadioDj.Core;
 using ReaRadioDj.Core.Audio;
 using ReaRadioDj.Core.Data;
 using ReaRadioDj.Core.Hardware;
+using ReaRadioDj.Core.Model;
 using ReaRadioDj.Core.Scheduling;
 using ReaRadioDj.Server.Remote;
 
@@ -165,12 +166,17 @@ internal sealed class EngineMackieMixer(AudioRouter router, CommandBus bus, Play
 {
     private const string DeckPrefix = "deck:";
     private const double GainRange = 12;   // dB either way: the encoder ring shows -12..+12
-    private static readonly string[] Order = [AudioRouter.LogStrip, AudioRouter.StandbyStrip, AudioRouter.CartStrip, AudioRouter.OverlayStrip,
-        AudioRouter.DjStrip, AudioRouter.MicStrip, AudioRouter.Voip1Strip, AudioRouter.Voip2Strip];
+    // Live: speler A and B, the cartwall, the AI presenter, mic 1 and the inputs (mic 2); the rest after the first eight.
+    private static readonly string[] Front = [AudioRouter.StandbyStrip, "standby2", AudioRouter.CartStrip, AudioRouter.PresenterStrip, AudioRouter.MicStrip];
+    private static readonly string[] Back = [AudioRouter.Voip1Strip, AudioRouter.Voip2Strip, "standby3", "standby4",
+        AudioRouter.LogStrip, AudioRouter.OverlayStrip, AudioRouter.DjStrip];
     private static readonly string[] DjOrder = [AudioRouter.DjStrip, AudioRouter.MicStrip, AudioRouter.PflStrip, AudioRouter.LogStrip];
 
     public IReadOnlyList<MackieStripState> Strips() =>
-        router.IsStarted ? Order.Where(router.HasStrip).Select(router.Strip).Concat(router.InputStrips).Select(State).ToList() : [];
+        router.IsStarted
+            ? Front.Where(router.HasStrip).Select(router.Strip).Concat(router.InputStrips).Concat(Back.Where(router.HasStrip).Select(router.Strip))
+                .Select(State).ToList()
+            : [];
 
     public IReadOnlyList<MackieStripState> DjStrips()
     {
@@ -203,8 +209,23 @@ internal sealed class EngineMackieMixer(AudioRouter router, CommandBus bus, Play
     {
         var (l, r) = s.Levels();
         var (track, left) = Track(s.Id);
+        // A player on this channel: its fader starts it, SOLO pre-listens its track.
+        var player = PlayerOf(s.Id);
+        var info = player?.Info;
+        var pfl = players.Pfl.Info;
         return new MackieStripState(s.Id, s.Name, s.Volume, s.Muted, s.Processor.Settings.Pan, s.OnAir, s.Recorder.IsRecording, Math.Max(l, r),
-            Track: track, Left: left);
+            Playing: info?.State == PlayerState.Playing,
+            Pfl: info?.Media is { } m && pfl.State == PlayerState.Playing && pfl.Media?.Path == m.Path,
+            Track: track, Left: left, Player: player is null ? null : player.Id == "presenter" ? "PRESENTER" : player.Id["standby".Length..]);
+    }
+
+    /// <summary>The player that plays on a channel: speler A-D on theirs, the presenter player on the presenter's.</summary>
+    private ManualPlayer? PlayerOf(string stripId)
+    {
+        if (stripId == AudioRouter.PresenterStrip) return players.Presenter;
+        for (int n = 1; n <= players.Standby.Count; n++)
+            if (AudioRouter.PlayerStrip(n) == stripId) return players.Standby[n - 1];
+        return null;
     }
 
     /// <summary>What plays on a channel, for its block on the iCON screen: the title and the time it still has.</summary>
@@ -219,15 +240,17 @@ internal sealed class EngineMackieMixer(AudioRouter router, CommandBus bus, Play
             case AudioRouter.LogStrip:
                 if (engine.GetState().Current is { } now) return (now.Label, now.To - now.Position);
                 return Clip(players.Live.Active);
-            case AudioRouter.StandbyStrip:
-                return players.Standby.Select(Player).FirstOrDefault(t => t.Item1 is not null);
+            case AudioRouter.PresenterStrip:
+                if (engine.GetState().Playing.FirstOrDefault(p => p.Type == nameof(LogItemType.AiBreak)) is { } brk) return (brk.Label, brk.To - brk.Position);
+                return Player(players.Presenter);
             case AudioRouter.PflStrip: return Player(players.Pfl);
             case AudioRouter.CartStrip: return Clip(players.Carts.Active);
             case AudioRouter.OverlayStrip: return Clip(players.Overlays.Active);
             case AudioRouter.DjStrip:
                 return dj.Decks.Select(d => d.Info).Where(i => i.Playing && i.Media is not null).MaxBy(i => i.Fader) is { } deck
                     ? (deck.Media!.DisplayName, deck.Duration - deck.Position) : (null, 0);
-            default: return (null, 0);
+            default:
+                return PlayerOf(id) is { } pl ? Player(pl) : (null, 0);
         }
     }
 

@@ -214,11 +214,15 @@ public sealed class ManualPlayer : ITickable
     public event Action<ManualPlayer, MediaItem>? Started;
     public event Action<ManualPlayer, MediaItem, double>? Ended;
 
+    /// <summary>When the track in the player was loaded (which of the waiting players goes first).</summary>
+    public DateTime LoadedAt { get; private set; }
+
     public void Load(MediaItem media)
     {
         lock (_gate)
         {
             EndCurrent();
+            LoadedAt = DateTime.UtcNow;
             _clip = new Clip(_strip, media, AudioRouter.LoudnessGain(media, _targetLufs), media.CueIn, media.CueOut, paused: true, loop: false);
         }
     }
@@ -341,9 +345,10 @@ public sealed class StudioPlayers
         if (!router.IsStarted) router.Start();
         double lufs = options.Mix.TargetLufs;
         Standby = Enumerable.Range(1, Math.Max(1, options.Routing.StandbyPlayers))
-            .Select(i => new ManualPlayer($"standby{i}", $"Standby {i}", router, router.Strip(AudioRouter.StandbyStrip), lufs))
+            .Select(i => new ManualPlayer($"standby{i}", AudioRouter.PlayerName(i), router, router.Strip(AudioRouter.PlayerStrip(i)), lufs))
             .ToList();
         Pfl = new ManualPlayer("pfl", "PFL", router, router.Strip(AudioRouter.PflStrip), lufs);
+        Presenter = new ManualPlayer("presenter", "AI-presentator", router, router.Strip(AudioRouter.PresenterStrip), lufs);
         Carts = new ClipBank(router, router.Strip(AudioRouter.CartStrip), lufs);
         Overlays = new ClipBank(router, router.Strip(AudioRouter.OverlayStrip), lufs);
         // External live streams that take over the program play on the automation strip (the engine is paused then).
@@ -352,9 +357,22 @@ public sealed class StudioPlayers
 
     public IReadOnlyList<ManualPlayer> Standby { get; }
     public ManualPlayer Pfl { get; }
+    /// <summary>Live: the AI breaks from the log play here, on the channel of the AI presenter.</summary>
+    public ManualPlayer Presenter { get; }
     public ClipBank Carts { get; }
     public ClipBank Overlays { get; }
     public ClipBank Live { get; }
 
-    public ManualPlayer? Find(string id) => id == "pfl" ? Pfl : Standby.FirstOrDefault(p => p.Id == id);
+    public ManualPlayer? Find(string id) => id switch
+    {
+        "pfl" => Pfl,
+        "presenter" => Presenter,
+        _ => Standby.FirstOrDefault(p => p.Id == id),
+    };
+
+    /// <summary>The players that play the log live: the standby players and the presenter.</summary>
+    public IEnumerable<ManualPlayer> LogPlayers => Standby.Append(Presenter);
+
+    /// <summary>The player to start next: of the players with a track waiting at its start, the one loaded first.</summary>
+    public ManualPlayer? NextCued() => LogPlayers.Where(p => p.Info.State == PlayerState.Cued).OrderBy(p => p.LoadedAt).FirstOrDefault();
 }

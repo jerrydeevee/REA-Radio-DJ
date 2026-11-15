@@ -72,6 +72,7 @@
                   <TextBlock Classes="muted" FontSize="11" TextWrapping="Wrap"
                              Text="Gaat de DJ-tafel op de zender, dan wisselt het paneel vanzelf naar de DJ-indeling (en terug als de tafel eraf gaat); met FLIP wissel je zelf. Strip 1-4 = deck A-D: fader = kanaalfader, draaiknop = gain, MUTE = spelen/pauze, SELECT = sync, SOLO = voorbeluisteren, REC = cue. Strip 5-8 = DJ-master, mic, PFL en log." />
                   <CheckBox Content="Faderstart: fader open = deck start, dicht = pauze; start je een deck op het scherm, dan gaat de fader open" IsChecked="{Binding MackieDjFaderStart}" />
+                  <CheckBox Content="Live met de hand: staat de automatisering uit, dan vult de log speler A en B (AI-breaks de presentator); fader open = speler start, dicht = stop, PLAY = volgende" IsChecked="{Binding MackieLiveAssist}" />
                   <TextBlock Classes="field" Text="iCON V1-M: aanraakknoppen" />
                   <TextBlock Classes="muted" FontSize="11" TextWrapping="Wrap"
                              Text="Schrijft REA's eigen indeling in het paneel (iMap is niet nodig): blauw stuurt ch2, groen ch3 en oranje ch4, noot 0-23. Op de knoppen komt de naam van wat ze doen (de naam van de cart). Koppel de knoppen eerst hieronder; schrijf opnieuw na het wijzigen van een cart. Sluit iMap, anders zet die zijn eigen indeling terug." />
