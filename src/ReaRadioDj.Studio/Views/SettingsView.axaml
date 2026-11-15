@@ -108,7 +108,9 @@
           <ComboBox ItemsSource="{Binding Inputs}" SelectedItem="{Binding MicDevice}" HorizontalAlignment="Stretch" IsEnabled="{Binding MicEnabled}">
             <ComboBox.ItemTemplate><DataTemplate x:DataType="c:DeviceDto"><TextBlock Text="{Binding Name}" /></DataTemplate></ComboBox.ItemTemplate>
           </ComboBox>
-          <TextBlock Classes="help" Text="Een andere microfoon wordt actief na een herstart van de engine." />
+          <TextBlock Classes="field" Text="Kanaal van de microfoon" />
+          <ComboBox ItemsSource="{Binding MicChannels}" SelectedIndex="{Binding MicChannel}" HorizontalAlignment="Stretch" IsEnabled="{Binding MicEnabled}" />
+          <TextBlock Classes="help" TextWrapping="Wrap" Text="Zit de microfoon op één ingang van een paar (bijvoorbeeld ingang 1 van IN 1-2), kies dan mono; anders klinkt hij alleen links of rechts. Dit wisselt direct. Een andere microfoon wordt actief na een herstart van de engine." />
           <TextBlock Classes="field" Text="Muziek onder de microfoon (% van het volume)" />
           <NumericUpDown Value="{Binding MicDuck}" Minimum="0" Maximum="100" Increment="5" FormatString="0" />
           <TextBlock Classes="field" Text="Muziek onder een overlay (% van het volume)" />

@@ -274,6 +274,7 @@ public sealed class AudioRouter : IDisposable
         var mic = new MixerStrip(MicStrip, "Microfoon", Program, _push);
         Add(mic);
         mic.Duck("closed", 0f, 0);
+        SetMicChannel(_options.Routing.MicChannel);
         if (_options.Routing.MicEnabled) StartRecording(_options.Routing.MicDevice);
         else MicStatus = "uitgeschakeld in de instellingen";
         foreach (var s in _strips.Values) s.HomeBus = s.Bus;
@@ -423,8 +424,8 @@ public sealed class AudioRouter : IDisposable
         try
         {
             if (!BASS_RecordInit(device) && BASS_ErrorGetCode() != BASS_ERROR_ALREADY) throw new BassException($"BASS_RecordInit({device})");
-            delegate* unmanaged[Stdcall]<int, IntPtr, uint, IntPtr, int> proc = &RecordProc;
-            _record = BassRuntime.Check(BASS_RecordStart((uint)BassRuntime.SampleRate, 2, BASS_SAMPLE_FLOAT, (IntPtr)proc, _push),
+            delegate* unmanaged[Stdcall]<int, IntPtr, uint, IntPtr, int> proc = &MicRecordProc;
+            _record =BassRuntime.Check(BASS_RecordStart((uint)BassRuntime.SampleRate, 2, BASS_SAMPLE_FLOAT, (IntPtr)proc, _push),
                 "BASS_RecordStart");
             MicAvailable = true;
             MicStatus = "dicht";
@@ -436,9 +437,29 @@ public sealed class AudioRouter : IDisposable
         }
     }
 
+    // Read on the recording thread; there is one microphone per engine.
+    private static volatile int s_micChannel;
+
+    /// <summary>Which channel of the input the microphone is on (<see cref="MicChannel"/>); switches at once.</summary>
+    public void SetMicChannel(int channel)
+    {
+        s_micChannel = MicChannel.Checked(channel);
+        _options.Routing.MicChannel = s_micChannel;
+    }
+
     [UnmanagedCallersOnly(CallConvs = [typeof(CallConvStdcall)])]
     private static int RecordProc(int handle, IntPtr buffer, uint length, IntPtr user)
     {
+        BASS_StreamPutData((int)user, buffer, length);
+        return 1;
+    }
+
+    /// <summary>The microphone: like <see cref="RecordProc"/>, with the channel choice applied first.</summary>
+    [UnmanagedCallersOnly(CallConvs = [typeof(CallConvStdcall)])]
+    private static unsafe int MicRecordProc(int handle, IntPtr buffer, uint length, IntPtr user)
+    {
+        int channel = s_micChannel;
+        if (channel != MicChannel.Stereo) MicChannel.Apply(new Span<float>((void*)buffer, (int)(length / sizeof(float))), channel);
         BASS_StreamPutData((int)user, buffer, length);
         return 1;
     }

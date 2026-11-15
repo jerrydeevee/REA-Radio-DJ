@@ -105,6 +105,11 @@ public sealed class RoutingOptions
     public bool MicEnabled { get; set; } = false;
     /// <summary>Recording device for the microphone (-1 = default input).</summary>
     public int MicDevice { get; set; } = -1;
+    /// <summary>
+    /// Which channel of the input the microphone is on: 0 = stereo as it comes in, 1 = mono from the left channel
+    /// (input 1 of a pair), 2 = mono from the right channel (input 2). See <see cref="Audio.MicChannel"/>.
+    /// </summary>
+    public int MicChannel { get; set; } = 0;
     /// <summary>Music level while the microphone is open, 0..1.</summary>
     public double MicDuckLevel { get; set; } = 0.25;
     /// <summary>Automation level under overlays and overlay carts, 0..1.</summary>

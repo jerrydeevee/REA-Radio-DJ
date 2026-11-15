@@ -320,7 +320,7 @@ public static class StudioApi
         api.MapPut("/routing", (RoutingDto d, AudioRouter router, StationDb db, MessageCenter messages) =>
         {
             var old = RoutingSettings.From(options);
-            var s = new RoutingSettings(d.OutputDevice, d.PreviewDevice, d.MicEnabled, d.MicDevice, d.MicDuckLevel, d.OverlayDuckLevel);
+            var s = new RoutingSettings(d.OutputDevice, d.PreviewDevice, d.MicEnabled, d.MicDevice, d.MicDuckLevel, d.OverlayDuckLevel, d.MicChannel);
             try
             {
                 if (router.IsStarted && router.Program.Asio is null && s.OutputDevice != old.OutputDevice) router.Program.SetDevice(s.OutputDevice);
@@ -328,6 +328,7 @@ public static class StudioApi
             }
             catch (BassException ex) { return Results.BadRequest(ex.Message); }
             s.ApplyTo(options);
+            if (router.IsStarted) router.SetMicChannel(s.MicChannel);   // mono or stereo switches at once
             s.Save(db);
             if (s.MicEnabled != old.MicEnabled || s.MicDevice != old.MicDevice)
                 messages.Info("Microfooninstelling opgeslagen; wordt actief na een herstart van de engine");
@@ -427,7 +428,7 @@ public static class StudioApi
         s.SilenceEnabled, s.SilenceDb, s.SilenceSeconds, s.SilenceAction, s.SilenceCategoryId);
 
     private static RoutingDto Routing(RoutingSettings s) =>
-        new(s.OutputDevice, s.PreviewDevice, s.MicEnabled, s.MicDevice, s.MicDuckLevel, s.OverlayDuckLevel);
+        new(s.OutputDevice, s.PreviewDevice, s.MicEnabled, s.MicDevice, s.MicDuckLevel, s.OverlayDuckLevel, s.MicChannel);
 
     private static (AirStatsSummary Summary, IReadOnlyList<AirStatsIdle> Idle) AirStatsData(AirStats st, DateOnly from, DateOnly to, int? top, int? idle)
     {

@@ -299,8 +299,13 @@ public sealed record SettingsDto(
 /// <summary>The answer to saving the settings: what was stored, and what needs a restart or a rescan.</summary>
 public sealed record SettingsSavedDto(SettingsDto Settings, IReadOnlyList<string> NeedsRestart, bool Rescanning);
 
+/// <summary>MicChannel: 0 = stereo, 1 = mono from the left channel (input 1), 2 = mono from the right (input 2).</summary>
 public sealed record RoutingDto(int OutputDevice, int PreviewDevice, bool MicEnabled, int MicDevice, double MicDuckLevel,
-    double OverlayDuckLevel);
+    double OverlayDuckLevel, int MicChannel = 0)
+{
+    /// <summary>The choices for MicChannel, in the order of their values.</summary>
+    public static readonly string[] MicChannelNames = ["Stereo (zoals de ingang binnenkomt)", "Mono uit links (ingang 1)", "Mono uit rechts (ingang 2)"];
+}
 
 // ---------------------------------------------------------------- planner
 

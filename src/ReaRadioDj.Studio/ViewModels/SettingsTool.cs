@@ -48,6 +48,9 @@ public sealed partial class SettingsTool : StudioTool
     [ObservableProperty] private DeviceDto? _previewDevice;
     [ObservableProperty] private DeviceDto? _micDevice;
     [ObservableProperty] private bool _micEnabled;
+    /// <summary>Stereo, mono from the left or from the right channel of the input (index in <see cref="MicChannels"/>).</summary>
+    [ObservableProperty] private int _micChannel;
+    public IReadOnlyList<string> MicChannels => RoutingDto.MicChannelNames;
     [ObservableProperty] private decimal _micDuck = 25;
     [ObservableProperty] private decimal _overlayDuck = 35;
     [ObservableProperty] private decimal _standbyPlayers = 2;
@@ -507,6 +510,7 @@ public sealed partial class SettingsTool : StudioTool
         PreviewDevice = Outputs.FirstOrDefault(d => d.Index == r.PreviewDevice);
         MicDevice = Inputs.FirstOrDefault(d => d.Index == r.MicDevice);
         MicEnabled = r.MicEnabled;
+        MicChannel = Math.Clamp(r.MicChannel, 0, RoutingDto.MicChannelNames.Length - 1);
         MicDuck = Percent(r.MicDuckLevel);
         OverlayDuck = Percent(r.OverlayDuckLevel);
         Loaded = true;
@@ -696,7 +700,7 @@ public sealed partial class SettingsTool : StudioTool
         if (!Loaded) return;
         Status = "opslaan…";
         var routing = new RoutingDto(OutputDevice?.Index ?? -1, PreviewDevice?.Index ?? -1, MicEnabled, MicDevice?.Index ?? -1,
-            (double)MicDuck / 100, (double)OverlayDuck / 100);
+            (double)MicDuck / 100, (double)OverlayDuck / 100, Math.Max(0, MicChannel));
         bool routed = await Hub.Client.PutAsync("/api/routing", routing);
         var saved = await Hub.Client.SendForAsync<SettingsSavedDto>(HttpMethod.Put, "/api/settings", new SettingsDto(
             StationName, MusicFolder, JingleFolder, StartAutomation, (int)StandbyPlayers,

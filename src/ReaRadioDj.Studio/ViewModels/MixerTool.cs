@@ -98,6 +98,9 @@ public sealed partial class MixerTool : StudioTool
     [ObservableProperty] private DeviceDto? _previewDevice;
     [ObservableProperty] private DeviceDto? _micDevice;
     [ObservableProperty] private bool _micEnabled;
+    /// <summary>Stereo, mono from the left or from the right channel of the input (index in <see cref="MicChannels"/>).</summary>
+    [ObservableProperty] private int _micChannel;
+    public IReadOnlyList<string> MicChannels => RoutingDto.MicChannelNames;
     [ObservableProperty] private double _micDuck = 25;
     [ObservableProperty] private double _overlayDuck = 35;
 
@@ -218,6 +221,7 @@ public sealed partial class MixerTool : StudioTool
         PreviewDevice = Outputs.FirstOrDefault(d => d.Index == r.PreviewDevice);
         MicDevice = Inputs.FirstOrDefault(d => d.Index == r.MicDevice);
         MicEnabled = r.MicEnabled;
+        MicChannel = Math.Clamp(r.MicChannel, 0, RoutingDto.MicChannelNames.Length - 1);
         MicDuck = Math.Round(r.MicDuckLevel * 100);
         OverlayDuck = Math.Round(r.OverlayDuckLevel * 100);
     }
@@ -228,7 +232,8 @@ public sealed partial class MixerTool : StudioTool
     [RelayCommand]
     private async Task SaveRouting()
     {
-        var r = new RoutingDto(OutputDevice?.Index ?? -1, PreviewDevice?.Index ?? -1, MicEnabled, MicDevice?.Index ?? -1, MicDuck / 100, OverlayDuck / 100);
+        var r = new RoutingDto(OutputDevice?.Index ?? -1, PreviewDevice?.Index ?? -1, MicEnabled, MicDevice?.Index ?? -1, MicDuck / 100, OverlayDuck / 100,
+            Math.Max(0, MicChannel));
         if (await Hub.Client.PutAsync("/api/routing", r)) Hub.Status = "routing opgeslagen";
     }
 }
