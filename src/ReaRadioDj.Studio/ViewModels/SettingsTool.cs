@@ -45,8 +45,31 @@ public sealed partial class SettingsTool : StudioTool
     [ObservableProperty] private bool _startSemi;
     [ObservableProperty] private bool _flowOnFaders = true;
     [ObservableProperty] private bool _webOnNetwork;
-    /// <summary>Where other computers find this station: the computer's name and the engine's port.</summary>
-    public string NetworkAddress => $"http://{Environment.MachineName.ToLowerInvariant()}:{(Uri.TryCreate(Hub.Settings.EffectiveEngineUrl, UriKind.Absolute, out var u) ? u.Port : 8600)}/remote/";
+    /// <summary>Where a phone or tablet finds this station: its network address (a phone often cannot find the computer's name).</summary>
+    public string NetworkAddress => $"https://{LanAddress}:8443/remote/";
+    /// <summary>The station's own CA, to install once on a phone or tablet.</summary>
+    public string CaAddress => $"http://{LanAddress}:{(Uri.TryCreate(Hub.Settings.EffectiveEngineUrl, UriKind.Absolute, out var u) ? u.Port : 8600)}/api/system/ca.crt";
+    private static string LanAddress
+    {
+        get
+        {
+            try
+            {
+                foreach (var nic in System.Net.NetworkInformation.NetworkInterface.GetAllNetworkInterfaces())
+                {
+                    if (nic.OperationalStatus != System.Net.NetworkInformation.OperationalStatus.Up
+                        || nic.NetworkInterfaceType is System.Net.NetworkInformation.NetworkInterfaceType.Loopback
+                        || nic.Description.Contains("Hyper-V", StringComparison.OrdinalIgnoreCase) || nic.Name.StartsWith("vEthernet", StringComparison.OrdinalIgnoreCase)) continue;
+                    var props = nic.GetIPProperties();
+                    if (props.GatewayAddresses.Count == 0) continue;   // the network with a router, not a virtual one
+                    foreach (var a in props.UnicastAddresses)
+                        if (a.Address.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork) return a.Address.ToString();
+                }
+            }
+            catch (System.Net.NetworkInformation.NetworkInformationException) { }
+            return Environment.MachineName.ToLowerInvariant();
+        }
+    }
     public string[] StartModeNames { get; } = ["Automatisch (AUTO)", "Semi: wacht als de DJ zelf iets speelt", "Met de hand (HAND)"];
     /// <summary>The play mode the engine starts in: 0 AUTO, 1 SEMI, 2 HAND.</summary>
     public int StartMode

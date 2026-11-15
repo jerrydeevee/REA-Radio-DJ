@@ -58,8 +58,23 @@ ChannelsApi.Load(db, options);
 RoutingSettings.Load(db, options);
 GeneralSettings.Load(db, options);
 // Instellingen › Op afstand: the web server on the whole network, on the port it was given (appsettings or --urls).
+// With HTTPS beside it on its own port (phones want https), with the station's own certificate (LocalCertificates).
 if (options.Control.WebOnNetwork)
-    builder.WebHost.UseUrls(GeneralSettings.NetworkUrl(builder.Configuration["urls"]));
+{
+    var httpPort = new Uri(GeneralSettings.NetworkUrl(builder.Configuration["urls"])).Port;
+    System.Security.Cryptography.X509Certificates.X509Certificate2? httpsCert = null;
+    if (options.Control.HttpsPort > 0 && options.Control.HttpsPort != httpPort)
+        try { httpsCert = ReaRadioDj.Core.LocalCertificates.Server(options.DataFolder); }
+        catch (Exception ex) when (ex is System.Security.Cryptography.CryptographicException or IOException or UnauthorizedAccessException)
+        {
+            Console.Error.WriteLine($"HTTPS-certificaat maken mislukt, alleen http: {ex.Message}");
+        }
+    builder.WebHost.ConfigureKestrel(k =>
+    {
+        k.ListenAnyIP(httpPort);
+        if (httpsCert is not null) k.ListenAnyIP(options.Control.HttpsPort, l => l.UseHttps(httpsCert));
+    });
+}
 PresenterSettings.Load(db, options);
 PresenterExtrasSettings.Load(db, options);
 CreativeSettings.Load(db, options);
@@ -233,6 +248,10 @@ var json = new JsonSerializerOptions(JsonSerializerDefaults.Web);
 json.Converters.Add(new JsonStringEnumConverter(JsonNamingPolicy.CamelCase));
 
 var api = app.MapGroup("/api");
+// The public certificate of the station's own CA: install it once on a phone or tablet and https needs no warning.
+api.MapGet("/system/ca.crt", () => ReaRadioDj.Core.LocalCertificates.CaCertificate(options.DataFolder) is { } der
+    ? Results.File(der, "application/x-x509-ca-cert", "REA-Radio-DJ-CA.crt")
+    : Results.NotFound("Nog geen certificaat: zet de engine op het netwerk (Instellingen › Op afstand) en start hem opnieuw."));
 StudioApi.Map(api, options);
 UsersApi.Map(api);
 DjApi.Map(api);

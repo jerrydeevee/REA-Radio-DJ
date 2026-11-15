@@ -469,6 +469,8 @@
           <CheckBox Content="De engine is op het netwerk te bereiken (studio op een andere pc, browserstudio, remote-app)" IsChecked="{Binding WebOnNetwork}" />
           <TextBlock Classes="help" TextWrapping="Wrap" Text="Uit: alleen deze computer. Aan: andere computers en tablets in het netwerk bereiken de engine; elke handeling vraagt dan om een aanmelding of het wachtwoord hieronder. Werkt na een herstart van de engine; Windows kan dan vragen het programma door de firewall te laten (zie Systeem › Poorten)." />
           <SelectableTextBlock Classes="help" Text="{Binding NetworkAddress, StringFormat='Remote-app op een tablet of telefoon: {0}'}" />
+          <TextBlock Classes="help" TextWrapping="Wrap" Text="Https gebruikt een eigen certificaat van het station. Installeer het één keer op de telefoon, dan geeft de browser geen waarschuwing meer. Android: open op de telefoon het adres hieronder, en installeer het bestand via Instellingen › Beveiliging › Meer › Versleuteling en inloggegevens › Certificaat installeren › CA-certificaat. iPhone: open het adres in Safari, en zet het daarna aan bij Instellingen › Algemeen › Info › Certificaatvertrouwen. Https gebruikt poort 8443: zet die ook open in de firewall." />
+          <SelectableTextBlock Classes="help" Text="{Binding CaAddress, StringFormat='Certificaat: {0}'}" />
 
           <TextBlock Classes="title" Text="Bediening op afstand" Margin="0,24,0,4" />
           <TextBlock Classes="help" Text="De commando's waarmee andere apparaten en programma's het station bedienen (venster Bediening toont ze allemaal). Knoppen, lampjes en mengtafels stel je in bij het venster Hardware." />

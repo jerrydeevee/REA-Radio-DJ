@@ -76,6 +76,8 @@ public sealed class ControlOptions
     /// only this computer. Another computer still needs a sign-in or the control password for every action.
     /// </summary>
     public bool WebOnNetwork { get; set; }
+    /// <summary>With <see cref="WebOnNetwork"/>: HTTPS on this port as well (0 = none), with the station's own certificate.</summary>
+    public int HttpsPort { get; set; } = 8443;
     /// <summary>Line-based TCP (telnet-style). 0 = off.</summary>
     public int TcpPort { get; set; } = 8601;
     /// <summary>OSC over UDP (TouchOSC, Companion, lighting desks). 0 = off.</summary>
