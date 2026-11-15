@@ -56,10 +56,14 @@ niet · leeg = niet getest.
 
 | Apparaat | Stuurprogramma / firmware | Uitzenden | Opnemen | ASIO | Overig | Getest op / door | Opmerking |
 |---|---|---|---|---|---|---|---|
-| | | | | | | | |
+| Behringer UMC404HD 192k | Behringer UMC-driver met UMC ASIO Driver | ✅ via Windows op `OUT 1-2` | ✅ microfoon op ingang 1 via `IN 1-2`, mono uit links | | | 15-11-2026, studio-pc | Mic op één ingang van een paar klinkt zonder mono alleen links: kies *Mono uit links (ingang 1)*. Bij het installeren van de driver verdween de kaart tot een herstart van Windows; daarna kregen de apparaten andere nummers. ASIO nog niet getest |
+| iCON V1-M | firmware zonder versie in de USB-naam (≥ 1.26), poort `iCON V1-M` | | | | 🟡 Mackie Control (H4) | 15-11-2026, studio-pc | Verbindt als Mackie Control op poort 1; kanaalnamen op het scherm en fader 1 werken. Rest van H4 nog doen. iMAP nog niet geïnstalleerd |
 
 ## Uitkomsten
 
 | Test | Datum | Versie | Uitkomst | Bevinding |
 |---|---|---|---|---|
-| | | | | |
+| H4 | 15-11-2026 | 1.2.0-rc.1 | 🟡 deels | iCON V1-M: verbonden (Mackie Control), kanaalnamen op het scherm, fader 1 en fader 6 bewegen de mixer. Nog te doen: motorfader volgt de studio, meters, mute, solo, rec, aanraken, transport, jogwiel. Het Mackie-logboek (Hardware) toont fadergebaren niet, wat testen lastiger maakt. |
+| — | 15-11-2026 | 1.2.0-rc.1 | ✅ nagebootst | Touchscreen van de iCON naar de cartwall: noten op kanaal 2–4 gaan naar de ingangen (blauw = kanaal 2 → knop 1–24, groen = kanaal 3 → 25–48, oranje = kanaal 4 → 49–64, kanaal 4 noot 23 = carts stoppen). Nagebootst met `/api/hardware/devices/1/simulate`: knop 3 startte de Sweeper. Met het echte touchscreen pas na het instellen in iMAP. |
+| — | 15-11-2026 | 1.2.0-rc.1 | ✅ | Microfoon mono: links en rechts gemeten gelijk na *Mono uit links*, wisselt zonder herstart. |
+| — | 15-11-2026 | 1.2.0-rc.1 | ❌ | Engine blijft geregeld hangen na "Application is shutting down..." bij Ctrl+C (vier van de vijf keer, ook met een gezonde Behringer en met de iCON verbonden); na het sluiten van het venster meldt hij bij de start "niet netjes afgesloten" en gaat verder waar hij was. Oorzaak nog zoeken (mogelijk het sluiten van de MIDI-poort of de geluidskaart). |
