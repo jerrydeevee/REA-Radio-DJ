@@ -233,8 +233,9 @@ internal sealed class EngineMackieMixer(AudioRouter router, CommandBus bus, Play
     {
         static (string?, double) Clip(IReadOnlyList<ClipInfo> active) =>
             active.Count > 0 && active[^1] is var c ? (c.Media.DisplayName is { Length: > 0 } n ? n : c.Label, c.Loop ? 0 : c.Length - c.Position) : (null, 0);
+        // A player shows its track also while it waits (loaded, paused): the time is what is left from where it stands.
         static (string?, double) Player(ManualPlayer p) =>
-            p.Info is { State: PlayerState.Playing, Media: { } m } i ? (m.DisplayName, i.CueOut - i.Position) : (null, 0);
+            p.Info is { State: not PlayerState.Empty, Media: { } m } i ? (m.DisplayName, i.CueOut - i.Position) : (null, 0);
         switch (id)
         {
             case AudioRouter.LogStrip:

@@ -693,19 +693,21 @@ public sealed class MackieSurface(IMackieMixer mixer, MackieSettings settings, M
     public static MackieColor ColorOf(MackieStripState? s)
     {
         if (s is null) return MackieColor.Off;
-        var c = (s.Deck is not null ? "deck" : s.Id) switch
+        var c = (s.Deck is not null ? "deck" : s.Id.StartsWith("standby", StringComparison.Ordinal) ? "standby" : s.Id) switch
         {
             "log" => new MackieColor(0, 40, 127),
             "standby" => new MackieColor(0, 110, 127),
             "cart" => new MackieColor(127, 60, 0),
             "overlay" => new MackieColor(127, 120, 0),
+            "presenter" => new MackieColor(127, 30, 90),
             "dj" or "deck" => new MackieColor(90, 0, 127),
             "mic" => new MackieColor(127, 0, 0),
             "voip1" or "voip2" => new MackieColor(0, 127, 30),
             "pfl" => new MackieColor(127, 127, 127),
             _ => new MackieColor(60, 60, 60),
         };
-        bool lit = s.Deck is not null ? s.Playing : s.OnAir && !s.Muted;
+        // A deck or a player is bright while it plays; another channel while it is on air.
+        bool lit = s.Deck is not null || s.Player is not null ? s.Playing : s.OnAir && !s.Muted;
         return lit ? c : c.Dim();
     }
 
