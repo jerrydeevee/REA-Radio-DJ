@@ -314,24 +314,33 @@ api.MapPost("/command", (CommandRequest body, CommandBus bus) =>
 api.MapGet("/state", (IServiceProvider sp) => Snapshot.Build(sp));
 
 // Server-sent events (browser studio) and a WebSocket (desktop studio): the full state five times a second.
+// Both end when the client goes away and when the engine stops: the web server waits for open connections before the
+// services stop, so a studio that stays connected would otherwise hold up the stop until the host gives up (30 s).
 api.MapGet("/events", async (HttpContext http, IServiceProvider sp) =>
 {
     http.Response.Headers.ContentType = "text/event-stream";
     http.Response.Headers.CacheControl = "no-cache";
-    while (!http.RequestAborted.IsCancellationRequested)
+    using var live = CancellationTokenSource.CreateLinkedTokenSource(http.RequestAborted, app.Lifetime.ApplicationStopping);
+    var ct = live.Token;
+    try
     {
-        var payload = JsonSerializer.Serialize(Snapshot.Build(sp), json);
-        await http.Response.WriteAsync($"data: {payload}\n\n", http.RequestAborted);
-        await http.Response.Body.FlushAsync(http.RequestAborted);
-        await Task.Delay(200, http.RequestAborted).ContinueWith(_ => { }, CancellationToken.None);
+        while (!ct.IsCancellationRequested)
+        {
+            var payload = JsonSerializer.Serialize(Snapshot.Build(sp), json);
+            await http.Response.WriteAsync($"data: {payload}\n\n", ct);
+            await http.Response.Body.FlushAsync(ct);
+            await Task.Delay(200, ct).ContinueWith(_ => { }, CancellationToken.None);
+        }
     }
+    catch (OperationCanceledException) { }
 });
 
 api.Map("/ws", async (HttpContext http, IServiceProvider sp) =>
 {
     if (!http.WebSockets.IsWebSocketRequest) { http.Response.StatusCode = 400; return; }
     using var ws = await http.WebSockets.AcceptWebSocketAsync();
-    var ct = http.RequestAborted;
+    using var live = CancellationTokenSource.CreateLinkedTokenSource(http.RequestAborted, app.Lifetime.ApplicationStopping);
+    var ct = live.Token;
     // Reads (and ignores) incoming frames so that a close from the client is noticed.
     var reader = Task.Run(async () =>
     {
@@ -350,8 +359,15 @@ api.Map("/ws", async (HttpContext http, IServiceProvider sp) =>
             await ws.SendAsync(bytes, WebSocketMessageType.Text, true, ct);
             await Task.WhenAny(reader, Task.Delay(200, ct));
         }
+    }
+    catch (Exception ex) when (ex is WebSocketException or OperationCanceledException) { }
+    try
+    {
+        // Say goodbye, but never wait long for the studio to answer.
+        using var bye = new CancellationTokenSource(TimeSpan.FromSeconds(2));
         if (ws.State is WebSocketState.Open or WebSocketState.CloseReceived)
-            await ws.CloseAsync(WebSocketCloseStatus.NormalClosure, "bye", CancellationToken.None);
+            await ws.CloseAsync(app.Lifetime.ApplicationStopping.IsCancellationRequested ? WebSocketCloseStatus.EndpointUnavailable : WebSocketCloseStatus.NormalClosure,
+                app.Lifetime.ApplicationStopping.IsCancellationRequested ? "engine stopt" : "bye", bye.Token);
     }
     catch (Exception ex) when (ex is WebSocketException or OperationCanceledException) { }
 });
