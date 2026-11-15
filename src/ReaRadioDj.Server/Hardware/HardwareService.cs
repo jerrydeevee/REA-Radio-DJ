@@ -110,7 +110,7 @@ public sealed class HardwareService(HardwareStore store, CommandBus bus, Playout
                 HwKind.Midi => new MidiConnection(d, Report),
                 HwKind.Serial => new SerialConnection(d, Report),
                 HwKind.Ember => new EmberConnection(d, Report),
-                HwKind.Mackie => new MackieConnection(d, mackie.Received),
+                HwKind.Mackie => new MackieConnection(d, FromMackie),
                 _ => new LivewireConnection(d, Report),
             };
             _open[d.Id] = c;
@@ -157,6 +157,16 @@ public sealed class HardwareService(HardwareStore store, CommandBus bus, Playout
         value = Math.Clamp(value, 0, 127);
         Report(new HwEvent(deviceId, $"{a.Kind} {a.Number}", a.Kind == "note" ? value > 0 : value >= 64, Math.Max(1, a.Channel), value));
         return true;
+    }
+
+    /// <summary>
+    /// A message from a Mackie Control panel: Mackie messages go to the surface, notes and controllers on channel 2-16
+    /// (buttons programmed on the panel itself) to the inputs of the device, like those of a MIDI device.
+    /// </summary>
+    private void FromMackie(long deviceId, uint message)
+    {
+        if (HwSignals.BesideMackie(message) && HwSignals.FromMidi(deviceId, message) is { } e) Report(e);
+        else mackie.Received(deviceId, message);
     }
 
     /// <summary>A device reported something: run the commands that belong to it.</summary>

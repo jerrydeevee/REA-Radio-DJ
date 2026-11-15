@@ -22,6 +22,23 @@ public sealed class HwSignalTests
     }
 
     [Fact]
+    public void A_Mackie_panel_passes_its_own_buttons_on_channel_2_to_16()
+    {
+        // Programmed buttons (the touchscreen of an iCON V1-M): notes, controllers and program changes on channel 2-16.
+        Assert.True(HwSignals.BesideMackie(0x7F0091));   // ch2 note 0 on
+        Assert.True(HwSignals.BesideMackie(0x000081));   // ch2 note 0 off
+        Assert.True(HwSignals.BesideMackie(0x7F17B3));   // ch4 cc 23
+        Assert.True(HwSignals.BesideMackie(0x05CF));     // ch16 program change
+        // Mackie itself: buttons, touch, V-pots and jog on channel 1, faders as pitch bend on any channel.
+        Assert.False(HwSignals.BesideMackie(0x7F1090));  // mute strip 1
+        Assert.False(HwSignals.BesideMackie(0x7F6890));  // fader 1 touched
+        Assert.False(HwSignals.BesideMackie(0x413CB0));  // jog wheel
+        Assert.False(HwSignals.BesideMackie(0x4000E1));  // fader 2
+        Assert.False(HwSignals.BesideMackie(0x4000E8));  // master fader
+        Assert.False(HwSignals.BesideMackie(0xF8));      // clock
+    }
+
+    [Fact]
     public void MIDI_messages_become_on_and_off()
     {
         // The value (velocity or controller value) comes along, for faders and knobs on a DJ controller.
