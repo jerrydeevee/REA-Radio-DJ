@@ -16,12 +16,14 @@ Hoe je ermee werkt, in de studio en als beheerder, staat in de [handleiding](doc
 
 | | |
 |---|---|
-| ![DJ-modus met twee decks, mengpaneel en automix](docs/screenshots/dj-modus.png) | ![Automatisering met de programmalog, klok en berichten](docs/screenshots/automatisering.png) |
-| **DJ-modus**: decks met golfvorm en beatstrepen, mengpaneel en automix | **Automatisering**: programmalog met AI-presentator, klok en berichten |
+| ![DJ-modus met twee decks, stems, mengpaneel en effecten](docs/screenshots/dj-modus.png) | ![Automatisering met de programmalog, klok en berichten](docs/screenshots/automatisering.png) |
+| **DJ-modus**: decks met golfvorm en beatstrepen, stems (zang, drums, bas, rest), mengpaneel en effecten | **Automatisering**: programmalog met AI-presentator, klok en berichten |
 | ![Productie met bibliotheek, cue-editor en voicetracking](docs/screenshots/productie.png) | ![Planning met de planner, reclame en programmalog](docs/screenshots/planning.png) |
 | **Productie**: bibliotheek, cue-editor, voicetracking en PFL | **Planning**: dag, week, klokken en vaste tijden, reclamecampagnes |
 | ![Rapportage met as-run, muziekrapport, stream en regiekamer](docs/screenshots/rapportage.png) | ![Het venster Uitsturing met een grote meter en een open-lampje per kanaal](docs/screenshots/uitsturing.png) |
 | **Rapportage**: as-run, muziekrapport (CSV en PDF), stream en regiekamer | **Uitsturing**: programma met loudness en per kanaal een meter met OPEN/DICHT |
+| ![Verbindingen met twee VoIP-lijnen via Opus, met meting](docs/screenshots/verbindingen.png) | |
+| **Verbindingen**: twee VoIP-lijnen, hier met Opus, met verlies, jitter en buffer | |
 
 Elk venster is te verslepen, te docken of los te laten zweven, ook op een tweede scherm.
 
@@ -63,6 +65,9 @@ Elk venster is te verslepen, te docken of los te laten zweven, ook op een tweede
   *Controleer* laat zien hoeveel dat er zijn.
 - **Gebeurtenissen op een plek in een nummer**: een volume-omhullende of een commando op een tijdstip, te zetten in
   de cue-editor.
+- **Speelwijze AUTO, SEMI en HAND**: de log loopt vanzelf, jij valt in (de log wacht op je eigen nummer), of je
+  start alles zelf. De log kan **onder de faders** lopen: muziek op speler A/B, jingles op de cartwall en AI-breaks
+  op de AI-presentator, elk met een eigen fader die meebeweegt.
 - **Studio-spelers**: standby-spelers met stapel, een PFL-speler, cartwalls van 4 × 16 knoppen, overlays en een
   klembord om nummers te parkeren.
 
@@ -96,7 +101,10 @@ Elk venster is te verslepen, te docken of los te laten zweven, ook op een tweede
 ### DJ-modus
 - Vier decks met doorlopende golfvormen en beatstrepen, sync, hot cues, loops en loop-roll, Quantize, effecten op
   de beat, censuur, rem en backspin, een sampler, cue-mix op de koptelefoon en een begrenzer.
-- **Automix** met overgangstypes, en de automatisering loopt onhoorbaar door terwijl de DJ op de lucht is.
+- **Stems**: per deck zang, drums, bas en de rest los aan of uit, bijvoorbeeld voor een instrumentale versie. Ze
+  worden op de achtergrond op de processor gemaakt (HT-Demucs, op lage prioriteit) en bewaard tot 20 GB. Het
+  model (`data\models\htdemucs.onnx`) zit niet in de download.
+- **Automix** op 2 of 4 decks met overgangstypes (ook via de kanaalfaders), en de automatisering loopt onhoorbaar door terwijl de DJ op de lucht is.
 - Mix opnemen; bediening van decks via de commandobus en MIDI leren. *Nog niet beluisterd.*
 
 ### Verbindingen (VoIP)
@@ -138,10 +146,14 @@ Elk venster is te verslepen, te docken of los te laten zweven, ook op een tweede
   *Ember+ is nog niet tegen een echt apparaat getest.*
 - **Mackie Control**: een bedieningspaneel met motorfaders (bijv. iCON V1-M, met een uitbreiding zoals de
   V1-X ernaast) bedient het mengpaneel: volume, balans, dempen, opnemen en naar de zender per kanaal, met display
-  en meters; de faders volgen de studio.
-  *Nog niet tegen een echt paneel getest.*
+  en meters; de faders volgen de studio. Op een iCON V1-M zet REA zijn eigen indeling in het paneel, met de nummers
+  per fader op het scherm, een DJ-indeling met faderstart en de jogwheel door de log. Getest met een iCON V1-M.
 
 ### De studio
+- **Https op het netwerk** met een eigen certificaat van het station (poort 8443), en **voicetracking vanuit de
+  browser**: een presentator neemt thuis een praatje op met de microfoon van laptop of telefoon.
+- **Centrale bibliotheek**: één engine leest de muziek in en meet hem; andere studio's nemen dat over en spelen
+  van de share of van een eigen kopie (*Instellingen › Centrale bibliotheek*).
 - **Op afstand**: een pagina voor telefoon en tablet (`/remote/` op de engine) toont wat er speelt en wat er komt,
   met grote knoppen voor start, overslaan en carts. Lezen kan vanaf elke computer; elke actie via het netwerk vraagt
   een aangemelde gebruiker of het bedieningswachtwoord.
