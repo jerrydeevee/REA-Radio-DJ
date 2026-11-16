@@ -110,6 +110,9 @@ builder.Services.AddSingleton<ReaRadioDj.Server.Voip.VoipService>();
 builder.Services.AddHostedService(sp => sp.GetRequiredService<ReaRadioDj.Server.Voip.VoipService>());
 builder.Services.AddSingleton<StudioPlayers>();
 builder.Services.AddSingleton(new DjStore(Path.Combine(options.DataFolder, "dj.json")));
+builder.Services.AddSingleton(sp => new StemLibrary(Path.Combine(options.DataFolder, "stems"),
+    options.Stems.Enabled ? StemSeparator.FindModel(options.Stems.Model, options.DataFolder) : null,
+    (long)(Math.Max(1, options.Stems.CacheGb) * 1024 * 1024 * 1024), sp.GetRequiredService<ILoggerFactory>().CreateLogger("Stems")));
 builder.Services.AddSingleton<DjMixer>();
 builder.Services.AddHostedService<ReaRadioDj.Server.AutoFaderService>();
 builder.Services.AddHostedService<ReaRadioDj.Server.FlowModeService>();
@@ -307,6 +310,7 @@ VoiceLibraryApi.Map(api, options);
 PresenterApi.Map(api, options);
 VoiceTrackApi.Map(api, options);
 CentralApi.Map(api);
+StemApi.Map(api);
 TransitionApi.Map(api, options);
 NewsApi.Map(api);
 AdsApi.Map(api);

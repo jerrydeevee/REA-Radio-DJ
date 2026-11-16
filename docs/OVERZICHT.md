@@ -150,7 +150,7 @@ Gerangschikt naar de stappen van de werklijst. De proof of concept is af na stap
 - ⬜ Hercules- en Pioneer-controller via de commandobus
 - ⬜ Mix opnemen naar de bibliotheek. De opname per kanaal is er al; het moet nog in de bibliotheek komen
 - ⬜ Draaiknoppen, alles passend op 1920 × 1080
-- ⬜ Later: stems (zang, instrumenten, bas, drums)
+- 🟡 Stems (zang, drums, bas, rest) per deck, gemaakt op de processor
 
 ### Stap 5 — Verbindingen (codec en VoIP)
 

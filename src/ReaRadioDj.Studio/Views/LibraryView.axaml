@@ -281,6 +281,7 @@
           <MenuItem Header="Cues bewerken" Command="{Binding CuesCommand}" />
           <MenuItem Header="Aan / uit (niet meer inplannen)" Command="{Binding ToggleEnabledCommand}" />
           <MenuItem Header="Muziek ↔ jingle omzetten" Command="{Binding ToggleKindCommand}" />
+          <MenuItem Header="Stems maken (voor de DJ-decks)" Command="{Binding MakeStemsCommand}" />
         </ContextMenu>
       </ListBox.ContextMenu>
       <ListBox.ItemTemplate>

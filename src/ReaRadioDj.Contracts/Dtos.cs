@@ -103,7 +103,14 @@ public sealed record DjDeckDto(string Id, long? MediaId, string Title, string Ar
     double CuePoint, IReadOnlyList<double?> HotCues, double? LoopIn, double? LoopOut, bool LoopActive, double LoopBeats, double Gain,
     double EqLow, double EqMid, double EqHigh, bool KillLow, bool KillMid, bool KillHigh, double Filter, double Fader, bool Pfl,
     float LevelLeft, float LevelRight, bool Rolling = false, string FxType = "echo", bool FxOn = false, double FxMix = 0.5, double FxBeats = 1,
-    bool Censoring = false, string? Spinning = null);
+    bool Censoring = false, string? Spinning = null,
+    string Stems = "none", double StemProgress = 0, bool StemsPlaying = false, IReadOnlyList<double>? StemLevels = null);
+
+/// <summary>Stems of the DJ decks: whether they can be made, what waits, how far the one being made is, the cache.</summary>
+public sealed record StemsDto(bool Available, int Waiting, string? Working, double Progress, double CacheGb, double MaxGb);
+
+/// <summary>Library tracks to make stems of, in the background.</summary>
+public sealed record StemRequest(IReadOnlyList<long> Ids);
 
 /// <summary>Crossfader 0 (decks A and C) .. 1 (B and D); curve "smooth" or "sharp"; OnAir = the desk is heard on the radio.</summary>
 /// Following = deck A copies what the automation plays, ready to take over.

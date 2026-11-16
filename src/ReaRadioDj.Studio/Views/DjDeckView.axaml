@@ -166,6 +166,20 @@
               </StackPanel>
             </Button>
           </WrapPanel>
+          <!-- Stems: vocals, drums, bass and the rest of the track, each on or off (made in the background when a track is loaded) -->
+          <WrapPanel ItemSpacing="6" LineSpacing="6" IsVisible="{Binding !Compact}">
+            <TextBlock Classes="lbl" Text="STEMS" VerticalAlignment="Center" Width="52" />
+            <ToggleButton Classes="bar fx" Padding="12,0" Content="Zang" IsChecked="{Binding StemVocals, Mode=OneWay}" IsEnabled="{Binding StemsUsable}"
+                          Command="{Binding ToggleStemCommand}" CommandParameter="vocals" ToolTip.Tip="Zang aan of uit: uit = alleen de muziek (een instrumentale versie)" />
+            <ToggleButton Classes="bar fx" Padding="12,0" Content="Drums" IsChecked="{Binding StemDrums, Mode=OneWay}" IsEnabled="{Binding StemsUsable}"
+                          Command="{Binding ToggleStemCommand}" CommandParameter="drums" ToolTip.Tip="Drums aan of uit" />
+            <ToggleButton Classes="bar fx" Padding="12,0" Content="Bas" IsChecked="{Binding StemBass, Mode=OneWay}" IsEnabled="{Binding StemsUsable}"
+                          Command="{Binding ToggleStemCommand}" CommandParameter="bass" ToolTip.Tip="Bas aan of uit" />
+            <ToggleButton Classes="bar fx" Padding="12,0" Content="Rest" IsChecked="{Binding StemOther, Mode=OneWay}" IsEnabled="{Binding StemsUsable}"
+                          Command="{Binding ToggleStemCommand}" CommandParameter="other" ToolTip.Tip="De rest (gitaren, toetsen, strijkers…) aan of uit" />
+            <TextBlock Classes="lbl" Text="{Binding StemText}" VerticalAlignment="Center"
+                       ToolTip.Tip="De stems worden op de achtergrond gemaakt (op de processor) als je een nummer laadt, of vooraf via Bibliotheek › rechtsklik › Stems maken. Ook DJ &lt;deck&gt; STEM VOCALS ON/OFF." />
+          </WrapPanel>
         </StackPanel>
 
         <!-- Tempo fader: down is faster, as on a turntable -->

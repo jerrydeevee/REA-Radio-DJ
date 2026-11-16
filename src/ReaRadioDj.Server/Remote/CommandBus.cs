@@ -60,7 +60,8 @@ public sealed class CommandBus(
         new("OVERLAY STOP", "Overlays stoppen", "Spelers"),
         new("DJ <A-D> <actie> [waarde]", "DJ-deck: TOGGLE, PLAY, PAUSE, CUE, SYNC, PFL, HOTCUE <1-8>, LOOPTOGGLE [tellen], FX, LOAD <media-id>, EJECT, "
             + "TEMPO <%>, BEND <%>, GAIN <dB>, FADER <0-1>, EQHIGH|EQMID|EQLOW <-1..1>, FILTER <-1..1>, SEEK <s>, "
-            + "CENSOR ON|OFF (achteruit zolang aan), BRAKE [s], BACKSPIN [s]", "DJ"),
+            + "CENSOR ON|OFF (achteruit zolang aan), BRAKE [s], BACKSPIN [s], "
+            + "STEM VOCALS|DRUMS|BASS|OTHER ON|OFF|TOGGLE|<0-1>", "DJ"),
         new("DJ XFADER <0-1>", "Crossfader (0 = deck A en C, 1 = B en D)", "DJ"),
         new("DJ CUEMIX <0-1>", "Koptelefoon van cue (0) naar master (1)", "DJ"),
         new("DJ ONAIR ON|OFF|TOGGLE", "DJ-tafel op de lucht, of teruggeven aan de automatisering", "DJ"),
@@ -347,6 +348,9 @@ public sealed class CommandBus(
             "hotcue" or "hotcueclear" => new Contracts.DjCommand(Index: v is double n ? (int)n - 1 : null),
             "load" => new Contracts.DjCommand(MediaId: v is double id ? (long)id : null),
             "fxtype" => new Contracts.DjCommand(Name: w.Count > 3 ? w[3].ToLowerInvariant() : null),
+            // DJ A STEM VOCALS ON|OFF|TOGGLE|<0-1>
+            "stem" => new Contracts.DjCommand(Name: w.Count > 3 ? w[3].ToLowerInvariant() : null, Value: Double(w, 4),
+                On: (w.Count > 4 ? w[4].ToUpperInvariant() : "") switch { "ON" or "AAN" => true, "OFF" or "UIT" => false, _ => null }),
             "fx" or "pfl" or "keylock" or "killlow" or "killmid" or "killhigh" or "censor" =>
                 new Contracts.DjCommand(On: w.Count > 3 ? w[3].ToUpperInvariant() is "ON" or "1" or "AAN" : null),
             _ => new Contracts.DjCommand(Value: v),

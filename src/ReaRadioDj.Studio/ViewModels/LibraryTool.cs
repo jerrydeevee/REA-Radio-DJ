@@ -150,6 +150,17 @@ public sealed partial class LibraryTool : StudioTool
         BulkText = "";
     }
 
+    /// <summary>Makes the stems of the selection in the background, so they are ready when the tracks go on a DJ deck.</summary>
+    [RelayCommand]
+    private async Task MakeStems()
+    {
+        var ids = SelectedIds;
+        if (ids.Count == 0) return;
+        Hub.Status = await Hub.Client.PostAsync("/api/stems", new StemRequest(ids))
+            ? $"Stems van {ids.Count} nummer(s) worden op de achtergrond gemaakt."
+            : "Stems maken lukt niet: staat het model (data\\models\\htdemucs.onnx) erin?";
+    }
+
     [RelayCommand] private Task ToClipboard() => Services.MediaClipboard.AddAsync(SelectedIds);
 
     private IReadOnlyList<long> SelectedIds => _selection.Count > 0 ? _selection.Select(m => m.Id).ToList() : Selected is { } s ? [s.Id] : [];

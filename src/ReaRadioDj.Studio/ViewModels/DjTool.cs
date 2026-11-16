@@ -164,6 +164,16 @@ public sealed partial class DjDeckVm : ObservableObject
     [RelayCommand] private Task Backspin() => Post("backspin", new DjCommand(Value: 1.2));
     [ObservableProperty] private bool _censoring;
     [ObservableProperty] private bool _spinning;
+
+    /// <summary>Stems: each part on or off (the engine plays the stems file of the track once it is made).</summary>
+    [ObservableProperty] private bool _stemVocals = true;
+    [ObservableProperty] private bool _stemDrums = true;
+    [ObservableProperty] private bool _stemBass = true;
+    [ObservableProperty] private bool _stemOther = true;
+    /// <summary>The stems can be used (they are ready for this track, or being made).</summary>
+    [ObservableProperty] private bool _stemsUsable;
+    [ObservableProperty] private string _stemText = "";
+    [RelayCommand] private Task ToggleStem(string? name) => Post("stem", new DjCommand(Name: name));
     [RelayCommand] private Task ResetEq() => Task.WhenAll(Post("eqlow", new(Value: 0)), Post("eqmid", new(Value: 0)), Post("eqhigh", new(Value: 0)), Post("filter", new(Value: 0)));
 
     [RelayCommand]
@@ -202,6 +212,18 @@ public sealed partial class DjDeckVm : ObservableObject
             Rolling = d.Rolling;
             Censoring = d.Censoring;
             Spinning = d.Spinning is not null;
+            var stems = d.StemLevels ?? [1, 1, 1, 1];
+            StemDrums = stems[0] > 0; StemBass = stems[1] > 0; StemOther = stems[2] > 0; StemVocals = stems[3] > 0;
+            StemsUsable = d.Loaded && d.Stems is "ready" or "working" or "waiting";
+            StemText = !d.Loaded ? "" : d.Stems switch
+            {
+                "ready" when d.StemsPlaying => "klaar",
+                "ready" => "klaar (bij de eerste knop of pauze)",
+                "working" => $"maken… {d.StemProgress * 100:0} %",
+                "waiting" => "in de wachtrij",
+                "failed" => "mislukt",
+                _ => "geen model",
+            };
             FxType = d.FxType;
             FxOn = d.FxOn;
             _fxBeats = d.FxBeats;
