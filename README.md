@@ -8,6 +8,8 @@ VoIP-kanalen voor bellers en verslaggevers, en bediening via MIDI, Livewire, Emb
 > Status: in ontwikkeling (proof of concept). Nog niet bedoeld voor een echte zender. Wat klaar is en wat nog
 > open staat, staat in [docs/WERKLIJST.md](docs/WERKLIJST.md).
 
+Hoe je ermee werkt, in de studio en als beheerder, staat in de [handleiding](docs/HANDLEIDING.md).
+
 ## Schermafdrukken
 
 ![De werkruimte Live: aan-de-luchtbalk, bibliotheek, live-decks, programmalog, cartwall en mixer](docs/screenshots/live.png)
