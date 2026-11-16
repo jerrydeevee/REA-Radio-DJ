@@ -157,7 +157,7 @@ Gerangschikt naar de stappen van de werklijst. De proof of concept is af na stap
 Dit is het grootste open blok van de proof of concept.
 
 - ⬜ VoIP-mengkanaal met mix-minus (terugkanaal zonder zichzelf)
-- ⬜ RTP met Opus, G.722, G.711 en PCM, met een jitterbuffer
+- 🟡 RTP met Opus, G.722, G.711 en PCM, met een jitterbuffer (nog niet met LUCI Live geprobeerd)
 - ⬜ SIP volgens EBU N/ACIP: bellen, gebeld worden, registreren. LUCI Live verbindt hiermee op een open codec
 - ⬜ Venster Verbindingen met stations en presets
 - ⬜ Bediening en status via de commandobus

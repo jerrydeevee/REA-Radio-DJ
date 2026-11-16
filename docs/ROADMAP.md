@@ -122,7 +122,7 @@ audiocodec. Alleen open protocollen en codecs; eigen ontwerp. Elke verbinding ko
 | Status | Onderdeel |
 |---|---|
 | ⬜ | Mengkanaal VoIP/extern in de mixer met eigen fader, PFL en mix-minus-terugkanaal |
-| ⬜ | RTP in twee richtingen: G.711, G.722, Opus en lineair PCM (L16/L24), jitterbuffer met meting (jitter, verlies, kwaliteit) |
+| 🟡 | RTP in twee richtingen: G.711, G.722, Opus en lineair PCM (L16), jitterbuffer met meting (jitter, verlies, kwaliteit); L24 nog niet |
 | ⬜ | SIP volgens EBU N/ACIP: bellen en gebeld worden, registreren bij een SIP-server, automatisch of handmatig aannemen |
 | ⬜ | Venster Verbindingen: stationslijst (adresboek met protocol, codec, bitrate), verbinden/ophangen/aannemen, niveaumeters in en uit, verbindingstijd, kwaliteit, waarschuwingen |
 | ⬜ | Presets per station en meerdere verbindingen tegelijk, elk op een eigen mengkanaal |

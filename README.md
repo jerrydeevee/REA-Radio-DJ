@@ -99,9 +99,10 @@ Elk venster is te verslepen, te docken of los te laten zweven, ook op een tweede
 
 ### Verbindingen (VoIP)
 - Twee VoIP-mengkanalen met eigen fader, voorluisteren en een terugkanaal zonder zichzelf (mix-minus).
-- **RTP** in twee richtingen met G.711 (A-law, µ-law) en lineair PCM, met jitterbuffer en meting.
+- **RTP** in twee richtingen met Opus (48 kHz), G.722 (16 kHz breedband), G.711 (A-law, µ-law) en lineair PCM, met
+  jitterbuffer en meting; bij Opus vult de codec zelf een verloren pakket op.
 - **SIP**: bellen, gebeld worden en registreren bij een centrale, met NAT-ondersteuning. *Nog niet getest bij de
-  aanbieder; Opus en G.722 volgen.*
+  aanbieder.*
 - **Adresboek** met stations (SIP-nummer of vaste RTP-lijn), signalen bij overgaan en verbinden, lampjes en tallies,
   en **gesprekken opnemen** (met de hand of automatisch, met bewaartermijn).
 

@@ -16,7 +16,11 @@ public sealed record SdpAudio(string Address, int Port, IReadOnlyList<(int Paylo
         sb.Append($"c=IN IP4 {address}\r\n");
         sb.Append("t=0 0\r\n");
         sb.Append($"m=audio {port} RTP/AVP {string.Join(' ', list.Select(c => c.PayloadType))}\r\n");
-        foreach (var c in list) sb.Append($"a=rtpmap:{c.PayloadType} {c.Rtpmap}\r\n");
+        foreach (var c in list)
+        {
+            sb.Append($"a=rtpmap:{c.PayloadType} {c.Rtpmap}\r\n");
+            if (c.Fmtp is { } fmtp) sb.Append($"a=fmtp:{c.PayloadType} {fmtp}\r\n");
+        }
         sb.Append("a=ptime:20\r\n");
         sb.Append("a=sendrecv\r\n");
         return sb.ToString();
