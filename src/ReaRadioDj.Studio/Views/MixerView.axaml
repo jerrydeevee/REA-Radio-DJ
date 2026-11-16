@@ -159,7 +159,7 @@
         <DockPanel>
           <ToggleButton DockPanel.Dock="Right" Classes="mic" Content="🎤 MIC (F8)" IsChecked="{Binding MicOpen, Mode=OneWay}" Command="{Binding ToggleMicCommand}" />
           <StackPanel>
-            <TextBlock Classes="h" Text="Microfoon" />
+            <TextBlock Classes="h" Text="Mic 1" />
             <TextBlock Classes="muted" Text="{Binding MicStatus}" />
           </StackPanel>
         </DockPanel>
@@ -179,6 +179,8 @@
           <ComboBox ItemsSource="{Binding Inputs}" SelectedItem="{Binding MicDevice}" HorizontalAlignment="Stretch" IsEnabled="{Binding MicEnabled}">
             <ComboBox.ItemTemplate><DataTemplate x:DataType="c:DeviceDto"><TextBlock Text="{Binding Name}" /></DataTemplate></ComboBox.ItemTemplate>
           </ComboBox>
+          <ComboBox ItemsSource="{Binding MicChannels}" SelectedIndex="{Binding MicChannel}" HorizontalAlignment="Stretch" IsEnabled="{Binding MicEnabled}"
+                    ToolTip.Tip="Zit de microfoon op één ingang van een paar (bijvoorbeeld ingang 1 van IN 1-2), kies dan mono: anders klinkt hij alleen links of rechts." />
           <TextBlock Text="{Binding MicDuck, StringFormat='Muziek onder de microfoon: {0:0}%'}" />
           <Slider Minimum="0" Maximum="100" Value="{Binding MicDuck}" />
           <TextBlock Text="{Binding OverlayDuck, StringFormat='Muziek onder overlays: {0:0}%'}" />

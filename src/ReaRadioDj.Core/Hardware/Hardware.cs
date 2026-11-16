@@ -110,6 +110,17 @@ public static partial class HwSignals
         };
     }
 
+    /// <summary>
+    /// Whether a message from a Mackie Control panel is no Mackie message but an input of its own: a note, controller
+    /// or program change on MIDI channel 2-16. Mackie uses channel 1 for those (and pitch bend for the faders), so
+    /// buttons a panel lets you program yourself (the touchscreen of an iCON V1-M, set up in iMAP) go to the inputs.
+    /// </summary>
+    public static bool BesideMackie(uint message)
+    {
+        int status = (int)(message & 0xFF);
+        return (status & 0x0F) != 0 && (status & 0xF0) is 0x80 or 0x90 or 0xB0 or 0xC0;
+    }
+
     /// <summary>The MIDI message for a tally: note on (velocity 127) or off, or a controller at 127 or 0.</summary>
     public static uint? ToMidi(HwAddress a, bool on)
     {

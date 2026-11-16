@@ -48,7 +48,7 @@
               <Run Text="{Binding Artist}" /><Run Text=" - " /><Run Text="{Binding Title}" />
             </TextBlock>
             <TextBlock Grid.Column="4" Classes="muted" Text="{Binding Presenter}" Margin="8,0,0,0" MaxWidth="120" TextTrimming="CharacterEllipsis" />
-            <TextBlock Grid.Column="5" Classes="mono muted" Text="{Binding Played, StringFormat='{}{0:0}s'}" Margin="6,0,0,0" />
+            <TextBlock Grid.Column="5" Classes="mono muted" Text="{Binding Played, StringFormat='{}{0:0}s', TargetNullValue=''}" Margin="6,0,0,0" />
           </Grid>
         </DataTemplate>
       </ListBox.ItemTemplate>

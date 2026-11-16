@@ -168,6 +168,8 @@ public class EventRunnerTests
         public void PlayOverlay(LogItem item) => Calls.Add($"overlay {item.Media?.Title}");
         public void Notify(string message) => Calls.Add($"msg {message}");
         public void Execute(TimedEvent e) => Calls.Add($"exec {e.Action} {e.Text}");
+        public double? Left;
+        public double? SecondsToNext() => Left;
     }
 
     private static readonly DateTime Top = new(2026, 11, 9, 0, 0, 0);
@@ -261,6 +263,32 @@ public class EventRunnerTests
         runner.Tick([off], Top, sink);
         Assert.Empty(sink.Calls);
         Assert.Empty(runner.Upcoming([off], Top, 5));
+    }
+
+    [Theory]
+    [InlineData(0, 600, "next Nieuws-intro")]          // no limit: always wait
+    [InlineData(120, 60, "next Nieuws-intro")]         // the item is nearly done: wait
+    [InlineData(120, 600, "now Nieuws-intro vast: Nieuws")]   // too long: start now, fade the item
+    public void A_soft_event_waits_at_most_the_set_time(int maxWait, double left, string expected)
+    {
+        var runner = new EventRunner { SoftMaxWait = TimeSpan.FromSeconds(maxWait) };
+        var sink = new FakeSink { Left = left };
+        var events = new[] { News(EventTiming.Soft) };
+        runner.Tick(events, Top.AddMinutes(-1), sink);
+        runner.Tick(events, Top.AddSeconds(0.1), sink);
+        Assert.Contains(expected, sink.Calls);
+        if (expected.StartsWith("now")) Assert.Contains(sink.Calls, c => c.Contains("weggedraaid"));
+    }
+
+    [Fact]
+    public void A_soft_event_with_nothing_on_air_goes_into_the_log()
+    {
+        var runner = new EventRunner { SoftMaxWait = TimeSpan.FromSeconds(30) };
+        var sink = new FakeSink { Left = null };
+        var events = new[] { News(EventTiming.Soft) };
+        runner.Tick(events, Top.AddMinutes(-1), sink);
+        runner.Tick(events, Top.AddSeconds(0.1), sink);
+        Assert.Contains("next Nieuws-intro", sink.Calls);
     }
 }
 

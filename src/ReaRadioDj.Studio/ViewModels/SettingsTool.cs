@@ -42,12 +42,55 @@ public sealed partial class SettingsTool : StudioTool
     [ObservableProperty] private string _musicFolder = "";
     [ObservableProperty] private string _jingleFolder = "";
     [ObservableProperty] private bool _startAutomation;
+    [ObservableProperty] private bool _startSemi;
+    [ObservableProperty] private bool _flowOnFaders = true;
+    [ObservableProperty] private bool _webOnNetwork;
+    /// <summary>Where a phone or tablet finds this station: its network address (a phone often cannot find the computer's name).</summary>
+    public string NetworkAddress => $"https://{LanAddress}:8443/remote/";
+    /// <summary>The station's own CA, to install once on a phone or tablet.</summary>
+    public string CaAddress => $"http://{LanAddress}:{(Uri.TryCreate(Hub.Settings.EffectiveEngineUrl, UriKind.Absolute, out var u) ? u.Port : 8600)}/api/system/ca.crt";
+    private static string LanAddress
+    {
+        get
+        {
+            try
+            {
+                foreach (var nic in System.Net.NetworkInformation.NetworkInterface.GetAllNetworkInterfaces())
+                {
+                    if (nic.OperationalStatus != System.Net.NetworkInformation.OperationalStatus.Up
+                        || nic.NetworkInterfaceType is System.Net.NetworkInformation.NetworkInterfaceType.Loopback
+                        || nic.Description.Contains("Hyper-V", StringComparison.OrdinalIgnoreCase) || nic.Name.StartsWith("vEthernet", StringComparison.OrdinalIgnoreCase)) continue;
+                    var props = nic.GetIPProperties();
+                    if (props.GatewayAddresses.Count == 0) continue;   // the network with a router, not a virtual one
+                    foreach (var a in props.UnicastAddresses)
+                        if (a.Address.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork) return a.Address.ToString();
+                }
+            }
+            catch (System.Net.NetworkInformation.NetworkInformationException) { }
+            return Environment.MachineName.ToLowerInvariant();
+        }
+    }
+    public string[] StartModeNames { get; } = ["Automatisch (AUTO)", "Semi: wacht als de DJ zelf iets speelt", "Met de hand (HAND)"];
+    /// <summary>The play mode the engine starts in: 0 AUTO, 1 SEMI, 2 HAND.</summary>
+    public int StartMode
+    {
+        get => !StartAutomation ? 2 : StartSemi ? 1 : 0;
+        set { StartAutomation = value != 2; StartSemi = value == 1; OnPropertyChanged(); }
+    }
+
+    /// <summary>The hardware, DJ controller and hotkeys, shown under Besturing.</summary>
+    public HardwareTool Hardware { get; } = new();
+    public DjMidiTool DjMidi { get; } = new();
+    public ControlTool Control { get; } = new();
 
     // Sound
     [ObservableProperty] private DeviceDto? _outputDevice;
     [ObservableProperty] private DeviceDto? _previewDevice;
     [ObservableProperty] private DeviceDto? _micDevice;
     [ObservableProperty] private bool _micEnabled;
+    /// <summary>Stereo, mono from the left or from the right channel of the input (index in <see cref="MicChannels"/>).</summary>
+    [ObservableProperty] private int _micChannel;
+    public IReadOnlyList<string> MicChannels => RoutingDto.MicChannelNames;
     [ObservableProperty] private decimal _micDuck = 25;
     [ObservableProperty] private decimal _overlayDuck = 35;
     [ObservableProperty] private decimal _standbyPlayers = 2;
@@ -60,6 +103,10 @@ public sealed partial class SettingsTool : StudioTool
     [ObservableProperty] private decimal _maxOverlap = 8;
     [ObservableProperty] private decimal _fadeOut = 2.5m;
     [ObservableProperty] private decimal _duckLevel = 30;
+    /// <summary>The longest a soft fixed-time event waits for the item on air (0 = always wait).</summary>
+    [ObservableProperty] private decimal _softMaxWait;
+    private bool _softLoaded;
+    private sealed record SoftStartWire(double MaxWaitSeconds);
 
     // Guarding the broadcast
     [ObservableProperty] private bool _silenceEnabled = true;
@@ -152,6 +199,17 @@ public sealed partial class SettingsTool : StudioTool
     [ObservableProperty] private string _autoStartCommand = "";
     [ObservableProperty] private string _watchdogLog = "";
     [ObservableProperty] private string _backupStatus = "";
+    // the daily backup
+    [ObservableProperty] private bool _autoBackupLoaded;
+    [ObservableProperty] private bool _autoBackupEnabled;
+    [ObservableProperty] private string _autoBackupFolder = "";
+    [ObservableProperty] private string _autoBackupTime = "03:00";
+    [ObservableProperty] private decimal _autoBackupKeep = 7;
+    [ObservableProperty] private string _autoBackupInfo = "";
+    [ObservableProperty] private string _autoBackupFiles = "";
+    // ports
+    public ObservableCollection<PortDto> Ports { get; } = [];
+    [ObservableProperty] private string _firewallCommand = "";
     [ObservableProperty] private bool _showInfoLines;
     public ObservableCollection<SystemLogEntryDto> SystemLines { get; } = [];
 
@@ -204,10 +262,11 @@ public sealed partial class SettingsTool : StudioTool
     }
     [ObservableProperty] private bool _startEngine;
 
-    protected override void OnFirstShow() { _ = LoadAsync(); _ = Users.LoadAsync(); }
+    protected override void OnFirstShow() { _ = LoadAsync(); _ = Users.LoadAsync(); _ = Remotes.LoadAsync(); }
 
     /// <summary>Instellingen › Gebruikers.</summary>
     public UsersPanelVm Users { get; } = new();
+    public RemoteClientsVm Remotes { get; } = new();
 
     // ---- mixing desk or software
     [ObservableProperty] private bool _deskMode;
@@ -272,7 +331,49 @@ public sealed partial class SettingsTool : StudioTool
     [ObservableProperty] private decimal _recKeepDays = 365;
     [ObservableProperty] private string _recFolder = "";
     [ObservableProperty] private string _recStatus = "";
+    [ObservableProperty] private bool _recSpeech;
+    [ObservableProperty] private decimal _recSpeechThreshold = -40;
+    [ObservableProperty] private decimal _recSpeechHang = 2;
+    private static readonly OutputChoiceDto MicChoice = new("mic", "Microfoon");
+    [ObservableProperty] private List<OutputChoiceDto> _recSpeechSources = [MicChoice];
+    [ObservableProperty] private OutputChoiceDto? _recSpeechSource = MicChoice;
     public int[] RecBitrates { get; } = [64, 96, 128, 160, 192, 256, 320];
+
+    // ---- the sound card watch (Windows volume and mute of the cards the station plays on)
+    [ObservableProperty] private bool _devWatchEnabled = true;
+    [ObservableProperty] private bool _devWatchRestore;
+    [ObservableProperty] private List<string> _devWatchCards = [];
+    [ObservableProperty] private string _devWatchStatus = "";
+
+    private async Task LoadDeviceWatchAsync()
+    {
+        if (await Hub.Client.GetAsync<DeviceWatchDto>("/api/devicewatch") is { } d) ShowDeviceWatch(d);
+    }
+
+    private void ShowDeviceWatch(DeviceWatchDto d)
+    {
+        DevWatchEnabled = d.Enabled;
+        DevWatchRestore = d.Restore;
+        DevWatchCards = d.Cards.Select(c =>
+            $"{c.Name} — {c.Uses}: {(c.Volume is double v ? (c.Muted ? "gedempt" : $"{v:0}%") : "volume niet uit te lezen")}{(c.Note.Length > 0 && c.Volume is not null ? $" ({c.Note})" : "")}").ToList();
+        if (DevWatchCards.Count == 0) DevWatchCards = ["Geen Windows-kaart in gebruik (ASIO of geen geluid)."];
+    }
+
+    [RelayCommand]
+    private async Task SaveDeviceWatch()
+    {
+        var d = await Hub.Client.SendForAsync<DeviceWatchDto>(HttpMethod.Put, "/api/devicewatch", new DeviceWatchDto(DevWatchEnabled, DevWatchRestore, []));
+        DevWatchStatus = d is null ? "Opslaan mislukt." : "Bewaard.";
+        if (d is not null) ShowDeviceWatch(d);
+    }
+
+    [RelayCommand]
+    private async Task AcceptDeviceWatch()
+    {
+        var d = await Hub.Client.SendForAsync<DeviceWatchDto>(HttpMethod.Post, "/api/devicewatch/accept", new { });
+        DevWatchStatus = d is null ? "Mislukt." : "De huidige stand van de kaarten is nu de normale stand.";
+        if (d is not null) ShowDeviceWatch(d);
+    }
 
     private async Task LoadRecordingAsync()
     {
@@ -283,9 +384,21 @@ public sealed partial class SettingsTool : StudioTool
     {
         RecProgram = r.Program; RecMic = r.Mic; RecMicToLibrary = r.MicToLibrary; RecBitrate = r.Bitrate;
         RecKeepDays = r.KeepDays; RecFolder = r.Folder;
+        // the microphone and the input channels (a second microphone on a line input, say)
+        var sources = new List<OutputChoiceDto> { MicChoice };
+        if (Hub.State is { } st)
+            sources.AddRange(st.Mixer.Strips.Where(x => x.Source is not null).Select(x => new OutputChoiceDto(x.Id, x.Name)));
+        if (sources.All(x => x.Id != r.SpeechSource)) sources.Add(new(r.SpeechSource, r.SpeechSource + " (niet gevonden)"));
+        RecSpeechSources = sources;
+        RecSpeechSource = sources.First(x => x.Id == r.SpeechSource);
+        RecSpeech = r.Speech; RecSpeechThreshold = (decimal)r.SpeechThresholdDb; RecSpeechHang = (decimal)r.SpeechHangSeconds;
         var now = new List<string>();
         if (r.ProgramFile is { } p) now.Add($"neemt nu op: {Path.GetFileName(p)}");
         if (r.MicFile is { } m) now.Add($"microfoon: {Path.GetFileName(m)}");
+        if (r.Speech)
+            now.Add(r.SpeechFile is { } sf
+                ? $"spraak: {Path.GetFileName(sf)}{(r.SpeechRecording ? " (neemt nu op)" : "")}, {r.SpeechTakes} keer"
+                : "spraak: wacht op de microfoon");
         RecStatus = (r.Error.Length > 0 ? r.Error + "  " : "") + $"Map: {r.FolderInUse}" + (now.Count > 0 ? "  ·  " + string.Join("  ·  ", now) : "");
     }
 
@@ -293,7 +406,8 @@ public sealed partial class SettingsTool : StudioTool
     private async Task SaveRecording()
     {
         var r = await Hub.Client.SendForAsync<RecordingSettingsDto>(HttpMethod.Put, "/api/recordings/settings",
-            new RecordingSettingsDto(RecProgram, RecMic, RecMicToLibrary, RecBitrate, (int)RecKeepDays, RecFolder.Trim()));
+            new RecordingSettingsDto(RecProgram, RecMic, RecMicToLibrary, RecBitrate, (int)RecKeepDays, RecFolder.Trim(),
+                Speech: RecSpeech, SpeechSource: RecSpeechSource?.Id ?? "mic", SpeechThresholdDb: (double)RecSpeechThreshold, SpeechHangSeconds: (double)RecSpeechHang));
         if (r is null) { RecStatus = "Opslaan mislukt."; return; }
         await Task.Delay(1500);   // the recorder starts on its next tick
         await LoadRecordingAsync();
@@ -320,6 +434,47 @@ public sealed partial class SettingsTool : StudioTool
                 From = Side(r.From), To = Side(r.To), Mode = RuleModes.FirstOrDefault(m => m.Key == r.Mode),
                 Seconds = (decimal)r.Seconds, Enabled = r.Enabled,
             });
+        await LoadLimitsAsync();
+        if (await Hub.Client.GetAsync<SoftStartWire>("/api/soft-start") is { } soft) { SoftMaxWait = (decimal)soft.MaxWaitSeconds; _softLoaded = true; }
+    }
+
+    // ---- longest play time per kind of item and category
+    public ObservableCollection<PlayLimitRow> PlayLimits { get; } = [];
+    [ObservableProperty] private string _limitStatus = "";
+
+    private sealed record LimitWire(string Side, double MaxSeconds, double NoFadeUnder, bool Enabled);
+
+    private async Task LoadLimitsAsync()
+    {
+        if (await Hub.Client.GetAsync<List<LimitWire>>("/api/play-limits") is not { } list) return;
+        PlayLimits.Clear();
+        foreach (var l in list)
+            PlayLimits.Add(new PlayLimitRow
+            {
+                Side = Side(l.Side), MaxSeconds = (decimal)l.MaxSeconds, NoFadeUnder = (decimal)l.NoFadeUnder, Enabled = l.Enabled,
+            });
+    }
+
+    [RelayCommand]
+    private void AddLimit() => PlayLimits.Add(new PlayLimitRow { Side = RuleSides.FirstOrDefault(s => s.Key == "jingle"), MaxSeconds = 30 });
+
+    [RelayCommand] private void RemoveLimit(PlayLimitRow? row) { if (row is not null) PlayLimits.Remove(row); }
+
+    [RelayCommand]
+    private void MoveLimitUp(PlayLimitRow? row)
+    {
+        if (row is null || PlayLimits.IndexOf(row) is not (> 0 and var i)) return;
+        PlayLimits.Move(i, i - 1);
+    }
+
+    [RelayCommand]
+    private async Task SaveLimits()
+    {
+        var body = PlayLimits.Where(l => l.Side is not null)
+            .Select(l => new LimitWire(l.Side!.Key, (double)l.MaxSeconds, (double)l.NoFadeUnder, l.Enabled)).ToList();
+        var saved = await Hub.Client.SendForAsync<List<LimitWire>>(HttpMethod.Put, "/api/play-limits", body);
+        LimitStatus = saved is null ? "Opslaan mislukt." : $"{saved.Count} speelduurregels bewaard; ze gelden vanaf het volgende item.";
+        await LoadLimitsAsync();
     }
 
     // A category that no longer exists still shows, so the rule is not lost unnoticed.
@@ -358,6 +513,9 @@ public sealed partial class SettingsTool : StudioTool
     /// <summary>Settings › Reservestudio.</summary>
     public FailoverVm Failover { get; } = new();
 
+    /// <summary>Settings › Centrale bibliotheek.</summary>
+    public CentralVm Central { get; } = new();
+
     private async Task LoadAsync()
     {
         Status = "lezen…";
@@ -375,8 +533,10 @@ public sealed partial class SettingsTool : StudioTool
         }
         Show(s);
         await LoadRulesAsync();
+        await LoadDeviceWatchAsync();
         await LoadSystemAsync();
         await Failover.LoadAsync();
+        await Central.LoadAsync();
         await LoadOutputsAsync();
         await LoadDeskModeAsync();
         await LoadAudioAsync();
@@ -394,6 +554,7 @@ public sealed partial class SettingsTool : StudioTool
         PreviewDevice = Outputs.FirstOrDefault(d => d.Index == r.PreviewDevice);
         MicDevice = Inputs.FirstOrDefault(d => d.Index == r.MicDevice);
         MicEnabled = r.MicEnabled;
+        MicChannel = Math.Clamp(r.MicChannel, 0, RoutingDto.MicChannelNames.Length - 1);
         MicDuck = Percent(r.MicDuckLevel);
         OverlayDuck = Percent(r.OverlayDuckLevel);
         Loaded = true;
@@ -467,6 +628,8 @@ public sealed partial class SettingsTool : StudioTool
             : "De engine draait zonder bewaking. Start hem met --watchdog (de studio doet dat zelf als zij de engine start), of zet hieronder starten bij aanmelden aan.";
         WatchdogLog = sys.WatchdogLog.Count == 0 ? "(nog niets)" : string.Join(Environment.NewLine, sys.WatchdogLog.Reverse());
         if (sys.RestorePending) BackupStatus = "Er staat een reservekopie klaar die bij de volgende start van de engine wordt teruggezet.";
+        ShowAutoBackup(await Hub.Client.GetAsync<AutoBackupDto>("/api/backup/auto"));
+        await RefreshPorts();
         await RefreshLog();
     }
 
@@ -487,6 +650,53 @@ public sealed partial class SettingsTool : StudioTool
         BackupStatus = await Hub.Client.PostAsync("/api/system/restart")
             ? "De engine start opnieuw; de studio maakt vanzelf weer verbinding."
             : "Opnieuw starten kan alleen als de engine met bewaking draait.";
+    }
+
+    [RelayCommand]
+    private async Task RefreshPorts()
+    {
+        var p = await Hub.Client.GetAsync<PortsDto>("/api/system/ports");
+        Ports.Clear();
+        if (p is null) { FirewallCommand = "De engine kent het poortenoverzicht nog niet: werk hem bij."; return; }
+        foreach (var port in p.Ports) Ports.Add(port);
+        FirewallCommand = p.Firewall.Length > 0 ? p.Firewall
+            : "Geen poort staat open voor het netwerk: alles luistert alleen op deze pc, dus er is geen firewallregel nodig.";
+    }
+
+    private void ShowAutoBackup(AutoBackupDto? a)
+    {
+        AutoBackupLoaded = a is not null;
+        if (a is null) { AutoBackupInfo = "De engine kent de dagelijkse reservekopie nog niet: werk hem bij."; AutoBackupFiles = ""; return; }
+        AutoBackupEnabled = a.Enabled;
+        AutoBackupFolder = a.Folder;
+        AutoBackupTime = a.Time;
+        AutoBackupKeep = a.KeepDays;
+        var lines = new List<string> { $"Map: {a.UsedFolder}" };
+        if (a.SameDisk) lines.Add("Let op: deze map staat op dezelfde schijf als de database. Gaat die schijf kapot, dan ben je beide kwijt; kies een andere schijf of een NAS.");
+        if (a.Next is { } next) lines.Add($"Volgende: {next:dddd d MMMM HH:mm}" + (a.Files.Count == 0 ? " (of binnen een minuut als er nog geen is)" : ""));
+        if (a.LastError is { } e) lines.Add($"Laatste poging mislukt: {e}");
+        AutoBackupInfo = string.Join(Environment.NewLine, lines);
+        AutoBackupFiles = a.Files.Count == 0 ? "(nog geen automatische reservekopieën)"
+            : string.Join(Environment.NewLine, a.Files.Select(f => $"{f.Time:ddd d-M-yyyy HH:mm}   {f.Bytes / 1024.0 / 1024.0:0.0} MB   {f.Name}"));
+    }
+
+    [RelayCommand]
+    private async Task RunAutoBackup()
+    {
+        AutoBackupInfo = "reservekopie maken…";
+        var (r, error) = await Hub.Client.SendWithErrorAsync<AutoBackupDto>(HttpMethod.Post, "/api/backup/auto/run", null);
+        ShowAutoBackup(r ?? await Hub.Client.GetAsync<AutoBackupDto>("/api/backup/auto"));
+        BackupStatus = r is null ? $"Niet gelukt: {error}" : $"Reservekopie gemaakt: {r.Files.FirstOrDefault()?.Name}";
+    }
+
+    /// <summary>Stores the daily backup settings; returns an error text when the engine refused them.</summary>
+    private async Task<string?> SaveAutoBackupAsync()
+    {
+        if (!AutoBackupLoaded) return null;
+        var (r, error) = await Hub.Client.SendWithErrorAsync<AutoBackupDto>(HttpMethod.Put, "/api/backup/auto",
+            new AutoBackupSettingsDto(AutoBackupEnabled, AutoBackupFolder.Trim(), AutoBackupTime.Trim(), (int)AutoBackupKeep));
+        if (r is not null) ShowAutoBackup(r);
+        return r is null ? $"Dagelijkse reservekopie niet opgeslagen: {error}" : null;
     }
 
     /// <summary>Fetches a backup of the whole station from the engine.</summary>
@@ -514,6 +724,7 @@ public sealed partial class SettingsTool : StudioTool
     private void Show(SettingsDto s)
     {
         StationName = s.StationName; MusicFolder = s.MusicFolder; JingleFolder = s.JingleFolder; StartAutomation = s.StartAutomation;
+        StartSemi = s.StartSemi; FlowOnFaders = s.FlowOnFaders; WebOnNetwork = s.WebOnNetwork; OnPropertyChanged(nameof(StartMode));
         StandbyPlayers = s.StandbyPlayers;
         TargetLufs = (decimal)s.TargetLufs; CueInDb = (decimal)s.CueInDb; MixDb = (decimal)s.MixDb; CueOutDb = (decimal)s.CueOutDb;
         MaxOverlap = (decimal)s.MaxOverlap; FadeOut = (decimal)s.FadeOut; DuckLevel = Percent(s.DuckLevel);
@@ -534,7 +745,7 @@ public sealed partial class SettingsTool : StudioTool
         if (!Loaded) return;
         Status = "opslaan…";
         var routing = new RoutingDto(OutputDevice?.Index ?? -1, PreviewDevice?.Index ?? -1, MicEnabled, MicDevice?.Index ?? -1,
-            (double)MicDuck / 100, (double)OverlayDuck / 100);
+            (double)MicDuck / 100, (double)OverlayDuck / 100, Math.Max(0, MicChannel));
         bool routed = await Hub.Client.PutAsync("/api/routing", routing);
         var saved = await Hub.Client.SendForAsync<SettingsSavedDto>(HttpMethod.Put, "/api/settings", new SettingsDto(
             StationName, MusicFolder, JingleFolder, StartAutomation, (int)StandbyPlayers,
@@ -542,9 +753,11 @@ public sealed partial class SettingsTool : StudioTool
             (int)ArtistSeparation, (int)SongSeparation, (int)LookAhead,
             StreamEnabled, StreamServer, StreamPassword, false, StreamBitrate, StreamGenre, StreamUrl,
             ControlBindAddress, (int)ControlTcpPort, (int)ControlOscPort, ControlPassword, false, ClearControlPassword,
-            SilenceEnabled, (double)SilenceDb, (double)SilenceSeconds, SilenceActionNames[Math.Clamp(SilenceAction, 0, SilenceActionNames.Length - 1)], SilenceCategory?.Id));
+            SilenceEnabled, (double)SilenceDb, (double)SilenceSeconds, SilenceActionNames[Math.Clamp(SilenceAction, 0, SilenceActionNames.Length - 1)], SilenceCategory?.Id,
+            StartSemi, FlowOnFaders, WebOnNetwork));
 
         if (_masterLoaded) await Hub.Client.PutAsync("/api/master", new MasterDto(LimiterOn, (double)LimiterCeiling));
+        if (_softLoaded) await Hub.Client.PutAsync("/api/soft-start", new SoftStartWire((double)SoftMaxWait));
 
         if (AudioLoaded)
         {
@@ -558,12 +771,14 @@ public sealed partial class SettingsTool : StudioTool
         StoreSoloist();
 
         string? failoverError = await Failover.SaveAsync();
+        string? centralError = await Central.SaveAsync();
 
         if (SystemLoaded)
         {
             var sys = await Hub.Client.SendForAsync<SystemDto>(HttpMethod.Put, "/api/system", new SystemSettingsRequest(AutoStart, DetailedLog));
             if (sys is not null) { AutoStart = sys.AutoStart; AutoStartCommand = sys.AutoStartCommand ?? ""; }
         }
+        string? autoBackupError = await SaveAutoBackupAsync();
 
         // This computer: the engine address is used the next time the studio starts.
         Hub.Settings.EngineUrl = string.IsNullOrWhiteSpace(EngineUrl) ? Hub.Settings.EngineUrl : EngineUrl.Trim();
@@ -577,6 +792,8 @@ public sealed partial class SettingsTool : StudioTool
         if (saved.Rescanning) notes.Add("De bibliotheek wordt opnieuw ingelezen uit de nieuwe mappen.");
         if (saved.NeedsRestart.Count > 0) notes.Add("Actief na een herstart van de engine: " + string.Join(", ", saved.NeedsRestart) + ".");
         if (failoverError is not null) notes.Add(failoverError + ".");
+        if (centralError is not null) notes.Add(centralError + ".");
+        if (autoBackupError is not null) notes.Add(autoBackupError);
         Status = string.Join(" ", notes);
     }
 
@@ -879,6 +1096,15 @@ public sealed partial class TransitionRuleRow : ObservableObject
     [ObservableProperty] private decimal _seconds = 2;
     [ObservableProperty] private bool _enabled = true;
     public bool HasSeconds => Mode?.Key is "overlap" or "fade" or "tempo";
+}
+
+/// <summary>One play limit in the settings: this kind or category plays at most so long, short ones play out.</summary>
+public sealed partial class PlayLimitRow : ObservableObject
+{
+    [ObservableProperty] private KeyChoice? _side;
+    [ObservableProperty] private decimal _maxSeconds;
+    [ObservableProperty] private decimal _noFadeUnder;
+    [ObservableProperty] private bool _enabled = true;
 }
 
 /// <summary>Instellingen › Uiterlijk: the colour of one kind of item (muziek, jingles, ...), applied and saved at once.</summary>

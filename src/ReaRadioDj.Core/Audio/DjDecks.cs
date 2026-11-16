@@ -105,7 +105,8 @@ public sealed record DjDeckInfo(string Id, MediaItem? Media, bool Playing, doubl
     double? LoopIn, double? LoopOut, bool LoopActive, double LoopBeats, double Gain, double EqLow, double EqMid, double EqHigh,
     bool KillLow, bool KillMid, bool KillHigh, double Filter, double Fader, bool Pfl, float LevelLeft, float LevelRight, bool Rolling = false,
     string FxType = DjEffects.Echo, bool FxOn = false, double FxMix = 0.5, double FxBeats = 1,
-    bool Censoring = false, string? Spinning = null)
+    bool Censoring = false, string? Spinning = null,
+    string Stems = "none", double StemProgress = 0, bool StemsPlaying = false, IReadOnlyList<double>? StemLevels = null)
 {
     /// <summary>The tempo you hear: the measured tempo with the tempo fader applied.</summary>
     public double PlayingBpm => Bpm * (1 + Tempo / 100);
@@ -134,6 +135,11 @@ public sealed class DjDeck
     private string _fxBeatType = DjEffects.None;
     private float _sourceRate = BassRuntime.SampleRate, _loudness = 1f;
     private DjTrackMemory _memory = new();
+    /// <summary>The track's own file (resolved) and whether the deck plays its stems file instead.</summary>
+    private string? _file;
+    private bool _onStems;
+    /// <summary>The level of each stem (drums, bass, other, vocals), 0..1; back to 1 for every new track.</summary>
+    private readonly double[] _stemLevels = [1, 1, 1, 1];
     private double _duration, _bend;
     private DateTime _bendUntil;
     private bool _ended;
@@ -143,6 +149,9 @@ public sealed class DjDeck
 
     /// <summary>Quantize (set by the mixer for all decks): hot cues, loops and rolls land on the beat.</summary>
     public bool Quantize { get; internal set; }
+
+    /// <summary>Where the stems come from (set by the mixer); null: this deck has no stems.</summary>
+    internal StemLibrary? Stems { get; set; }
 
     internal DjDeck(string id, MixerStrip strip, MixerStrip pflStrip, DjStore store, double targetLufs)
     {
@@ -226,12 +235,36 @@ public sealed class DjDeck
         {
             var levels = new float[2];
             lock (_gate)
-                if (_main == 0 || !Playing || !BASS_Mixer_ChannelGetLevelEx(_main, levels, 0.05f, BASS_LEVEL_STEREO)) levels[0] = levels[1] = 0;
+                if (_main == 0 || !Playing) levels[0] = levels[1] = 0;
+                else if (_onStems)
+                {
+                    // the level is measured before the matrix: weigh each stem's channels by its level (an upper bound)
+                    var stems = new float[StemSeparator.Count * 2];
+                    if (BASS_Mixer_ChannelGetLevelEx(_main, stems, 0.05f, 0))
+                        for (int s = 0; s < StemSeparator.Count; s++)
+                        {
+                            levels[0] += stems[s * 2] * (float)_stemLevels[s];
+                            levels[1] += stems[s * 2 + 1] * (float)_stemLevels[s];
+                        }
+                    levels[0] = Math.Min(levels[0], 1);
+                    levels[1] = Math.Min(levels[1], 1);
+                }
+                else if (!BASS_Mixer_ChannelGetLevelEx(_main, levels, 0.05f, BASS_LEVEL_STEREO)) levels[0] = levels[1] = 0;
             return new DjDeckInfo(Id, Media, Playing, Math.Round(Position, 3), _duration, _memory.Bpm, _memory.FirstBeat, Analysing, Tempo, TempoRange,
                 KeyLock, Synced, CuePoint, [.. _memory.HotCues], LoopIn, LoopOut, LoopActive, LoopBeats, Gain, EqLow, EqMid, EqHigh,
                 KillLow, KillMid, KillHigh, Filter, Fader, Pfl, levels[0], levels[1], _roll is not null, FxType, FxOn, FxMix, FxBeats,
-                _censor is not null, Spinning);
+                _censor is not null, Spinning, StemInfo(out double progress), progress, _onStems, [.. _stemLevels]);
         }
+    }
+
+    private string StemInfo(out double progress)
+    {
+        progress = 0;
+        if (_onStems) { progress = 1; return "ready"; }
+        if (Stems is null || _file is null) return "none";
+        var status = Stems.Status(_file);
+        progress = status.Progress;
+        return status.State.ToString().ToLowerInvariant();
     }
 
     // ---------------------------------------------------------------- loading
@@ -241,9 +274,46 @@ public sealed class DjDeck
         lock (_gate)
         {
             Unload();
+            string file = Library.MediaPaths.Resolve(media.Path);
+            string? stems = Stems?.Ready(file);
+            try { OpenLocked(stems ?? file); }
+            catch (BassException) when (stems is not null) { stems = null; OpenLocked(file); }   // a broken stems file: the track itself
+            _file = file;
+            _onStems = stems is not null;
+            Array.Fill(_stemLevels, 1);
+
+            Media = media;
+            _memory = _store.Get(media.Path);
+            _loudness = AudioRouter.LoudnessGain(media, _targetLufs);
+            Tempo = 0;
+            Synced = false;
+            LoopIn = LoopOut = null;
+            LoopActive = false;
+            _ended = false;
+            CuePoint = Math.Clamp(media.CueIn, 0, _duration);
+            ApplyTempo();
+            ApplyFilters();
+            ApplyFx();
+            ApplyStems(0);
+            SeekLocked(CuePoint);
+        }
+        if (!_memory.Analysed) Analyse(media.Path, _memory);
+        // the stems are made now, before the other tracks waiting for them; they come in when ready (see StemsReady)
+        if (Stems is { Available: true } && !_onStems && _file is not null) Stems.Request(_file, now: true);
+    }
+
+    /// <summary>
+    /// Builds the chain for a file: decoder → reverse (for censor and backspin) → tempo → equaliser and filter → split to
+    /// the DJ strip and the pre-listen strip. A stems file (8 channels) goes into the strips through a matrix.
+    /// </summary>
+    private void OpenLocked(string path)
+    {
+        {
             int decode = BassRuntime.Check(
-                BASS_StreamCreateFile(false, Library.MediaPaths.Resolve(media.Path), 0, 0, BASS_STREAM_DECODE | BASS_SAMPLE_FLOAT | BASS_STREAM_PRESCAN | BASS_UNICODE),
-                $"BASS_StreamCreateFile({Path.GetFileName(media.Path)})");
+                BASS_StreamCreateFile(false, path, 0, 0, BASS_STREAM_DECODE | BASS_SAMPLE_FLOAT | BASS_STREAM_PRESCAN | BASS_UNICODE),
+                $"BASS_StreamCreateFile({Path.GetFileName(path)})");
+            BASS_ChannelGetInfo(decode, out var info);
+            uint matrix = info.chans == StemSeparator.Count * 2 ? BASS_MIXER_CHAN_MATRIX : 0;
             BASS_ChannelGetAttribute(decode, BASS_ATTRIB_FREQ, out _sourceRate);
             _duration = BASS_ChannelBytes2Seconds(decode, BASS_ChannelGetLength(decode, BASS_POS_BYTE));
             // file → reverse (for censor and backspin; plays forward normally) → tempo
@@ -269,30 +339,113 @@ public sealed class DjDeck
             _fxMid = BASS_ChannelSetFX(_tempo, BASS_FX_BFX_BQF, 3);
             _fxHigh = BASS_ChannelSetFX(_tempo, BASS_FX_BFX_BQF, 2);
             _fxFilter = BASS_ChannelSetFX(_tempo, BASS_FX_BFX_BQF, 1);
-            _main = BassRuntime.Check(BASS_Split_StreamCreate(_tempo, BASS_STREAM_DECODE, IntPtr.Zero), "BASS_Split_StreamCreate(deck)");
-            _pfl = BassRuntime.Check(BASS_Split_StreamCreate(_tempo, BASS_STREAM_DECODE, IntPtr.Zero), "BASS_Split_StreamCreate(pfl)");
-            BASS_ChannelSetAttribute(_main, BASS_ATTRIB_VOL, 0);
-            BASS_ChannelSetAttribute(_pfl, BASS_ATTRIB_VOL, Pfl ? 1 : 0);
-            BassRuntime.Check(BASS_Mixer_StreamAddChannel(_strip.Handle, _main, BASS_MIXER_CHAN_NORAMPIN | BASS_MIXER_CHAN_BUFFER | BASS_MIXER_CHAN_PAUSE),
-                "BASS_Mixer_StreamAddChannel(deck)");
-            BassRuntime.Check(BASS_Mixer_StreamAddChannel(_pflStrip.Handle, _pfl, BASS_MIXER_CHAN_NORAMPIN | BASS_MIXER_CHAN_PAUSE),
-                "BASS_Mixer_StreamAddChannel(deck pfl)");
-
-            Media = media;
-            _memory = _store.Get(media.Path);
-            _loudness = AudioRouter.LoudnessGain(media, _targetLufs);
-            Tempo = 0;
-            Synced = false;
-            LoopIn = LoopOut = null;
-            LoopActive = false;
-            _ended = false;
-            CuePoint = Math.Clamp(media.CueIn, 0, _duration);
-            ApplyTempo();
-            ApplyFilters();
-            ApplyFx();
-            SeekLocked(CuePoint);
+            try
+            {
+                _main = BassRuntime.Check(BASS_Split_StreamCreate(_tempo, BASS_STREAM_DECODE, IntPtr.Zero), "BASS_Split_StreamCreate(deck)");
+                _pfl = BassRuntime.Check(BASS_Split_StreamCreate(_tempo, BASS_STREAM_DECODE, IntPtr.Zero), "BASS_Split_StreamCreate(pfl)");
+                BASS_ChannelSetAttribute(_main, BASS_ATTRIB_VOL, 0);
+                BASS_ChannelSetAttribute(_pfl, BASS_ATTRIB_VOL, Pfl ? 1 : 0);
+                BassRuntime.Check(BASS_Mixer_StreamAddChannel(_strip.Handle, _main, BASS_MIXER_CHAN_NORAMPIN | BASS_MIXER_CHAN_BUFFER | BASS_MIXER_CHAN_PAUSE | matrix),
+                    "BASS_Mixer_StreamAddChannel(deck)");
+                BassRuntime.Check(BASS_Mixer_StreamAddChannel(_pflStrip.Handle, _pfl, BASS_MIXER_CHAN_NORAMPIN | BASS_MIXER_CHAN_PAUSE | matrix),
+                    "BASS_Mixer_StreamAddChannel(deck pfl)");
+            }
+            catch
+            {
+                CloseStreamsLocked();
+                throw;
+            }
         }
-        if (!_memory.Analysed) Analyse(media.Path, _memory);
+    }
+
+    /// <summary>Frees the chain of the loaded file.</summary>
+    private void CloseStreamsLocked()
+    {
+        if (_main != 0) { BASS_Mixer_ChannelRemove(_main); BASS_StreamFree(_main); }
+        if (_pfl != 0) { BASS_Mixer_ChannelRemove(_pfl); BASS_StreamFree(_pfl); }
+        if (_tempo != 0) BASS_StreamFree(_tempo); // frees the file decoder too
+        _tempo = _main = _pfl = _fxLow = _fxMid = _fxHigh = _fxFilter = _fxBeat = _reverse = 0;
+        _fxBeatType = DjEffects.None;
+    }
+
+    // ---------------------------------------------------------------- stems
+
+    /// <summary>Whether this deck plays the stems of its track (so the stem levels are heard).</summary>
+    public bool OnStems { get { lock (_gate) return _onStems; } }
+
+    /// <summary>The level of one stem (0 = drums, 1 = bass, 2 = other, 3 = vocals), 0..1.</summary>
+    public double StemLevel(int stem) { lock (_gate) return _stemLevels[Math.Clamp(stem, 0, 3)]; }
+
+    /// <summary>
+    /// Sets the level of a stem. When the stems are ready but the deck still plays the track itself (they came in while
+    /// it played), it changes over to them first, at the place it is: a stem you turn down has to go down now.
+    /// </summary>
+    public void SetStem(int stem, double level)
+    {
+        lock (_gate)
+        {
+            if (stem is < 0 or > 3) return;
+            _stemLevels[stem] = Math.Clamp(level, 0, 1);
+            if (!_onStems && _file is not null && Stems?.Ready(_file) is { } stems) SwapLocked(stems);
+            ApplyStems(40);
+        }
+    }
+
+    /// <summary>The stems of a track are ready: a deck with that track that is not playing changes over to them.</summary>
+    internal void StemsReady(string track, string stems)
+    {
+        lock (_gate)
+        {
+            if (_onStems || Playing || _file is null || !string.Equals(_file, track, StringComparison.OrdinalIgnoreCase)) return;
+            SwapLocked(stems);
+            ApplyStems(0);
+        }
+    }
+
+    /// <summary>Another file for the same track (the stems), at the same place, tempo, equaliser and effect.</summary>
+    private void SwapLocked(string path)
+    {
+        if (_tempo == 0 || _roll is not null || _censor is not null || Spinning is not null) return;
+        double at = Decoded;
+        bool playing = Playing;
+        float volume = 0, pfl = 0;
+        BASS_ChannelGetAttribute(_main, BASS_ATTRIB_VOL, out volume);
+        BASS_ChannelGetAttribute(_pfl, BASS_ATTRIB_VOL, out pfl);
+        CloseStreamsLocked();
+        try { OpenLocked(path); _onStems = true; }
+        catch (BassException) { OpenLocked(_file!); _onStems = false; }   // back to the track itself
+        BASS_ChannelSetAttribute(_main, BASS_ATTRIB_VOL, volume);
+        BASS_ChannelSetAttribute(_pfl, BASS_ATTRIB_VOL, pfl);
+        ApplyTempo();
+        ApplyFilters();
+        ApplyFx();
+        SeekLocked(at);
+        if (playing)
+        {
+            BASS_Mixer_ChannelFlags(_main, 0, BASS_MIXER_CHAN_PAUSE);
+            BASS_Mixer_ChannelFlags(_pfl, 0, BASS_MIXER_CHAN_PAUSE);
+        }
+    }
+
+    /// <summary>The matrix of the stems into stereo: each stem's left to the left, its right to the right, at its level.</summary>
+    public static float[] StemMatrix(IReadOnlyList<double> levels)
+    {
+        var m = new float[2 * StemSeparator.Count * 2];   // 2 outputs × 8 inputs, row by row
+        for (int s = 0; s < StemSeparator.Count; s++)
+        {
+            float level = (float)Math.Clamp(levels[s], 0, 1);
+            m[s * 2] = level;                                 // left out ← stem s left
+            m[StemSeparator.Count * 2 + s * 2 + 1] = level;   // right out ← stem s right
+        }
+        return m;
+    }
+
+    private void ApplyStems(float milliseconds)
+    {
+        if (!_onStems || _main == 0) return;
+        var m = StemMatrix(_stemLevels);
+        BASS_Mixer_ChannelSetMatrixEx(_main, m, milliseconds / 1000);
+        BASS_Mixer_ChannelSetMatrixEx(_pfl, m, milliseconds / 1000);
     }
 
     /// <summary>Measures the tempo in the background the first time a file is loaded.</summary>
@@ -318,17 +471,13 @@ public sealed class DjDeck
 
     private void Unload()
     {
+        _file = null;
+        _onStems = false;
         if (_tempo == 0) { Media = null; return; }
-        BASS_Mixer_ChannelRemove(_main);
-        BASS_Mixer_ChannelRemove(_pfl);
-        BASS_StreamFree(_main);
-        BASS_StreamFree(_pfl);
-        BASS_StreamFree(_tempo); // frees the file decoder too
-        _tempo = _main = _pfl = _fxLow = _fxMid = _fxHigh = _fxFilter = _fxBeat = _reverse = 0;
+        CloseStreamsLocked();
         _censor = null;
         _spin++;
         Spinning = null;
-        _fxBeatType = DjEffects.None;
         Media = null;
         Playing = false;
         Analysing = false;
@@ -840,13 +989,15 @@ public sealed class DjMixer : ITickable, IDisposable
     private readonly MixerStrip _strip;
     private readonly DjStore _store;
 
-    public DjMixer(AudioRouter router, ReaRadioDjOptions options, DjStore store)
+    public DjMixer(AudioRouter router, ReaRadioDjOptions options, DjStore store, StemLibrary? stems = null)
     {
         if (!router.IsStarted) router.Start();
         _store = store;
         _strip = router.Strip(AudioRouter.DjStrip);
         var pfl = router.Strip(AudioRouter.PflStrip);
-        Decks = new[] { "A", "B", "C", "D" }.Select(id => new DjDeck(id, _strip, pfl, store, options.Mix.TargetLufs)).ToList();
+        Decks = new[] { "A", "B", "C", "D" }.Select(id => new DjDeck(id, _strip, pfl, store, options.Mix.TargetLufs) { Stems = stems }).ToList();
+        Stems = stems;
+        if (stems is not null) stems.Finished += (track, file) => { foreach (var d in Decks) d.StemsReady(track, file); };
         Sampler = new ClipBank(router, _strip, options.Mix.TargetLufs);
         SamplerCue = new ClipBank(router, pfl, options.Mix.TargetLufs);
         Automix = new DjAutomix(this);
@@ -864,6 +1015,9 @@ public sealed class DjMixer : ITickable, IDisposable
 
     private readonly MasterProcessor _limiter = new();
 
+    /// <summary>The stems of the decks (null when the engine has none).</summary>
+    public StemLibrary? Stems { get; }
+
     /// <summary>The list of tracks that mixes itself on decks A and B.</summary>
     public DjAutomix Automix { get; }
 
@@ -880,7 +1034,7 @@ public sealed class DjMixer : ITickable, IDisposable
     /// </summary>
     public double? SecondsToNextBeat()
     {
-        var lead = Decks.Where(d => d.Playing && d.Bpm > 0).OrderByDescending(d => d.Fader * CrossfadeGain(Crossfader, d.Left, Curve)).FirstOrDefault();
+        var lead = Decks.Where(d => d.Playing && d.Bpm > 0).OrderByDescending(d => d.Fader * SideGain(d)).FirstOrDefault();
         if (lead is null) return null;
         return UntilNextBeat(lead.Position, lead.FirstBeat, 60 / lead.Bpm, 1 + lead.Tempo / 100);
     }
@@ -1015,19 +1169,67 @@ public sealed class DjMixer : ITickable, IDisposable
     /// <summary>The deck to follow: the loudest other deck that is playing and has a tempo.</summary>
     public DjDeck? MasterFor(DjDeck deck) => Decks
         .Where(d => !ReferenceEquals(d, deck) && d.Playing && d.Bpm > 0)
-        .OrderByDescending(d => d.Fader * CrossfadeGain(Crossfader, d.Left, Curve))
+        .OrderByDescending(d => d.Fader * SideGain(d))
         .FirstOrDefault();
 
-    public bool Sync(DjDeck deck) => MasterFor(deck) is { } master && deck.SyncTo(master);
+    /// <summary>What the crossfader lets through of a deck; nothing in the way while automix mixes with the channel faders.</summary>
+    public float SideGain(DjDeck d) => Automix.On && Automix.Faders ? 1f : CrossfadeGain(Crossfader, d.Left, Curve);
+
+    /// <summary>
+    /// Takes over the tempo and beat of the deck you hear, but only when the tempos lie close (within 8 %, or at half or
+    /// double tempo): a big jump in pitch is not a mix. Once that other deck is gone, this deck glides back to its own
+    /// tempo by itself. Returns why it cannot, or null.
+    /// </summary>
+    public string? Sync(DjDeck deck)
+    {
+        if (MasterFor(deck) is not { } master) return "geen ander spelend deck met een tempo om te volgen";
+        if (deck.Bpm > 0 && TransitionRules.TempoMatch(master.PlayingBpm, deck.Bpm) is null)
+            return $"tempo verschilt te veel ({deck.Bpm:0.#} tegen {master.PlayingBpm:0.#} BPM, meer dan 8 %)";
+        if (!deck.SyncTo(master)) return "geen tempo bekend van dit deck";
+        lock (_glides) _glides.Remove(deck);
+        return null;
+    }
+
+    private readonly Dictionary<DjDeck, (double From, DateTime Since, double Last)> _glides = [];
+
+    /// <summary>
+    /// A deck synced by hand that is left on its own (no other deck to be heard) glides back to its own tempo, smoothly
+    /// over <see cref="DjAutomix.GlideSeconds"/>. Touching the tempo yourself stops it.
+    /// </summary>
+    private void GlideBack()
+    {
+        lock (_glides)
+        {
+            if (Automix.On) { _glides.Clear(); return; }
+            var now = DateTime.UtcNow;
+            foreach (var d in Decks)
+            {
+                if (_glides.TryGetValue(d, out var g))
+                {
+                    if (!d.Playing || Math.Abs(d.Tempo - g.Last) > 0.001) { _glides.Remove(d); continue; }
+                    double elapsed = (now - g.Since).TotalSeconds;
+                    double t = elapsed >= DjAutomix.GlideSeconds ? 0 : DjAutomix.GlideTempo(g.From, elapsed);
+                    d.SetTempo(t);
+                    if (t == 0) _glides.Remove(d); else _glides[d] = g with { Last = d.Tempo };
+                }
+                else if (d.Synced && d.Playing && Math.Abs(d.Tempo) > 0.01 && Alone(d))
+                    _glides[d] = (d.Tempo, now, d.Tempo);
+            }
+        }
+    }
+
+    /// <summary>No other deck can be heard (playing, fader open).</summary>
+    private bool Alone(DjDeck deck) => !Decks.Any(o => !ReferenceEquals(o, deck) && o.Playing && o.Fader * SideGain(o) > 0.01);
 
     void ITickable.Tick()
     {
         foreach (var d in Decks)
         {
             d.Tick();
-            d.ApplyVolume(CrossfadeGain(Crossfader, d.Left, Curve), CueMix);
+            d.ApplyVolume(SideGain(d), CueMix);
         }
         Automix.Tick();
+        GlideBack();
     }
 
     public void Dispose()

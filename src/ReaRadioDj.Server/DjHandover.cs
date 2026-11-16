@@ -36,7 +36,8 @@ public sealed class DjHandover : IDisposable
     }
 
     /// <summary>The strips the automation plays on: they go quiet while the DJ is on air.</summary>
-    private IEnumerable<MixerStrip> AutomationStrips => [_router.Strip(AudioRouter.LogStrip), _router.Strip(AudioRouter.OverlayStrip)];
+    private IEnumerable<MixerStrip> AutomationStrips =>
+        _router.MusicFlowStrips.Concat([AudioRouter.OverlayStrip, AudioRouter.PresenterStrip]).Where(_router.HasStrip).Select(_router.Strip);
 
     /// <summary>True while deck A copies what the automation plays.</summary>
     public bool Following { get; private set; }

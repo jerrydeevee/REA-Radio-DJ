@@ -214,6 +214,8 @@ public sealed class RtpLineTests
     [InlineData("pcma")]
     [InlineData("pcmu")]
     [InlineData("l16")]
+    [InlineData("g722")]
+    [InlineData("opus")]
     public async Task Two_lines_hear_each_other(string codec)
     {
         using var a = new RtpLine(new RtpLineOptions { LocalPort = 0, Codec = codec, JitterMs = 60 }, 44100);

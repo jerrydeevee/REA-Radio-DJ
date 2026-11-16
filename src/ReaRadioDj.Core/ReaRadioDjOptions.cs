@@ -28,6 +28,8 @@ public sealed class ReaRadioDjOptions
     /// <summary>-1 = default sound card, 0 = no sound card (stream only), 1.. = device index (see /api/devices).</summary>
     public int OutputDevice { get; set; } = -1;
     public bool StartAutomation { get; set; } = true;
+    /// <summary>With <see cref="StartAutomation"/>: start in SEMI (the flow waits while the DJ plays a track of their own) instead of AUTO.</summary>
+    public bool StartSemi { get; set; }
 
     public MixOptions Mix { get; set; } = new();
     public RoutingOptions Routing { get; set; } = new();
@@ -37,6 +39,20 @@ public sealed class ReaRadioDjOptions
     public ControlOptions Control { get; set; } = new();
     public SpotifyOptions Spotify { get; set; } = new();
     public SilenceOptions Silence { get; set; } = new();
+    public StemOptions Stems { get; set; } = new();
+}
+
+/// <summary>
+/// Stems for the DJ decks: vocals, drums, bass and the rest of a track, each with its own level. Made on the processor
+/// (never on the graphics card) with the HT-Demucs model, models\htdemucs.onnx in the data folder.
+/// </summary>
+public sealed class StemOptions
+{
+    public bool Enabled { get; set; } = true;
+    /// <summary>The model file; empty: models\htdemucs.onnx in the data folder or next to the program.</summary>
+    public string? Model { get; set; }
+    /// <summary>The stems cache (data\stems) may grow to this many GB; then the stems not used longest go.</summary>
+    public double CacheGb { get; set; } = 20;
 }
 
 /// <summary>Silence on air: under the threshold for longer than the given time raises an alarm.</summary>
@@ -69,6 +85,13 @@ public sealed class ControlOptions
 {
     /// <summary>127.0.0.1 = only this computer; 0.0.0.0 = the whole network.</summary>
     public string BindAddress { get; set; } = "127.0.0.1";
+    /// <summary>
+    /// The web server (studio over the network, browser studio, remote app, API) listens on the whole network instead of
+    /// only this computer. Another computer still needs a sign-in or the control password for every action.
+    /// </summary>
+    public bool WebOnNetwork { get; set; }
+    /// <summary>With <see cref="WebOnNetwork"/>: HTTPS on this port as well (0 = none), with the station's own certificate.</summary>
+    public int HttpsPort { get; set; } = 8443;
     /// <summary>Line-based TCP (telnet-style). 0 = off.</summary>
     public int TcpPort { get; set; } = 8601;
     /// <summary>OSC over UDP (TouchOSC, Companion, lighting desks). 0 = off.</summary>
@@ -105,11 +128,23 @@ public sealed class RoutingOptions
     public bool MicEnabled { get; set; } = false;
     /// <summary>Recording device for the microphone (-1 = default input).</summary>
     public int MicDevice { get; set; } = -1;
+    /// <summary>
+    /// Which channel of the input the microphone is on: 0 = stereo as it comes in, 1 = mono from the left channel
+    /// (input 1 of a pair), 2 = mono from the right channel (input 2). See <see cref="Audio.MicChannel"/>.
+    /// </summary>
+    public int MicChannel { get; set; } = 0;
+    /// <summary>What happened to the stored sound cards at start (a card that was not found by name); shown once the engine runs.</summary>
+    [System.Text.Json.Serialization.JsonIgnore] public List<string> DeviceNotes { get; } = [];
     /// <summary>Music level while the microphone is open, 0..1.</summary>
     public double MicDuckLevel { get; set; } = 0.25;
     /// <summary>Automation level under overlays and overlay carts, 0..1.</summary>
     public double OverlayDuckLevel { get; set; } = 0.35;
     public int StandbyPlayers { get; set; } = 2;
+    /// <summary>
+    /// The flow under the faders: the automation plays music in turn on speler A and B, jingles on the cartwall and AI
+    /// breaks on the AI presenter, each under its own fader. Off: everything on the automation channel.
+    /// </summary>
+    public bool FlowOnFaders { get; set; } = true;
     /// <summary>Mixer channels that have an output of their own (channel id → "dev:&lt;device&gt;:&lt;pair&gt;"); the rest goes on air.</summary>
     public Dictionary<string, string> StripOutputs { get; set; } = [];
     /// <summary>

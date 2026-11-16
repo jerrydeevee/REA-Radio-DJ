@@ -71,6 +71,21 @@ public sealed partial class PlannerTool
     [ObservableProperty] private string _weekTitle = "";
     [ObservableProperty] private int _plannerTab;
 
+    /// <summary>Tab to open first (from the command line, "--show planner:Klokken").</summary>
+    public static string? StartTab { get; set; }
+    private static readonly string[] TabNames = ["Dag", "Week", "Klokken", "Weekgrid", "Vaste tijden", "Regels", "Externe streams"];
+
+    /// <summary>Opens the tab asked for on the command line, once (call when the window appears).</summary>
+    public void ApplyStartTab()
+    {
+        if (StartTab is null) return;
+        int i = Array.IndexOf(TabNames, StartTab);
+        StartTab = null;
+        if (i < 0) return;
+        PlannerTab = i;
+        if (i == 2 && SelectedClock is null && Clocks.Count > 0) SelectedClock = Clocks[0];
+    }
+
     [RelayCommand] private void PrevWeek() => DayDate = (DayDate ?? DateTime.Today).AddDays(-7);
     [RelayCommand] private void NextWeek() => DayDate = (DayDate ?? DateTime.Today).AddDays(7);
 
@@ -209,6 +224,7 @@ public sealed partial class PlannerTool
             {
                 "media" => $"vast item {r.MediaId}",
                 "ai" or "aiBreak" => "AI-presentator",
+                "playlist" => $"afspeellijst {System.IO.Path.GetFileNameWithoutExtension(r.Source ?? "")}",
                 _ => Categories.FirstOrDefault(c => c.Id == r.CategoryId)?.Name ?? "categorie",
             };
             var color = Categories.FirstOrDefault(c => c.Id == r.CategoryId)?.Color;

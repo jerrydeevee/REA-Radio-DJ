@@ -150,14 +150,14 @@ Gerangschikt naar de stappen van de werklijst. De proof of concept is af na stap
 - ⬜ Hercules- en Pioneer-controller via de commandobus
 - ⬜ Mix opnemen naar de bibliotheek. De opname per kanaal is er al; het moet nog in de bibliotheek komen
 - ⬜ Draaiknoppen, alles passend op 1920 × 1080
-- ⬜ Later: stems (zang, instrumenten, bas, drums)
+- 🟡 Stems (zang, drums, bas, rest) per deck, gemaakt op de processor
 
 ### Stap 5 — Verbindingen (codec en VoIP)
 
 Dit is het grootste open blok van de proof of concept.
 
 - ⬜ VoIP-mengkanaal met mix-minus (terugkanaal zonder zichzelf)
-- ⬜ RTP met Opus, G.722, G.711 en PCM, met een jitterbuffer
+- 🟡 RTP met Opus, G.722, G.711 en PCM, met een jitterbuffer (nog niet met LUCI Live geprobeerd)
 - ⬜ SIP volgens EBU N/ACIP: bellen, gebeld worden, registreren. LUCI Live verbindt hiermee op een open codec
 - ⬜ Venster Verbindingen met stations en presets
 - ⬜ Bediening en status via de commandobus

@@ -8,6 +8,8 @@ VoIP-kanalen voor bellers en verslaggevers, en bediening via MIDI, Livewire, Emb
 > Status: in ontwikkeling (proof of concept). Nog niet bedoeld voor een echte zender. Wat klaar is en wat nog
 > open staat, staat in [docs/WERKLIJST.md](docs/WERKLIJST.md).
 
+Hoe je ermee werkt, in de studio en als beheerder, staat in de [handleiding](docs/HANDLEIDING.md).
+
 ## Schermafdrukken
 
 ![De werkruimte Live: aan-de-luchtbalk, bibliotheek, live-decks, programmalog, cartwall en mixer](docs/screenshots/live.png)
@@ -30,13 +32,25 @@ Elk venster is te verslepen, te docken of los te laten zweven, ook op een tweede
   via REST (`/api/...`), met live status via WebSocket (`/api/ws`) of server-sent events (`/api/events`).
 - **Watchdog**: een klein bewakingsproces start de engine opnieuw na een crash of vastloper, en hij gaat verder waar
   de log was. De engine kan met Windows mee starten, los van de studio.
+- **Bewaking van de geluidskaart**: zet Windows of een ander programma de kaart van de zender zachter of dempt
+  hem, dan komt er een melding, of de engine zet hem meteen terug. Stopt een ASIO-kaart tijdens het spelen, dan
+  start de engine hem opnieuw en meldt het; komt hij niet terug, dan probeert hij het elke 10 seconden.
+- **Zachte start met grens**: een zacht nieuws- of reclameblok wacht op het einde van het item, maar hoogstens zo lang
+  als ingesteld (*Instellingen › Mixen*); duurt het langer, dan start het blok meteen en faadt het item uit.
+- **Speelduur per soort en categorie**: een langste speelduur (bijv. jingles hoogstens 30 seconden), en korte items die
+  altijd helemaal uitspelen zonder te faden.
+- **Presentatortekst**: per nummer, reclame of aankondiging een tekst die je erbij zegt; zolang het item speelt staat
+  hij groot in de Live-balk.
 - **Stiltedetectie** op de zender: drempel, duur en actie (melden, automatisering starten of iets uit een
   noodcategorie spelen).
 - **Reservestudio**: een tweede engine bewaakt de hoofdstudio en neemt de uitzending over als die uitvalt, een
   storing meldt of (als je dat kiest) stil valt; als de hoofdstudio weer speelt, geeft hij de lucht na een ingestelde
   tijd of met een knop terug (*Instellingen › Reservestudio*).
 - **Reservekopie** van instellingen, klokken, planning, cartwalls en hardware in één bestand, en een systeemlog in
-  de studio.
+  de studio. De engine kan dat **elke dag automatisch** doen op een vaste tijd, in een map op een andere schijf of
+  een NAS, met een bewaartermijn; een gemiste nacht wordt ingehaald (*Instellingen › Systeem*).
+- **Poortenoverzicht**: welke poorten de engine gebruikt (in of uit, alleen deze pc of het netwerk), met een
+  PowerShell-opdracht voor de firewall die alleen de nodige poorten opent (*Instellingen › Systeem*).
 
 ### Playout en planning
 - **BASS-mixer** (32-bit float), crossfades op het mixpunt, loudness-normalisatie naar −16 LUFS (EBU R128),
@@ -44,6 +58,9 @@ Elk venster is te verslepen, te docken of los te laten zweven, ook op een tweede
 - **Uurklokken en weekgrid**, met vaste tijden: *hard* (op de seconde), *zacht* (na het huidige nummer) of
   *overlay* (eroverheen, de muziek duikt). Regels voor de rotatie, **containers** (een blok als één regel in de log)
   en **externe streams** die in een tijdvenster het programma overnemen.
+- **Afspeellijst als bron** in een klok: een plek speelt het volgende (of een willekeurig) nummer uit een M3U-, PLS-
+  of XSPF-bestand, ook als een ander programma die lijst schrijft. Alleen bestanden uit de bibliotheek spelen;
+  *Controleer* laat zien hoeveel dat er zijn.
 - **Gebeurtenissen op een plek in een nummer**: een volume-omhullende of een commando op een tijdstip, te zetten in
   de cue-editor.
 - **Studio-spelers**: standby-spelers met stapel, een PFL-speler, cartwalls van 4 × 16 knoppen, overlays en een
@@ -84,15 +101,22 @@ Elk venster is te verslepen, te docken of los te laten zweven, ook op een tweede
 
 ### Verbindingen (VoIP)
 - Twee VoIP-mengkanalen met eigen fader, voorluisteren en een terugkanaal zonder zichzelf (mix-minus).
-- **RTP** in twee richtingen met G.711 (A-law, µ-law) en lineair PCM, met jitterbuffer en meting.
+- **RTP** in twee richtingen met Opus (48 kHz), G.722 (16 kHz breedband), G.711 (A-law, µ-law) en lineair PCM, met
+  jitterbuffer en meting; bij Opus vult de codec zelf een verloren pakket op.
 - **SIP**: bellen, gebeld worden en registreren bij een centrale, met NAT-ondersteuning. *Nog niet getest bij de
-  aanbieder; Opus en G.722 volgen.*
+  aanbieder.*
 - **Adresboek** met stations (SIP-nummer of vaste RTP-lijn), signalen bij overgaan en verbinden, lampjes en tallies,
   en **gesprekken opnemen** (met de hand of automatisch, met bewaartermijn).
 
 ### Opnemen, streamen en rapportage
 - De uitzending als MP3 per klokuur en de microfoon apart, optioneel direct in de bibliotheek, met bewaartermijn.
+- **Alleen het praten opnemen** als luistercontrole: de microfoon of een ingang, alleen zolang die open staat en er
+  geluid is (drempel en nalooptijd), met een halve seconde vóór de inzet; één MP3 per uur zonder de muziek ertussen.
+- **Uit de uitzending knippen**: het interview van net als item in de bibliotheek. Kies een dag en een begin- en
+  eindtijd (of *laatste 10 min*); het stuk mag over het uur heen lopen. Werkt met de uitzendopname (Instellingen ›
+  Opnemen).
 - **Streams** naar meerdere Icecast- en SHOUTcast-servers tegelijk, met titelupdates in een eigen opmaak.
+- **Programmalog afdrukken of exporteren** (PDF en CSV) met de verwachte begintijden: *Programmalog › Exporteren*.
 - **As-run** en een programmalog als tekstbestand per dag; rapportage auteursrechten (CSV en PDF),
   reclame-afspeelrapporten per adverteerder en uitzendstatistiek.
 
@@ -131,7 +155,10 @@ Elk venster is te verslepen, te docken of los te laten zweven, ook op een tweede
 - **Gebruikers en rechten**: aanmelden met een eigen naam en pincode, rollen presentator, technicus en beheerder
   (*Instellingen › Gebruikers*); de instellingen zijn dan alleen voor beheerders. *Studio › Studio vergrendelen*
   (Ctrl+L) houdt de uitzending gaande en de studio dicht tot de pincode; de as-run laat per presentator zien wat er
-  is uitgezonden. Pincode kwijt: start de engine op die computer met `--users-off`.
+  is uitgezonden. Een account kan een **laatste dag** krijgen (stagiair, invaller); daarna kan die persoon zich niet
+  meer aanmelden en wordt hij afgemeld. Wie stopt kun je uitschakelen in plaats van verwijderen. Na een instelbaar
+  aantal verkeerde pincodes wordt een naam een tijd geblokkeerd; een beheerder kan dat opheffen. Pincode kwijt: start
+  de engine op die computer met `--users-off`.
 
 ## Installeren (Windows 10/11, x64)
 
@@ -249,6 +276,9 @@ de commandobus, hardwaresignalen, RTP en SIP. De audiotests draaien alleen als B
 audio af op het stille apparaat (engine, cartwall, standby, ducken, opnemen, bibliotheekscan) en starten een
 nep-Icecast-server voor de stream.
 
+Wat alleen met oren of met echte apparatuur te controleren is (DJ-modus, AI-nieuws, ASIO, SIP, Ember+, Mackie
+Control), staat in [docs/TESTPLAN.md](docs/TESTPLAN.md), met een lijst om geteste apparatuur bij te houden.
+
 ## Licentie
 
 GPL-3.0 of later, met een aanvullende toestemming om met BASS te linken. Zie [NOTICE.md](NOTICE.md) voor BASS,
@@ -265,10 +295,19 @@ Alles wat je in de studio kunt, kan ook met tekstcommando's (`NEXT`, `AUTO OFF`,
 
 - **HTTP**: `POST /api/command` met `{"text":"NEXT"}`, of een webadres per knop: `/api/do/next`, `/api/do/cart/1/5`
 - **TCP** (poort 8601): één commando per regel, antwoord `OK …` of `ERR …`; met wachtwoord eerst `AUTH <wachtwoord>`
+- **Opdrachtregel**: `rea-cmd NEXT`, `rea-cmd "AUTO OFF" "CART 1 5"` of `rea-cmd --file commando's.txt` (staat naast de
+  engine). Het wachtwoord komt uit de omgevingsvariabele `REA_CONTROL_PASSWORD`; afsluitcode 0 = alles OK, 1 = een
+  commando gaf ERR, 2 = geen verbinding. Handig in een taakplanner of script.
 - **OSC** (UDP 8602): `/rea/next`, `/rea/cart/1/5`, `/rea/mic/toggle`, `/rea/cmd "AUTO OFF"` (waarde 0 = loslaten, genegeerd)
 - **UDP** (poort 8603): één commando per pakket, met antwoord terug
 - **MIDI, serieel, Livewire en Ember+**: knoppen en faders op een commando, lampjes en tallies op een toestand
 - **Sneltoetsen** in de studio (vrij in te stellen) en **vaste tijden** in de planner (actie *Commando uitvoeren*)
+
+Een afstandsbediener die maar een deel mag (een tablet alleen de cartwall, een knoppenkast alleen `NEXT`) zet je onder
+**Instellingen › Op afstand › Afstandsbedieners met eigen rechten**. Hij krijgt een eigen sleutel in plaats van het
+wachtwoord (TCP `AUTH <sleutel>`, UDP `<sleutel> NEXT`, web `/api/do/next?key=<sleutel>`, `rea-cmd` via
+`REA_CONTROL_PASSWORD`) of wordt zonder sleutel herkend aan zijn vaste adres. Hij mag alleen de aangevinkte groepen
+commando's gebruiken; `STATUS` en `HELP` mogen altijd.
 
 Standaard luistert dit alleen op deze computer. Voor het netwerk in `appsettings.json`:
 

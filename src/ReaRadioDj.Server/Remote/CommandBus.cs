@@ -43,7 +43,8 @@ public sealed class CommandBus(
         new("SKIP", "Sla het huidige item over (snel uitfaden)", "Uitzending"),
         new("PLAY", "Automatisch aan en spelen", "Uitzending"),
         new("STOP", "Automatisering stoppen (uitfaden)", "Uitzending"),
-        new("AUTO ON|OFF|TOGGLE", "Automatisch of live-assist", "Uitzending"),
+        new("AUTO ON|OFF|TOGGLE", "Automatisch of met de hand", "Uitzending"),
+        new("MODE AUTO|SEMI|HAND|CYCLE", "Speelwijze: alles vanzelf, vanzelf met de DJ erbij, of de DJ start elk item", "Uitzending"),
         new("BREAK", "AI-break als volgende item", "Log"),
         new("REPLAN", "Log opnieuw vullen vanuit de klokken", "Log"),
         new("LOG ADD <media-id> [NEXT|END]", "Item uit de bibliotheek in de log zetten", "Log"),
@@ -52,13 +53,15 @@ public sealed class CommandBus(
         new("MUTE <kanaal> ON|OFF|TOGGLE", "Kanaal dempen", "Mixer"),
         new("CART <wand> <knop>", "Cartknop indrukken (wand 1-2, knop 1-64)", "Cartwall"),
         new("CARTS STOP", "Alle carts stoppen", "Cartwall"),
-        new("PLAYER <1|2|PFL> PLAY|PAUSE|TOGGLE|STOP|EJECT", "Standby-speler of PFL bedienen", "Spelers"),
+        new("PLAYER <1-4|A-D|PRESENTER|PFL> PLAY|PAUSE|TOGGLE|STOP|EJECT|PFL", "Speler A-D, AI-presentator of PFL bedienen (PFL = voorbeluisteren)", "Spelers"),
+        new("PLAYER NEXT", "De volgende klaarstaande speler starten (handmatig: de log in speler A en B)", "Spelers"),
         new("PLAYER <1|2|PFL> LOAD <media-id>", "Item in een speler laden", "Spelers"),
         new("OVERLAY PLAY <media-id>", "Item als overlay over het programma", "Spelers"),
         new("OVERLAY STOP", "Overlays stoppen", "Spelers"),
         new("DJ <A-D> <actie> [waarde]", "DJ-deck: TOGGLE, PLAY, PAUSE, CUE, SYNC, PFL, HOTCUE <1-8>, LOOPTOGGLE [tellen], FX, LOAD <media-id>, EJECT, "
             + "TEMPO <%>, BEND <%>, GAIN <dB>, FADER <0-1>, EQHIGH|EQMID|EQLOW <-1..1>, FILTER <-1..1>, SEEK <s>, "
-            + "CENSOR ON|OFF (achteruit zolang aan), BRAKE [s], BACKSPIN [s]", "DJ"),
+            + "CENSOR ON|OFF (achteruit zolang aan), BRAKE [s], BACKSPIN [s], "
+            + "STEM VOCALS|DRUMS|BASS|OTHER ON|OFF|TOGGLE|<0-1>", "DJ"),
         new("DJ XFADER <0-1>", "Crossfader (0 = deck A en C, 1 = B en D)", "DJ"),
         new("DJ CUEMIX <0-1>", "Koptelefoon van cue (0) naar master (1)", "DJ"),
         new("DJ ONAIR ON|OFF|TOGGLE", "DJ-tafel op de lucht, of teruggeven aan de automatisering", "DJ"),
@@ -80,6 +83,31 @@ public sealed class CommandBus(
         new("STATUS", "Wat er nu speelt", "Info"),
         new("HELP", "Lijst met commando's", "Info"),
     ];
+
+    /// <summary>The command groups, in the order of the list (for the limits of a remote control).</summary>
+    public static readonly IReadOnlyList<string> Groups = Commands.Select(c => c.Group).Distinct().ToList();
+
+    private static readonly Dictionary<string, string> GroupByVerb = Commands
+        .GroupBy(c => c.Syntax.Split(' ')[0].ToUpperInvariant())
+        .ToDictionary(g => g.Key, g => g.First().Group, StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>The group of a command text by its first word ("CART 1 5" → Cartwall), or null for an unknown command.</summary>
+    public static string? GroupOf(string? text)
+    {
+        var first = (text ?? "").Trim().Split(' ', 2)[0];
+        return first.Length > 0 && GroupByVerb.TryGetValue(first, out var g) ? g : null;
+    }
+
+    /// <summary>Runs one command for a remote control with limits (null = no limits).</summary>
+    public CommandResult Run(string? text, string source, RemoteClient? client)
+    {
+        if (client is not null && !RemoteClients.Allows(client, GroupOf(text)))
+        {
+            logger.LogInformation("Command '{Text}' from {Source} refused for remote control {Name}", text, source, client.Name);
+            return CommandResult.Fail($"niet toegestaan voor {client.Name}" + (GroupOf(text) is { } g ? $" ({g})" : ""));
+        }
+        return Run(text, client is null ? source : $"{source} ({client.Name})");
+    }
 
     /// <summary>Runs one command. <paramref name="source"/> names the interface (tcp, osc, http, studio, planner).</summary>
     public CommandResult Run(string? text, string source)
@@ -113,6 +141,22 @@ public sealed class CommandBus(
             case "STOP": engine.Stop(); return CommandResult.Done();
             case "AUTO":
                 return Switch(Arg(1), engine.AutoPlay, on => engine.SetAutoPlay(on), "automatisch");
+            case "MODE":
+            {
+                // MODE AUTO|SEMI|HAND, or MODE CYCLE (AUTO > SEMI > HAND > AUTO).
+                var arg = Arg(1).ToUpperInvariant();
+                FlowMode? mode = arg switch
+                {
+                    "AUTO" or "AUTOMATISCH" => FlowMode.Auto,
+                    "SEMI" => FlowMode.Semi,
+                    "HAND" or "MANUAL" or "ASSIST" => FlowMode.Hand,
+                    "CYCLE" or "" => engine.Mode switch { FlowMode.Auto => FlowMode.Semi, FlowMode.Semi => FlowMode.Hand, _ => FlowMode.Auto },
+                    _ => null,
+                };
+                if (mode is not { } flowMode) return CommandResult.Fail("MODE AUTO, SEMI of HAND");
+                engine.SetMode(flowMode);
+                return CommandResult.Done("modus " + flowMode.ToString().ToUpperInvariant());
+            }
             case "BREAK":
                 log.Insert(0, new LogItem { Type = LogItemType.AiBreak, Origin = "commando" });
                 return CommandResult.Done("AI-break als volgende");
@@ -135,7 +179,12 @@ public sealed class CommandBus(
 
             case "CART" when Long(w, 1) is long wall && Long(w, 2) is long slot:
                 if (wall is < 1 or > Cartwall.SamplerWall + 1 || slot is < 1 or > Cartwall.SlotsPerWall) return CommandResult.Fail("wand 1-2 (3 = DJ-sampler), knop 1-64");
-                return cartwall.Press((int)wall - 1, (int)slot - 1) ? CommandResult.Done() : CommandResult.Fail("knop is leeg");
+            {
+                // Pressing a cart that plays stops it: that is not an empty button.
+                bool wasPlaying = cartwall.Get((int)wall - 1)[(int)slot - 1].Playing;
+                return cartwall.Press((int)wall - 1, (int)slot - 1) ? CommandResult.Done()
+                    : wasPlaying ? CommandResult.Done("gestopt") : CommandResult.Fail("knop is leeg");
+            }
             case "CARTS" when Arg(1) == "STOP":
                 cartwall.StopAll();
                 return CommandResult.Done();
@@ -299,6 +348,9 @@ public sealed class CommandBus(
             "hotcue" or "hotcueclear" => new Contracts.DjCommand(Index: v is double n ? (int)n - 1 : null),
             "load" => new Contracts.DjCommand(MediaId: v is double id ? (long)id : null),
             "fxtype" => new Contracts.DjCommand(Name: w.Count > 3 ? w[3].ToLowerInvariant() : null),
+            // DJ A STEM VOCALS ON|OFF|TOGGLE|<0-1>
+            "stem" => new Contracts.DjCommand(Name: w.Count > 3 ? w[3].ToLowerInvariant() : null, Value: Double(w, 4),
+                On: (w.Count > 4 ? w[4].ToUpperInvariant() : "") switch { "ON" or "AAN" => true, "OFF" or "UIT" => false, _ => null }),
             "fx" or "pfl" or "keylock" or "killlow" or "killmid" or "killhigh" or "censor" =>
                 new Contracts.DjCommand(On: w.Count > 3 ? w[3].ToUpperInvariant() is "ON" or "1" or "AAN" : null),
             _ => new Contracts.DjCommand(Value: v),
@@ -310,10 +362,28 @@ public sealed class CommandBus(
 
     private CommandResult Player(string which, string action, long? mediaId)
     {
-        var id = which switch { "1" => "standby1", "2" => "standby2", "3" => "standby3", "PFL" => "pfl", _ => which.ToLowerInvariant() };
+        if (which == "NEXT")
+        {
+            if (players.NextCued() is not { } next) return CommandResult.Fail("geen speler met een nummer klaar");
+            next.Play();
+            return CommandResult.Done(next.Name);
+        }
+        var id = which switch
+        {
+            "1" or "A" => "standby1", "2" or "B" => "standby2", "3" or "C" => "standby3", "4" or "D" => "standby4",
+            "PFL" => "pfl", "PRESENTER" or "AI" => "presenter", _ => which.ToLowerInvariant(),
+        };
         if (players.Find(id) is not { } p) return CommandResult.Fail($"speler {which} bestaat niet");
         switch (action)
         {
+            case "PFL" when !ReferenceEquals(p, players.Pfl):
+                // Pre-listen: the track of this player on the PFL; again (while it plays) stops it.
+                if (p.Info.Media is not { } track) return CommandResult.Fail($"{p.Name} is leeg");
+                var pfl = players.Pfl.Info;
+                if (pfl.State == PlayerState.Playing && pfl.Media?.Path == track.Path) { players.Pfl.Stop(); return CommandResult.Done("PFL uit"); }
+                players.Pfl.Load(track);
+                players.Pfl.Play();
+                return CommandResult.Done($"PFL: {track.DisplayName}");
             case "PLAY": p.Play(); break;
             case "PAUSE": p.Pause(); break;
             case "TOGGLE": p.TogglePlay(); break;

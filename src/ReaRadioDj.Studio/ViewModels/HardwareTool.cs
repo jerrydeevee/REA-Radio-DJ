@@ -244,6 +244,8 @@ public sealed partial class HardwareTool : StudioTool
     [ObservableProperty] private HwMackieChoice? _mackieMaster;
     [ObservableProperty] private bool _mackieTransport;
     [ObservableProperty] private bool _mackieMeters = true;
+    [ObservableProperty] private bool _mackieDjFaderStart = true;
+    [ObservableProperty] private bool _mackieLiveAssist = true;
     /// <summary>The selected device is an extender (eight strips more, e.g. iCON V1-X).</summary>
     [ObservableProperty] private bool _mackieExtender;
     [ObservableProperty] private bool _mackieExtendersLeft;
@@ -251,6 +253,7 @@ public sealed partial class HardwareTool : StudioTool
     [ObservableProperty] private string _mackieChannels = "";
     [ObservableProperty] private string _mackieRecent = "";
     [ObservableProperty] private string _mackieTest = "";
+    [ObservableProperty] private string _iconResult = "";
     private bool _mackieLoading;
 
     private void ShowMackie(MackieDto m, bool settings)
@@ -268,6 +271,8 @@ public sealed partial class HardwareTool : StudioTool
         MackieMaster = MackieMasters.FirstOrDefault(c => c.Id == m.Settings.MasterStrip) ?? MackieMasters[0];
         MackieTransport = m.Settings.Transport;
         MackieMeters = m.Settings.Meters;
+        MackieDjFaderStart = m.Settings.DjFaderStart;
+        MackieLiveAssist = m.Settings.LiveAssist;
         _mackieExtenders = m.Settings.Extenders ?? [];
         MackieExtender = _mackieExtenders.Contains(Id);
         MackieExtendersLeft = m.Settings.ExtendersLeft;
@@ -277,6 +282,8 @@ public sealed partial class HardwareTool : StudioTool
     partial void OnMackieMasterChanged(HwMackieChoice? value) => _ = SaveMackieAsync();
     partial void OnMackieTransportChanged(bool value) => _ = SaveMackieAsync();
     partial void OnMackieMetersChanged(bool value) => _ = SaveMackieAsync();
+    partial void OnMackieDjFaderStartChanged(bool value) => _ = SaveMackieAsync();
+    partial void OnMackieLiveAssistChanged(bool value) => _ = SaveMackieAsync();
     partial void OnMackieExtendersLeftChanged(bool value) => _ = SaveMackieAsync();
 
     partial void OnMackieExtenderChanged(bool value)
@@ -291,7 +298,7 @@ public sealed partial class HardwareTool : StudioTool
     {
         if (_mackieLoading) return;
         if (await Hub.Client.SendForAsync<MackieDto>(HttpMethod.Put, "/api/hardware/mackie",
-                new MackieSettingsDto(MackieMaster?.Id ?? "", MackieTransport, MackieMeters, [.. _mackieExtenders], MackieExtendersLeft)) is { } m)
+                new MackieSettingsDto(MackieMaster?.Id ?? "", MackieTransport, MackieMeters, [.. _mackieExtenders], MackieExtendersLeft, MackieDjFaderStart, MackieLiveAssist)) is { } m)
             ShowMackie(m, settings: false);
     }
 
@@ -302,6 +309,16 @@ public sealed partial class HardwareTool : StudioTool
         if (Id <= 0 || MackieTest.Trim().Length == 0) return;
         if (await Hub.Client.SendForAsync<MackieDto>(HttpMethod.Post, "/api/hardware/mackie/simulate", new MackieSimulateRequest(Id, MackieTest)) is { } m)
             ShowMackie(m, settings: false);
+    }
+
+    /// <summary>Writes REA's set-up into an iCON V1-M: touch buttons on the notes of the inputs, with their names.</summary>
+    [RelayCommand]
+    private async Task WriteIcon()
+    {
+        if (Id <= 0) return;
+        IconResult = "bezig…";
+        var r = await Hub.Client.SendForAsync<IconWriteDto>(HttpMethod.Post, $"/api/hardware/devices/{Id}/icon", null);
+        IconResult = r?.Text ?? "geen antwoord van de engine";
     }
 
     // ---------------------------------------------------------------- Ember+ tree

@@ -11,7 +11,7 @@ public sealed partial class VoipLineVm(string id, string name) : ObservableObjec
 {
     public string Id { get; } = id;
     public string Name { get; } = name;
-    public IReadOnlyList<string> Codecs { get; } = ["pcma", "pcmu", "l16"];
+    public IReadOnlyList<string> Codecs { get; } = ["opus", "g722", "pcma", "pcmu", "l16"];
 
     [ObservableProperty] private decimal? _localPort = 5004;
     [ObservableProperty] private string _remoteHost = "";
@@ -249,7 +249,7 @@ public sealed partial class SipAccountVm : ObservableObject
 public sealed partial class StationVm : ObservableObject
 {
     public IReadOnlyList<string> Kinds { get; } = ["sip", "rtp"];
-    public IReadOnlyList<string> Codecs { get; } = ["pcma", "pcmu", "l16"];
+    public IReadOnlyList<string> Codecs { get; } = ["opus", "g722", "pcma", "pcmu", "l16"];
     public string Id { get; set; } = "";
     /// <summary>Takes this station out of the address book it is in.</summary>
     public Action<StationVm>? RemoveFromBook { get; set; }
@@ -335,9 +335,9 @@ public sealed partial class ConnectionsTool : StudioTool
     public ConnectionsTool() : base("connections", "Verbindingen") { }
 
     public ObservableCollection<VoipLineVm> Lines { get; } = [];
-    public IReadOnlyList<string> Codecs { get; } = ["pcma", "pcmu", "l16"];
+    public IReadOnlyList<string> Codecs { get; } = ["opus", "g722", "pcma", "pcmu", "l16"];
     [ObservableProperty] private string _codecHelp =
-        "pcma / pcmu = G.711 (8 kHz, telefoon) · l16 = lineair 16 bit 48 kHz mono (studiokwaliteit, ruim 0,8 Mbit/s)";
+        "opus = 48 kHz over internet (LUCI Live, Comrex) · g722 = 16 kHz breedband (HD-telefonie) · pcma / pcmu = G.711 (8 kHz, telefoon) · l16 = lineair 16 bit 48 kHz mono (studiokwaliteit, ruim 0,8 Mbit/s)";
     [ObservableProperty] private bool _empty = true;
     public SipAccountVm Sip { get; } = new();
     [ObservableProperty] private string _sipState = "SIP staat uit";

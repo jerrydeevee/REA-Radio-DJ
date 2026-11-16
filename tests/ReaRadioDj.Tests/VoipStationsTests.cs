@@ -53,7 +53,7 @@ public class VoipStationsTests
         Assert.Contains("eigen poort", e1);
         Assert.Null(VoipStations.Clean([Rtp("R", 5104, "10.0.0.5", 0)], out var e2));
         Assert.Contains("overkant", e2);
-        Assert.Null(VoipStations.Clean([Rtp("R", 5104, codec: "opus")], out var e3));
+        Assert.Null(VoipStations.Clean([Rtp("R", 5104, codec: "g729")], out var e3));
         Assert.Contains("codec", e3);
         Assert.Null(VoipStations.Clean([Rtp("R", 5104, "10.0.0 .5", 5106)], out var e4));
         Assert.Contains("spaties", e4);

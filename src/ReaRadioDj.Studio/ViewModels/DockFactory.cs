@@ -29,6 +29,7 @@ public sealed class DockFactory : Factory
         ("soloist", "Soloist (ontwikkeltest)", () => new SoloistTool()),
         ("library", "Bibliotheek", () => new LibraryTool()),
         ("clipboard", "Klembord", () => new ClipboardTool()),
+        ("aircut", "Uit de uitzending knippen", () => new AirCutTool()),
         ("cues", "Cue-editor", () => new CueEditorTool()),
         ("mixer", "Mixer en routing", () => new MixerTool()),
         ("output", "Uitsturing", () => new OutputTool()),
@@ -64,7 +65,7 @@ public sealed class DockFactory : Factory
     public static readonly IReadOnlyList<(string Name, string[] Ids)> Groups =
     [
         ("Uitzending", ["regie", "decks", "log", "standby", "pfl", "cart1", "cart2", "overlays", "clock", "item"]),
-        ("Bibliotheek en productie", ["library", "clipboard", "explorer", "cues", "transition", "voicetrack"]),
+        ("Bibliotheek en productie", ["library", "clipboard", "explorer", "cues", "transition", "voicetrack", "aircut"]),
         ("Planning", ["planner", "ads", "news", "import", "sources", "wishlist"]),
         ("AI-presentator en stemmen", ["presenter", "voice"]),
         ("DJ", ["dj", "sampler", "automix", "djmidi", "soloist"]),

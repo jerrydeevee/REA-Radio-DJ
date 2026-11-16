@@ -20,7 +20,11 @@
                    Classes.end="{Binding EndState, Converter={x:Static vm:Brushes.Is}, ConverterParameter=end}" />
         <!-- wraps instead of running under the time when the player is narrow -->
         <WrapPanel ItemSpacing="8" LineSpacing="4" VerticalAlignment="Center">
+          <Border Width="12" Height="12" CornerRadius="6" Background="{Binding PlayerBrush}" VerticalAlignment="Center"
+                  IsVisible="{Binding PlayerBrush, Converter={x:Static ObjectConverters.IsNotNull}}" />
           <TextBlock Text="{Binding Name}" FontSize="16" FontWeight="Bold" VerticalAlignment="Center" />
+          <TextBlock Text="uit programmalog" FontSize="12" Foreground="{DynamicResource MutedTextBrush}" VerticalAlignment="Center"
+                     IsVisible="{Binding Flow}" />
           <Border CornerRadius="{DynamicResource Radius10}" Padding="8,2" BorderThickness="1" BorderBrush="{Binding StateBrush}" VerticalAlignment="Center">
             <StackPanel Orientation="Horizontal" Spacing="5">
               <TextBlock Text="{Binding StateGlyph}" FontSize="11" FontWeight="Bold" Foreground="{Binding StateBrush}" VerticalAlignment="Center" />

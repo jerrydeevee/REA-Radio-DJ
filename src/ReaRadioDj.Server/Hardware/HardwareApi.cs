@@ -1,5 +1,6 @@
 using ReaRadioDj.Contracts;
 using ReaRadioDj.Core.Hardware;
+using ReaRadioDj.Core.Studio;
 
 namespace ReaRadioDj.Server.Hardware;
 
@@ -59,7 +60,7 @@ public static class HardwareApi
             s.SetSettings(new MackieSettings
             {
                 MasterStrip = d.MasterStrip ?? "", Transport = d.Transport, Meters = d.Meters,
-                Extenders = d.Extenders ?? [.. s.Settings.Extenders], ExtendersLeft = d.ExtendersLeft,
+                Extenders = d.Extenders ?? [.. s.Settings.Extenders], ExtendersLeft = d.ExtendersLeft, DjFaderStart = d.DjFaderStart, LiveAssist = d.LiveAssist,
             });
             return Mackie(s, store, service);
         });
@@ -67,6 +68,15 @@ public static class HardwareApi
             store.Devices().All(d => d.Id != r.DeviceId || d.Kind != HwKind.Mackie) ? Results.BadRequest(new { error = "kies een apparaat van de soort Mackie Control" })
             : s.Simulate(r.DeviceId, r.Messages ?? "") is null ? Results.BadRequest(new { error = "hexadecimale bytes, bijv. 90 10 7F (meerdere met komma's)" })
             : Results.Ok(Mackie(s, store, service)));
+
+        // ---- iCON V1-M: REA's own set-up for the touch buttons, written into the panel
+        g.MapPost("/devices/{id:long}/icon", async (long id, bool? save, int? daw, HardwareStore store, Cartwall cartwall) =>
+        {
+            if (store.Devices().FirstOrDefault(d => d.Id == id) is not { Kind: HwKind.Mackie } device)
+                return Results.BadRequest(new { error = "kies een apparaat van de soort Mackie Control" });
+            var (ok, text) = await Task.Run(() => IconPanel.Write(device, store, cartwall, save ?? true, (byte)Math.Clamp(daw ?? IconV1M.NoDaw, 0, 0x7F)));
+            return Results.Ok(new IconWriteDto(ok, text));
+        });
 
         // ---- DJ controller: what each control does, learning, presets
         var m = api.MapGroup("/dj/midi");
@@ -99,7 +109,8 @@ public static class HardwareApi
     }
 
     private static MackieDto Mackie(MackieService s, HardwareStore store, HardwareService service) => new(
-        new MackieSettingsDto(s.Settings.MasterStrip, s.Settings.Transport, s.Settings.Meters, [.. s.Settings.Extenders], s.Settings.ExtendersLeft),
+        new MackieSettingsDto(s.Settings.MasterStrip, s.Settings.Transport, s.Settings.Meters, [.. s.Settings.Extenders], s.Settings.ExtendersLeft,
+            s.Settings.DjFaderStart, s.Settings.LiveAssist),
         s.Channels.Select(c => new MackieChannelDto(c.Id, c.Name)).ToList(),
         store.Devices().Where(d => d.Kind == HwKind.Mackie).Select(d =>
         {

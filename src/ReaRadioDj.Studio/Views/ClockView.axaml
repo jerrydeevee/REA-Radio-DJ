@@ -80,7 +80,8 @@
     </StackPanel>
 
     <!-- the clock takes all remaining space and scales with the window -->
-    <ctl:StudioClock Time="{Binding Now}" ClockStyle="{Binding ClockStyle}" ShowSeconds="{Binding ShowSeconds}"
-                     ItemLeft="{Binding ItemLeft}" ItemSecondsLeft="{Binding ItemSecondsLeft}" MinHeight="120" Margin="0,6,0,0" />
+    <!-- in a low panel the counters win: the clock gets what is left, and goes when that is too little -->
+    <ctl:StudioClock x:Name="Clock" Time="{Binding Now}" ClockStyle="{Binding ClockStyle}" ShowSeconds="{Binding ShowSeconds}"
+                     ItemLeft="{Binding ItemLeft}" ItemSecondsLeft="{Binding ItemSecondsLeft}" Margin="0,6,0,0" />
   </DockPanel>
 </UserControl>

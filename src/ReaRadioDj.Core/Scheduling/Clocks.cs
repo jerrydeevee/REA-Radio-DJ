@@ -1,13 +1,16 @@
+using ReaRadioDj.Core.Library;
 using ReaRadioDj.Core.Model;
 
 namespace ReaRadioDj.Core.Scheduling;
 
-public enum ClockRuleKind { Category = 0, Media = 1, AiBreak = 2 }
+/// <summary>Playlist = the next (or a random) file from a playlist file (M3U, PLS, XSPF) in <see cref="ClockRule.Source"/>.</summary>
+public enum ClockRuleKind { Category = 0, Media = 1, AiBreak = 2, Playlist = 3 }
 
 /// <summary>Random = pick with separation rules; Sequential = next in line; Hook = random, but play only the hook.</summary>
 public enum RuleMode { Random = 0, Sequential = 1, Hook = 2 }
 
-public sealed record ClockRule(long Id, ClockRuleKind Kind, long? CategoryId, long? MediaId, RuleMode Mode, string Note);
+/// <param name="Source">For a playlist: the path of the playlist file as the engine sees it.</param>
+public sealed record ClockRule(long Id, ClockRuleKind Kind, long? CategoryId, long? MediaId, RuleMode Mode, string Note, string Source = "");
 
 /// <summary>An hour format: rules played from top to bottom (and again from the top when the hour lasts longer).</summary>
 public sealed record ClockDef(long Id, string Name, string Color, IReadOnlyList<ClockRule> Rules);
@@ -24,6 +27,10 @@ public interface IScheduleSource
     IReadOnlyList<ScriptRule> Rules => [];
     /// <summary>Items of an imported log for this hour (position, playable item); empty when the hour follows its clock.</summary>
     IReadOnlyList<(int Index, MediaItem Media)> Imported(DateTime hour) => [];
+    /// <summary>A playlist file, read from disk (cached until it changes).</summary>
+    PlaylistFile Playlist(string path) => Playlists.Read(path);
+    /// <summary>The playable library items of these files, in the same order; files that are not in the library are left out.</summary>
+    IReadOnlyList<MediaItem> ByPaths(IReadOnlyList<string> paths) => [];
 }
 
 /// <summary>
@@ -35,6 +42,7 @@ public sealed class ClockScheduler(RotationOptions rotation, bool presenterEnabl
 {
     private readonly Random _random = random ?? Random.Shared;
     private readonly Dictionary<long, int> _sequence = [];
+    private readonly Dictionary<string, int> _playlistAt = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<long, Queue<string>> _recentJingles = [];
     private long _clockId = -1;
     private DateTime _hour = DateTime.MinValue;
@@ -129,9 +137,26 @@ public sealed class ClockScheduler(RotationOptions rotation, bool presenterEnabl
                 bool hook = rule.Mode == RuleMode.Hook && pick.Cues is { HookIn: double, HookOut: double };
                 return new LogItem { Type = TypeOf(kind), Media = pick, Origin = origin, UseHook = hook };
 
+            case ClockRuleKind.Playlist when rule.Source.Length > 0:
+                var list = source.Playlist(rule.Source);
+                var inList = source.ByPaths(list.Entries);
+                if (inList.Count == 0) return null;
+                MediaItem next = rule.Mode == RuleMode.Random
+                    ? (inList.All(m => m.Kind == MediaKind.Song) ? SongPicker.Pick(inList, log.RecentAndPlannedSongs(), rotation, _random) : inList[_random.Next(inList.Count)])
+                    : NextInPlaylist(rule.Source, inList);
+                return new LogItem { Type = TypeOf(next.Kind), Media = next, Origin = $"{origin} · lijst {System.IO.Path.GetFileNameWithoutExtension(rule.Source)}" };
+
             default:
                 return null;
         }
+    }
+
+    /// <summary>The next item of a playlist in its own order; after the last one it starts again at the top.</summary>
+    private MediaItem NextInPlaylist(string playlist, IReadOnlyList<MediaItem> items)
+    {
+        int index = _playlistAt.GetValueOrDefault(playlist) % items.Count;
+        _playlistAt[playlist] = index + 1;
+        return items[index];
     }
 
     private static LogItemType TypeOf(MediaKind kind) => kind == MediaKind.Song ? LogItemType.Song : LogItemType.Jingle;

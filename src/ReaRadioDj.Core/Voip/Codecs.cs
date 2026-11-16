@@ -18,18 +18,24 @@ public interface IRtpCodec
     int Encode(ReadOnlySpan<float> pcm, Span<byte> payload);
     /// <summary>Decodes a payload; returns the number of samples written.</summary>
     int Decode(ReadOnlySpan<byte> payload, Span<float> pcm);
+    /// <summary>Format parameters for SDP (a=fmtp), or null.</summary>
+    string? Fmtp => null;
+    /// <summary>Fills in a lost packet the codec's own way; false: the jitter buffer repeats the last frame instead.</summary>
+    bool Conceal(Span<float> pcm) => false;
 }
 
 public static class RtpCodecs
 {
     /// <summary>The codecs this build can use, best first.</summary>
-    public static IReadOnlyList<string> Names { get; } = ["l16", "pcma", "pcmu"];
+    public static IReadOnlyList<string> Names { get; } = ["opus", "l16", "g722", "pcma", "pcmu"];
 
     public static IRtpCodec Create(string? name) => (name ?? "").Trim().ToLowerInvariant() switch
     {
         "pcmu" or "g711u" or "g.711u" => new G711(mu: true),
         "pcma" or "g711a" or "g.711a" or "" => new G711(mu: false),
         "l16" or "pcm" => new L16(),
+        "g722" or "g.722" => new G722(),
+        "opus" => new OpusRtp(),
         var other => throw new ArgumentException($"Onbekende codec: {other}. Beschikbaar: {string.Join(", ", Names)}"),
     };
 
@@ -38,6 +44,8 @@ public static class RtpCodecs
         "pcmu" => "G.711 µ-law (8 kHz, telefoonkwaliteit)",
         "pcma" => "G.711 A-law (8 kHz, telefoonkwaliteit, gangbaar in Europa)",
         "l16" => "Lineair PCM 16 bit (48 kHz mono, studiokwaliteit, 768 kbit/s)",
+        "g722" => "G.722 (16 kHz breedband, 64 kbit/s, HD-telefonie en veel codecs)",
+        "opus" => "Opus (48 kHz, 64 kbit/s, studiokwaliteit over internet; LUCI Live, Comrex)",
         _ => name,
     };
 

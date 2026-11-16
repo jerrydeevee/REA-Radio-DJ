@@ -1,4 +1,5 @@
 using Avalonia.Controls;
+using Avalonia.Interactivity;
 using ReaRadioDj.Studio.ViewModels;
 
 namespace ReaRadioDj.Studio.Views;
@@ -21,4 +22,10 @@ public partial class LogView : UserControl
             Played.IsVisible = e.NewSize.Height >= 200;
         };
     }
+
+    private async void OnExportPdf(object? sender, RoutedEventArgs e) =>
+        await FileSave.FromEngineAsync(this, "Programmalog opslaan als PDF", $"programmalog-{DateTime.Now:yyyy-MM-dd-HHmm}.pdf", "/api/log/export.pdf");
+
+    private async void OnExportCsv(object? sender, RoutedEventArgs e) =>
+        await FileSave.FromEngineAsync(this, "Programmalog opslaan als CSV", $"programmalog-{DateTime.Now:yyyy-MM-dd-HHmm}.csv", "/api/log/export.csv");
 }

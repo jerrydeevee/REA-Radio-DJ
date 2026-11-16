@@ -172,6 +172,17 @@ public sealed class MixerStrip
         return BASS_Mixer_ChannelGetLevelEx(Handle, l, 0.05f, BASS_LEVEL_STEREO) ? (l[0], l[1]) : (0, 0);
     }
 
+    /// <summary>
+    /// The level after the fader (what goes on to the bus): the level of what comes in times the volume the strip has
+    /// now (also while it slides). A closed or muted channel reads 0, however loud the mic or the track is.
+    /// </summary>
+    public (float Left, float Right) PostFaderLevels()
+    {
+        var (l, r) = Levels();
+        float gain = BASS_ChannelGetAttribute(Handle, BASS_ATTRIB_VOL, out float v) ? Math.Clamp(v, 0f, 1f) : (Muted ? 0f : Volume);
+        return (l * gain, r * gain);
+    }
+
     /// <summary>Moves the strip to another output bus; what plays on it carries on.</summary>
     internal void MoveTo(OutputBus bus)
     {
@@ -198,7 +209,14 @@ public sealed class MixerStrip
 public sealed class AudioRouter : IDisposable
 {
     public const string LogStrip = "log", StandbyStrip = "standby", CartStrip = "cart", OverlayStrip = "overlay",
-        MicStrip = "mic", PflStrip = "pfl", DjStrip = "dj", Voip1Strip = "voip1", Voip2Strip = "voip2";
+        MicStrip = "mic", PflStrip = "pfl", DjStrip = "dj", Voip1Strip = "voip1", Voip2Strip = "voip2", PresenterStrip = "presenter";
+
+    /// <summary>The channel of standby player <paramref name="n"/> (1-4): "standby" for player A, "standby2" for B, …</summary>
+    public static string PlayerStrip(int n) => n <= 1 ? StandbyStrip : $"standby{n}";
+    /// <summary>The name of standby player <paramref name="n"/>: Speler A, B, C, D.</summary>
+    public static string PlayerName(int n) => $"Speler {(char)('A' + Math.Clamp(n, 1, 4) - 1)}";
+    /// <summary>How many standby players (and so player channels) there are.</summary>
+    public int PlayerCount => Math.Clamp(_options.Routing.StandbyPlayers, 1, 4);
 
     private readonly ReaRadioDjOptions _options;
     private readonly ILogger _logger;
@@ -250,6 +268,7 @@ public sealed class AudioRouter : IDisposable
     public void Start()
     {
         if (IsStarted) return;
+        StartNotes.AddRange(_options.Routing.DeviceNotes);
         BassRuntime.Initialize(_options.OutputDevice);
         AsioRuntime.BufferSamples = _options.Routing.AsioBuffer;
         Program = Bus("program", "Uitzending", _options.Routing.ProgramAsio, _options.OutputDevice);
@@ -259,8 +278,11 @@ public sealed class AudioRouter : IDisposable
         catch (Exception ex) when (ex is BassException or DllNotFoundException) { _logger.LogWarning("Limiter not available: {Message}", ex.Message); StartNotes.Add($"Begrenzer niet beschikbaar: {ex.Message}"); }
 
         Add(MixerStrip.CreateSubMixer(LogStrip, "Automatisering", Program));
-        Add(MixerStrip.CreateSubMixer(StandbyStrip, "Standby", Program));
+        // Every standby player has its own channel (its own fader), so live they can be mixed like on a radio desk.
+        for (int n = 1; n <= PlayerCount; n++) Add(MixerStrip.CreateSubMixer(PlayerStrip(n), PlayerName(n), Program));
         Add(MixerStrip.CreateSubMixer(CartStrip, "Cartwall", Program));
+        // The AI presenter: the breaks of the automation, and live the presenter player.
+        Add(MixerStrip.CreateSubMixer(PresenterStrip, "AI-presentator", Program));
         Add(MixerStrip.CreateSubMixer(OverlayStrip, "Overlay", Program));
         Add(MixerStrip.CreateSubMixer(DjStrip, "DJ", Program));
         Add(MixerStrip.CreateSubMixer(PflStrip, "PFL", Preview));
@@ -271,9 +293,10 @@ public sealed class AudioRouter : IDisposable
         // Microphone: a push stream fed by the recording callback, muted until the mic is opened.
         _push = BassRuntime.Check(BASS_StreamCreate((uint)BassRuntime.SampleRate, 2, BASS_SAMPLE_FLOAT | BASS_STREAM_DECODE, STREAMPROC_PUSH, IntPtr.Zero),
             "BASS_StreamCreate(push)");
-        var mic = new MixerStrip(MicStrip, "Microfoon", Program, _push);
+        var mic = new MixerStrip(MicStrip, "Mic 1", Program, _push);
         Add(mic);
         mic.Duck("closed", 0f, 0);
+        SetMicChannel(_options.Routing.MicChannel);
         if (_options.Routing.MicEnabled) StartRecording(_options.Routing.MicDevice);
         else MicStatus = "uitgeschakeld in de instellingen";
         foreach (var s in _strips.Values) s.HomeBus = s.Bus;
@@ -423,8 +446,8 @@ public sealed class AudioRouter : IDisposable
         try
         {
             if (!BASS_RecordInit(device) && BASS_ErrorGetCode() != BASS_ERROR_ALREADY) throw new BassException($"BASS_RecordInit({device})");
-            delegate* unmanaged[Stdcall]<int, IntPtr, uint, IntPtr, int> proc = &RecordProc;
-            _record = BassRuntime.Check(BASS_RecordStart((uint)BassRuntime.SampleRate, 2, BASS_SAMPLE_FLOAT, (IntPtr)proc, _push),
+            delegate* unmanaged[Stdcall]<int, IntPtr, uint, IntPtr, int> proc = &MicRecordProc;
+            _record =BassRuntime.Check(BASS_RecordStart((uint)BassRuntime.SampleRate, 2, BASS_SAMPLE_FLOAT, (IntPtr)proc, _push),
                 "BASS_RecordStart");
             MicAvailable = true;
             MicStatus = "dicht";
@@ -436,12 +459,39 @@ public sealed class AudioRouter : IDisposable
         }
     }
 
+    // Read on the recording thread; there is one microphone per engine.
+    private static volatile int s_micChannel;
+
+    /// <summary>Which channel of the input the microphone is on (<see cref="MicChannel"/>); switches at once.</summary>
+    public void SetMicChannel(int channel)
+    {
+        s_micChannel = MicChannel.Checked(channel);
+        _options.Routing.MicChannel = s_micChannel;
+    }
+
     [UnmanagedCallersOnly(CallConvs = [typeof(CallConvStdcall)])]
     private static int RecordProc(int handle, IntPtr buffer, uint length, IntPtr user)
     {
         BASS_StreamPutData((int)user, buffer, length);
         return 1;
     }
+
+    /// <summary>The microphone: like <see cref="RecordProc"/>, with the channel choice applied first.</summary>
+    [UnmanagedCallersOnly(CallConvs = [typeof(CallConvStdcall)])]
+    private static unsafe int MicRecordProc(int handle, IntPtr buffer, uint length, IntPtr user)
+    {
+        int channel = s_micChannel;
+        if (channel != MicChannel.Stereo) MicChannel.Apply(new Span<float>((void*)buffer, (int)(length / sizeof(float))), channel);
+        BASS_StreamPutData((int)user, buffer, length);
+        return 1;
+    }
+
+    /// <summary>The channels the music of the automation plays on: the automation channel and speler A-D.</summary>
+    public IEnumerable<string> MusicFlowStrips => new[] { LogStrip }.Concat(Enumerable.Range(1, PlayerCount).Select(PlayerStrip)).Where(HasStrip);
+
+    /// <summary>The channels that go down under the open mic.</summary>
+    private IEnumerable<string> MusicStrips =>
+        new[] { LogStrip, CartStrip, DjStrip }.Concat(Enumerable.Range(1, PlayerCount).Select(PlayerStrip)).Where(HasStrip);
 
     /// <summary>Talkover: opens the microphone and ducks the music strips (also works without an input device).</summary>
     public void SetMic(bool open)
@@ -453,12 +503,12 @@ public sealed class AudioRouter : IDisposable
         if (open)
         {
             mic.Duck("closed", null, 40);
-            foreach (var id in new[] { LogStrip, StandbyStrip, CartStrip, DjStrip }) Strip(id).Duck("mic", duck, 250);
+            foreach (var id in MusicStrips) Strip(id).Duck("mic", duck, 250);
         }
         else
         {
             mic.Duck("closed", 0f, 120);
-            foreach (var id in new[] { LogStrip, StandbyStrip, CartStrip, DjStrip }) Strip(id).Duck("mic", null, 800);
+            foreach (var id in MusicStrips) Strip(id).Duck("mic", null, 800);
         }
         if (MicAvailable) MicStatus = open ? "open" : "dicht";
         MicChanged?.Invoke(open);

@@ -10,15 +10,32 @@ public class MackieTests
             .Select(i => new MackieStripState($"s{i}", $"Kanaal{i}", 1f, false, 0, true, false, 0)).ToList();
         public List<string> Commands = [];
         public IReadOnlyList<MackieStripState> Strips() => List;
-        private void Change(string id, Func<MackieStripState, MackieStripState> f) { int i = List.FindIndex(s => s.Id == id); List[i] = f(List[i]); }
+        public List<MackieStripState> Dj = new[] { "A", "B", "C", "D" }
+            .Select(d => new MackieStripState("deck:" + d, "Deck " + d, 0f, false, 0, false, false, 0, d, Top: 1f))
+            .Append(new MackieStripState("dj", "DJ", 1f, false, 0, true, false, 0)).ToList();
+        public IReadOnlyList<MackieStripState> DjStrips() => Dj;
+        public bool DjOnAir { get; set; }
+        public MackieAir OnAir = new("Artiest X - Nu", 205, 1f, 0.01f);
+        public MackieAir Air() => OnAir;
+        private void Change(string id, Func<MackieStripState, MackieStripState> f)
+        {
+            var list = List.Any(s => s.Id == id) ? List : Dj;
+            int i = list.FindIndex(s => s.Id == id);
+            list[i] = f(list[i]);
+        }
         public void SetVolume(string id, float v) => Change(id, s => s with { Volume = v });
         public void SetMute(string id, bool m) => Change(id, s => s with { Muted = m });
         public void SetPan(string id, double p) => Change(id, s => s with { Pan = p });
         public void SetOnAir(string id, bool o) => Change(id, s => s with { OnAir = o });
         public void SetRecording(string id, bool r) => Change(id, s => s with { Recording = r });
-        public void Run(string command) => Commands.Add(command);
+        public string? Fails;
+        public string? Run(string command) { Commands.Add(command); return Fails; }
+        public List<MackieLogItem> Log = [new(11, "Artiest A - Een"), new(12, "Artiest B - Twee"), new(13, "Artiest C - Drie")];
+        public IReadOnlyList<MackieLogItem> Upcoming() => Log;
+        public void StartFromLog(long id) => Commands.Add($"START {id}");
         public bool Playing { get; set; }
-        public bool AutoPlay { get; set; }
+        public bool AutoPlay { get; set; } = true;
+        public bool DjAutomix { get; set; }
     }
 
     private static uint Msg(int status, int d1, int d2) => (uint)(status | (d1 << 8) | (d2 << 16));
@@ -165,9 +182,65 @@ public class MackieTests
         surface.Handle(Note(Mackie.Play, true));
         surface.Handle(Note(Mackie.Stop, true));
         surface.Handle(Note(Mackie.Cycle, true));
-        Assert.Equal(["NEXT", "STOP", "AUTO TOGGLE"], mixer.Commands);
+        Assert.Equal(["NEXT", "STOP", "MODE CYCLE"], mixer.Commands);
         surface.Handle(Bend(8, 0));
         Assert.Equal(0f, mixer.List[4].Volume);
+    }
+
+    private static uint Jog(int ticks) => Msg(0xB0, Mackie.JogCc, ticks < 0 ? 0x40 | -ticks : ticks);
+
+    private static string TopRow(List<MackieOutput> outs) =>
+        outs.Where(o => o.SysEx is { } x && x[6] == 0).Select(o => new string(o.SysEx![7..^1].Select(b => (char)b).ToArray())).LastOrDefault() ?? "";
+
+    [Fact]
+    public void The_jog_wheel_browses_the_log_and_play_starts_the_choice()
+    {
+        var mixer = new FakeMixer();
+        var now = new DateTime(2026, 11, 15, 10, 0, 0);
+        var surface = new MackieSurface(mixer, new MackieSettings { Transport = true }) { Clock = () => now };
+        surface.Refresh();
+
+        Assert.Equal("log 1: Artiest A - Een", surface.Handle(Jog(1)));
+        Assert.StartsWith("Volgende: Artiest A - Een", TopRow(surface.Refresh()));
+        Assert.Equal("log 3: Artiest C - Drie", surface.Handle(Jog(5)));   // stops at the end
+        Assert.Equal("log 2: Artiest B - Twee", surface.Handle(Jog(-1)));
+        Assert.StartsWith("2/3: Artiest B - Twee", TopRow(surface.Refresh()));
+
+        Assert.Equal("start Artiest B - Twee", surface.Handle(Note(Mackie.Play, true)));
+        Assert.Equal(["START 12"], mixer.Commands);
+        Assert.StartsWith("Kanaal", TopRow(surface.Refresh()));   // the names are back
+
+        surface.Handle(Note(Mackie.Play, true));                  // nothing chosen: the next item, as before
+        Assert.Equal(["START 12", "NEXT"], mixer.Commands);
+    }
+
+    [Fact]
+    public void A_choice_with_the_jog_wheel_runs_out()
+    {
+        var mixer = new FakeMixer();
+        var now = new DateTime(2026, 11, 15, 10, 0, 0);
+        var surface = new MackieSurface(mixer, new MackieSettings { Transport = true }) { Clock = () => now };
+        surface.Handle(Jog(3));
+        now += MackieSurface.ChoiceTime;
+        Assert.StartsWith("Kanaal", TopRow(surface.Refresh()));
+        surface.Handle(Note(Mackie.Play, true));
+        Assert.Equal(["NEXT"], mixer.Commands);   // not the item chosen a while ago
+
+        surface.Handle(Jog(2));
+        mixer.Log.RemoveAt(1);                    // the chosen item played or was removed
+        surface.Handle(Note(Mackie.Play, true));
+        Assert.Equal(["NEXT", "NEXT"], mixer.Commands);
+    }
+
+    [Fact]
+    public void The_jog_wheel_does_nothing_without_transport()
+    {
+        var mixer = new FakeMixer();
+        var surface = new MackieSurface(mixer, new MackieSettings());
+        Assert.Null(surface.Handle(Jog(1)));
+        mixer.Log.Clear();
+        surface.Settings = new MackieSettings { Transport = true };
+        Assert.Equal("log: niets meer gepland", surface.Handle(Jog(1)));
     }
 
     [Fact]
@@ -253,5 +326,363 @@ public class MackieTests
         Assert.DoesNotContain(xt.Refresh(), o => (o.Short & 0xFF) == 0xE8 || o.Short == Mackie.Led(Mackie.Play, false).Short);
         main.Handle(Bend(8, 0));
         Assert.Equal(0f, mixer.List[0].Volume);
+    }
+
+    // ---------------------------------------------------------------- live: players on the faders
+
+    private static (MackieSurface Surface, FakeMixer Mixer) LivePanel()
+    {
+        var mixer = new FakeMixer();
+        mixer.List[0] = new MackieStripState("standby", "Speler A", 0f, false, 0, true, false, 0, Player: "1");
+        mixer.List[1] = new MackieStripState("standby2", "Speler B", 0f, false, 0, true, false, 0, Player: "2");
+        var surface = new MackieSurface(mixer, new MackieSettings { Transport = true });
+        surface.Refresh(force: true);
+        return (surface, mixer);
+    }
+
+    [Fact]
+    public void A_player_fader_that_opens_starts_the_player_and_closing_it_stops_it()
+    {
+        var (surface, mixer) = LivePanel();
+        surface.Handle(Bend(0, Mackie.Position(0.05f)));
+        Assert.DoesNotContain("PLAYER 1 PLAY", mixer.Commands);           // a touch does not start it
+        surface.Handle(Bend(0, Mackie.Position(0.8f)));
+        Assert.Contains("PLAYER 1 PLAY", mixer.Commands);
+        mixer.List[0] = mixer.List[0] with { Volume = 0.8f, Playing = true };
+        surface.Handle(Bend(0, 0));
+        Assert.Equal("PLAYER 1 STOP", mixer.Commands[^1]);
+    }
+
+    [Fact]
+    public void Solo_on_a_player_pre_listens_its_track()
+    {
+        var (surface, mixer) = LivePanel();
+        surface.Handle(Note(Mackie.Solo + 1, true));
+        Assert.Equal("PLAYER 2 PFL", mixer.Commands[^1]);
+        mixer.List[1] = mixer.List[1] with { Pfl = true };
+        Assert.Contains(Mackie.Led(Mackie.Solo + 1, true), surface.Refresh());
+    }
+
+    [Fact]
+    public void Play_starts_the_next_item_of_the_flow_also_by_hand()
+    {
+        var (surface, mixer) = LivePanel();
+        mixer.AutoPlay = false;
+        surface.Handle(Note(Mackie.Play, true));
+        Assert.Equal("NEXT", mixer.Commands[^1]);
+    }
+
+    [Fact]
+    public void By_hand_the_fader_of_the_waiting_flow_item_starts_it()
+    {
+        var (surface, mixer) = LivePanel();
+        mixer.AutoPlay = false;
+        mixer.List[1] = mixer.List[1] with { Next = true };
+        surface.Handle(Bend(1, Mackie.Position(0.8f)));
+        Assert.Equal("NEXT", mixer.Commands[^1]);
+        Assert.DoesNotContain("PLAYER 2 PLAY", mixer.Commands);
+    }
+
+    [Fact]
+    public void The_mic_fader_opens_and_closes_the_mic()
+    {
+        var (surface, mixer) = LivePanel();
+        mixer.List[2] = new MackieStripState("mic", "Mic 1", 0f, false, 0, true, false, 0);
+        surface.Handle(Bend(2, Mackie.Position(0.05f)));
+        Assert.DoesNotContain("MIC ON", mixer.Commands);   // a touch does not open it
+        surface.Handle(Bend(2, Mackie.Position(0.8f)));
+        Assert.Equal("MIC ON", mixer.Commands[^1]);
+        mixer.List[2] = mixer.List[2] with { Volume = 0.8f, Sounding = true };
+        surface.Handle(Bend(2, 0));
+        Assert.Equal("MIC OFF", mixer.Commands[^1]);
+    }
+
+    [Fact]
+    public void Loop_cycles_the_play_mode_and_its_lamp_shows_it()
+    {
+        var (surface, mixer) = LivePanel();
+        surface.Handle(Note(Mackie.Cycle, true));
+        Assert.Equal("MODE CYCLE", mixer.Commands[^1]);
+        mixer.AutoPlay = false;
+        Assert.Contains(Mackie.Led(Mackie.Cycle, false), surface.Refresh());
+        mixer.AutoPlay = true;
+        Assert.Contains(Mackie.Led(Mackie.Cycle, true), surface.Refresh());
+    }
+
+    // ---------------------------------------------------------------- DJ layout
+
+    private static (MackieSurface Surface, FakeMixer Mixer) DjPanel(bool faderStart = true)
+    {
+        var mixer = new FakeMixer();
+        var surface = new MackieSurface(mixer, new MackieSettings { DjFaderStart = faderStart });
+        surface.Refresh(force: true);
+        Assert.Equal("indeling: DJ", surface.Handle(Note(Mackie.Flip, true)));
+        surface.Refresh();
+        return (surface, mixer);
+    }
+
+    [Fact]
+    public void Flip_puts_the_decks_on_the_first_strips()
+    {
+        var (surface, _) = DjPanel();
+        Assert.Equal(MackieLayout.Dj, surface.Group.Layout);
+        var outs = surface.Refresh(force: true);
+        Assert.Contains(outs, o => o.SysEx is { } b && System.Text.Encoding.ASCII.GetString(b).Contains("Deck A Deck B"));
+        Assert.Contains(Mackie.Led(Mackie.Flip, true), outs);
+        Assert.Equal("indeling: uitzending", surface.Handle(Note(Mackie.Flip, true)));
+        Assert.Equal(MackieLayout.Broadcast, surface.Group.Layout);
+    }
+
+    [Fact]
+    public void In_the_dj_layout_loop_switches_automix_and_play_mixes_now()
+    {
+        var (surface, mixer) = DjPanel();
+        surface.Settings = surface.Settings with { Transport = true };
+        surface.Handle(Note(Mackie.Cycle, true));
+        Assert.Equal("DJ AUTOMIX TOGGLE", mixer.Commands[^1]);
+        mixer.DjAutomix = true;
+        Assert.Contains(Mackie.Led(Mackie.Cycle, true), surface.Refresh());
+        surface.Handle(Note(Mackie.Play, true));
+        Assert.Equal("DJ AUTOMIX MIX", mixer.Commands[^1]);
+    }
+
+    [Fact]
+    public void While_automix_runs_a_started_deck_keeps_its_fader_for_the_automix()
+    {
+        var (surface, mixer) = DjPanel();
+        mixer.DjAutomix = true;
+        mixer.Dj[1] = mixer.Dj[1] with { Playing = true };   // automix starts deck B with its fader closed
+        surface.Refresh();
+        Assert.Equal(0f, mixer.Dj[1].Volume);
+    }
+
+    [Fact]
+    public void The_buttons_of_a_deck_strip_operate_the_deck()
+    {
+        var (surface, mixer) = DjPanel();
+        surface.Handle(Note(Mackie.Mute + 0, true));
+        surface.Handle(Note(Mackie.Select + 1, true));
+        surface.Handle(Note(Mackie.Solo + 2, true));
+        surface.Handle(Note(Mackie.Rec + 3, true));
+        Assert.Equal(["DJ A TOGGLE", "DJ B SYNC", "DJ C PFL", "DJ D CUE"], mixer.Commands);
+        // The DJ master on strip 5 is a normal channel: MUTE mutes it.
+        surface.Handle(Note(Mackie.Mute + 4, true));
+        Assert.True(mixer.Dj[4].Muted);
+    }
+
+    [Fact]
+    public void A_deck_fader_uses_the_whole_travel()
+    {
+        var (surface, mixer) = DjPanel(faderStart: false);
+        surface.Handle(Bend(0, Mackie.FaderMax));
+        Assert.Equal(1f, mixer.Dj[0].Volume);
+        surface.Handle(Bend(0, Mackie.FaderMax / 2));
+        Assert.InRange(mixer.Dj[0].Volume, 0.49f, 0.51f);
+        Assert.Empty(mixer.Commands);
+    }
+
+    [Fact]
+    public void Fader_start_starts_and_pauses_a_deck()
+    {
+        var (surface, mixer) = DjPanel();
+        Assert.Equal("deck A: faderstart", surface.Handle(Bend(0, 4000)));
+        mixer.Dj[0] = mixer.Dj[0] with { Playing = true };
+        Assert.Null(surface.Handle(Bend(0, 9000)));   // further open: nothing new
+        Assert.Equal("deck A: fader dicht, pauze", surface.Handle(Bend(0, 0)));
+        Assert.Equal(["DJ A PLAY", "DJ A PAUSE"], mixer.Commands);
+    }
+
+    [Fact]
+    public void A_tap_on_a_closed_deck_fader_does_not_start_the_deck()
+    {
+        var (surface, mixer) = DjPanel();
+        Assert.Null(surface.Handle(Bend(0, 800)));   // about 5 %
+        Assert.Null(surface.Handle(Bend(0, 0)));
+        Assert.Empty(mixer.Commands);
+        Assert.Equal("deck A: faderstart", surface.Handle(Bend(0, 3000)));
+    }
+
+    [Fact]
+    public void A_deck_button_that_fails_says_why()
+    {
+        var (surface, mixer) = DjPanel();
+        mixer.Fails = "geen ander spelend deck met een tempo om te volgen";
+        Assert.Equal("deck A: sync lukt niet: geen ander spelend deck met een tempo om te volgen", surface.Handle(Note(Mackie.Select, true)));
+    }
+
+    [Fact]
+    public void A_deck_started_on_the_screen_opens_its_fader()
+    {
+        var (surface, mixer) = DjPanel();
+        mixer.Dj[1] = mixer.Dj[1] with { Playing = true };
+        surface.Refresh();
+        Assert.Equal(1f, mixer.Dj[1].Volume);
+        // Without fader start the fader stays where it is.
+        var (other, otherMixer) = DjPanel(faderStart: false);
+        otherMixer.Dj[1] = otherMixer.Dj[1] with { Playing = true };
+        other.Refresh();
+        Assert.Equal(0f, otherMixer.Dj[1].Volume);
+    }
+
+    [Fact]
+    public void A_deck_that_already_played_keeps_its_fader_when_the_layout_comes_up()
+    {
+        var mixer = new FakeMixer();
+        mixer.Dj[0] = mixer.Dj[0] with { Playing = true };
+        var surface = new MackieSurface(mixer, new MackieSettings());
+        surface.Handle(Note(Mackie.Flip, true));
+        surface.Refresh();
+        surface.Refresh();
+        Assert.Equal(0f, mixer.Dj[0].Volume);
+    }
+
+    [Fact]
+    public void The_panel_follows_the_dj_desk_going_on_and_off_air()
+    {
+        var mixer = new FakeMixer();
+        var surface = new MackieSurface(mixer, new MackieSettings());
+        surface.Refresh();
+        Assert.Equal(MackieLayout.Broadcast, surface.Group.Layout);
+        mixer.DjOnAir = true;
+        surface.Refresh();
+        Assert.Equal(MackieLayout.Dj, surface.Group.Layout);
+        surface.Handle(Note(Mackie.Flip, true));   // FLIP still switches back by hand
+        surface.Refresh();
+        Assert.Equal(MackieLayout.Broadcast, surface.Group.Layout);
+        mixer.DjOnAir = false;
+        surface.Refresh();
+        Assert.Equal(MackieLayout.Broadcast, surface.Group.Layout);
+    }
+
+    [Fact]
+    public void A_dj_layout_chosen_with_flip_stays_when_the_desk_goes_off_air()
+    {
+        var mixer = new FakeMixer();
+        var surface = new MackieSurface(mixer, new MackieSettings());
+        surface.Refresh();
+        surface.Handle(Note(Mackie.Flip, true));
+        mixer.DjOnAir = true;
+        surface.Refresh();
+        mixer.DjOnAir = false;
+        surface.Refresh();
+        Assert.Equal(MackieLayout.Dj, surface.Group.Layout);
+    }
+
+    [Fact]
+    public void A_button_without_a_function_is_named_with_its_note()
+    {
+        var surface = new MackieSurface(new FakeMixer(), new MackieSettings());
+        Assert.Equal("knop 4Ah: geen functie", surface.Handle(Note(0x4A, true)));
+    }
+
+    [Fact]
+    public void A_panel_that_comes_up_while_the_desk_is_on_air_starts_in_the_dj_layout()
+    {
+        var mixer = new FakeMixer { DjOnAir = true };
+        var surface = new MackieSurface(mixer, new MackieSettings());
+        surface.Refresh(force: true);
+        Assert.Equal(MackieLayout.Dj, surface.Group.Layout);
+    }
+
+    // ---------------------------------------------------------------- iCON screens
+
+    private static string Text(MackieOutput o) => System.Text.Encoding.ASCII.GetString(o.SysEx!, 7, o.SysEx!.Length - 8);
+
+    private static (MackieSurface Surface, FakeMixer Mixer) IconPanel()
+    {
+        var mixer = new FakeMixer();
+        var surface = new MackieSurface(mixer, new MackieSettings()) { Icon = true, LocalTime = () => new DateTime(2026, 11, 15, 14, 25, 7) };
+        return (surface, mixer);
+    }
+
+    [Fact]
+    public void An_icon_panel_shows_the_strips_above_the_faders_and_per_fader_what_plays_on_top()
+    {
+        var (surface, mixer) = IconPanel();
+        mixer.List[0] = mixer.List[0] with { Track = "Kort", Left = 205 };
+        var outs = surface.Refresh(force: true);
+        var second = outs.Where(o => o.SysEx is [0xF0, 0x00, 0x02, 0x4E, 0x15, 0x13, ..]).ToList();
+        Assert.StartsWith("Kanaal Kanaal", Text(second[0]));
+        var main = outs.Where(o => o.SysEx is [0xF0, 0x00, 0x00, 0x66, 0x14, 0x12, ..]).Select(Text).ToList();
+        // Block 1: the time left on top, the title below; block 2 plays nothing.
+        Assert.Equal("-3:25  " + new string(' ', 49), main[0]);
+        Assert.Equal("Kort   " + new string(' ', 49), main[1]);
+    }
+
+    [Fact]
+    public void A_long_title_scrolls_in_its_own_block()
+    {
+        var (surface, mixer) = IconPanel();
+        var now = new DateTime(2026, 11, 15, 13, 0, 0, DateTimeKind.Utc);
+        surface.Clock = () => now;
+        mixer.List[1] = mixer.List[1] with { Track = "Artiest X - Lange titel", Left = 65 };
+        string Titles() => surface.Refresh(force: true).Where(o => o.SysEx is [0xF0, 0x00, 0x00, 0x66, 0x14, 0x12, 56, ..]).Select(Text).Single();
+        Assert.Equal("Artiest X - Lange titel"[..6], Titles()[7..13]);
+        now += MackieSurface.ScrollWait + MackieSurface.ScrollStep * 4;
+        Assert.Equal("Artiest X - Lange titel"[4..10], Titles()[7..13]);
+        Assert.Equal(new string(' ', 7), Titles()[..7]);
+    }
+
+    [Fact]
+    public void A_plain_mackie_panel_keeps_the_strips_on_its_display()
+    {
+        var outs = new MackieSurface(new FakeMixer(), new MackieSettings()).Refresh(force: true);
+        Assert.DoesNotContain(outs, o => o.SysEx is [0xF0, 0x00, 0x02, 0x4E, ..]);
+        Assert.StartsWith("Kanaal", Text(outs.First(o => o.SysEx is [0xF0, 0x00, 0x00, 0x66, 0x14, 0x12, 0, ..])));
+    }
+
+    [Fact]
+    public void The_clock_runs_on_the_time_display()
+    {
+        var (surface, _) = IconPanel();
+        var outs = surface.Refresh(force: true);
+        var digits = outs.Where(o => o.SysEx is null && (o.Short & 0xFF) == 0xB0 && ((o.Short >> 8) & 0x7F) is >= 0x40 and <= 0x49)
+            .ToDictionary(o => (int)((o.Short >> 8) & 0x7F) - 0x40, o => (int)((o.Short >> 16) & 0x7F));
+        // " 14.25.07 ": digit 9 blank, 8-7 = 14, 6-5 = 25, 4-3 = 07, 2 blank.
+        Assert.Equal(0x20, digits[9]);
+        // Digits 7 and 5 carry the dot (+40h) between hours, minutes and seconds.
+        Assert.Equal(new[] { 0x31, 0x34 | 0x40, 0x32, 0x35 | 0x40, 0x30, 0x37 }, new[] { digits[8], digits[7], digits[6], digits[5], digits[4], digits[3] });
+        Assert.Equal(0x20, digits[2]);
+        Assert.DoesNotContain(surface.Refresh(), o => o.SysEx is null && (o.Short & 0xFF) == 0xB0 && ((o.Short >> 8) & 0x7F) >= 0x40 && ((o.Short >> 8) & 0x7F) <= 0x49);
+    }
+
+    [Fact]
+    public void The_colour_bar_shows_the_kind_of_channel_and_whether_it_is_on_air()
+    {
+        Assert.Equal(new MackieColor(127, 0, 0), MackieSurface.ColorOf(new MackieStripState("mic", "Mic", 1, false, 0, true, false, 0, Sounding: true)));
+        Assert.Equal(new MackieColor(0, 127, 30), MackieSurface.ColorOf(new MackieStripState("voip1", "VoIP 1", 1, false, 0, true, false, 0)));
+        Assert.Equal(new MackieColor(127, 0, 0).Dim(), MackieSurface.ColorOf(new MackieStripState("mic", "Mic", 1, false, 0, false, false, 0)));
+        Assert.Equal(new MackieColor(90, 0, 127), MackieSurface.ColorOf(new MackieStripState("deck:A", "Deck A", 1, false, 0, false, false, 0, "A", Playing: true)));
+        var (surface, _) = IconPanel();
+        var color = surface.Refresh(force: true).Single(o => o.SysEx is [0xF0, 0x00, 0x02, 0x4E, 0x16, 0x14, ..]);
+        Assert.Equal(6 + 24 + 1, color.SysEx!.Length);
+    }
+
+    [Fact]
+    public void A_channel_that_sounds_flashes_on_the_colour_bar()
+    {
+        var playing = new MackieStripState("standby", "Speler A", 1, false, 0, true, false, 0, Player: "1", Sounding: true);
+        var color = new MackieColor(0, 110, 127);
+        Assert.Equal(color, MackieSurface.ColorOf(playing));
+        Assert.Equal(color.Dim(), MackieSurface.ColorOf(playing, dark: true));
+        // Not sounding: no flash.
+        var mic = new MackieStripState("mic", "Mic", 1, false, 0, true, false, 0);
+        Assert.Equal(MackieSurface.ColorOf(mic), MackieSurface.ColorOf(mic, dark: true));
+        // A cartwall that is quiet is dim, even with its fader up: only a sounding one is bright (and flashes).
+        var cart = new MackieStripState("cart", "Cartwall", 1, false, 0, true, false, 0);
+        Assert.Equal(new MackieColor(127, 60, 0).Dim(), MackieSurface.ColorOf(cart));
+        Assert.Equal(new MackieColor(127, 60, 0), MackieSurface.ColorOf(cart with { Sounding = true }));
+        Assert.Equal(new MackieColor(127, 60, 0).Dim(), MackieSurface.ColorOf(cart with { Sounding = true }, dark: true));
+    }
+
+    [Fact]
+    public void An_icon_panel_gets_the_programme_on_its_master_meter()
+    {
+        var (surface, _) = IconPanel();
+        var meters = surface.Meters();
+        Assert.Contains(Mackie.MasterMeter(0, 12), meters);
+        Assert.Contains(Mackie.MasterMeter(1, Mackie.Segments(0.01f)), meters);
+        Assert.Equal(0xD1u, Mackie.MasterMeter(1, 5).Short & 0xFF);
+        Assert.Equal(0x15u, (Mackie.MasterMeter(1, 5).Short >> 8) & 0xFF);
     }
 }

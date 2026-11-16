@@ -31,7 +31,8 @@ New-Item -ItemType Directory -Force $Staging, $Out | Out-Null
 $dotnet = (Get-Command dotnet -ErrorAction SilentlyContinue).Source
 if (-not $dotnet) { $dotnet = "$env:ProgramFiles\dotnet\dotnet.exe" }
 
-foreach ($p in @(@{ Project = "src\ReaRadioDj.Server"; Dir = "engine" }, @{ Project = "src\ReaRadioDj.Studio"; Dir = "studio" })) {
+# rea-cmd (commands from a prompt or a script) goes next to the engine and shares its runtime.
+foreach ($p in @(@{ Project = "src\ReaRadioDj.Server"; Dir = "engine" }, @{ Project = "src\ReaRadioDj.Cmd"; Dir = "engine" }, @{ Project = "src\ReaRadioDj.Studio"; Dir = "studio" })) {
   Write-Host "Publishing $($p.Project)"
   & $dotnet publish (Join-Path $root $p.Project) -c Release -r win-x64 --self-contained true -p:DebugType=none -o (Join-Path $Staging $p.Dir) --nologo -v quiet
   if ($LASTEXITCODE -ne 0) { throw "dotnet publish failed for $($p.Project)" }

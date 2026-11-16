@@ -9,7 +9,7 @@ namespace ReaRadioDj.Studio.ViewModels;
 
 public sealed partial class RuleRow : ObservableObject
 {
-    public static readonly string[] Kinds = ["Categorie", "Vast item", "AI-presentator"];
+    public static readonly string[] Kinds = ["Categorie", "Vast item", "AI-presentator", "Afspeellijst"];
     public static readonly string[] Modes = ["Willekeurig (rotatie)", "Op volgorde", "Alleen hook"];
 
     [ObservableProperty] private int _kind;
@@ -18,13 +18,22 @@ public sealed partial class RuleRow : ObservableObject
     [ObservableProperty] private long? _mediaId;
     [ObservableProperty] private string _mediaLabel = "";
     [ObservableProperty] private string _note = "";
+    [ObservableProperty] private string _source = "";
+    [ObservableProperty] private string _sourceInfo = "";
 
     public bool IsCategory => Kind == 0;
     public bool IsMedia => Kind == 1;
-    partial void OnKindChanged(int value) { OnPropertyChanged(nameof(IsCategory)); OnPropertyChanged(nameof(IsMedia)); }
+    public bool IsPlaylist => Kind == 3;
+    /// <summary>Category and playlist both choose how: at random or in order.</summary>
+    public bool HasMode => Kind is 0 or 3;
+    partial void OnKindChanged(int value)
+    {
+        OnPropertyChanged(nameof(IsCategory)); OnPropertyChanged(nameof(IsMedia)); OnPropertyChanged(nameof(IsPlaylist)); OnPropertyChanged(nameof(HasMode));
+        if (value == 3 && Mode != 1) Mode = 1;   // a playlist plays in its own order unless chosen otherwise
+    }
 
-    public ClockRuleDto ToDto() => new(0, Kind switch { 1 => "media", 2 => "aiBreak", _ => "category" }, Kind == 0 ? Category?.Id : null,
-        Kind == 1 ? MediaId : null, Mode switch { 1 => "sequential", 2 => "hook", _ => "random" }, Note);
+    public ClockRuleDto ToDto() => new(0, Kind switch { 1 => "media", 2 => "aiBreak", 3 => "playlist", _ => "category" }, Kind == 0 ? Category?.Id : null,
+        Kind == 1 ? MediaId : null, Mode switch { 1 => "sequential", 2 when Kind == 0 => "hook", _ => "random" }, Note, Kind == 3 ? Source.Trim().Trim('"') : null);
 }
 
 public sealed partial class GridCellVm(int day, int hour) : ObservableObject
@@ -84,7 +93,8 @@ public sealed partial class PlannerTool : StudioTool
         foreach (var r in value.Rules)
             Rules.Add(new RuleRow
             {
-                Kind = r.Kind switch { "media" => 1, "aiBreak" => 2, _ => 0 },
+                Kind = r.Kind switch { "media" => 1, "aiBreak" => 2, "playlist" => 3, _ => 0 },
+                Source = r.Source ?? "",
                 Category = Categories.FirstOrDefault(c => c.Id == r.CategoryId),
                 Mode = r.Mode switch { "sequential" => 1, "hook" => 2, _ => 0 },
                 MediaId = r.MediaId,
@@ -217,6 +227,21 @@ public sealed partial class PlannerTool : StudioTool
         if (r is null) return;
         int i = Rules.IndexOf(r);
         if (i >= 0 && i < Rules.Count - 1) Rules.Move(i, i + 1);
+    }
+
+    /// <summary>Asks the engine what it finds in the playlist: how many files, and how many are in the library.</summary>
+    [RelayCommand]
+    private async Task CheckPlaylist(RuleRow? r)
+    {
+        if (r is null) return;
+        if (string.IsNullOrWhiteSpace(r.Source)) { r.SourceInfo = "Geef het pad van een afspeellijst (.m3u, .m3u8, .pls of .xspf)."; return; }
+        var c = await Hub.Client.GetAsync<PlaylistCheckDto>("/api/planner/playlist?path=" + Uri.EscapeDataString(r.Source.Trim().Trim('"')));
+        r.SourceInfo = c is null ? "De engine kon de afspeellijst niet nakijken (werk hem bij)."
+            : c.Problem is { } p ? p
+            : $"{c.Entries} bestanden, waarvan {c.InLibrary} in de bibliotheek"
+              + (c.InLibrary < c.Entries ? " (de rest wordt overgeslagen: voeg die map toe aan de bibliotheek)" : "")
+              + (c.Skipped > 0 ? $"; {c.Skipped} webadressen of onbruikbare regels overgeslagen" : "")
+              + (c.First is { } f ? $". Eerste: {f}" : ".");
     }
 
     [RelayCommand]

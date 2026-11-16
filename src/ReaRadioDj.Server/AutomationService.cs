@@ -73,7 +73,7 @@ public sealed class AutomationService(
             End("log:" + item.Id, played);
             if (!_unheard.TryRemove(item.Id, out _)) adService.OnEnded(item, played);
         };
-        foreach (var p in players.Standby)
+        foreach (var p in players.LogPlayers)
         {
             p.Started += (pl, m) => Begin($"player:{pl.Id}", pl.Name, Kind(m), m, m.CueOut - m.CueIn);
             p.Ended += (pl, _, played) => End($"player:{pl.Id}", played);
@@ -112,6 +112,7 @@ public sealed class AutomationService(
 
         var eventLoop = Task.Run(() => EventLoop(ct), ct);
         var lastCleanup = DateTime.MinValue;
+        Task rendering = Task.CompletedTask;
         while (!ct.IsCancellationRequested)
         {
             try
@@ -124,7 +125,12 @@ public sealed class AutomationService(
                     if (SeedDemoEvents) SeedNews();
                 }
                 _scheduler.Fill(log, planner, DateTime.Now, engine.GetState().SecondsToNext);
-                if (options.Presenter.Enabled) await breaks.RenderPendingAsync(ct);
+                // Breaks are rendered next to this loop: a slow voice must not hold up filling and saving the log.
+                if (options.Presenter.Enabled)
+                {
+                    if (rendering.IsCompleted) rendering = Task.Run(() => breaks.RenderPendingAsync(ct), CancellationToken.None);
+                    breaks.Rescue(engine.GetState().SecondsToNext, ct);
+                }
                 SaveLog();
                 SaveOnAir();
                 if (DateTime.Now - lastCleanup > TimeSpan.FromHours(1)) { breaks.CleanUp(); lastCleanup = DateTime.Now; }
@@ -133,6 +139,7 @@ public sealed class AutomationService(
             catch (Exception ex) { logger.LogError(ex, "Automation cycle failed"); }
             await Task.Delay(1000, ct).ContinueWith(_ => { }, CancellationToken.None);
         }
+        await rendering.ContinueWith(_ => { }, CancellationToken.None);
         await eventLoop.ContinueWith(_ => { }, CancellationToken.None);
         await scan.ContinueWith(_ => { }, CancellationToken.None);
         SaveLog();
@@ -304,6 +311,11 @@ public sealed class AutomationService(
     }
 
     void IEventSink.PlayNow(LogItem item, double fade) => engine.PlayNow(item, fade);
+
+    double? IEventSink.SecondsToNext() => engine.GetState() is { Current: not null } s ? s.SecondsToNext : null;
+
+    /// <summary>The longest a soft event waits for the item on air (zero: always wait).</summary>
+    public TimeSpan SoftMaxWait { get => _events.SoftMaxWait; set => _events.SoftMaxWait = value; }
 
     void IEventSink.InsertNext(LogItem item) => log.InsertAfterBlock(item);
 

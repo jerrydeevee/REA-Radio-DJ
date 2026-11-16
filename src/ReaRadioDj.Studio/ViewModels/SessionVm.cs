@@ -60,7 +60,7 @@ public sealed partial class SessionVm : ObservableObject
         if (users is null) return;
         var keep = Name;
         Names.Clear();
-        foreach (var u in users.Users.Where(u => u.Enabled)) Names.Add(u.Name);
+        foreach (var u in users.Users.Where(u => u.Enabled && !u.Expired)) Names.Add(u.Name);   // not who can no longer sign in
         Name = keep is not null && Names.Contains(keep) ? keep : Names.FirstOrDefault();
     }
 

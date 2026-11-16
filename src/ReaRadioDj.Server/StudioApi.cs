@@ -53,6 +53,8 @@ public static class StudioApi
         api.MapPost("/transport/next", (PlayoutEngine e) => { e.Next(); return Results.Ok(); });
         api.MapPost("/transport/skip", (PlayoutEngine e) => { e.Skip(); return Results.Ok(); });
         api.MapPost("/transport/autoplay", (SwitchRequest r, PlayoutEngine e) => { e.SetAutoPlay(r.On); return Results.Ok(); });
+        api.MapPost("/transport/mode", (ModeRequest r, PlayoutEngine e) =>
+            Enum.TryParse<FlowMode>(r.Mode, ignoreCase: true, out var m) ? Results.Ok(e.SetModeAnd(m)) : Results.BadRequest("AUTO, SEMI of HAND"));
         // Old names, used by the first browser studio.
         api.MapPost("/play", (PlayoutEngine e) => { e.Play(); return Results.Ok(); });
         api.MapPost("/stop", (PlayoutEngine e) => { e.Stop(); return Results.Ok(); });
@@ -60,6 +62,22 @@ public static class StudioApi
 
         // ------------------------------------------------------------ log
         api.MapGet("/log", (PlayoutLog log) => log.Upcoming.Select(i => Item(i, default)));
+        // the coming log as a file, with the expected start times: CSV for a spreadsheet, PDF to print
+        api.MapGet("/log/export.csv", (PlayoutLog log, PlayoutEngine engine) =>
+        {
+            var now = DateTime.Now;
+            var rows = ReaRadioDj.Core.Studio.LogExport.Rows(log.Upcoming, now.AddSeconds(engine.GetState().SecondsToNext));
+            var csv = ReaRadioDj.Core.Studio.LogExport.Csv(rows, options.StationName);
+            return Results.File(System.Text.Encoding.UTF8.GetPreamble().Concat(System.Text.Encoding.UTF8.GetBytes(csv)).ToArray(),
+                "text/csv", $"programmalog-{now:yyyy-MM-dd-HHmm}.csv");
+        });
+        api.MapGet("/log/export.pdf", (PlayoutLog log, PlayoutEngine engine) =>
+        {
+            var now = DateTime.Now;
+            var rows = ReaRadioDj.Core.Studio.LogExport.Rows(log.Upcoming, now.AddSeconds(engine.GetState().SecondsToNext));
+            return Results.File(ReaRadioDj.Core.Studio.LogExport.Pdf(rows, options.StationName, now), "application/pdf",
+                $"programmalog-{now:yyyy-MM-dd-HHmm}.pdf");
+        });
         api.MapDelete("/log/{id:long}", (long id, PlayoutLog log) => log.Remove(id) ? Results.Ok() : Results.NotFound());
         api.MapPost("/log/{id:long}/up", (long id, PlayoutLog log) => log.Move(id, -1) ? Results.Ok() : Results.BadRequest());
         api.MapPost("/log/{id:long}/down", (long id, PlayoutLog log) => log.Move(id, +1) ? Results.Ok() : Results.BadRequest());
@@ -188,6 +206,10 @@ public static class StudioApi
         api.MapPut("/media/{id:long}", (long id, MediaUpdateRequest r, MediaLibrary library) =>
             library.UpdateDetails(id, r.CategoryId, r.Enabled, r.ValidFrom, r.ValidUntil) ? Results.Ok(Media(library.GetDetails(id)!)) : Results.NotFound());
         // Music or jingle, by hand (a later scan keeps it); moves to a category of that kind when needed.
+        // what the presenter says with this item, shown large in the studio while it plays
+        api.MapGet("/media/{id:long}/presenter-text", (long id, PresenterTexts texts) => new PresenterTextDto(texts.Get(id) ?? ""));
+        api.MapPut("/media/{id:long}/presenter-text", (long id, PresenterTextDto d, PresenterTexts texts, MediaLibrary library) =>
+            library.Get(id) is null ? Results.NotFound() : Results.Ok(new PresenterTextDto(texts.Set(id, d.Text) ?? "")));
         api.MapPut("/media/{id:long}/kind", (long id, MediaKindRequest r, MediaLibrary library) =>
             r.Kind is "song" or "jingle" && library.SetKind(id, Parse(r.Kind, MediaKind.Song), r.CategoryId)
                 ? Results.Ok(Media(library.GetDetails(id)!)) : Results.BadRequest());
@@ -300,7 +322,7 @@ public static class StudioApi
         api.MapPut("/routing", (RoutingDto d, AudioRouter router, StationDb db, MessageCenter messages) =>
         {
             var old = RoutingSettings.From(options);
-            var s = new RoutingSettings(d.OutputDevice, d.PreviewDevice, d.MicEnabled, d.MicDevice, d.MicDuckLevel, d.OverlayDuckLevel);
+            var s = new RoutingSettings(d.OutputDevice, d.PreviewDevice, d.MicEnabled, d.MicDevice, d.MicDuckLevel, d.OverlayDuckLevel, d.MicChannel);
             try
             {
                 if (router.IsStarted && router.Program.Asio is null && s.OutputDevice != old.OutputDevice) router.Program.SetDevice(s.OutputDevice);
@@ -308,6 +330,7 @@ public static class StudioApi
             }
             catch (BassException ex) { return Results.BadRequest(ex.Message); }
             s.ApplyTo(options);
+            if (router.IsStarted) router.SetMicChannel(s.MicChannel);   // mono or stereo switches at once
             s.Save(db);
             if (s.MicEnabled != old.MicEnabled || s.MicDevice != old.MicDevice)
                 messages.Info("Microfooninstelling opgeslagen; wordt actief na een herstart van de engine");
@@ -322,7 +345,8 @@ public static class StudioApi
                 d.TargetLufs, d.CueInDb, d.MixDb, d.CueOutDb, d.MaxOverlap, d.FadeOut, d.DuckLevel, d.ArtistSeparation, d.SongSeparation, d.LookAhead,
                 d.StreamEnabled, d.StreamServer, d.StreamPassword, d.StreamBitrate, d.StreamGenre, d.StreamUrl,
                 d.ControlBindAddress, d.ControlTcpPort, d.ControlOscPort, d.ControlPassword,
-                d.SilenceEnabled, d.SilenceDb, d.SilenceSeconds, d.SilenceAction, d.SilenceCategoryId).Checked(old, d.ClearControlPassword);
+                d.SilenceEnabled, d.SilenceDb, d.SilenceSeconds, d.SilenceAction, d.SilenceCategoryId,
+                d.StartSemi, d.FlowOnFaders, d.WebOnNetwork).Checked(old, d.ClearControlPassword);
             s.ApplyTo(options);
             s.Save(db);
             var restart = s.NeedsRestart(old);
@@ -339,6 +363,14 @@ public static class StudioApi
         // ------------------------------------------------------------ planner
         var planner = api.MapGroup("/planner");
         planner.MapGet("/clocks", (PlannerStore p) => p.Clocks.Select(Clock));
+        // what a playlist file for a clock position holds (counts and the first file name only)
+        planner.MapGet("/playlist", (string? path, PlannerStore p) =>
+        {
+            var list = ReaRadioDj.Core.Library.Playlists.Read(path ?? "");
+            var media = p.ByPaths(list.Entries);
+            return new PlaylistCheckDto(list.Path, list.Entries.Count, media.Count, list.Skipped,
+                media.FirstOrDefault()?.DisplayName, list.Problem);
+        });
         planner.MapPost("/clocks", (ClockDto c, PlannerStore p) => Results.Ok(new { id = p.SaveClock(Clock(c) with { Id = 0 }) }));
         planner.MapPut("/clocks/{id:long}", (long id, ClockDto c, PlannerStore p) => Results.Ok(new { id = p.SaveClock(Clock(c) with { Id = id }) }));
         planner.MapDelete("/clocks/{id:long}", (long id, PlannerStore p) => p.DeleteClock(id) ? Results.Ok() : Results.NotFound());
@@ -396,10 +428,11 @@ public static class StudioApi
         s.ArtistSeparation, s.SongSeparation, s.LookAhead,
         s.StreamEnabled, s.StreamServer, "", s.StreamPassword.Length > 0, s.StreamBitrate, s.StreamGenre, s.StreamUrl,
         s.ControlBindAddress, s.ControlTcpPort, s.ControlOscPort, "", s.ControlPassword.Length > 0, false,
-        s.SilenceEnabled, s.SilenceDb, s.SilenceSeconds, s.SilenceAction, s.SilenceCategoryId);
+        s.SilenceEnabled, s.SilenceDb, s.SilenceSeconds, s.SilenceAction, s.SilenceCategoryId,
+        s.StartSemi, s.FlowOnFaders, s.WebOnNetwork);
 
     private static RoutingDto Routing(RoutingSettings s) =>
-        new(s.OutputDevice, s.PreviewDevice, s.MicEnabled, s.MicDevice, s.MicDuckLevel, s.OverlayDuckLevel);
+        new(s.OutputDevice, s.PreviewDevice, s.MicEnabled, s.MicDevice, s.MicDuckLevel, s.OverlayDuckLevel, s.MicChannel);
 
     private static (AirStatsSummary Summary, IReadOnlyList<AirStatsIdle> Idle) AirStatsData(AirStats st, DateOnly from, DateOnly to, int? top, int? idle)
     {

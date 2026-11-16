@@ -103,6 +103,30 @@ public static class BassRuntime
         return list;
     }
 
+    /// <summary>
+    /// The Windows endpoint id of an output device (BASS gives it as the driver): -1 is the default device, 0 (no
+    /// sound) has none. Only reads the device list; nothing is opened.
+    /// </summary>
+    public static string? GetDeviceDriver(int device)
+    {
+        if (device == 0 || !IsAvailable) return null;
+        string? defaultId = null, chosen = null;
+        bool chosenIsDefault = device < 0;
+        for (uint i = 1; BASS_GetDeviceInfo(i, out var info); i++)
+        {
+            var id = Marshal.PtrToStringUTF8(info.driver);
+            bool isDefault = (info.flags & BASS_DEVICE_DEFAULT) != 0;
+            // the "Default" entry has no id of its own; the real default card has the flag and an id
+            if (isDefault && !string.IsNullOrEmpty(id)) defaultId ??= id;
+            if (i == (uint)device)
+            {
+                if (string.IsNullOrEmpty(id)) chosenIsDefault = true;
+                else chosen = id;
+            }
+        }
+        return chosenIsDefault ? defaultId : chosen;
+    }
+
     public static IReadOnlyList<AudioDevice> GetRecordDevices()
     {
         var list = new List<AudioDevice>();

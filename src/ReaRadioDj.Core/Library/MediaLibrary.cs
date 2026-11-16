@@ -748,6 +748,22 @@ public sealed class MediaLibrary
 
     // ---------------------------------------------------------------- reading
 
+    /// <summary>Re-reads the library and tells everybody (after a change made outside the library, such as the central library).</summary>
+    public void Refresh()
+    {
+        Reload();
+        Status = $"{Songs.Count} nummers, {Jingles.Count} jingles";
+        Changed?.Invoke();
+    }
+
+    /// <summary>Runs work on the library's tables while no scan runs (and keeps scans out meanwhile).</summary>
+    public T Exclusive<T>(Func<T> work, CancellationToken ct = default)
+    {
+        _scanLock.Wait(ct);
+        try { return work(); }
+        finally { _scanLock.Release(); }
+    }
+
     /// <summary>Re-reads the library from the database.</summary>
     public void Reload()
     {
@@ -866,6 +882,18 @@ public sealed class MediaLibrary
     {
         var full = System.IO.Path.GetFullPath(path);
         return _all.FirstOrDefault(d => string.Equals(d.Media.Path, full, StringComparison.OrdinalIgnoreCase))?.Media;
+    }
+
+    /// <summary>The playable library items of these files (full paths), in the given order; unknown files are left out.</summary>
+    public IReadOnlyList<MediaItem> PlayableByPaths(IReadOnlyList<string> paths, DateTime now)
+    {
+        if (paths.Count == 0) return [];
+        var byPath = new Dictionary<string, MediaDetails>(StringComparer.OrdinalIgnoreCase);
+        foreach (var d in _all) byPath.TryAdd(d.Media.Path, d);
+        var result = new List<MediaItem>(paths.Count);
+        foreach (var p in paths)
+            if (byPath.TryGetValue(p, out var d) && d.IsPlayable(now)) result.Add(d.Media);
+        return result;
     }
 
     /// <summary>Library ids of the files directly inside <paramref name="folder"/>, by full path.</summary>

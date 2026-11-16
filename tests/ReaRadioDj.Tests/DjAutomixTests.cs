@@ -5,6 +5,16 @@ namespace ReaRadioDj.Tests;
 public sealed class DjAutomixTests
 {
     [Fact]
+    public void The_decks_take_turns()
+    {
+        Assert.Equal(1, DjAutomix.NextIndex(0, 2));
+        Assert.Equal(0, DjAutomix.NextIndex(1, 2));
+        Assert.Equal(2, DjAutomix.NextIndex(1, 4));
+        Assert.Equal(0, DjAutomix.NextIndex(3, 4));
+        Assert.Equal(0, DjAutomix.NextIndex(-1, 4));   // a deck outside the turn: start at A
+    }
+
+    [Fact]
     public void A_transition_starts_at_the_mix_point_or_early_enough_to_fit()
     {
         Assert.Equal(200, DjAutomix.MixStart(DjAutomix.Fade, 0, 200, 210, 8, 1, 0, 0), 6);

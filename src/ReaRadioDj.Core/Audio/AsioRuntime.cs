@@ -153,6 +153,44 @@ public static class AsioRuntime
         }
     }
 
+    /// <summary>The ASIO drivers in use and whether each one runs (a driver that stopped asks no audio any more).</summary>
+    public static IReadOnlyList<(int Device, bool Running)> Status()
+    {
+        lock (Gate)
+        {
+            var list = new List<(int, bool)>();
+            foreach (var device in InUse.Keys.ToList())
+            {
+                try { Select(device); list.Add((device, BassAsioNative.BASS_ASIO_IsStarted())); }
+                catch (AsioException) { list.Add((device, false)); }
+            }
+            return list;
+        }
+    }
+
+    /// <summary>Starts a driver that stopped again, with the same outputs; true when it runs.</summary>
+    public static bool TryRestart(int device)
+    {
+        lock (Gate)
+        {
+            if (!InUse.ContainsKey(device)) return false;
+            try
+            {
+                Select(device);
+                BassAsioNative.BASS_ASIO_Stop();
+                if (!BassAsioNative.BASS_ASIO_Start((uint)Math.Max(0, BufferSamples), 0)) BassAsioNative.BASS_ASIO_Start(0, 0);
+                bool ok = BassAsioNative.BASS_ASIO_IsStarted();
+                if (!ok) _logger.LogError("ASIO device {Device} did not start again: error {Code}", device, BassAsioNative.BASS_ASIO_ErrorGetCode());
+                return ok;
+            }
+            catch (AsioException ex)
+            {
+                _logger.LogError("ASIO device {Device} did not start again: {Message}", device, ex.Message);
+                return false;
+            }
+        }
+    }
+
     private static void Select(int device)
     {
         if (!BassAsioNative.BASS_ASIO_SetDevice((uint)device)) throw new AsioException($"BASS_ASIO_SetDevice({device})");

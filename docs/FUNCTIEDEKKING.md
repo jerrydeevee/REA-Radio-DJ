@@ -32,7 +32,7 @@ Het belang staat in de kolom **Prio** voor Radio Aa en Hunze: **H** hoog, **M** 
 | | Functie | Stand bij ons | Prio |
 |---|---|---|---|
 | ✅ | 24/7-bedrijf, 32-bit float-verwerking | engine (BASS) los van de studio, met watchdog | — |
-| 🟡 | WDM/WASAPI en ASIO 2.0, meerkanaalskaarten | ASIO per uitgang gebouwd; een stuurprogramma dat niet start wordt nog niet opgevangen met een terugval | H |
+| 🟡 | WDM/WASAPI en ASIO 2.0, meerkanaalskaarten | ASIO per uitgang; bij het starten terugval op de Windows-kaart, tijdens het spelen bewaakt en herstart; nog niet getest met echte ASIO-apparatuur | H |
 | ✅ | Afspelen van MP1/2/3, WAV, OGG, FLAC, AAC/M4A, Opus, WMA, APE, MPC, internetstreams | via BASS en plug-ins | — |
 | ⬜ | Broadcast Wave: BEXT- en CART-gegevens lezen **en schrijven**, RF64 (wav boven 4 GB) | niet in de code gevonden | M |
 | ✅ | ReplayGain (piek en waargenomen luidheid), LUFS, BPM, toonsoort | bij het inlezen | — |
@@ -52,7 +52,7 @@ Het belang staat in de kolom **Prio** voor Radio Aa en Hunze: **H** hoog, **M** 
 | ⬜ | **Vrij aantal in- en uitgangskanalen** en **subgroepen** (som van een paar spelers, groepsbus, luidsprekertoewijzing per kanaal) | onze kanalen liggen vast | M |
 | ⬜ | **Profielen met presets**: hele mengpanelinstelling of alleen EQ/gain/pan wisselen met één klik | ontbreekt | M |
 | ⬜ | "Talk to user": een tweede spreekcircuit naar één bepaalde uitgang (bijv. de beller of de tweede studio), los van de zender | deels via de VoIP-terugweg | L |
-| ⬜ | **Bewaking van de geluidskaart**: melden of terugzetten als Windows of een ander programma het volume of de demping van het apparaat verandert | ontbreekt | H |
+| ✅ | **Bewaking van de geluidskaart**: melden of terugzetten als Windows of een ander programma het volume of de demping van het apparaat verandert | Instellingen › Bewaking › "Volume van de geluidskaart": elke 2 s het Windows-volume en de demping (Core Audio) van de kaarten van zender, PFL en mengkanalen; een verandering geeft een melding, of wordt meteen teruggezet als je dat kiest; "Huidige stand is normaal" na een bewuste wijziging. ASIO telt niet mee. Getest: uitlezen op de testengine (alleen lezen); terugzetten alleen in de tests, niet op een echte kaart | H |
 | ⬜ | Inrichthulp voor het mengpaneel: in een paar stappen kanalen, uitgangen en routering kiezen | onze inrichthulp doet alleen de basis | L |
 | ✅ | Gesynchroniseerde PFL op elke bron, plus een PFL-speler die vooruit luistert | PFL-speler | — |
 | ⬜ | Volumeregeling van een externe tafel of kaart vanuit het programma (uitgangsniveau van het apparaat) | ontbreekt | L |
@@ -77,13 +77,13 @@ Het belang staat in de kolom **Prio** voor Radio Aa en Hunze: **H** hoog, **M** 
 | ✅ | Cue-editor: in, vol niveau, intro, outro, mix (volgende), fade-uit, uit; hookpunten | cue-editor | — |
 | ✅ | Automatisch cues bepalen op drempels (dB voor in, volgende en uit; min/max fadelengtes) | bij het inlezen | — |
 | ✅ | Mengregels per soort item en per nummer | overgangsregels per soort | — |
-| ⬜ | **Maximale speelduur per soort** (bijv. jingles nooit langer dan 30 s) en **korte items niet faden** | na te bouwen in de overgangsregels | M |
+| ✅ | **Maximale speelduur per soort** (bijv. jingles nooit langer dan 30 s) en **korte items niet faden** | Instellingen › Mixen › Speelduur per soort en categorie | M |
 | 🟡 | Gebeurtenissen op een plek in een nummer: volume-omhullende of opdracht | in de cue-editor | — |
 | ⬜ | **Inzet-overgang**: een kort item (bijv. een station-ID) automatisch over het einde of het begin van een nummer leggen, met demping, tot een maximale lengte | ontbreekt | M |
 | ⬜ | **Overgangseditor met twee sporen**: einde van A en begin van B onder elkaar, B verslepen, een voice-over ertussen leggen of direct inspreken, automatische demping, tempo aanpassen | **grootste ontbrekende stuk in de bediening** | H |
 | ✅ | Hooks afspelen (alleen een fragment) in de planning | klokregel "Hook" | — |
 | ⬜ | Hook-container met eigen opener, scheider en afsluiter (een "teaser" van komende nummers) | ontbreekt | M |
-| ⬜ | Presentatortekst per item (wat je bij dit nummer of deze reclame zegt), groot in beeld tijdens het afspelen | er zijn alleen notities voor de AI-presentator | M |
+| ✅ | Presentatortekst per item (wat je bij dit nummer of deze reclame zegt), groot in beeld tijdens het afspelen | tekst per item in de bibliotheek; de Live-balk toont hem onder de knoppen zolang het item speelt | M |
 
 ### 5. Bibliotheek en metagegevens
 
@@ -91,8 +91,8 @@ Het belang staat in de kolom **Prio** voor Radio Aa en Hunze: **H** hoog, **M** 
 |---|---|---|---|
 | ✅ | Mappen als bibliotheek, automatisch bijwerken, ook op shares | Bibliotheek › Beheer | — |
 | ✅ | Externe database als bron (SQL) | Databronnen | — |
-| ⬜ | **Een afspeellijst (M3U/PLS/XSPF) als vaste bron**, en als één doorlopend item in de log | niet in de code gevonden | M |
-| ⬜ | **Centrale bibliotheekdienst** voor meerdere studio's: één plek scant en meet, de studio's vragen op en halen het bestand over als het lokaal niet bereikbaar is | stap 7 | M |
+| 🟡 | **Een afspeellijst (M3U/PLS/XSPF) als vaste bron**, en als één doorlopend item in de log | als bron in een klok (op volgorde of willekeurig, alleen bestanden uit de bibliotheek, opnieuw gelezen als de lijst verandert); als één doorlopend item in de log nog niet | M |
+| ✅ | **Centrale bibliotheekdienst** voor meerdere studio's: één plek scant en meet, de studio's vragen op en halen het bestand over als het lokaal niet bereikbaar is | Instellingen › Centrale bibliotheek (bron/studio) | — |
 | ✅ | Snel zoeken met filters (artiest, jaar, BPM, energie, stemming, waardering, categorie) | zoektaal met chips | — |
 | 🟡 | Vergelijkbare nummers vinden | via toonsoort en BPM; echte gelijkenis ontbreekt | L |
 | ✅ | Uitgebreide tagvelden (componist, uitgever, ISRC, groepering, stemming, waardering) | detailpaneel | — |
@@ -109,7 +109,7 @@ Het belang staat in de kolom **Prio** voor Radio Aa en Hunze: **H** hoog, **M** 
 | ✅ | Vaste tijden: hard (onderbreken), zacht (na het huidige item), overlay | vaste gebeurtenissen | — |
 | ✅ | Herinneringen, alarmen en commando's op tijd | vaste gebeurtenissen | — |
 | ⬜ | **Programma's op datum** (eenmalig of met herhaling, zoals in een agenda), met eindtijd | wij plannen per weekdag en uur | H |
-| ⬜ | **Maximale vertraging bij een zachte start**: is het huidige nummer bijna klaar, dan uitspelen; anders wegdraaien | zacht wacht nu altijd | M |
+| ✅ | **Maximale vertraging bij een zachte start**: is het huidige nummer bijna klaar, dan uitspelen; anders wegdraaien | Instellingen › Mixen; het item faadt in 2 s uit | M |
 | ⬜ | Overlay tot een eindtijd of één ronde, daarna gaat het onderbroken programma verder | overlay speelt één item of blok | M |
 | ⬜ | Handmatige start: het programma meldt zich op tijd, de presentator start het | ontbreekt | L |
 | ⬜ | Overlay laten uitstellen of overslaan door de presentator vóór de start | ontbreekt | M |
@@ -140,7 +140,7 @@ Het belang staat in de kolom **Prio** voor Radio Aa en Hunze: **H** hoog, **M** 
 | ⬜ | Hoes meesturen in de stream (in-stream artwork) | ontbreekt | L |
 | ⬜ | Zelf als lokale streamserver dienen (luisteren op het eigen netwerk zonder Icecast) | ontbreekt | L |
 | ✅ | Programma per uur opnemen met bewaartermijn; microfoon opnemen; gesprekken opnemen | | — |
-| ⬜ | **Opnemen met signaaldetectie** (alleen opnemen bij geluid boven een drempel, bijv. alleen de presentatorpraat als luistercontrole) | niet in de code gevonden | H |
+| ✅ | **Opnemen met signaaldetectie** (alleen opnemen bij geluid boven een drempel, bijv. alleen de presentatorpraat als luistercontrole) | Instellingen › Opnemen › "Alleen het praten opnemen": de microfoon (als hij open staat) of een ingang (als die naar de zender gaat), drempel in dBFS en nalooptijd; een halve seconde vóór de inzet gaat mee; één MP3 per klokuur met alleen de stukken met geluid, bewaartermijn als de andere opnamen. Getest op de testengine met een testtoon: twee keer 4 en 3 s → één bestand van 8 s | H |
 | ✅ | Direct inspreken naar de bibliotheek (voicetrack) | | — |
 
 ### 9. Bediening op afstand en hardware
@@ -151,10 +151,10 @@ Het belang staat in de kolom **Prio** voor Radio Aa en Hunze: **H** hoog, **M** 
 | 🟡 | MIDI met leren, serieel, Livewire, Ember+, Mackie Control | gebouwd; nog niet tegen echte apparaten getest | H |
 | 🟡 | **Commandotaal**: velden zoals {artiest} {titel} {tijd} zijn er; **voorwaarden, rekenen, tekstfuncties en datum/tijd-opmaak ontbreken** | EventRules en PlayoutOutputs | M |
 | ⬜ | Commandoschema met **gebeurtenissen per bron** (speler, mengkanaal, stream, MIDI, OSC, serieel met patroonherkenning) die elk hun eigen velden aanbieden | gebeurtenissen per soort item zijn er | M |
-| ⬜ | Commando's vanaf de opdrachtregel naar de engine sturen | klein programma op de bestaande TCP-poort | L |
+| ✅ | Commando's vanaf de opdrachtregel naar de engine sturen | `rea-cmd` op de TCP-poort, met afsluitcodes voor scripts | L |
 | ⬜ | USB-GPIO-kaarten (contactsluitingen), D&R Airence/Webstation | stap 8 | M |
 | ⬜ | GPIO als losse dienst op een andere pc (koppelt apparaten en praat met de engine via het netwerk) | onze hardwarelaag zit in de engine | L |
-| ⬜ | Toegangslimiet per afstandsbediener (welke commando's mag die client) | er is één wachtwoord | M |
+| ✅ | Toegangslimiet per afstandsbediener (welke commando's mag die client) | eigen sleutel of vast adres, per groep commando's; Instellingen › Op afstand | M |
 | ➖ | Joystickpoort | verouderd | — |
 
 ### 10. Meerdere studio's en meekijken
@@ -164,7 +164,7 @@ Het belang staat in de kolom **Prio** voor Radio Aa en Hunze: **H** hoog, **M** 
 | ✅ | Hoofd- en reservestudio met hartslag en automatische overname | reservestudio (fa3f799) | — |
 | ⬜ | **Studio's elkaar laten bedienen** (log, planner en mengkanalen van een andere studio) | ontbreekt | M |
 | ⬜ | **Meekijkscherm**: vorige/huidige/volgende, tijden en de stand van alle spelers, op een tweede plek of op afstand | samen met de remote-app | M |
-| ⬜ | **Voicetracking op afstand** (thuis inspreken) | stap 9 | M |
+| ✅ | **Voicetracking op afstand** (thuis inspreken) | pagina /voicetrack/ | — |
 
 ### 11. Bedrijfszekerheid, logging en rapportage
 
@@ -175,7 +175,7 @@ Het belang staat in de kolom **Prio** voor Radio Aa en Hunze: **H** hoog, **M** 
 | ⬜ | Logopmaak met kop, regel en slot, filter per soort item, containers wel of niet uitklappen | eigen opmaak per regel is er | L |
 | ✅ | Uitzendstatistiek per dag, week en maand; rapport auteursrechten (CSV, PDF); reclamebewijs | | — |
 | ⬜ | **Vrije analyse**: draaitabel en grafieken over de hele geschiedenis | uitbreiding van de statistiek | L |
-| ⬜ | Log en planning afdrukken of exporteren (PDF/HTML) | alleen het muziekrapport heeft PDF | M |
+| 🟡 | Log en planning afdrukken of exporteren (PDF/HTML) | de programmalog als PDF en CSV met verwachte begintijden; de planning (klokken, weekschema) nog niet | M |
 | ✅ | Reservekopie en terugzetten van instellingen | | — |
 | ⬜ | Eigen rapportsjablonen (opmaak zelf maken) | wij hebben vaste rapporten | L |
 
@@ -212,7 +212,7 @@ Het pakket levert naast de studio een aantal losse programma's. Bij ons horen di
 | Meekijkprogramma | remote-app / meekijkscherm | ⬜ |
 | Bewaker die de studio herstart | watchdog | ✅ |
 | Losse studioklok | venster Klok | 🟡 |
-| Commando's vanaf de opdrachtregel | `rea-cmd` | ⬜ |
+| Commando's vanaf de opdrachtregel | `rea-cmd` | ✅ |
 | Afspeellijsten omzetten | import van open formaten | 🟡 |
 
 ### 14. Mediabeheer en workflows (tweede bron)
@@ -272,11 +272,11 @@ De openbare artikelen geven vooral een beeld van **hoe een groot radiosysteem is
 | ✅ | Uitzendspeler met carts; engine als aparte uitzenddienst | engine + studio | — |
 | ✅ | Cue-editor, voorluisteren, klembord | | — |
 | 🟡 | Handmatige recorder en voicetrack-opname | opnemen naar de bibliotheek is er; een losse recorder met trimmen ontbreekt | M |
-| ⬜ | **Doorlopende opname waaruit je achteraf een stuk knipt** (bijv. een interview van 10 minuten geleden als item in de bibliotheek zetten) | uuropnames bestaan; knippen naar de bibliotheek ontbreekt | H |
+| 🟡 | **Doorlopende opname waaruit je achteraf een stuk knipt** (bijv. een interview van 10 minuten geleden als item in de bibliotheek zetten) | venster *Uit de uitzending knippen*: van-tot op tijd, ook over het uur; een golfvorm om het stuk aan te wijzen ontbreekt nog | H |
 | ⬜ | **Noodrecorder**: één knop die direct opneemt wat er binnenkomt (telefoon, lijn, microfoon) | ontbreekt | M |
 | ⬜ | **Geplande opnames van een ingang of stream** (bijv. elke dag om 12:00 het regionale nieuws opnemen en klaarzetten) | ontbreekt | H |
 | ⬜ | **Montageprogramma met meerdere sporen**: voice-over-spoor, automatisch dempen, volume-omhullende, stilte wegknippen, knippen en plakken, J/K/L | ontbreekt; hoort bij de bouwsteen tijdlijn | M |
-| ⬜ | **Lijst met geteste apparatuur**: per geluidskaart en per functie (uitzenden, opnemen, ASIO) wat werkt | ontbreekt; geheugen-regel: tests alleen met apparaat 0 | M |
+| 🟡 | **Lijst met geteste apparatuur**: per geluidskaart en per functie (uitzenden, opnemen, ASIO) wat werkt | de lijst staat in docs/TESTPLAN.md, nog leeg tot de eerste tests | M |
 | ⬜ | Kleine nieuwsredactie: berichten met tekst en geluid, een draaiboek voor het bulletin, leesscherm (prompter) | nieuwsblokken bestaan; berichten en draaiboek ontbreken | M |
 | ⬜ | Veilige toegang van buiten (thuisstudio, voicetracking op afstand) via een VPN zoals WireGuard, in plaats van poorten openzetten | advies en documentatie | M |
 | ➖ | Cloud-gateway met BGP/OSPF, dubbel uitgevoerd | te groot voor een lokale omroep | — |
@@ -291,9 +291,9 @@ Deze artikelen gaan minder over uitzenden en meer over **hoe een omroepsysteem b
 | | Functie | Stand bij ons | Prio |
 |---|---|---|---|
 | ✅ | Gebruikers met één rol, pincode, blokkeren na mislukte pogingen | 5 fouten → 30 s blokkade | — |
-| ⬜ | Blokkeerduur en aantal pogingen instelbaar; beheerder kan een blokkade opheffen | vaste waarden | L |
-| ⬜ | **Account met einddatum** (stagiair, gastpresentator, invaller) | ontbreekt | M |
-| ⬜ | **Uitschakelen in plaats van verwijderen**: oude gebruikers blijven zichtbaar in as-run en statistiek | ontbreekt | M |
+| ✅ | Blokkeerduur en aantal pogingen instelbaar; beheerder kan een blokkade opheffen | Instellingen › Gebruikers; blokkades vervallen bij een herstart van de engine | L |
+| ✅ | **Account met einddatum** (stagiair, gastpresentator, invaller) | laatste dag per gebruiker; daarna geen aanmelding en de sessie stopt; er blijft altijd een beheerder zonder einde | M |
+| ✅ | **Uitschakelen in plaats van verwijderen**: oude gebruikers blijven zichtbaar in as-run en statistiek | uitschakelen bestond al; de lijst toont nu "uitgeschakeld", "verlopen" en "tot en met", en de hulptekst raadt uitschakelen aan | M |
 | ⬜ | **Activiteitenlog per gebruiker**: wie heeft wat gewijzigd (log, planning, bibliotheek, instellingen) | systeemlog zonder gebruiker per actie | M |
 | ⬜ | **Geschiedenis per item**: wie veranderde welk veld wanneer | ongedaan maken bestaat, maar zonder overzicht | L |
 | ⬜ | Beheerder kan "meekijken als" een gebruiker (zien wat die ziet), en dat wordt gelogd | ontbreekt | L |
@@ -321,13 +321,13 @@ Deze artikelen gaan minder over uitzenden en meer over **hoe een omroepsysteem b
 | ⬜ | **Systeemcontrole**: één scherm dat de pc nakijkt (energiebeheer, samplefrequentie van de kaart, virusscanner op de muziekmap, vrije ruimte, klok gelijk, database in orde) | losse meldingen | M |
 | ⬜ | Advies om de virusscanner de muziek-, jingle- en datamap niet live te laten scannen (geeft vertraging en mislukte toegang) | ontbreekt | M |
 | ⬜ | Advies over Windows-updates: niet automatisch op de uitzend-pc; gepland en afgesproken, een week na de maandelijkse update | ontbreekt | M |
-| ⬜ | **Overzicht van alle poorten** die de engine gebruikt, plus een firewallregel uit het installatieprogramma voor alleen die poorten | poort 8600 bekend, geen overzicht | M |
+| 🟡 | **Overzicht van alle poorten** die de engine gebruikt, plus een firewallregel uit het installatieprogramma voor alleen die poorten | *Instellingen › Systeem* toont alle poorten (in/uit, netwerk of alleen deze pc) en geeft een firewallopdracht voor alleen de open netwerkpoorten; het installatieprogramma maakt de regel nog niet zelf | M |
 | ⬜ | Draaien zonder beheerdersrechten en zonder UAC uit te zetten (nagaan en vastleggen) | nog niet nagekeken | M |
 | ⬜ | Advies bij haperend geluid: ASIO-buffer, stroombesparing van de processor (C-states/SpeedStep) in het BIOS | ontbreekt | L |
 | ⬜ | Bij HTTPS voor toegang van buiten: volledige certificaatketen, en een controle die waarschuwt voor een verlopen of onvolledige keten | geen HTTPS | L |
 | ⬜ | Databasecontrole vóór een upgrade (integriteit, schemaversie, reservekopie) met een duidelijke melding | migraties bestaan; controle vooraf ontbreekt | M |
 | ⬜ | Handleiding per rol: presentator, superuser/eerste hulp, beheerder | stap 10 (handleiding) | M |
-| ⬜ | **Dagelijkse automatische reservekopie van de database** met bewaartermijn (bijv. 7 dagen) op een andere schijf of NAS; muziek en jingles apart | handmatige reservekopie van instellingen | H |
+| ✅ | **Dagelijkse automatische reservekopie van de database** met bewaartermijn (bijv. 7 dagen) op een andere schijf of NAS; muziek en jingles apart | *Instellingen › Systeem*: vaste tijd, eigen map, bewaartermijn; waarschuwt bij dezelfde schijf als de database en als het mislukt | H |
 | ⬜ | **Hulp op afstand die het station zelf aan- en uitzet**: een uitgaande, versleutelde verbinding (geen open poort), met een log van wie er wanneer in zat | ontbreekt; nu ad hoc | M |
 | ⬜ | Meetwaarden van de engine (buffer, CPU, stilte, streamstatus) als standaard-endpoint voor een monitoringpakket, en logs 30 dagen lokaal bewaren | `/api/health` en systeemlog | L |
 | ⬜ | Mailserver (SMTP) instellen voor meldingen, met een testknop | ontbreekt | M |
@@ -435,20 +435,20 @@ Zonder dit heeft uitbreiden geen zin.
 
 | Werk | Grootte | Klaar als |
 |---|---|---|
-| Luistertests: DJ-modus, AI-nieuws op de zender, opnemen met bewaartermijn | S | bevindingen verwerkt, niets hoorbaar mis |
-| ASIO-stuurprogramma dat niet start: terugval naar WASAPI met melding | S | engine blijft spelen, studio toont de melding |
-| **Bewaking van de geluidskaart** (volume en demping van het apparaat) | S | ander programma zet de kaart zacht → melding en terugzetten |
-| **Opnemen met signaaldetectie** (drempel en nalooptijd) | S | alleen de presentatorpraat staat in de opname |
-| Testen tegen echte apparatuur: SIP bij de aanbieder, Ember+ tegen LUCI/Lawo, Mackie Control | M | elk apparaat werkt of heeft een bekende beperking op papier |
-| Cosmetische ronde over de hele studio | M | in een smal of laag paneel is alles vindbaar |
+| 🟡 Luistertests: DJ-modus, AI-nieuws op de zender, opnemen met bewaartermijn | S | bevindingen verwerkt, niets hoorbaar mis — het testplan staat in docs/TESTPLAN.md (L1–L8); uitvoeren en beluisteren kan alleen in de studio |
+| 🟡 ASIO-stuurprogramma dat niet start: terugval naar WASAPI met melding | S | engine blijft spelen, studio toont de melding — bij het starten gebeurt dit (terugval op de Windows-kaart, met melding); valt een kaart tijdens het spelen weg, dan herstart de engine hem en meldt het, en probeert het elke 10 s opnieuw. Nog open: overschakelen naar de Windows-kaart zonder herstart, en de test met echte ASIO-apparatuur (TESTPLAN A1–A5) |
+| ✅ **Bewaking van de geluidskaart** (volume en demping van het apparaat) | S | ander programma zet de kaart zacht → melding en terugzetten |
+| ✅ **Opnemen met signaaldetectie** (drempel en nalooptijd) | S | alleen de presentatorpraat staat in de opname |
+| 🟡 Testen tegen echte apparatuur: SIP bij de aanbieder, Ember+ tegen LUCI/Lawo, Mackie Control | M | elk apparaat werkt of heeft een bekende beperking op papier — de tests staan in docs/TESTPLAN.md (H1–H7); uitvoeren kan alleen met de apparatuur |
+| ✅ Cosmetische ronde over de hele studio | M | in een smal of laag paneel is alles vindbaar — alle zes werkruimtes nagelopen op 1280×720; klok, bibliotheek en as-run hersteld |
 
 ### Fase B — Bediening en geluid op niveau
 
 | Werk | Bouwsteen | Grootte | Klaar als |
 |---|---|---|---|
 | 1. **Overgangseditor met twee sporen**, met voice-over-spoor, direct inspreken en automatische demping | tijdlijn | L | een voicetrack tussen twee nummers maken en beluisteren zonder de cue-editor |
-| 2. **Inzet-overgang** (station-ID over het einde van een nummer) en **maximale speelduur / niet faden per soort** | tijdlijn + overgangsregels | M | een ID valt automatisch over de outro, gedempt |
-| 3. **Presentatortekst per item**, groot in beeld tijdens het afspelen | — | S | tekst bij een reclame staat in de Live-balk zolang die speelt |
+| 2. **Inzet-overgang** (station-ID over het einde van een nummer) en ✅ **maximale speelduur / niet faden per soort** | tijdlijn + overgangsregels | M | een ID valt automatisch over de outro, gedempt |
+| 3. ✅ **Presentatortekst per item**, groot in beeld tijdens het afspelen | — | S | tekst bij een reclame staat in de Live-balk zolang die speelt |
 | 4. **Flexibele mixergraaf**: vrij aantal kanalen, subgroepen, profielen met presets | mixergraaf | L | een extra microfoon en een groepsbus toevoegen zonder code; preset wisselen in één klik |
 | 5. Hook-container met opener, scheider en afsluiter | — | S | een "straks hoor je…"-teaser uit drie hooks |
 | 6. Indeling, beginwerkruimte en zichtbare vensters per gebruiker | — | M | elke presentator krijgt na aanmelden zijn eigen indeling |
@@ -461,11 +461,11 @@ Zonder dit heeft uitbreiden geen zin.
 | Werk | Bouwsteen | Grootte | Klaar als |
 |---|---|---|---|
 | 1. **Agenda-laag**: programma's op datum met herhaling en eindtijd boven het weekrooster | agenda | L | een eenmalige uitzending op 24 december verdringt die avond het rooster |
-| 2. Startgedrag: vast, zacht met maximale vertraging, handmatig; mengtijd tussen programma's | agenda | M | zacht start nooit meer dan N seconden te laat |
+| 2. 🟡 Startgedrag: vast, ✅ zacht met maximale vertraging, handmatig; mengtijd tussen programma's | agenda | M | zacht start nooit meer dan N seconden te laat |
 | 3. Overlay tot eindtijd of één ronde; daarna verder met het onderbroken programma; uitstellen of overslaan vóór de start | agenda | M | nieuws onderbreekt en het programma loopt verder waar het was |
-| 4. **Afspeellijst als vaste bron** en als één doorlopend item | — | S | een M3U-map speelt als categorie |
+| 4. 🟡 **Afspeellijst als vaste bron** (✅ in een klok) en als één doorlopend item | — | S | een M3U-map speelt als categorie |
 | 5. Koppelprofielen voor externe muziekplanners en traffic (eerst het formaat dat het station gebruikt) | — | M | een geïmporteerde dag speelt zonder handwerk |
-| 6. Log en planning afdrukken of exporteren (PDF/HTML) | — | S | het draaiboek van morgen ligt op papier |
+| 6. 🟡 Log (✅ PDF/CSV) en planning afdrukken of exporteren | — | S | het draaiboek van morgen ligt op papier |
 
 ### Fase D — Commando's en hardware
 
@@ -473,8 +473,8 @@ Zonder dit heeft uitbreiden geen zin.
 |---|---|---|---|
 | 1. **Expressietaal** met velden, voorwaarden en functies in alle gebeurtenissen en titelupdates | expressietaal | M | "als soort = jingle dan geen titelupdate" zonder code |
 | 2. Gebeurtenissen per bron: speler, mengkanaal, stream, MIDI, OSC, serieel met patroonherkenning | expressietaal | M | een fader-start op de tafel start de juiste speler |
-| 3. Toegangslimiet per afstandsbediener | — | S | de tablet mag geen instellingen wijzigen |
-| 4. `rea-cmd` op de opdrachtregel | — | S | een ander programma stuurt "NEXT" |
+| 3. ✅ Toegangslimiet per afstandsbediener | — | S | de tablet mag geen instellingen wijzigen |
+| 4. ✅ `rea-cmd` op de opdrachtregel | — | S | een ander programma stuurt "NEXT" |
 | 5. USB-GPIO en D&R Airence/Webstation via de algemene hardwarelaag (alleen met het openbare protocol) | — | M | knoppen en lampjes werken op de echte tafel |
 
 ### Fase E — Meerdere plekken
@@ -516,11 +516,11 @@ Zonder dit heeft uitbreiden geen zin.
 
 | Werk | Bouwsteen | Grootte | Klaar als |
 |---|---|---|---|
-| 1. **Doorlopende opname met terugknippen**: in de opname van de afgelopen uren een stuk aanwijzen (golfvorm, tijd) en als item in de bibliotheek zetten | tijdlijn | M | het interview van 10 minuten geleden staat binnen een minuut als item klaar |
+| 1. 🟡 **Doorlopende opname met terugknippen** (op tijd klaar; golfvorm nog niet): in de opname van de afgelopen uren een stuk aanwijzen (golfvorm, tijd) en als item in de bibliotheek zetten | tijdlijn | M | het interview van 10 minuten geleden staat binnen een minuut als item klaar |
 | 2. **Geplande opnames** van een ingang, VoIP-lijn of stream, met een categorie als bestemming | agenda | M | het regionale nieuws van 12:00 staat elke dag vanzelf klaar |
 | 3. **Noodrecorder**: één knop (ook als commando en op de hardware) die direct opneemt wat er binnenkomt | — | S | een onverwacht telefoontje staat volledig in de opname |
 | 4. **Montageprogramma met meerdere sporen**: voice-over-spoor met inspreken, automatisch dempen, omhullende, stilte wegknippen, knippen/plakken, J/K/L | tijdlijn | L | een nieuwsitem met intro, interview en muziekbed maken zonder ander programma |
-| 5. **Lijst met geteste apparatuur** in de documentatie, bijgehouden bij elke test | — | S | de beheerder weet vooraf welke kaart werkt |
+| 5. 🟡 **Lijst met geteste apparatuur** in de documentatie, bijgehouden bij elke test (docs/TESTPLAN.md) | — | S | de beheerder weet vooraf welke kaart werkt |
 | 6. Kleine nieuwsredactie: berichten met tekst en geluid, draaiboek voor het bulletin, leesscherm | webpagina's | M | de nieuwslezer leest van het scherm en start de geluidsfragmenten vanuit het draaiboek |
 | 7. Handleiding voor veilige toegang van buiten via WireGuard | — | S | voicetracking op afstand werkt zonder open poorten |
 
@@ -531,7 +531,7 @@ Zonder dit heeft uitbreiden geen zin.
 | 1. **Systeemcontrole-scherm** en een beheerdershandleiding (virusscanner, Windows-updates, poorten, ASIO/BIOS) | — | M | een nieuwe uitzend-pc is in een half uur nagekeken |
 | 2. Firewallregel in het installatieprogramma; draaien zonder beheerdersrechten nagaan | — | S | de engine is van buiten alleen bereikbaar op de poorten die nodig zijn |
 | 3. **Activiteitenlog per gebruiker** en geschiedenis per item | — | M | "wie heeft de log van vrijdag veranderd?" is te beantwoorden |
-| 4. Account met einddatum, uitschakelen in plaats van verwijderen, instelbare blokkade | — | S | een stagiair kan na zijn laatste dag niet meer inloggen |
+| 4. ✅ Account met einddatum, uitschakelen in plaats van verwijderen, instelbare blokkade | — | S | een stagiair kan na zijn laatste dag niet meer inloggen |
 | 5. Meldingen per niveau naar e-mail | — | S | stilte 's nachts komt als mail binnen |
 | 6. **Plaatshouder** in de planning, met waarschuwing als het geluid ontbreekt | — | S | een ingeplande reclame zonder bestand geeft een dag vooraf een melding |
 | 7. **Bewerkingsslot** op log en planning | engine-rollen | M | twee plekken kunnen niet tegelijk dezelfde dag overschrijven |

@@ -25,6 +25,7 @@
     header { position: sticky; top: 0; z-index: 2; background: var(--bg); display: flex; align-items: center; gap: 12px; padding: 12px 0 10px; }
     .station { font-weight: 650; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .clock { font-variant-numeric: tabular-nums; font-size: 22px; font-weight: 600; }
+    .vtlink { text-decoration: none; font-size: 20px; }
     .air { border-radius: 6px; padding: 4px 10px; font-weight: 700; font-size: 13px; letter-spacing: .04em; border: 1px solid var(--line); color: var(--muted); }
     .air.on { background: var(--air); border-color: var(--air); color: #fff; }
     .lost { display: none; background: var(--warn); color: #000; border-radius: 6px; padding: 8px 12px; margin-bottom: 10px; }
@@ -86,6 +87,7 @@
 <body>
   <header>
     <div class="station" id="station">REA-Radio-DJ</div>
+    <a class="vtlink" href="/voicetrack/" title="Voicetrack inspreken">🎙</a>
     <div class="air" id="air">OFF AIR</div>
     <div class="clock" id="clock">--:--</div>
   </header>

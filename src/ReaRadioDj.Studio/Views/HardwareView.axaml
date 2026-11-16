@@ -68,6 +68,18 @@
                   <TextBlock Classes="muted" FontSize="11" TextWrapping="Wrap"
                              Text="Staat standaard uit: een per ongeluk ingedrukte knop mag de zender niet stilzetten. Geldt voor alle Mackie-panelen en meteen." />
                   <CheckBox Content="Niveaumeters op het paneel" IsChecked="{Binding MackieMeters}" />
+                  <TextBlock Classes="field" Text="DJ-indeling" />
+                  <TextBlock Classes="muted" FontSize="11" TextWrapping="Wrap"
+                             Text="Gaat de DJ-tafel op de zender, dan wisselt het paneel vanzelf naar de DJ-indeling (en terug als de tafel eraf gaat); met FLIP wissel je zelf. Strip 1-4 = deck A-D: fader = kanaalfader, draaiknop = gain, MUTE = spelen/pauze, SELECT = sync, SOLO = voorbeluisteren, REC = cue. Strip 5-8 = DJ-master, mic, PFL en log." />
+                  <CheckBox Content="Faderstart: fader open = deck start, dicht = pauze; start je een deck op het scherm, dan gaat de fader open" IsChecked="{Binding MackieDjFaderStart}" />
+                  <CheckBox Content="Live met de hand: fader open start de speler of (in HAND) het volgende item van de log, dicht stopt de speler" IsChecked="{Binding MackieLiveAssist}" />
+                  <TextBlock Classes="field" Text="iCON V1-M: aanraakknoppen" />
+                  <TextBlock Classes="muted" FontSize="11" TextWrapping="Wrap"
+                             Text="Schrijft REA's eigen indeling in het paneel (iMap is niet nodig): blauw stuurt ch2, groen ch3 en oranje ch4, noot 0-23. Op de knoppen komt de naam van wat ze doen (de naam van de cart). Koppel de knoppen eerst hieronder; schrijf opnieuw na het wijzigen van een cart. Sluit iMap, anders zet die zijn eigen indeling terug." />
+                  <DockPanel>
+                    <Button DockPanel.Dock="Left" Classes="small" Content="Indeling naar het paneel schrijven" Command="{Binding WriteIconCommand}" Margin="0,0,8,0" />
+                    <TextBlock Classes="muted" FontSize="11" VerticalAlignment="Center" TextWrapping="Wrap" Text="{Binding IconResult}" />
+                  </DockPanel>
                   <TextBlock Classes="field" Text="Uitproberen zonder paneel" />
                   <DockPanel>
                     <Button DockPanel.Dock="Right" Classes="small" Content="Versturen" Command="{Binding MackieSimulateCommand}" Margin="6,0,0,0" />

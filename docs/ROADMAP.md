@@ -110,7 +110,7 @@ De DJ-modus speelt op een eigen mengkanaal, zodat de automatisering kan doorlope
 | ⬜ | Sampler: de bestaande cartwall als pads in de DJ-modus |
 | ⬜ | Automix in de DJ-modus: lijst afspelen met overgangstype (knippen, faden, tempo-overgang); mixpunten per nummer |
 | 🟡 | Bediening: decks, mengpaneel en pads op de commandobus, dus ook via MIDI-controllers en sneltoetsen (DJ-controller leren en voorinstellingen klaar; ingebouwde voorinstellingen volgen) |
-| ⬜ | Stems (zang, instrumenten, bas, drums) met een open scheidingsmodel op de GPU, vooraf berekend per nummer |
+| 🟡 | Stems (zang, drums, bas, rest) met HT-Demucs (ONNX) op de processor, vooraf of bij laden berekend per nummer |
 | ⬜ | Opname van de mix en tempo-overgang als overgangstype in de automatisering |
 
 ## Verbindingen (codec)
@@ -122,7 +122,7 @@ audiocodec. Alleen open protocollen en codecs; eigen ontwerp. Elke verbinding ko
 | Status | Onderdeel |
 |---|---|
 | ⬜ | Mengkanaal VoIP/extern in de mixer met eigen fader, PFL en mix-minus-terugkanaal |
-| ⬜ | RTP in twee richtingen: G.711, G.722, Opus en lineair PCM (L16/L24), jitterbuffer met meting (jitter, verlies, kwaliteit) |
+| 🟡 | RTP in twee richtingen: G.711, G.722, Opus en lineair PCM (L16), jitterbuffer met meting (jitter, verlies, kwaliteit); L24 nog niet |
 | ⬜ | SIP volgens EBU N/ACIP: bellen en gebeld worden, registreren bij een SIP-server, automatisch of handmatig aannemen |
 | ⬜ | Venster Verbindingen: stationslijst (adresboek met protocol, codec, bitrate), verbinden/ophangen/aannemen, niveaumeters in en uit, verbindingstijd, kwaliteit, waarschuwingen |
 | ⬜ | Presets per station en meerdere verbindingen tegelijk, elk op een eigen mengkanaal |

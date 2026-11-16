@@ -20,6 +20,7 @@ public static class AccessRules
         ("/api/users", UserRole.Admin),
         ("/api/system", UserRole.Admin),
         ("/api/backup", UserRole.Admin),
+        ("/api/remote-clients", UserRole.Admin),
         ("/api/settings", UserRole.Admin),
         ("/api/voice/services", UserRole.Admin),
         ("/api/voice/server", UserRole.Admin),
@@ -53,6 +54,8 @@ public static class AccessRules
         ("/api/voip/signals", UserRole.Technician),
         ("/api/stream", UserRole.Technician),
         ("/api/library/scan", UserRole.Technician),
+        // The central library: what this engine takes over, and from where (the source answers others with its password).
+        ("/api/central/settings", UserRole.Technician),
         // Programming: technician.
         ("/api/planner", UserRole.Technician),
         ("/api/categories", UserRole.Technician),
@@ -65,6 +68,8 @@ public static class AccessRules
         ("/api/voice/mine", null),
         ("/api/presenter/personas", UserRole.Technician),
         ("/api/transition-rules", UserRole.Technician),
+        ("/api/play-limits", UserRole.Technician),
+        ("/api/soft-start", UserRole.Technician),
         ("/api/transition", UserRole.Technician),
     ];
 
@@ -135,7 +140,8 @@ public static class NetworkRules
 }
 
 /// <summary>A signed-in studio: who, and until when (renewed with every request).</summary>
-public sealed record UserSession(string Token, long UserId, string Name, UserRole Role, DateTime Expires);
+/// <summary>A signed-in user; <see cref="Ends"/> (UTC) is the end of the account's last day, when it has one.</summary>
+public sealed record UserSession(string Token, long UserId, string Name, UserRole Role, DateTime Expires, DateTime? Ends = null);
 
 /// <summary>Sessions of signed-in studios, in memory only: an engine restart means signing in again.</summary>
 public sealed class SessionStore(Func<DateTime>? clock = null)
@@ -147,7 +153,7 @@ public sealed class SessionStore(Func<DateTime>? clock = null)
     public UserSession Create(StationUser user)
     {
         var token = Convert.ToHexString(RandomNumberGenerator.GetBytes(24)).ToLowerInvariant();
-        var s = new UserSession(token, user.Id, user.Name, user.Role, Now + Lifetime);
+        var s = new UserSession(token, user.Id, user.Name, user.Role, Now + Lifetime, user.EndsUtc);
         _sessions[token] = s;
         return s;
     }
@@ -156,7 +162,7 @@ public sealed class SessionStore(Func<DateTime>? clock = null)
     public UserSession? Get(string? token)
     {
         if (string.IsNullOrEmpty(token) || !_sessions.TryGetValue(token, out var s)) return null;
-        if (s.Expires <= Now) { _sessions.TryRemove(token, out _); return null; }
+        if (s.Expires <= Now || s.Ends <= Now) { _sessions.TryRemove(token, out _); return null; }
         var renewed = s with { Expires = Now + Lifetime };
         _sessions[token] = renewed;
         return renewed;

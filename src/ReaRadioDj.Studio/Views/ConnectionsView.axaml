@@ -52,7 +52,7 @@
               <TextBox Grid.Row="8" Grid.Column="1" Text="{Binding Stun}" MinHeight="26" Padding="4,2" Watermark="leeg = publiek adres leren van de registrar (rport)" />
               <TextBlock Grid.Row="9" Classes="muted" Text="Codecs" VerticalAlignment="Center" />
               <TextBox Grid.Row="9" Grid.Column="1" Text="{Binding Codecs}" MinHeight="26" Padding="4,2" Watermark="op volgorde van voorkeur, bv. pcma, pcmu"
-                       ToolTip.Tip="pcma / pcmu = G.711 (telefoon), l16 = studiokwaliteit (alleen als de overkant het kan)" />
+                       ToolTip.Tip="Op volgorde van voorkeur. opus = studiokwaliteit over internet (LUCI Live), g722 = breedband (HD-telefonie), pcma / pcmu = G.711 (telefoon), l16 = ongecomprimeerd (alleen als de overkant het kan). De eerste die de overkant ook kent, wordt gebruikt." />
               <TextBlock Grid.Row="10" Classes="muted" Text="Inkomend op" VerticalAlignment="Center" />
               <ComboBox Grid.Row="10" Grid.Column="1" ItemsSource="{Binding IncomingChoices}" SelectedItem="{Binding IncomingChannel}" MinWidth="100"
                         ToolTip.Tip="auto = het eerste vrije VoIP-kanaal · geen = inkomende gesprekken weigeren" />

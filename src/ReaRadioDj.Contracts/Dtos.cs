@@ -103,7 +103,14 @@ public sealed record DjDeckDto(string Id, long? MediaId, string Title, string Ar
     double CuePoint, IReadOnlyList<double?> HotCues, double? LoopIn, double? LoopOut, bool LoopActive, double LoopBeats, double Gain,
     double EqLow, double EqMid, double EqHigh, bool KillLow, bool KillMid, bool KillHigh, double Filter, double Fader, bool Pfl,
     float LevelLeft, float LevelRight, bool Rolling = false, string FxType = "echo", bool FxOn = false, double FxMix = 0.5, double FxBeats = 1,
-    bool Censoring = false, string? Spinning = null);
+    bool Censoring = false, string? Spinning = null,
+    string Stems = "none", double StemProgress = 0, bool StemsPlaying = false, IReadOnlyList<double>? StemLevels = null);
+
+/// <summary>Stems of the DJ decks: whether they can be made, what waits, how far the one being made is, the cache.</summary>
+public sealed record StemsDto(bool Available, int Waiting, string? Working, double Progress, double CacheGb, double MaxGb);
+
+/// <summary>Library tracks to make stems of, in the background.</summary>
+public sealed record StemRequest(IReadOnlyList<long> Ids);
 
 /// <summary>Crossfader 0 (decks A and C) .. 1 (B and D); curve "smooth" or "sharp"; OnAir = the desk is heard on the radio.</summary>
 /// Following = deck A copies what the automation plays, ready to take over.
@@ -118,13 +125,14 @@ public sealed record DjDto(double Crossfader, string Curve, bool OnAir, IReadOnl
 /// State: uit, leeg, klaar, speelt or mixen; Progress 0..1 while mixing; SecondsToMix until the next transition.
 /// </summary>
 public sealed record DjAutomixDto(bool On, string Transition, double Beats, IReadOnlyList<DjAutomixItemDto> Queue, string State,
-    double Progress, double? SecondsToMix, string? OutDeck);
+    double Progress, double? SecondsToMix, string? OutDeck, int Decks = 2, bool Faders = true);
 
 public sealed record DjAutomixItemDto(long Id, string Title, string Artist, double Duration);
 
 /// <summary>Automix settings and list changes; any field left out stays as it is. MediaIds are added (at Index when given).</summary>
 public sealed record DjAutomixRequest(bool? On = null, string? Transition = null, double? Beats = null, IReadOnlyList<long>? MediaIds = null,
-    int? Index = null, int? Remove = null, int? MoveFrom = null, int? MoveTo = null, bool? Clear = null, bool? MixNow = null);
+    int? Index = null, int? Remove = null, int? MoveFrom = null, int? MoveTo = null, bool? Clear = null, bool? MixNow = null,
+    int? Decks = null, bool? Faders = null);
 
 public sealed record DjCommand(long? MediaId = null, double? Value = null, int? Index = null, bool? On = null, string? Name = null);
 
@@ -132,10 +140,14 @@ public sealed record DjMixerRequest(double? Crossfader = null, string? Curve = n
     bool? Quantize = null, double? CueMix = null, bool? Limiter = null, double? LimiterDb = null);
 
 public sealed record EngineDto(bool Running, bool AutoPlay, NowPlayingDto? Current, IReadOnlyList<NowPlayingDto> Playing,
-    float LevelLeft, float LevelRight, double SecondsToNext);
+    float LevelLeft, float LevelRight, double SecondsToNext, string Mode = "AUTO", bool Held = false);
 
 public sealed record NowPlayingDto(long Id, string Type, string Label, string Artist, string Title, string Category, string Origin,
-    double Position, double From, double To, double MixAt, double? Intro, double? FadeAt, string? Script, long MediaId);
+    double Position, double From, double To, double MixAt, double? Intro, double? FadeAt, string? Script, long MediaId,
+    string? PresenterText = null);
+
+/// <summary>What the presenter says with a library item (empty = none).</summary>
+public sealed record PresenterTextDto(string Text);
 
 public sealed record LogItemDto(long Id, string Type, string Label, string? Artist, string? Title, string? Category, string Origin,
     double Length, DateTime StartsAt, string? BreakState, string? Script, string? ScriptSource, string? Voice, string? Error,
@@ -143,7 +155,7 @@ public sealed record LogItemDto(long Id, string Type, string Label, string? Arti
     List<LogItemDto>? Children = null);
 
 public sealed record PlayerDto(string Id, string Name, string State, long? MediaId, string? Label, double Position, double CueIn,
-    double CueOut, double? Intro, IReadOnlyList<string> Stack);
+    double CueOut, double? Intro, IReadOnlyList<string> Stack, bool Flow = false);
 
 public sealed record ClipDto(string Key, string Label, long? MediaId, double Position, double Length, bool Loop);
 
@@ -227,7 +239,13 @@ public sealed record RelocateResultDto(int Changed, int Found);
 
 /// <summary>The station's own recordings: settings plus what is being recorded now.</summary>
 public sealed record RecordingSettingsDto(bool Program, bool Mic, bool MicToLibrary, int Bitrate, int KeepDays, string Folder,
-    string FolderInUse = "", string? ProgramFile = null, string? MicFile = null, string Error = "");
+    string FolderInUse = "", string? ProgramFile = null, string? MicFile = null, string Error = "",
+    bool Speech = false, double SpeechThresholdDb = -40, double SpeechHangSeconds = 2,
+    string? SpeechFile = null, bool SpeechRecording = false, long SpeechTakes = 0, string SpeechSource = "mic");
+
+/// <summary>The sound card watch: settings and per Windows card in use its volume (percent, null when it cannot be read).</summary>
+public sealed record DeviceWatchDto(bool Enabled, bool Restore, IReadOnlyList<DeviceWatchCardDto> Cards);
+public sealed record DeviceWatchCardDto(string Name, string Uses, double? Volume, bool Muted, string Note);
 
 public sealed record CategoryDto(long Id, string Name, string Kind, string Color);
 
@@ -264,6 +282,9 @@ public sealed record SeekRequest(double Seconds);
 
 public sealed record SwitchRequest(bool On);
 
+/// <summary>The play mode: AUTO, SEMI or HAND.</summary>
+public sealed record ModeRequest(string Mode);
+
 public sealed record VolumeRequest(float Volume, bool? Muted);
 
 public sealed record CartDto(int Wall, int Slot, int Page, long? MediaId, string Label, string Color, bool Loop, bool Overlay,
@@ -284,18 +305,27 @@ public sealed record SettingsDto(
     bool StreamEnabled, string StreamServer, string StreamPassword, bool StreamPasswordSet, int StreamBitrate, string StreamGenre, string StreamUrl,
     string ControlBindAddress, int ControlTcpPort, int ControlOscPort, string ControlPassword, bool ControlPasswordSet, bool ClearControlPassword,
     bool SilenceEnabled = true, double SilenceDb = -45, double SilenceSeconds = 20, string SilenceAction = "autoplay",
-    long? SilenceCategoryId = null);
+    long? SilenceCategoryId = null, bool StartSemi = false, bool FlowOnFaders = true, bool WebOnNetwork = false);
 
 /// <summary>The answer to saving the settings: what was stored, and what needs a restart or a rescan.</summary>
 public sealed record SettingsSavedDto(SettingsDto Settings, IReadOnlyList<string> NeedsRestart, bool Rescanning);
 
+/// <summary>MicChannel: 0 = stereo, 1 = mono from the left channel (input 1), 2 = mono from the right (input 2).</summary>
 public sealed record RoutingDto(int OutputDevice, int PreviewDevice, bool MicEnabled, int MicDevice, double MicDuckLevel,
-    double OverlayDuckLevel);
+    double OverlayDuckLevel, int MicChannel = 0)
+{
+    /// <summary>The choices for MicChannel, in the order of their values.</summary>
+    public static readonly string[] MicChannelNames = ["Stereo (zoals de ingang binnenkomt)", "Mono uit links (ingang 1)", "Mono uit rechts (ingang 2)"];
+}
 
 // ---------------------------------------------------------------- planner
 
 /// <summary>Kind: category, media or aiBreak. Mode: random, sequential or hook.</summary>
-public sealed record ClockRuleDto(long Id, string Kind, long? CategoryId, long? MediaId, string Mode, string Note);
+/// <summary>Kind "category", "media", "aiBreak" or "playlist" (Source = path of the playlist file on the engine).</summary>
+public sealed record ClockRuleDto(long Id, string Kind, long? CategoryId, long? MediaId, string Mode, string Note, string? Source = null);
+
+/// <summary>What the engine finds in a playlist file: entries, how many are in the library, the first playable one.</summary>
+public sealed record PlaylistCheckDto(string Path, int Entries, int InLibrary, int Skipped, string? First, string? Problem);
 
 public sealed record ClockDto(long Id, string Name, string Color, IReadOnlyList<ClockRuleDto> Rules);
 
@@ -414,7 +444,8 @@ public sealed record HwPortsDto(List<string> Midi, List<string> Serial);
 /// Choices for Mackie Control surfaces: the channel on the master fader ("" = none), transport buttons, meters, which
 /// devices are extenders (eight strips more, e.g. iCON V1-X) and whether those stand left of the main panel.
 /// </summary>
-public sealed record MackieSettingsDto(string MasterStrip, bool Transport, bool Meters, List<long>? Extenders = null, bool ExtendersLeft = false);
+public sealed record MackieSettingsDto(string MasterStrip, bool Transport, bool Meters, List<long>? Extenders = null, bool ExtendersLeft = false,
+    bool DjFaderStart = true, bool LiveAssist = true);
 
 /// <summary>A mixer channel a Mackie surface can show, in strip order.</summary>
 public sealed record MackieChannelDto(string Id, string Name);
@@ -430,6 +461,9 @@ public sealed record MackieDto(MackieSettingsDto Settings, IReadOnlyList<MackieC
 public sealed record MackieSimulateRequest(long DeviceId, string Messages);
 
 /// <summary>A DJ function a controller can operate. Kind: button, absolute (fader, knob) or relative (jog wheel).</summary>
+/// <summary>What writing REA's set-up into an iCON V1-M did.</summary>
+public sealed record IconWriteDto(bool Ok, string Text);
+
 public sealed record DjMidiControlDto(string Id, string Name, string Group, string Kind);
 
 /// <summary>A learned control: the function, the controller and what it sends ("ch1 cc 7"); Invert turns a fader around.</summary>
@@ -657,6 +691,35 @@ public sealed record SystemLogEntryDto(long Id, DateTime Time, string Level, str
 
 public sealed record BackupStagedDto(string Station, DateTime Created, string Machine, bool Restarting);
 
+/// <summary>The daily backup: settings, where it goes, and what is there.</summary>
+public sealed record AutoBackupDto(bool Enabled, string Folder, string Time, int KeepDays, string UsedFolder, bool SameDisk,
+    DateTime? Next, string? LastError, IReadOnlyList<AutoBackupFileDto> Files);
+
+public sealed record AutoBackupFileDto(string Name, DateTime Time, long Bytes);
+
+public sealed record AutoBackupSettingsDto(bool Enabled, string Folder, string Time, int KeepDays);
+
+/// <summary>A remote control with its own limits; the key itself never leaves the engine except once, when it is made.</summary>
+public sealed record RemoteClientDto(string Id, string Name, bool Enabled, bool HasKey, string Addresses, IReadOnlyList<string> Groups);
+
+public sealed record RemoteClientsDto(IReadOnlyList<RemoteClientDto> Clients, IReadOnlyList<string> Groups);
+
+/// <summary>A new key for a remote control: shown once.</summary>
+public sealed record RemoteClientKeyDto(string Id, string Key);
+
+/// <summary>A program recording (one clock hour) and the time it covers.</summary>
+public sealed record RecordedFileDto(string Name, DateTime Start, DateTime End);
+/// <summary>Cut the stretch From-To out of the program recording into a library item.</summary>
+public sealed record RecordingCutRequest(DateTime From, DateTime To, string? Title, string? Artist);
+/// <summary>The new library item: its file name and length.</summary>
+public sealed record RecordingCutDto(string File, double Seconds);
+
+/// <summary>A port the engine uses: "in" (others connect) or "uit" (the engine connects); reach "netwerk", "alleen deze pc" or "naar buiten".</summary>
+public sealed record PortDto(int Port, string Protocol, string Direction, string What, string Reach, bool Active, string Note);
+
+/// <summary>All ports, plus a PowerShell command for the incoming network ports (for the administrator to run).</summary>
+public sealed record PortsDto(IReadOnlyList<PortDto> Ports, string Firewall, string Program);
+
 /// <summary>An output a mixer channel can go to ("" = its normal bus).</summary>
 public sealed record OutputChoiceDto(string Id, string Name);
 
@@ -735,3 +798,10 @@ public sealed record FailoverStatusDto(string Role, string PartnerUrl, string St
 
 public sealed record FailoverSettingsDto(string Role, string Partner, int IntervalSeconds, int LostSeconds, bool TakeOverOnSilence,
     bool GiveBackAutomatically, int GiveBackSeconds, bool StartStream, string OnTakeOver, string OnGiveBack);
+
+/// <summary>Central library: "uit", "bron" (this engine is the library for the others) or "studio" (takes it over).</summary>
+/// <param name="Key">The control password of the source; empty in a GET (<paramref name="HasKey"/> says whether one is set), empty in a PUT keeps it.</param>
+public sealed record CentralSettingsDto(string Mode, string Address, string Key, bool HasKey, int IntervalMinutes, bool AlwaysFetch);
+
+public sealed record CentralStatusDto(string Mode, string State, DateTime? LastSync, string? Result, string? Error, int Items, int Playable,
+    int Fetching, string? Fetched, bool Busy);

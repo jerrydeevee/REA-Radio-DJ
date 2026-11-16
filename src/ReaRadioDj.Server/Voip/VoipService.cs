@@ -37,6 +37,23 @@ public sealed class VoipService(AudioRouter router, StationDb db, MessageCenter 
         catch (JsonException) { return []; }
     }
 
+    /// <summary>The ports VoIP listens on: SIP and the RTP port per channel (audio of a SIP call goes there too).</summary>
+    public IEnumerable<ReaRadioDj.Core.Studio.PortUse> Ports()
+    {
+        var saved = Saved();
+        var sip = LoadSip()?.Account;
+        bool sipOn = sip?.Enabled == true;
+        if (sip is not null || sipOn)
+            yield return new(sip?.LocalPort ?? 5060, "udp", true, "SIP (bellen)", true, sipOn, sipOn ? "" : "SIP staat uit");
+        foreach (var c in router.VoipChannels)
+        {
+            var s = saved.GetValueOrDefault(c.Id) ?? Default(c.Id);
+            bool open = c.Line is not null;
+            yield return new(open ? c.Line!.LocalPort : s.LocalPort, "udp", true, $"RTP-audio {c.Strip.Name}", true, open || sipOn,
+                open ? "lijn open" : sipOn ? "voor SIP-gesprekken" : "alleen als de lijn open is");
+        }
+    }
+
     public static VoipConnectRequest Default(string id) =>
         new(id == AudioRouter.Voip2Strip ? 5006 : 5004, "", id == AudioRouter.Voip2Strip ? 5006 : 5004, "pcma", 60);
 

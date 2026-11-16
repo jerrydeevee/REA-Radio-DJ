@@ -1,0 +1,46 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:ReaRadioDj.Studio.ViewModels"
+             x:Class="ReaRadioDj.Studio.Views.AirCutView"
+             x:DataType="vm:AirCutTool">
+  <!-- A stretch of the program recording as a new item in the library. -->
+  <ScrollViewer>
+    <StackPanel Margin="10" Spacing="6" MaxWidth="640" HorizontalAlignment="Left">
+      <TextBlock Classes="muted" TextWrapping="Wrap"
+                 Text="Zet een stuk uit de uitzendopname als item in de bibliotheek, bijvoorbeeld het interview van net. Het mag over het hele uur heen lopen. Het komt bij de jingles, categorie Opnamen." />
+
+      <WrapPanel ItemSpacing="6" LineSpacing="6">
+        <CalendarDatePicker SelectedDate="{Binding Day}" Width="150" />
+        <Button Classes="small" Content="Laatste 5 min" Command="{Binding LastCommand}" CommandParameter="5" />
+        <Button Classes="small" Content="10 min" Command="{Binding LastCommand}" CommandParameter="10" />
+        <Button Classes="small" Content="30 min" Command="{Binding LastCommand}" CommandParameter="30" />
+        <Button Classes="small" Content="Uur" Command="{Binding LastCommand}" CommandParameter="60" />
+      </WrapPanel>
+
+      <Grid ColumnDefinitions="Auto,120,Auto,120" RowDefinitions="Auto">
+        <TextBlock Text="Van" VerticalAlignment="Center" Margin="0,0,8,0" />
+        <TextBox Grid.Column="1" Text="{Binding FromText}" Watermark="14:05:30" FontFamily="Consolas" />
+        <TextBlock Grid.Column="2" Text="tot" VerticalAlignment="Center" Margin="12,0,8,0" />
+        <TextBox Grid.Column="3" Text="{Binding ToText}" Watermark="14:15:00" FontFamily="Consolas" />
+      </Grid>
+
+      <TextBox Text="{Binding Title}" Watermark="titel, bijv. Interview met de burgemeester" />
+      <TextBox Text="{Binding Artist}" Watermark="artiest of programma (mag leeg)" />
+
+      <StackPanel Orientation="Horizontal" Spacing="8">
+        <Button Classes="bar" Content="Knippen naar de bibliotheek" Command="{Binding CutCommand}" IsEnabled="{Binding !Busy}" />
+        <Button Classes="bar" Content="Ververs" Command="{Binding RefreshCommand}" />
+      </StackPanel>
+      <TextBlock Text="{Binding Status}" TextWrapping="Wrap" />
+
+      <TextBlock Classes="muted" Text="{Binding HoursText}" Margin="0,8,0,0" TextWrapping="Wrap" />
+      <ItemsControl ItemsSource="{Binding Hours}">
+        <ItemsControl.ItemTemplate>
+          <DataTemplate x:DataType="x:String">
+            <TextBlock Text="{Binding}" FontFamily="Consolas" FontSize="12" />
+          </DataTemplate>
+        </ItemsControl.ItemTemplate>
+      </ItemsControl>
+    </StackPanel>
+  </ScrollViewer>
+</UserControl>

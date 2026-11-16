@@ -21,9 +21,11 @@ public partial class LibraryView : UserControl
         SizeChanged += (_, e) =>
         {
             double h = e.NewSize.Height, w = e.NewSize.Width;
-            Body.MinHeight = Math.Min(120, Math.Max(48, h * 0.4));
-            // 60 px for the tab strip and the margins: the top area may never push the list over itself.
-            TopArea.MaxHeight = Math.Max(40, Math.Min(h * 0.45, h - Body.MinHeight - 60));
+            // 60 px for the tab strip and the margins; the search box (40 px) always stays. In a very low panel the list
+            // gets only what is left, so it never lies over the search box.
+            double room = Math.Max(0, h - 60);
+            Body.MinHeight = Math.Min(Math.Min(120, Math.Max(48, h * 0.4)), Math.Max(0, room - 40));
+            TopArea.MaxHeight = Math.Max(40, Math.Min(h * 0.45, room - Body.MinHeight));
             if (DataContext is LibraryTool t) t.Wide = w >= 720;
             ArrangeFilters(e.NewSize);
         };

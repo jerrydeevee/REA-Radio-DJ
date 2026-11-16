@@ -78,6 +78,14 @@ public static class SystemApi
             return Results.File(buffer, "application/zip", name);
         });
 
+        // the daily backup (under /backup, so it needs an administrator like the backup by hand)
+        api.MapGet("/backup/auto", (AutoBackupService auto) => AutoDto(auto, options));
+        api.MapPut("/backup/auto", (AutoBackupSettingsDto d, AutoBackupService auto) =>
+            auto.Save(new AutoBackupSettings(d.Enabled, d.Folder ?? "", d.Time ?? "", d.KeepDays)) is { } error
+                ? Results.BadRequest(error) : Results.Ok(AutoDto(auto, options)));
+        api.MapPost("/backup/auto/run", async (AutoBackupService auto) =>
+            await auto.RunNowAsync() is null ? Results.BadRequest($"Reservekopie niet gelukt: {auto.LastError}") : Results.Ok(AutoDto(auto, options)));
+
         api.MapPost("/backup", async (HttpRequest request, IHostApplicationLifetime life, MessageCenter messages) =>
         {
             var buffer = new MemoryStream();
@@ -95,6 +103,20 @@ public static class SystemApi
             if (restart) Restart(life);
             return Results.Ok(new BackupStagedDto(info.Station, info.Created, info.Machine, restart));
         });
+    }
+
+    private static AutoBackupDto AutoDto(AutoBackupService auto, ReaRadioDjOptions options)
+    {
+        var s = auto.Settings;
+        var folder = auto.Folder;
+        var files = AutoBackup.List(folder).Take(30).Select(f =>
+        {
+            long bytes = 0;
+            try { bytes = new FileInfo(f.Path).Length; } catch (IOException) { }
+            return new AutoBackupFileDto(Path.GetFileName(f.Path), f.Time, bytes);
+        }).ToList();
+        return new AutoBackupDto(s.Enabled, s.Folder, s.Time, s.KeepDays, Path.GetFullPath(folder), AutoBackup.SameDisk(folder, options.DataFolder),
+            s.Enabled ? AutoBackup.NextSlot(s, DateTime.Now) : null, auto.LastError, files);
     }
 
     /// <summary>Loads the stored level of the system log (call once at start).</summary>

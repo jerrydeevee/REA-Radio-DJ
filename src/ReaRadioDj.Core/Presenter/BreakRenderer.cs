@@ -38,6 +38,67 @@ public sealed class BreakRenderer(
         }
     }
 
+    /// <summary>A break that is not ready this many seconds before its air time is made quickly (<see cref="RescueAsync"/>).</summary>
+    public const double RescueSeconds = 75;
+    private readonly HashSet<long> _rescuing = [];
+
+    /// <summary>
+    /// The safety net: every break that comes on air within <see cref="RescueSeconds"/> and is still not ready (the
+    /// voice is slow, the model is still loading) is made at once with the template script and the backup voice, next
+    /// to the normal render. Whichever is ready first plays; a news bulletin and a break that waits for approval are left alone.
+    /// </summary>
+    /// <param name="secondsToNext">Seconds until the first upcoming item starts (from the engine).</param>
+    /// <returns>The rescues that were started.</returns>
+    public IReadOnlyList<Task> Rescue(double secondsToNext, CancellationToken ct)
+    {
+        var started = new List<Task>();
+        double at = Math.Max(0, secondsToNext);
+        foreach (var item in log.Upcoming)
+        {
+            if (at > RescueSeconds) break;
+            if (item.Type == LogItemType.AiBreak && item.BreakState is BreakState.Pending or BreakState.Rendering && item.Extra != "nieuws")
+            {
+                lock (_rescuing) if (!_rescuing.Add(item.Id)) { at += 10; continue; }
+                started.Add(Task.Run(() => RescueOneAsync(item, ct), CancellationToken.None));
+            }
+            at += item.Media is { } m ? Math.Max(0, m.MixPoint - m.CueIn) : 10;
+        }
+        return started;
+    }
+
+    private async Task RescueOneAsync(LogItem item, CancellationToken ct)
+    {
+        try
+        {
+            var (previous, next) = log.NeighbourSongs(item.Id);
+            var persona = PersonaOf(item) ?? personas?.For(DateTime.Now);
+            string script = ScriptSanitizer.Clean(await _template.WriteAsync(Context(DateTime.Now, previous, next, persona), ct), 1000);
+            Directory.CreateDirectory(_folder);
+            var wav = Path.Combine(_folder, $"break-{DateTime.Now:yyyyMMdd-HHmmss}-{item.Id}-spoed.wav");
+            var engine = fallbackVoice ?? primaryVoice;
+            await engine.SynthesizeAsync(script, wav, ct);
+            if (item.BreakState is not (BreakState.Pending or BreakState.Rendering)) return;   // the normal render won
+            string presenter = string.IsNullOrWhiteSpace(persona?.PresenterName) ? options.Presenter.PresenterName : persona.PresenterName;
+            var media = library.Load(wav, MediaKind.Voice) with { Title = script, Artist = presenter };
+            item.Script = script;
+            item.ScriptSource = _template.Name + " (spoed)";
+            item.Voice = engine.Name + " (spoed)";
+            item.Media = media;
+            item.BreakState = BreakState.Ready;
+            AddOutro(item);
+            _log.LogWarning("AI break {Id} was not ready in time: made quickly ({Voice}, {Duration:0.0}s): {Script}",
+                item.Id, engine.Name, media.CueOut - media.CueIn, script);
+        }
+        catch (Exception ex) when (!ct.IsCancellationRequested)
+        {
+            _log.LogWarning("AI break {Id}: quick render failed: {Message}", item.Id, ex.Message);
+        }
+        finally { lock (_rescuing) _rescuing.Remove(item.Id); }
+    }
+
+    /// <summary>The safety net made the break while the normal render was still busy: its result stays.</summary>
+    private static bool Rescued(LogItem item) => item.BreakState == BreakState.Ready && item.ScriptSource?.EndsWith("(spoed)", StringComparison.Ordinal) == true;
+
     /// <summary>Writes the script and, unless a person must approve it first, speaks it.</summary>
     public async Task RenderAsync(LogItem item, CancellationToken ct)
     {
@@ -55,6 +116,7 @@ public sealed class BreakRenderer(
                 ? await creative.PickAsync(airTime, ct) : null;
             if (idea is not null) extra = null;
             var (script, source) = await WriteScriptAsync(Context(airTime, previous, next, persona) with { Extra = extra, Creative = idea }, ct);
+            if (Rescued(item)) return;
             if (extra is not null)
             {
                 extras!.Used(extra, airTime);
@@ -300,6 +362,11 @@ public sealed class BreakRenderer(
         var media = library.Load(wav, MediaKind.Voice) with { Title = script, Artist = presenter };
         item.Voice = persona is null ? voice : $"{persona.Name}: {voice}";
         item.Media = media;
+        if (Rescued(item) && bulletin is null)
+        {
+            _log.LogInformation("AI break {Id}: the normal render came after the quick one; the quick one stays", item.Id);
+            return;
+        }
         item.BreakState = BreakState.Ready;
         if (bulletin is null) AddOutro(item);
         _log.LogInformation("AI break {Id} ready ({Source} + {Voice}, {Duration:0.0}s): {Script}",

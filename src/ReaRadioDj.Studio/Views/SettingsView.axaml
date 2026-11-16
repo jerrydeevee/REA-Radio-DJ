@@ -1,7 +1,8 @@
-<UserControl xmlns="https://github.com/avaloniaui"
+﻿<UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:ReaRadioDj.Studio.ViewModels"
              xmlns:c="using:ReaRadioDj.Contracts"
+             xmlns:views="using:ReaRadioDj.Studio.Views"
              x:Class="ReaRadioDj.Studio.Views.SettingsView"
              x:DataType="vm:SettingsTool">
   <UserControl.Styles>
@@ -55,8 +56,11 @@
           <TextBlock Classes="field" Text="Map met jingles" />
           <TextBox Text="{Binding JingleFolder}" Watermark="bijv. D:\Radio\Jingles" />
           <TextBlock Classes="help" Text="Het pad zoals de computer van de engine het ziet. Na het opslaan van een andere map wordt de bibliotheek opnieuw ingelezen; submappen worden categorieën." />
-          <CheckBox Content="Automatisering starten zodra de engine start" IsChecked="{Binding StartAutomation}" Margin="0,14,0,0" />
-          <TextBlock Classes="help" Text="Uit: de engine start stil en wacht tot je Volgende of Automatisch kiest." />
+          <TextBlock Classes="field" Text="Speelwijze als de engine start" />
+          <ComboBox ItemsSource="{Binding StartModeNames}" SelectedIndex="{Binding StartMode}" MinWidth="320" />
+          <TextBlock Classes="help" Text="AUTO speelt alles vanzelf. SEMI ook, maar wacht zolang de DJ zelf een nummer op een speler afspeelt. HAND start stil en wacht tot je Volgende kiest of een fader opent." />
+          <CheckBox Content="Programmalog onder de faders (muziek op speler A/B, jingles op de cartwall, AI-breaks op de AI-presentator)" IsChecked="{Binding FlowOnFaders}" Margin="0,14,0,0" />
+          <TextBlock Classes="help" Text="Uit: alles van de programmalog speelt op het automatiseringskanaal. Werkt vanaf het volgende item." />
         </StackPanel></ScrollViewer>
       </TabItem>
 
@@ -108,7 +112,9 @@
           <ComboBox ItemsSource="{Binding Inputs}" SelectedItem="{Binding MicDevice}" HorizontalAlignment="Stretch" IsEnabled="{Binding MicEnabled}">
             <ComboBox.ItemTemplate><DataTemplate x:DataType="c:DeviceDto"><TextBlock Text="{Binding Name}" /></DataTemplate></ComboBox.ItemTemplate>
           </ComboBox>
-          <TextBlock Classes="help" Text="Een andere microfoon wordt actief na een herstart van de engine." />
+          <TextBlock Classes="field" Text="Kanaal van de microfoon" />
+          <ComboBox ItemsSource="{Binding MicChannels}" SelectedIndex="{Binding MicChannel}" HorizontalAlignment="Stretch" IsEnabled="{Binding MicEnabled}" />
+          <TextBlock Classes="help" TextWrapping="Wrap" Text="Zit de microfoon op één ingang van een paar (bijvoorbeeld ingang 1 van IN 1-2), kies dan mono; anders klinkt hij alleen links of rechts. Dit wisselt direct. Een andere microfoon wordt actief na een herstart van de engine." />
           <TextBlock Classes="field" Text="Muziek onder de microfoon (% van het volume)" />
           <NumericUpDown Value="{Binding MicDuck}" Minimum="0" Maximum="100" Increment="5" FormatString="0" />
           <TextBlock Classes="field" Text="Muziek onder een overlay (% van het volume)" />
@@ -166,6 +172,9 @@
           <NumericUpDown Value="{Binding FadeOut}" Minimum="0" Maximum="15" Increment="0.5" FormatString="0.0" />
           <TextBlock Classes="field" Text="Muziek onder een stem die over het einde praat (% van het volume)" />
           <NumericUpDown Value="{Binding DuckLevel}" Minimum="0" Maximum="100" Increment="5" FormatString="0" />
+          <TextBlock Classes="field" Text="Zachte start op een vaste tijd: wacht hoogstens (seconden, 0 = altijd uitspelen)" />
+          <NumericUpDown Value="{Binding SoftMaxWait}" Minimum="0" Maximum="900" Increment="15" FormatString="0" />
+          <TextBlock Classes="help" Text="Een zacht nieuwsblok of reclameblok wacht tot het item op de zender klaar is. Duurt dat langer dan dit, dan start het blok meteen en faadt het item in 2 seconden uit." />
           <TextBlock Classes="title" Text="Overgangen per soort en categorie" Margin="0,20,0,4" />
           <TextBlock Classes="help" Text="Bijvoorbeeld: van een jingle naar een nummer achter elkaar, of van categorie Klassiek naar alles met 6 seconden overlap. De bovenste regel die past telt; zonder regel geldt het gemeten mixpunt. Een overgang die je met de hand maakte gaat altijd voor. Deze regels worden direct opgeslagen met de knop hieronder, los van Opslaan bovenaan." />
           <ItemsControl ItemsSource="{Binding TransitionRules}" Margin="0,6,0,0">
@@ -193,6 +202,34 @@
             <Button Classes="small" Content="Regels opslaan" Command="{Binding SaveRulesCommand}" />
             <TextBlock Classes="muted" Text="{Binding RuleStatus}" VerticalAlignment="Center" />
           </StackPanel>
+          <TextBlock Classes="title" Text="Speelduur per soort en categorie" Margin="0,20,0,4" />
+          <TextBlock Classes="help" Text="Bijvoorbeeld: een jingle speelt hoogstens 30 seconden, of reclame korter dan 60 seconden speelt altijd helemaal uit zonder te faden. Wordt een item op zijn langste speelduur gestopt, dan start het volgende en faadt dit item uit. De bovenste regel die past telt; een overgang die je met de hand maakte gaat voor." />
+          <ItemsControl ItemsSource="{Binding PlayLimits}" Margin="0,6,0,0">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="vm:PlayLimitRow">
+                <WrapPanel Margin="0,0,0,4">
+                  <CheckBox IsChecked="{Binding Enabled}" ToolTip.Tip="Aan of uit" VerticalAlignment="Center" />
+                  <ComboBox Width="130" ItemsSource="{Binding $parent[ItemsControl].DataContext.RuleSides}" SelectedItem="{Binding Side}" />
+                  <TextBlock Text="hoogstens" VerticalAlignment="Center" Margin="6,0,4,0" />
+                  <NumericUpDown Width="72" ShowButtonSpinner="False" Value="{Binding MaxSeconds}" Minimum="0" Maximum="3600" Increment="5" FormatString="0"
+                                 ToolTip.Tip="seconden; 0 = geen grens" />
+                  <TextBlock Text="s · uitspelen onder" VerticalAlignment="Center" Margin="6,0,4,0" />
+                  <NumericUpDown Width="72" ShowButtonSpinner="False" Value="{Binding NoFadeUnder}" Minimum="0" Maximum="600" Increment="5" FormatString="0"
+                                 ToolTip.Tip="korter dan zoveel seconden: speelt helemaal uit, zonder faden; 0 = uit" />
+                  <TextBlock Text="s" VerticalAlignment="Center" Margin="6,0,0,0" />
+                  <Button Classes="small" Content="▲" Margin="6,0,0,0" ToolTip.Tip="Hoger in de lijst (gaat voor)"
+                          Command="{Binding $parent[ItemsControl].DataContext.MoveLimitUpCommand}" CommandParameter="{Binding}" />
+                  <Button Classes="small" Content="✕" Margin="4,0,0,0"
+                          Command="{Binding $parent[ItemsControl].DataContext.RemoveLimitCommand}" CommandParameter="{Binding}" />
+                </WrapPanel>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+          <StackPanel Orientation="Horizontal" Spacing="4">
+            <Button Classes="small" Content="+ regel" Command="{Binding AddLimitCommand}" />
+            <Button Classes="small" Content="Speelduur opslaan" Command="{Binding SaveLimitsCommand}" />
+            <TextBlock Classes="muted" Text="{Binding LimitStatus}" VerticalAlignment="Center" />
+          </StackPanel>
         </StackPanel></ScrollViewer>
       </TabItem>
 
@@ -204,6 +241,27 @@
           <CheckBox Content="Microfoon apart opnemen (per keer dat hij open is)" IsChecked="{Binding RecMic}" />
           <CheckBox Content="Microfoonopnamen direct in de bibliotheek (categorie Opnamen, als jingle)" IsChecked="{Binding RecMicToLibrary}"
                     IsEnabled="{Binding RecMic}" Margin="24,0,0,0" />
+          <CheckBox Content="Alleen het praten opnemen (kanaal open en geluid, per uur)" IsChecked="{Binding RecSpeech}" Margin="0,6,0,0"
+                    ToolTip.Tip="Een luistercontrole van wat er gezegd is: alleen de stukken met geluid terwijl de microfoon open staat, zonder de muziek ertussen. Een halve seconde vóór de inzet gaat mee, zodat het eerste woord er helemaal in staat." />
+          <StackPanel Orientation="Horizontal" Spacing="16" Margin="24,2,0,0" IsEnabled="{Binding RecSpeech}">
+            <StackPanel>
+              <TextBlock Classes="field" Text="Kanaal" />
+              <ComboBox ItemsSource="{Binding RecSpeechSources}" SelectedItem="{Binding RecSpeechSource}" Width="180"
+                        ToolTip.Tip="De studiomicrofoon (telt als hij open staat) of een ingang, zoals een tweede microfoon op lijn-in (telt als die naar de zender gaat).">
+                <ComboBox.ItemTemplate><DataTemplate x:DataType="c:OutputChoiceDto"><TextBlock Text="{Binding Name}" /></DataTemplate></ComboBox.ItemTemplate>
+              </ComboBox>
+            </StackPanel>
+            <StackPanel>
+              <TextBlock Classes="field" Text="Drempel (dBFS)" />
+              <NumericUpDown Value="{Binding RecSpeechThreshold}" Minimum="-70" Maximum="-10" Increment="1" FormatString="0" Width="130"
+                             ToolTip.Tip="Geluid vanaf dit niveau telt als praten. Lager = gevoeliger; -40 past bij een gewone microfoon, hoger als er veel bijgeluid is." />
+            </StackPanel>
+            <StackPanel>
+              <TextBlock Classes="field" Text="Nalooptijd (s)" />
+              <NumericUpDown Value="{Binding RecSpeechHang}" Minimum="0.5" Maximum="30" Increment="0.5" FormatString="0.0" Width="130"
+                             ToolTip.Tip="Zo lang loopt de opname door na het laatste geluid, zodat korte pauzes tussen zinnen erin blijven." />
+            </StackPanel>
+          </StackPanel>
           <TextBlock Classes="field" Text="Kwaliteit (kbit/s MP3)" />
           <ComboBox ItemsSource="{Binding RecBitrates}" SelectedItem="{Binding RecBitrate}" Width="120" />
           <TextBlock Classes="field" Text="Bewaren (dagen, 0 = altijd)" />
@@ -239,6 +297,21 @@
             <TextBlock Classes="help" Text="Bij stilte start meteen een willekeurig item uit deze categorie (bijvoorbeeld een noodplaylist of stationsjingles) en daarna gaat de automatisering verder. Is de categorie leeg, dan start alleen de automatisering." />
           </StackPanel>
           <TextBlock Classes="help" Text="Zolang het stil blijft, komt het alarm elke minuut terug. Kies een duur die langer is dan de langste stilte in je eigen programma (een stille passage in klassieke muziek, een pauze in een gesprek)." />
+
+          <TextBlock Classes="title" Text="Volume van de geluidskaart" Margin="0,22,0,0" />
+          <TextBlock Classes="help" Text="De engine kijkt elke twee seconden naar het Windows-volume en de demping van de kaarten waar de zender (en de PFL en de mengkanalen) op spelen. Zet Windows of een ander programma (een update, een vergaderprogramma, een toetsenbordknop) een kaart zachter of dempt het hem, dan komt er een melding in Berichten. ASIO loopt buiten het Windows-volume om en telt niet mee." />
+          <CheckBox Content="Volume van de kaarten bewaken" IsChecked="{Binding DevWatchEnabled}" Margin="0,10,0,0" />
+          <CheckBox Content="Een veranderde kaart meteen terugzetten" IsChecked="{Binding DevWatchRestore}" IsEnabled="{Binding DevWatchEnabled}" Margin="24,0,0,0"
+                    ToolTip.Tip="Zonder deze keuze komt er alleen een melding en geldt de nieuwe stand daarna als normaal. Met deze keuze zet de engine de kaart binnen twee seconden terug op de normale stand." />
+          <ItemsControl ItemsSource="{Binding DevWatchCards}" Margin="0,8,0,0">
+            <ItemsControl.ItemTemplate><DataTemplate x:DataType="x:String"><TextBlock Text="{Binding}" TextWrapping="Wrap" /></DataTemplate></ItemsControl.ItemTemplate>
+          </ItemsControl>
+          <StackPanel Orientation="Horizontal" Spacing="6" Margin="0,10,0,0">
+            <Button Content="Bewaking opslaan" Command="{Binding SaveDeviceWatchCommand}" />
+            <Button Content="Huidige stand is normaal" Command="{Binding AcceptDeviceWatchCommand}"
+                    ToolTip.Tip="Na het bewust harder of zachter zetten van een kaart in Windows: die stand wordt de normale stand om op terug te zetten." />
+            <TextBlock Classes="muted" Text="{Binding DevWatchStatus}" VerticalAlignment="Center" />
+          </StackPanel>
         </StackPanel></ScrollViewer>
       </TabItem>
 
@@ -392,7 +465,14 @@
 
       <TabItem Header="Op afstand">
         <ScrollViewer><StackPanel Classes="page">
-          <TextBlock Classes="title" Text="Bediening op afstand" />
+          <TextBlock Classes="title" Text="Engine op het netwerk" />
+          <CheckBox Content="De engine is op het netwerk te bereiken (studio op een andere pc, browserstudio, remote-app)" IsChecked="{Binding WebOnNetwork}" />
+          <TextBlock Classes="help" TextWrapping="Wrap" Text="Uit: alleen deze computer. Aan: andere computers en tablets in het netwerk bereiken de engine; elke handeling vraagt dan om een aanmelding of het wachtwoord hieronder. Werkt na een herstart van de engine; Windows kan dan vragen het programma door de firewall te laten (zie Systeem › Poorten)." />
+          <SelectableTextBlock Classes="help" Text="{Binding NetworkAddress, StringFormat='Remote-app op een tablet of telefoon: {0}'}" />
+          <TextBlock Classes="help" TextWrapping="Wrap" Text="Https gebruikt een eigen certificaat van het station. Installeer het één keer op de telefoon, dan geeft de browser geen waarschuwing meer. Android: open op de telefoon het adres hieronder, en installeer het bestand via Instellingen › Beveiliging › Meer › Versleuteling en inloggegevens › Certificaat installeren › CA-certificaat. iPhone: open het adres in Safari, en zet het daarna aan bij Instellingen › Algemeen › Info › Certificaatvertrouwen. Https gebruikt poort 8443: zet die ook open in de firewall." />
+          <SelectableTextBlock Classes="help" Text="{Binding CaAddress, StringFormat='Certificaat: {0}'}" />
+
+          <TextBlock Classes="title" Text="Bediening op afstand" Margin="0,24,0,4" />
           <TextBlock Classes="help" Text="De commando's waarmee andere apparaten en programma's het station bedienen (venster Bediening toont ze allemaal). Knoppen, lampjes en mengtafels stel je in bij het venster Hardware." />
           <TextBlock Classes="field" Text="Luisteren op adres" />
           <TextBox Text="{Binding ControlBindAddress}" Watermark="127.0.0.1 = alleen deze computer, 0.0.0.0 = het hele netwerk" />
@@ -405,9 +485,63 @@
           <TextBlock Classes="help" Text="{Binding ControlPasswordHint}" />
           <CheckBox Content="Wachtwoord verwijderen" IsChecked="{Binding ClearControlPassword}" Margin="0,8,0,0" />
           <TextBlock Classes="help" TextWrapping="Wrap" Text="Adres en poorten worden actief na een herstart van de engine. Zet een wachtwoord als je op het hele netwerk luistert. Het wachtwoord geldt ook voor de webpagina en de remote-app (/remote/): vanaf een andere computer vraagt elke handeling om dit wachtwoord of een aanmelding met pincode. Zonder wachtwoord en zonder gebruikers kan een andere computer alleen meekijken." />
+
+          <TextBlock Classes="title" Text="Afstandsbedieners met eigen rechten" Margin="0,24,0,4" />
+          <TextBlock Classes="help" TextWrapping="Wrap" Text="Een tablet, knoppenkast of ander programma dat maar een deel mag, bijvoorbeeld alleen de cartwall. Hij meldt zich met zijn eigen sleutel in plaats van het wachtwoord (TCP: AUTH sleutel, UDP: sleutel vóór het commando, web: ?key=sleutel bij /api/do), of zonder sleutel aan zijn vaste adres. Hij mag alleen de gekozen groepen commando's gebruiken (STATUS en HELP altijd) en verder alleen meekijken. Geldt meteen na Opslaan in dit blok." />
+          <StackPanel DataContext="{Binding Remotes}" x:DataType="vm:RemoteClientsVm">
+          <ItemsControl ItemsSource="{Binding Clients}" Margin="0,8,0,0">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="vm:RemoteClientRowVm">
+                <Border Background="{DynamicResource CardBrush}" CornerRadius="6" Padding="10" Margin="0,0,0,8">
+                  <StackPanel Spacing="6">
+                    <DockPanel>
+                      <Button DockPanel.Dock="Right" Classes="small" Content="✕" ToolTip.Tip="Verwijderen (na Opslaan)"
+                              Command="{Binding RemoveCommand}" />
+                      <CheckBox DockPanel.Dock="Left" IsChecked="{Binding Enabled}" ToolTip.Tip="Aan" Margin="0,0,8,0" />
+                      <TextBox Text="{Binding Name}" Watermark="naam, bijv. Tablet studio 2" />
+                    </DockPanel>
+                    <TextBox Text="{Binding Addresses}" Watermark="adressen, bijv. 192.168.1.50 of 192.168.1.0/24 (leeg = elk adres, alleen met sleutel)" />
+                    <ItemsControl ItemsSource="{Binding Groups}">
+                      <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+                      <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="vm:GroupChoiceVm">
+                          <CheckBox Content="{Binding Name}" IsChecked="{Binding On}" Margin="0,0,14,0" />
+                        </DataTemplate>
+                      </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                      <TextBlock Classes="muted" FontSize="11" Text="{Binding KeyText}" VerticalAlignment="Center" />
+                      <Button Classes="small" Content="Nieuwe sleutel" Command="{Binding MakeKeyCommand}" />
+                      <Button Classes="small" Content="Sleutel weg" IsVisible="{Binding HasKey}" Command="{Binding ClearKeyCommand}" />
+                    </StackPanel>
+                    <TextBox Text="{Binding NewKey}" IsReadOnly="True" FontFamily="Consolas" IsVisible="{Binding ShowNewKey}" />
+                  </StackPanel>
+                </Border>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+          <StackPanel Orientation="Horizontal" Spacing="8">
+            <Button Classes="bar" Content="Afstandsbediener toevoegen" Command="{Binding AddCommand}" IsEnabled="{Binding Loaded}" />
+            <Button Classes="bar" Content="Opslaan" Command="{Binding SaveCommand}" IsEnabled="{Binding Loaded}" />
+          </StackPanel>
+          <TextBlock Classes="help" Text="{Binding Status}" Margin="0,6,0,0" />
+          </StackPanel>
         </StackPanel></ScrollViewer>
       </TabItem>
 
+      <TabItem Header="Besturing">
+        <TabControl TabStripPlacement="Top" Margin="8,0,0,0">
+          <TabItem Header="Hardware">
+            <views:HardwareView DataContext="{Binding Hardware}" />
+          </TabItem>
+          <TabItem Header="DJ-controller">
+            <views:DjMidiView DataContext="{Binding DjMidi}" />
+          </TabItem>
+          <TabItem Header="Sneltoetsen en gebeurtenissen">
+            <views:ControlView DataContext="{Binding Control}" />
+          </TabItem>
+        </TabControl>
+      </TabItem>
       <TabItem Header="Systeem">
         <ScrollViewer><StackPanel Classes="page" MaxWidth="900">
           <TextBlock Classes="title" Text="Bewaking" />
@@ -431,6 +565,46 @@
             <Button Classes="bar danger" Content="Reservekopie terugzetten…" Click="OnRestore" IsEnabled="{Binding SystemLoaded}" />
           </StackPanel>
           <TextBlock Classes="help" Text="{Binding BackupStatus}" Margin="0,8,0,0" />
+
+          <TextBlock Classes="title" Text="Elke dag een reservekopie" Margin="0,24,0,4" />
+          <TextBlock Classes="help" Text="De engine maakt elke dag op een vaste tijd dezelfde reservekopie in een map, en ruimt de oude op. Stond de pc op dat moment uit, dan volgt hij zodra de engine weer draait. Kies bij voorkeur een andere schijf of een NAS; de muziek en jingles bewaar je apart." />
+          <CheckBox Content="Elke dag automatisch een reservekopie maken" IsChecked="{Binding AutoBackupEnabled}" IsEnabled="{Binding AutoBackupLoaded}" Margin="0,10,0,0" />
+          <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto,Auto" Margin="0,8,0,0" IsEnabled="{Binding AutoBackupLoaded}">
+            <TextBlock Classes="muted" Text="Map" VerticalAlignment="Center" Margin="0,0,12,0" />
+            <TextBox Grid.Column="1" Text="{Binding AutoBackupFolder}" Watermark="leeg = map reservekopieen in de datamap · bijv. D:\Reservekopie of \\nas\radio" />
+            <TextBlock Grid.Row="1" Classes="muted" Text="Tijd" VerticalAlignment="Center" Margin="0,6,12,0" />
+            <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding AutoBackupTime}" Width="80" HorizontalAlignment="Left" Margin="0,6,0,0" Watermark="03:00" />
+            <TextBlock Grid.Row="2" Classes="muted" Text="Bewaren" VerticalAlignment="Center" Margin="0,6,12,0" />
+            <StackPanel Grid.Row="2" Grid.Column="1" Orientation="Horizontal" Spacing="8" Margin="0,6,0,0">
+              <NumericUpDown Value="{Binding AutoBackupKeep}" Minimum="1" Maximum="365" Increment="1" FormatString="0" Width="72" ShowButtonSpinner="False" />
+              <TextBlock Classes="muted" Text="dagen (de nieuwste blijft altijd staan)" VerticalAlignment="Center" />
+            </StackPanel>
+          </Grid>
+          <TextBlock Classes="help" Text="{Binding AutoBackupInfo}" Margin="0,8,0,0" />
+          <Button Classes="bar" Content="Nu een reservekopie in deze map maken" Command="{Binding RunAutoBackupCommand}" IsEnabled="{Binding AutoBackupLoaded}" Margin="0,8,0,0"
+                  ToolTip.Tip="Gebruikt de opgeslagen map; wijzig je de map, sla dan eerst op" />
+          <TextBox Text="{Binding AutoBackupFiles}" IsReadOnly="True" Background="{DynamicResource CardBrush}" Foreground="{DynamicResource TextBrush}" FontFamily="Consolas" FontSize="11" Height="110" TextWrapping="NoWrap" Margin="0,8,0,0" />
+
+          <TextBlock Classes="title" Text="Poorten" Margin="0,24,0,4" />
+          <TextBlock Classes="help" Text="Welke poorten de engine gebruikt. 'In' met bereik 'netwerk' heeft een regel in de firewall nodig; 'alleen deze pc' en 'uit' niet. De engine zet zelf niets open in de firewall: de opdracht hieronder voer je als beheerder uit in PowerShell, alleen voor de poorten die open moeten." />
+          <Button Classes="bar" Content="Vernieuwen" Command="{Binding RefreshPortsCommand}" Margin="0,8,0,0" />
+          <ItemsControl ItemsSource="{Binding Ports}" Margin="0,8,0,0">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="c:PortDto">
+                <Grid ColumnDefinitions="60,40,36,110,*" Margin="0,2" Opacity="{Binding Active, Converter={x:Static vm:Brushes.ActiveOpacity}}">
+                  <TextBlock Text="{Binding Port}" FontFamily="Consolas" FontSize="12" />
+                  <TextBlock Grid.Column="1" Text="{Binding Protocol}" FontSize="11" Classes="muted" VerticalAlignment="Center" />
+                  <TextBlock Grid.Column="2" Text="{Binding Direction}" FontSize="11" VerticalAlignment="Center" />
+                  <TextBlock Grid.Column="3" Text="{Binding Reach}" FontSize="11" VerticalAlignment="Center" />
+                  <TextBlock Grid.Column="4" FontSize="12" TextWrapping="Wrap">
+                    <Run Text="{Binding What}" /><Run Text="  " /><Run Text="{Binding Note}" Foreground="{DynamicResource MutedTextBrush}" FontSize="11" />
+                  </TextBlock>
+                </Grid>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+          <TextBlock Classes="field" Text="Firewallregel (PowerShell, als beheerder)" />
+          <TextBox Text="{Binding FirewallCommand}" IsReadOnly="True" FontFamily="Consolas" FontSize="11" TextWrapping="Wrap" />
 
           <TextBlock Classes="title" Text="Systeemlog van de engine" Margin="0,24,0,4" />
           <TextBlock Classes="help" Text="Fouten en waarschuwingen van de engine zelf. Uitgebreid bewaart ook de gewone meldingen; zet dat alleen aan als je een probleem zoekt." />
@@ -480,7 +654,7 @@
           <StackPanel IsVisible="{Binding IsOn}">
             <TextBlock Classes="field" Text="Adres van de andere engine" />
             <TextBox Text="{Binding Partner}" Watermark="http://studio1:8600" />
-            <TextBlock Classes="help" Text="De andere engine moet op het netwerk luisteren (niet alleen 127.0.0.1)." />
+            <TextBlock Classes="help" Text="Beide engines moeten op het netwerk te bereiken zijn (Op afstand › Engine op het netwerk). Het adres mag http://pc:8600 zijn of https://pc:8443; het eigen certificaat van de andere studio wordt dan vertrouwd." />
             <TextBlock Classes="field" Text="Vragen elke (seconden)" />
             <NumericUpDown Value="{Binding IntervalSeconds}" Minimum="1" Maximum="30" Increment="1" FormatString="0" />
             <TextBlock Classes="field" Text="Overnemen als de hoofdstudio zo lang niet antwoordt (seconden)" />
@@ -500,6 +674,38 @@
         </StackPanel></ScrollViewer>
       </TabItem>
 
+      <TabItem Header="Centrale bibliotheek">
+        <ScrollViewer><StackPanel Classes="page" DataContext="{Binding Central}" x:DataType="vm:CentralVm">
+          <TextBlock Classes="title" Text="Centrale bibliotheek voor meerdere studio's" />
+          <TextBlock Classes="help" Text="Eén engine is de bron: die leest de muziek en jingles in en meet ze (cues, loudness, golfvorm, BPM, toonsoort). De andere studio's nemen die bibliotheek over, met alles wat gemeten is, zodat ze zelf niets hoeven te meten. Kan een studio het bestand op de plek van de bron bereiken (een share), dan speelt hij het daarvandaan; anders haalt hij het eerst op naar deze pc. Pas als een bestand er is, wordt het gespeeld. Hoe vaak een nummer gespeeld is, blijft per studio." />
+          <Border Classes="card" Padding="10,8" Margin="0,12,0,0" IsVisible="{Binding IsOn}">
+            <StackPanel Spacing="4">
+              <TextBlock FontWeight="SemiBold" Text="{Binding State}" TextWrapping="Wrap" />
+              <TextBlock Classes="help" Text="{Binding Detail}" IsVisible="{Binding Detail, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+              <Button Classes="bar" Content="Nu bijwerken" Command="{Binding SyncNowCommand}" IsVisible="{Binding IsStudio}" HorizontalAlignment="Left" Margin="0,6,0,0"
+                      ToolTip.Tip="Vraagt de bron meteen wat er nieuw of veranderd is" />
+              <TextBlock Classes="help" Foreground="{DynamicResource WarnBrush}" Text="{Binding Result}" IsVisible="{Binding Result, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+            </StackPanel>
+          </Border>
+          <TextBlock Classes="field" Text="Deze engine is" />
+          <ComboBox ItemsSource="{Binding Modes}" SelectedItem="{Binding Mode}" MinWidth="150" IsEnabled="{Binding Loaded}"
+                    ToolTip.Tip="uit = alleen de eigen mappen · bron = de bibliotheek voor de andere studio's · studio = neemt de bibliotheek van de bron over" />
+          <TextBlock Classes="help" IsVisible="{Binding !IsStudio}" Text="Als bron: stel een bedieningswachtwoord in (Op afstand) en zet Engine op het netwerk aan; de studio's gebruiken dat wachtwoord." />
+          <StackPanel IsVisible="{Binding IsStudio}">
+            <TextBlock Classes="field" Text="Adres van de bibliotheek-engine" />
+            <TextBox Text="{Binding Address}" Watermark="http://bibliotheek:8600" />
+            <TextBlock Classes="help" Text="http://pc:8600 of https://pc:8443; het eigen certificaat van die engine wordt vertrouwd." />
+            <TextBlock Classes="field" Text="Bedieningswachtwoord van de bibliotheek-engine" />
+            <TextBox Text="{Binding Key}" PasswordChar="●" Watermark="{Binding KeyWatermark}" />
+            <TextBlock Classes="field" Text="Bijwerken elke (minuten)" />
+            <NumericUpDown Value="{Binding IntervalMinutes}" Minimum="1" Maximum="1440" Increment="5" FormatString="0" />
+            <CheckBox Content="Alle bestanden naar deze pc halen, ook wat op een bereikbare share staat" IsChecked="{Binding AlwaysFetch}" Margin="0,10,0,0"
+                      ToolTip.Tip="Dan blijft deze studio spelen als het netwerk of de share wegvalt; kost schijfruimte in de datamap (map centraal)" />
+            <TextBlock Classes="help" Text="Wat de bron niet meer heeft, wordt hier niet meer gespeeld en de opgehaalde kopie verdwijnt. Eigen mappen (Bibliotheek › Mappen) blijven daarnaast gewoon werken." />
+          </StackPanel>
+        </StackPanel></ScrollViewer>
+      </TabItem>
+
       <TabItem Header="Gebruikers">
         <ScrollViewer><StackPanel Classes="page" MaxWidth="760" DataContext="{Binding Users}" x:DataType="vm:UsersPanelVm">
           <TextBlock Classes="title" Text="Gebruikers en rechten" />
@@ -513,7 +719,8 @@
                       <TextBlock Text="{Binding Name}" FontWeight="SemiBold" />
                       <StackPanel Orientation="Horizontal" Spacing="6">
                         <TextBlock Classes="muted" FontSize="12" Text="{Binding RoleText}" />
-                        <TextBlock Classes="muted" FontSize="12" Text="· uitgeschakeld" IsVisible="{Binding !Enabled}" />
+                        <TextBlock Classes="muted" FontSize="12" Text="{Binding StateText, StringFormat='· {0}'}"
+                                   IsVisible="{Binding StateText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
                       </StackPanel>
                     </StackPanel>
                   </DataTemplate>
@@ -529,6 +736,8 @@
               <ComboBox ItemsSource="{Binding Roles}" SelectedItem="{Binding EditRole}" MinWidth="180" />
               <TextBlock Classes="field" Text="Pincode (4 tot 12 cijfers)" />
               <TextBox Text="{Binding EditPin}" PasswordChar="●" Watermark="leeg = pincode niet wijzigen" />
+              <TextBlock Classes="field" Text="Laatste dag (leeg = geen einde)" />
+              <TextBox Text="{Binding EditUntil}" Watermark="bijv. 2026-12-31" Width="200" ToolTip.Tip="Voor een stagiair, gastpresentator of invaller: na deze dag kan hij zich niet meer aanmelden" HorizontalAlignment="Left" />
               <CheckBox Content="Mag zich aanmelden" IsChecked="{Binding EditEnabled}" Margin="0,10,0,0" />
               <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,14,0,0">
                 <Button Classes="bar primary" Content="Opslaan" Command="{Binding SaveCommand}" />
@@ -536,9 +745,31 @@
               </StackPanel>
               <TextBlock Classes="help" Text="{Binding Status}" Margin="0,8,0,0" />
               <TextBlock Classes="help" Margin="0,12,0,0"
-                         Text="Gebruikers worden meteen opgeslagen (de knop onderaan is voor de andere tabbladen). Pincode vergeten en geen beheerder meer? Start de engine op deze computer met --users-off; dan wordt er niets gecontroleerd tot de volgende start." />
+                         Text="Gebruikers worden meteen opgeslagen (de knop onderaan is voor de andere tabbladen). Iemand die stopt kun je beter uitschakelen dan verwijderen: de naam blijft dan in de lijst en bij zijn uitzendingen. Na de laatste dag kan iemand zich niet meer aanmelden en wordt hij afgemeld. Er blijft altijd een beheerder zonder einddatum. Pincode vergeten en geen beheerder meer? Start de engine op deze computer met --users-off; dan wordt er niets gecontroleerd tot de volgende start." />
             </StackPanel>
           </Grid>
+          <TextBlock Classes="title" Text="Blokkeren na verkeerde pincodes" Margin="0,20,0,4" />
+          <TextBlock Classes="help" Text="Na te veel verkeerde pincodes achter elkaar kan die naam zich een tijd niet aanmelden. Een beheerder kan een blokkade hier meteen opheffen." />
+          <WrapPanel Margin="0,6,0,0">
+            <TextBlock Text="Blokkeren na" VerticalAlignment="Center" Margin="0,0,6,0" />
+            <NumericUpDown Value="{Binding LockAttempts}" Minimum="3" Maximum="20" Increment="1" FormatString="0" Width="120" />
+            <TextBlock Text="pogingen, voor" VerticalAlignment="Center" Margin="6,0,6,0" />
+            <NumericUpDown Value="{Binding LockSeconds}" Minimum="10" Maximum="3600" Increment="30" FormatString="0" Width="130" />
+            <TextBlock Text="seconden" VerticalAlignment="Center" Margin="6,0,10,0" />
+            <Button Classes="small" Content="Opslaan" Command="{Binding SaveLocksCommand}" />
+          </WrapPanel>
+          <ItemsControl ItemsSource="{Binding Locked}" Margin="0,8,0,0">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="vm:LockedNameVm">
+                <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,0,0,4">
+                  <TextBlock Text="{Binding Text}" VerticalAlignment="Center" />
+                  <Button Classes="small" Content="Opheffen" Command="{Binding $parent[ItemsControl].DataContext.LiftCommand}" CommandParameter="{Binding Name}" />
+                </StackPanel>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+          <TextBlock Classes="muted" Text="Er is nu niemand geblokkeerd." IsVisible="{Binding !Locked.Count}" />
+          <TextBlock Classes="help" Text="{Binding LockStatus}" />
         </StackPanel></ScrollViewer>
       </TabItem>
 

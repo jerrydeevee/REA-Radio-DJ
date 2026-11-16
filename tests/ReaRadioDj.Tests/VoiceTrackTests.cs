@@ -114,6 +114,39 @@ public sealed class VoiceTrackTests : IDisposable
     }
 
     [Fact]
+    public void A_recording_made_at_home_is_placed_like_a_take_of_the_studio()
+    {
+        // A stereo WAV from the browser: spoke from 1.0 to 4.0 s over an outro of 4 s, the next song started at 3 s.
+        var (tracker, log, capture, preview, next) = Setup([]);
+        var mono = Recording(1, 3, 0.5);
+        var stereo = new float[mono.Length * 2];
+        for (int i = 0; i < mono.Length; i++) stereo[2 * i] = stereo[2 * i + 1] = mono[i];
+
+        var (prev, after, before) = tracker.Slot(next.Id);
+        Assert.Equal("Een", prev!.Title);
+        Assert.Equal("Twee", after!.Title);
+        Assert.Same(next, before);
+
+        var item = tracker.PlaceRecording(VoiceProcessor.Write(Rate, 2, stereo), next.Id, outro: 4, next: 3);
+
+        Assert.Equal(new[] { "Een", "Voicetrack", "Twee", "Drie" }, log.Upcoming.Select(i => i.Media!.Title));
+        Assert.InRange(item.StartEarly, 3.0, 3.1);
+        Assert.InRange(item.Media!.MixPoint, 2.0, 2.1);
+        Assert.InRange(item.Media.Duration, 3.25, 3.35);
+        Assert.True(File.Exists(item.Media.Path));
+        Assert.False(capture.Running);   // the studio's own recording is not touched
+        Assert.Empty(preview.Calls);
+        Assert.Null(tracker.Take);
+
+        // an outro longer than the previous song had is cut to what there was; a gone slot and silence are refused
+        long drie = log.Upcoming[3].Id;   // after "Twee": mix point 90, cue-in 0.5
+        Assert.InRange(tracker.PlaceRecording(VoiceProcessor.Write(Rate, 1, Recording(0.5, 1, 0.2)), drie, outro: 500, next: null).StartEarly, 89, 89.5);
+        Assert.Throws<InvalidOperationException>(() => tracker.PlaceRecording(VoiceProcessor.Write(Rate, 1, new float[Rate]), next.Id, 2, null));
+        Assert.Throws<InvalidOperationException>(() => tracker.PlaceRecording(VoiceProcessor.Write(Rate, 1, mono), 999_999, 2, null));
+        Assert.Throws<InvalidDataException>(() => tracker.PlaceRecording([1, 2, 3], next.Id, 2, null));
+    }
+
+    [Fact]
     public void Speaking_after_the_mix_point_does_not_leave_dead_air_and_without_next_the_song_follows_the_voice()
     {
         // Started talking at 5 s, but the outro was only 2 s: no early start, and the voice goes straight after the song.

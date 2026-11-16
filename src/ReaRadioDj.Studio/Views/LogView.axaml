@@ -38,6 +38,8 @@
             <MenuItem Header="Selectie achteraan" Command="{Binding AddSelectedEndCommand}" />
             <MenuItem Header="AI-break" Command="{Binding AddBreakCommand}" />
             <MenuItem Header="Opnieuw plannen" Command="{Binding ReplanCommand}" />
+            <MenuItem Header="Log afdrukken (PDF)…" Click="OnExportPdf" />
+            <MenuItem Header="Log als CSV…" Click="OnExportCsv" />
           </MenuFlyout>
         </Button.Flyout>
       </Button>
@@ -47,6 +49,14 @@
         <Button Classes="small" Margin="0,0,4,4" Content="Selectie achteraan" Command="{Binding AddSelectedEndCommand}" />
         <Button Classes="small" Margin="0,0,4,4" Content="AI-break" Command="{Binding AddBreakCommand}" />
         <Button Classes="small" Margin="0,0,4,4" Content="Opnieuw plannen" Command="{Binding ReplanCommand}" ToolTip.Tip="Gooit de klokitems weg en plant opnieuw (handmatige items blijven)" />
+        <Button Classes="small" Margin="0,0,4,4" Content="Exporteren" ToolTip.Tip="De komende log met de verwachte begintijden, om af te drukken of in een spreadsheet">
+          <Button.Flyout>
+            <MenuFlyout>
+              <MenuItem Header="Afdrukken (PDF)…" Click="OnExportPdf" />
+              <MenuItem Header="Spreadsheet (CSV)…" Click="OnExportCsv" />
+            </MenuFlyout>
+          </Button.Flyout>
+        </Button>
       </WrapPanel>
     </DockPanel>
 

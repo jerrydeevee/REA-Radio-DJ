@@ -141,10 +141,11 @@ public sealed class JitterBuffer
         _skipped++;
     }
 
-    // Repeat the last frame, quieter each time, then silence.
+    // The codec's own concealment (Opus); otherwise repeat the last frame, quieter each time, then silence.
     private void Conceal(Span<float> frame)
     {
         _concealed++;
+        if (_concealed <= 5 && _codec.Conceal(frame)) return;
         float g = _concealed switch { 1 => 0.7f, 2 => 0.35f, _ => 0f };
         for (int i = 0; i < frame.Length; i++) frame[i] = _last[i] * g;
         if (g == 0) Array.Clear(_last);

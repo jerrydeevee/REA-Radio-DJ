@@ -51,6 +51,18 @@ internal static partial class BassNative
         public uint flags;
     }
 
+    [StructLayout(LayoutKind.Sequential)]
+    public struct BASS_CHANNELINFO
+    {
+        public uint freq, chans, flags, ctype, origres;
+        public int plugin, sample;
+        public IntPtr filename;
+    }
+
+    [LibraryImport(Bass)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static partial bool BASS_ChannelGetInfo(int handle, out BASS_CHANNELINFO info);
+
     public const uint BASS_DEVICE_ENABLED = 1;
     public const uint BASS_DEVICE_DEFAULT = 2;
 
@@ -182,6 +194,13 @@ internal static partial class BassNative
     [LibraryImport(BassMix)] public static partial ulong BASS_Mixer_ChannelGetPosition(int handle, uint mode);
 
     public const uint BASS_MIXER_CHAN_BUFFER = 0x2000;
+    /// <summary>Mix this source through a matrix (BASS_Mixer_ChannelSetMatrix): e.g. the four stems of a deck into stereo.</summary>
+    public const uint BASS_MIXER_CHAN_MATRIX = 0x10000;
+
+    /// <summary>The matrix row by row: one row per mixer output channel, one column per source channel.</summary>
+    [LibraryImport(BassMix)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static partial bool BASS_Mixer_ChannelSetMatrixEx(int handle, float[] matrix, float time);
     public const uint BASS_POS_MIXER_RESET = 0x10000;
 
     [LibraryImport(BassMix)]

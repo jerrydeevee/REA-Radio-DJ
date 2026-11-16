@@ -1,0 +1,8 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- rea-cmd: sends commands to the engine over the TCP control port, from a script, a scheduled task or a prompt. -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <AssemblyName>rea-cmd</AssemblyName>
+    <RootNamespace>ReaRadioDj.Cmd</RootNamespace>
+  </PropertyGroup>
+</Project>
