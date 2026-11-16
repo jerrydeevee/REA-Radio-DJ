@@ -26,8 +26,26 @@
   `/api/do`. Over HTTP mag hij verder alleen meekijken. Sleutels worden alleen als hash bewaard en één keer getoond.
 - **Uit de uitzending knippen**: een stuk uit de uitzendopname (van-tot op tijd, ook over het uur heen) als nieuw item
   in de bibliotheek, met titel en artiest, bij de jingles in de categorie Opnamen.
+- **Stems op de DJ-decks**: zang, drums, bas en de rest los aan of uit. Ze worden op de achtergrond op de processor
+  gemaakt (HT-Demucs), en bewaard tot 20 GB. Het model (`data\models\htdemucs.onnx`) zit niet in de setup.
+- **Opus en G.722** voor de VoIP-lijnen en SIP, naast G.711 en PCM. Bij Opus vult de codec zelf een verloren pakket op.
+- **Speelwijze AUTO, SEMI en HAND**, en de log onder de faders: muziek op speler A/B, jingles op de cartwall en
+  AI-breaks op de AI-presentator, elk met een eigen fader die meebeweegt.
+- **Automix op de DJ-tafel** met 2 of 4 decks, ook via de kanaalfaders.
+- **Centrale bibliotheek**: één engine leest de muziek in en meet hem, de andere studio's nemen dat over.
+- **Https op het netwerk** met een eigen certificaat van het station (poort 8443), en **voicetracking vanuit de
+  browser**.
+- **Reservestudio**: de hartslag gaat ook via https, met een waarschuwing als de hoofdstudio niet op het netwerk staat.
+- **iCON V1-M en andere Mackie-panelen**: REA's eigen indeling in het paneel, schermen met de nummers per fader, een
+  DJ-indeling met faderstart en de jogwheel door de log.
+- **Instellingen › Besturing** (hardware, DJ-controller, sneltoetsen), en de speelwijze bij het starten van de engine.
+- AI-breaks worden naast de automatisering klaargemaakt; is er een te laat, dan komt er snel een korte tekst met de
+  reservestem.
+- Geluidskaarten worden ook op naam onthouden, en de microfoon kan op één kanaal (mono).
+- **Handleiding** (`docs/HANDLEIDING.md`) voor de studio en voor de beheerder.
 
 ### Opgelost
+- De engine stopt snel, ook als er een studio verbonden is.
 - In een laag venster lag de analoge klok over de tellers, en de lijst van de bibliotheek over het zoekveld.
 - In de as-run stond bij items zonder gemeten speelduur een losse "s".
 - Foutmeldingen van de engine met een backslash (een map) kwamen met dubbele backslashes in de studio.
