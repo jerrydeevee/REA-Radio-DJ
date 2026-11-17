@@ -1,5 +1,7 @@
 # Handleiding REA-Radio-DJ
 
+**Nederlands** · [English](MANUAL.en.md)
+
 REA-Radio-DJ bestaat uit twee delen:
 
 - **De engine** speelt de uitzending. Hij draait als apart programma op de studio-pc en blijft spelen als de studio
@@ -16,6 +18,8 @@ Deze handleiding heeft twee delen:
 
 > REA-Radio-DJ is in ontwikkeling. Onderdelen die nog niet met echte apparatuur of bij de aanbieder zijn getest,
 > staan in [WERKLIJST.md](WERKLIJST.md) en [TESTPLAN.md](TESTPLAN.md).
+
+De studio kan in het Nederlands, Engels, Duits of Spaans: **Instellingen › Uiterlijk › Taal**.
 
 ---
 
@@ -353,6 +357,10 @@ voor een instrumentale versie. Vooraf kan het ook: in de bibliotheek, rechtsklik
   schrijven**. Is het niet op tijd goedgekeurd, dan komt er een jingle in de plaats.
 - **Berichten om voor te lezen** (venster AI-presentator): bijvoorbeeld een felicitatie, met een geldigheid en een
   aantal keer.
+- **Taal op de zender**: naast de naam van de presentator kies je welke taal hij op de zender spreekt (Nederlands,
+  Engels, Duits of Spaans). Het taalmodel schrijft in die taal, de sjablonen en de woorden rond nieuws en weer volgen
+  hem, en als het stemprofiel geen stem noemt wordt een Windows-stem in die taal gekozen. Kies een stem die de taal
+  spreekt.
 
 ## 11. Uit de uitzending knippen
 
@@ -382,7 +390,8 @@ Op een telefoon of tablet in het netwerk open je `http://<engine>:8600/remote/` 
 - **Bedienen**: start volgende, overslaan, automatisch of live-assist, microfoon, carts stoppen.
 - **Carts**: de cartwalls als grote knoppen.
 
-Meekijken kan altijd. Voor een handeling vraagt de pagina je naam en pincode, of het bedieningswachtwoord.
+Meekijken kan altijd. Voor een handeling vraagt de pagina je naam en pincode, of het bedieningswachtwoord. De pagina
+volgt de taal van de browser; `?lang=en` (of `nl`, `de`, `es`) kiest een andere.
 
 ## 14. Sneltoetsen
 
@@ -443,6 +452,9 @@ Kies voor de PFL een **andere kaart** dan voor de uitzending, anders hoort de lu
 
 Instellingen die je in de studio maakt, bewaart de engine in zijn eigen database. Die gaan voor op
 `appsettings.json`.
+
+Het icoon van de engine bij de klok heeft een menu in de taal van Windows; zet `ReaRadioDj:Language` (`nl`, `en`, `de`,
+`es`) in `appsettings.json` voor een andere.
 
 ## 2. De engine draaiende houden
 
@@ -552,6 +564,7 @@ servers stel je in het venster Stream in (zie [Stream en titels](#11-stream-en-t
 ### Uiterlijk en Deze studio
 
 - **Uiterlijk** geldt alleen voor deze computer:
+  - de **taal** van de studio (Nederlands, Engels, Duits of Spaans);
   - stijl (Studio donker, Nacht, Licht, Hoog contrast), accentkleur, hoeken, knoppen en golfvorm;
   - **Grootte van alles** en **Aanraakmodus**, voor een touchscreen of een scherm op afstand;
   - **Rustige kleuren**, en de kleuren per soort item.
@@ -716,7 +729,7 @@ melding in Berichten.
 
 Venster **AI-presentator**, onder **Instellingen: taalmodel en persona**:
 
-- **AI-presentator aan**, een naam, en het taalmodel. Gebruik **Ollama op deze pc** of een ander OpenAI-compatibel
+- **AI-presentator aan**, een naam, de **taal op de zender** ernaast, en het taalmodel. Gebruik **Ollama op deze pc** of een ander OpenAI-compatibel
   adres. Leeg betekent: vaste sjabloonteksten.
 - Lengte, variatie, persona, en een **muziekbed** (een categorie met beds onder de stem).
 - **Proefscript schrijven**: het taalmodel schrijft een tekst. Er wordt niets ingesproken of uitgezonden.

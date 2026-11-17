@@ -1,14 +1,20 @@
 # REA-Radio-DJ
 
+**Nederlands** · [English](README.en.md) · [Deutsch](README.de.md) · [Español](README.es.md)
+
 Vrije radio-playout met een ingebouwde AI-presentator, gemaakt voor Radio Aa en Hunze. Een losse playout-engine
 (service) en een desktop-studio met vrij verplaatsbare, dokbare en zwevende vensters. Muziek 24/7 automatisch of
 live-assist, met klokken, vaste tijden, cartwalls, standby- en PFL-spelers, een DJ-modus met vier decks, twee
 VoIP-kanalen voor bellers en verslaggevers, en bediening via MIDI, Livewire, Ember+, OSC en TCP.
 
+De studio, de webpagina's en het menu van de engine bij de klok spreken Nederlands, Engels, Duits of Spaans
+(*Instellingen › Uiterlijk*); de AI-presentator spreekt zijn eigen taal op de zender.
+
 > Status: in ontwikkeling (proof of concept). Nog niet bedoeld voor een echte zender. Wat klaar is en wat nog
 > open staat, staat in [docs/WERKLIJST.md](docs/WERKLIJST.md).
 
-Hoe je ermee werkt, in de studio en als beheerder, staat in de [handleiding](docs/HANDLEIDING.md).
+Hoe je ermee werkt, in de studio en als beheerder, staat in de [handleiding](docs/HANDLEIDING.md)
+([English](docs/MANUAL.en.md)).
 
 ## Schermafdrukken
 
@@ -131,6 +137,8 @@ Elk venster is te verslepen, te docken of los te laten zweven, ook op een tweede
 ### AI-presentator
 - Tekst via elk OpenAI-compatibel endpoint (bijv. Ollama) of ingebouwde sjablonen, stem via Higgs TTS 3 of
   Windows-spraak. Breaks worden vooraf gemaakt; de uitzending wacht nooit op de AI.
+- **Taal op de zender**: Nederlands, Engels, Duits of Spaans, te kiezen naast de naam van de presentator; het
+  taalmodel, de sjablonen, het nieuws en het weer volgen die taal.
 - **Stemmendatabase**: een presentator neemt een eigen stem op (studiomicrofoon) of uploadt er een, met rollen
   voor presentator, nieuwslezer en weerman/-vrouw; de Higgs-server kan met de engine mee starten.
 - Een creatieve presentator die de plaatjes aan elkaar praat, ook met denkende taalmodellen.
@@ -217,7 +225,7 @@ categorie) en jingles in `media\jingles`, naast de plek waar je de engine start,
 - Menu *Indeling*: indelingen opslaan, laden en terugzetten. De laatste indeling wordt bij afsluiten bewaard.
 - Slepen vanuit de bibliotheek naar log, speler of cartknop; dubbelklik = voorbeluisteren (PFL).
 - Sneltoetsen: F5 volgende, F6 automatisch/assist, F8 microfoon, F9 stop.
-- Opties: `--engine <url>`, `--no-engine`, `--profile <map>` (eigen instellingenmap), `--show <venster>`,
+- Opties: `--engine <url>`, `--no-engine`, `--profile <map>` (eigen instellingenmap), `--lang <nl|en|de|es>`, `--show <venster>`,
   `--float <venster>`, `--workspace <live|dj|auto|prod|plan|report>`, `--setup` (inrichthulp openen).
 
 ## Instellingen
@@ -227,12 +235,14 @@ Je kunt alles overschrijven met omgevingsvariabelen, bijvoorbeeld `ReaRadioDj__O
 
 | Instelling | Betekenis |
 |---|---|
+| `Language` | taal van het menu van de engine bij de klok (`nl`, `en`, `de`, `es`); leeg = de taal van Windows |
 | `OutputDevice` | `-1` standaard geluidskaart, `0` geen geluidskaart (alleen streamen), `1..` een specifiek apparaat (zie `/api/devices`) |
 | `Mix.TargetLufs` | doel-loudness, standaard −16 |
 | `Rotation.ArtistSeparation` / `SongSeparation` | niet dezelfde artiest / hetzelfde nummer binnen zoveel nummers |
 | `Routing.PreviewDevice` | geluidskaart voor PFL (voorbeluisteren) |
 | `Routing.MicEnabled` / `MicDevice` / `MicDuckLevel` | microfoon opnemen, invoerapparaat, muziekniveau bij open microfoon |
 | `Routing.OverlayDuckLevel` / `StandbyPlayers` | muziekniveau onder overlays, aantal standby-spelers |
+| `Presenter.Language` | de taal van de AI-presentator op de zender (`nl`, `en`, `de`, `es`) |
 | `Presenter.Llm.BaseUrl` / `Model` | bijvoorbeeld `http://localhost:11434` en `llama3.1` voor Ollama; leeg = sjablonen |
 | `Presenter.Tts.Provider` | `sapi` (Windows) of `higgs` |
 | `Presenter.Tts.BaseUrl` | Higgs-server, standaard `http://localhost:8001` |
@@ -265,11 +275,12 @@ REA-Radio-DJ terug op Windows-spraak.
 src/ReaRadioDj.Core       audio-engine en mixer (BASS), analyse, bibliotheek (SQLite), klokken, vaste tijden,
                           studio-spelers, cartwall, DJ-decks, VoIP (RTP, SIP), hardware, as-run,
                           AI-presentator, streams
-src/ReaRadioDj.Contracts  de berichten (DTO's) tussen engine en studio
+src/ReaRadioDj.Contracts  de berichten (DTO's) tussen engine en studio, en de vertalingen (strings.tsv)
 src/ReaRadioDj.Server     de engine-service: REST, WebSocket, server-sent events, automatisering, web-UI
 src/ReaRadioDj.Studio     de desktop-studio (Avalonia + Dock): dokbare en zwevende vensters
 tests/ReaRadioDj.Tests    unit tests en audiotests (draaien op het "no sound"-apparaat van BASS)
 scripts/fetch-bass.ps1   downloadt BASS naar /native
+scripts/strings.py       houdt de vertaaltabel bij
 scripts/build-installer.ps1, installer/   bouwen de Windows-setup (Inno Setup 6)
 ```
 
@@ -277,14 +288,20 @@ De mixer bestaat uit geneste BASS-mixers: uitgangen (uitzending, PFL) → kanale
 10 ms start het volgende log-item op het mixpunt. Ducken (microfoon, overlays, AI-breaks) gaat per kanaal met een
 reden, zodat meerdere oorzaken elkaar niet in de weg zitten. De engine speelt alleen materiaal dat klaarstaat.
 
+## Vertalingen
+
+De Nederlandse tekst is de sleutel; [`strings.tsv`](src/ReaRadioDj.Contracts/Localization/strings.tsv) heeft het
+Engels, Duits en Spaans ernaast. Na nieuwe of gewijzigde teksten: `python scripts/strings.py` en de lege cellen
+invullen; een test faalt zolang een tekst die de code vraagt geen vertaling heeft.
+
 ## Tests
 
 ```powershell
 dotnet test
 ```
 
-Bijna 400 tests dekken onder meer cuepunten, klokplanning, vaste tijden, de database, de bibliotheek en het zoeken,
-de commandobus, hardwaresignalen, RTP en SIP. De audiotests draaien alleen als BASS aanwezig is: ze spelen echte
+Ruim 700 tests dekken onder meer cuepunten, klokplanning, vaste tijden, de database, de bibliotheek en het zoeken,
+de commandobus, hardwaresignalen, RTP en SIP, en de vertalingen. De audiotests draaien alleen als BASS aanwezig is: ze spelen echte
 audio af op het stille apparaat (engine, cartwall, standby, ducken, opnemen, bibliotheekscan) en starten een
 nep-Icecast-server voor de stream.
 
