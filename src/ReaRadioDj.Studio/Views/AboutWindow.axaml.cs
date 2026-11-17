@@ -1,3 +1,4 @@
+using ReaRadioDj.Contracts.Localization;
 using System.Diagnostics;
 using System.Reflection;
 using Avalonia;
@@ -35,7 +36,7 @@ public partial class AboutWindow : Window
     {
         _splash = splash;
         InitializeComponent();
-        VersionText.Text = $"Studio · versie {Version}";
+        VersionText.Text = Tr.F("Studio · versie {0}", Version);
         CopyrightText.Text = $"© {Math.Max(2026, DateTime.Now.Year)} {Maker} ({Company})";
         Loading.IsVisible = splash;
         Details.IsVisible = !splash;

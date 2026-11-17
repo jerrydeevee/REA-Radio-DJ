@@ -1,3 +1,4 @@
+using ReaRadioDj.Contracts.Localization;
 using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
@@ -19,6 +20,14 @@ public partial class App : Application
             LogError(e.Exception);
             e.Handled = true;
         };
+
+        // The language is chosen before the first window: --profile <folder> picks another settings folder, --lang <code> overrides.
+        var args = Environment.GetCommandLineArgs();
+        int pa = Array.IndexOf(args, "--profile");
+        if (pa >= 0 && pa + 1 < args.Length) Services.StudioSettings.FolderOverride = Path.GetFullPath(args[pa + 1]);
+        int la = Array.IndexOf(args, "--lang");
+        Contracts.Localization.Tr.Language = la >= 0 && la + 1 < args.Length ? args[la + 1] : Services.StudioSettings.Load().Language;
+        Services.AutoTranslate.Install();
 
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
@@ -69,7 +78,7 @@ public partial class App : Application
         Console.Error.Write(text);
         try
         {
-            var dir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "REA-Radio-DJ");
+            var dir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), Tr.T("REA-Radio-DJ"));
             Directory.CreateDirectory(dir);
             File.AppendAllText(Path.Combine(dir, "studio-errors.log"), text);
         }

@@ -1,3 +1,4 @@
+using ReaRadioDj.Contracts.Localization;
 using System.Collections.ObjectModel;
 using Avalonia.Input;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -73,9 +74,9 @@ public sealed partial class ControlTool : StudioTool
     [ObservableProperty] private HotkeyRow? _selectedHotkey;
 
     public string ConnectInfo =>
-        "TCP: telnet <engine> 8601 (één commando per regel, antwoord OK/ERR)  ·  OSC: UDP 8602, bijv. /rea/next, /rea/cart/1/5, /rea/cmd \"AUTO OFF\"  ·  "
-        + "UDP: 8603, één commando per pakket  ·  webadres per knop: http://<engine>:8600/api/do/next, /api/do/cart/1/5, /api/do?text=AUTO%20OFF (met wachtwoord: ?key=…)  ·  HTTP: POST /api/command {\"text\":\"NEXT\"}. "
-        + "Standaard alleen vanaf deze computer; in appsettings.json ReaRadioDj:Control:BindAddress = 0.0.0.0 voor het netwerk (zet dan ook een wachtwoord).";
+        Tr.T("TCP: telnet <engine> 8601 (één commando per regel, antwoord OK/ERR)  ·  OSC: UDP 8602, bijv. /rea/next, /rea/cart/1/5, /rea/cmd \"AUTO OFF\"  ·  ")
+        + Tr.T("UDP: 8603, één commando per pakket  ·  webadres per knop: http://<engine>:8600/api/do/next, /api/do/cart/1/5, /api/do?text=AUTO%20OFF (met wachtwoord: ?key=…)  ·  HTTP: POST /api/command {\"text\":\"NEXT\"}. ")
+        + Tr.T("Standaard alleen vanaf deze computer; in appsettings.json ReaRadioDj:Control:BindAddress = 0.0.0.0 voor het netwerk (zet dan ook een wachtwoord).");
 
     partial void OnSelectedCommandChanged(CommandInfoDto? value)
     {
@@ -122,7 +123,7 @@ public sealed partial class ControlTool : StudioTool
     {
         var rules = EventRules.Where(r => r.Event is not null).Select(r => new EventRuleWire(r.Event!.Key, r.Command, r.Enabled)).ToList();
         var saved = await Hub.Client.SendForAsync<List<EventRuleWire>>(HttpMethod.Put, "/api/event-commands", rules);
-        EventStatus = saved is null ? "Niet gelukt." : $"{saved.Count} koppelingen bewaard.";
+        EventStatus = saved is null ? Tr.T("Niet gelukt.") : Tr.F("{0} koppelingen bewaard.", saved.Count);
         await LoadEventRulesAsync();
     }
 
@@ -166,7 +167,7 @@ public sealed partial class ControlTool : StudioTool
     private void SaveHotkeys()
     {
         var bad = HotkeyRows.FirstOrDefault(r => !r.Valid);
-        if (bad is not null) { Hub.Status = $"onbekende toets: '{bad.Key}' (voorbeelden: F5, Ctrl+B, Shift+F1, Ctrl+Alt+1)"; return; }
+        if (bad is not null) { Hub.Status = Tr.F("onbekende toets: '{0}' (voorbeelden: F5, Ctrl+B, Shift+F1, Ctrl+Alt+1)", bad.Key); return; }
         var map = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         var global = new List<string>();
         foreach (var r in HotkeyRows.Where(r => r.Key.Trim().Length > 0 && r.Command.Trim().Length > 0))
@@ -180,6 +181,6 @@ public sealed partial class ControlTool : StudioTool
         Hub.Settings.Save();
         Hotkeys.RaiseChanged();
         LoadHotkeys();
-        Hub.Status = $"{map.Count} sneltoetsen opgeslagen";
+        Hub.Status = Tr.F("{0} sneltoetsen opgeslagen", map.Count);
     }
 }

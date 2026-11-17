@@ -1,3 +1,4 @@
+using ReaRadioDj.Contracts.Localization;
 using System.Collections.ObjectModel;
 using System.Globalization;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -28,7 +29,7 @@ public sealed partial class VoiceTrackTool : StudioTool
     [ObservableProperty] private decimal? _preroll = 8;
     [ObservableProperty] private string _step = "idle";
     [ObservableProperty] private string _elapsed = "0:00.0";
-    [ObservableProperty] private string _hint = "Kies een plek in de log en druk op Start.";
+    [ObservableProperty] private string _hint = Tr.T("Kies een plek in de log en druk op Start.");
     [ObservableProperty] private string? _error;
     [ObservableProperty] private VoiceTakeDto? _take;
 
@@ -37,17 +38,17 @@ public sealed partial class VoiceTrackTool : StudioTool
     public bool CanNext => Step == "outro";
     public bool CanStop => !IsIdle;
     public bool HasTake => Take is not null && IsIdle;
-    public string TakeText => Take is not { } t ? "" : string.Format(CultureInfo.GetCultureInfo("nl-NL"),
-        "{0:0.0} s · {1} · {2} · piek {3:0} dBFS",
+    public string TakeText => Take is not { } t ? "" : string.Format(Contracts.Localization.Tr.Culture,
+        Tr.T("{0:0.0} s · {1} · {2} · piek {3:0} dBFS"),
         t.Length,
-        t.StartEarly > 0.05 ? $"begint {t.StartEarly:0.0} s over het einde van {Short(t.Previous)}" : $"begint na {Short(t.Previous)}",
-        t.NextAt is double n ? $"{Short(t.Next)} start na {n:0.0} s" : $"daarna {Short(t.Next)}",
+        t.StartEarly > 0.05 ? Tr.F("begint {0:0.0} s over het einde van {1}", t.StartEarly, Short(t.Previous)) : Tr.F("begint na {0}", Short(t.Previous)),
+        t.NextAt is double n ? Tr.F("{0} start na {1:0.0} s", Short(t.Next), n) : Tr.F("daarna {0}", Short(t.Next)),
         t.PeakDb);
-    public string TakeWarning => Take is { PeakDb: < -30 } ? "Erg zacht opgenomen: staat de goede microfoon ingesteld?"
-        : Take is { PeakDb: > -0.5 } ? "Het signaal zat tegen het maximum: wat zachter inspreken of de invoer lager zetten."
+    public string TakeWarning => Take is { PeakDb: < -30 } ? Tr.T("Erg zacht opgenomen: staat de goede microfoon ingesteld?")
+        : Take is { PeakDb: > -0.5 } ? Tr.T("Het signaal zat tegen het maximum: wat zachter inspreken of de invoer lager zetten.")
         : "";
 
-    private static string Short(string s) => string.IsNullOrEmpty(s) ? "het vorige item" : s.Length > 40 ? s[..39] + "…" : s;
+    private static string Short(string s) => string.IsNullOrEmpty(s) ? Tr.T("het vorige item") : s.Length > 40 ? s[..39] + "…" : s;
 
     partial void OnStepChanged(string value)
     {
@@ -55,9 +56,9 @@ public sealed partial class VoiceTrackTool : StudioTool
         OnPropertyChanged(nameof(CanStop)); OnPropertyChanged(nameof(HasTake));
         Hint = value switch
         {
-            "outro" => "Opname loopt. Het einde van het vorige item klinkt op PFL; praat eroverheen of wacht tot het stopt. Druk Volgende om het volgende item te starten.",
-            "intro" => "Het volgende item loopt op PFL: praat over de intro en druk Stop als je klaar bent.",
-            _ => Take is null ? "Kies een plek in de log en druk op Start." : "Beluister de opname, neem opnieuw op of plaats hem in de log.",
+            "outro" => Tr.T("Opname loopt. Het einde van het vorige item klinkt op PFL; praat eroverheen of wacht tot het stopt. Druk Volgende om het volgende item te starten."),
+            "intro" => Tr.T("Het volgende item loopt op PFL: praat over de intro en druk Stop als je klaar bent."),
+            _ => Take is null ? Tr.T("Kies een plek in de log en druk op Start.") : Tr.T("Beluister de opname, neem opnieuw op of plaats hem in de log."),
         };
     }
 
@@ -92,7 +93,7 @@ public sealed partial class VoiceTrackTool : StudioTool
         for (int i = 0; i < up.Count; i++)
         {
             if (up[i].Type == "voiceTrack" || (i > 0 && up[i - 1].Type == "voiceTrack")) continue;
-            string before = i > 0 ? Name(up[i - 1]) : s.Engine.Current is { } c ? $"{c.Label} (nu)" : "—";
+            string before = i > 0 ? Name(up[i - 1]) : s.Engine.Current is { } c ? Tr.F("{0} (nu)", c.Label) : "—";
             slots.Add(new VoiceSlot(up[i].Id, $"{up[i].StartsAt:HH:mm}  → {Short(Name(up[i]))}   (na {Short(before)})"));
         }
         if (!slots.Select(x => x.Text).SequenceEqual(Slots.Select(x => x.Text)))
@@ -107,7 +108,7 @@ public sealed partial class VoiceTrackTool : StudioTool
 
     private static string Name(LogItemDto u) => u.Type switch
     {
-        "aiBreak" => "AI-break",
+        "aiBreak" => Tr.T("AI-break"),
         "voiceTrack" => "voicetrack",
         _ => string.IsNullOrEmpty(u.Title) ? u.Label : $"{u.Artist} - {u.Title}".Trim(' ', '-'),
     };
@@ -142,7 +143,7 @@ public sealed partial class VoiceTrackTool : StudioTool
     private async Task Place()
     {
         await Send("/api/voicetrack/take/place");
-        if (Error is null) Hub.Status = "voicetrack in de log gezet";
+        if (Error is null) Hub.Status = Tr.T("voicetrack in de log gezet");
     }
 
     [RelayCommand]

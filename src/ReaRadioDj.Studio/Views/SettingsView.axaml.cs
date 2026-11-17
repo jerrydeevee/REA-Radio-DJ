@@ -1,3 +1,4 @@
+using ReaRadioDj.Contracts.Localization;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.Platform.Storage;
@@ -27,7 +28,7 @@ public partial class SettingsView : UserControl
         if (DataContext is not SettingsTool vm || TopLevel.GetTopLevel(this)?.StorageProvider is not { } storage) return;
         var files = await storage.OpenFilePickerAsync(new FilePickerOpenOptions
         {
-            Title = "Waar staat soloist.exe?",
+            Title = Tr.T("Waar staat soloist.exe?"),
             FileTypeFilter = [new FilePickerFileType("Spotify Soloist") { Patterns = ["soloist.exe"] }],
         });
         if (files.Count > 0 && files[0].TryGetLocalPath() is { } path) vm.SoloistPath = path;
@@ -38,7 +39,7 @@ public partial class SettingsView : UserControl
         if (DataContext is not SettingsTool vm || TopLevel.GetTopLevel(this)?.StorageProvider is not { } storage) return;
         var files = await storage.OpenFilePickerAsync(new FilePickerOpenOptions
         {
-            Title = "Soloist-zip voor Windows (soloist_release_windows_x86_64.zip)",
+            Title = Tr.T("Soloist-zip voor Windows (soloist_release_windows_x86_64.zip)"),
             FileTypeFilter = [new FilePickerFileType("Zip") { Patterns = ["*.zip"] }],
         });
         if (files.Count > 0 && files[0].TryGetLocalPath() is { } path) vm.InstallSoloistZip(path);
@@ -51,7 +52,7 @@ public partial class SettingsView : UserControl
         if (DataContext is not SettingsTool vm || TopLevel.GetTopLevel(this)?.StorageProvider is not { } storage) return;
         var file = await storage.SaveFilePickerAsync(new FilePickerSaveOptions
         {
-            Title = "Reservekopie opslaan",
+            Title = Tr.T("Reservekopie opslaan"),
             SuggestedFileName = $"{vm.StationName}-{DateTime.Now:yyyyMMdd-HHmm}.rea-backup",
             DefaultExtension = "rea-backup",
             FileTypeChoices = [BackupType],
@@ -60,7 +61,7 @@ public partial class SettingsView : UserControl
         var data = await vm.FetchBackupAsync();
         if (data is null) return;
         await using (var s = await file.OpenWriteAsync()) await s.WriteAsync(data);
-        vm.BackupStatus = $"Reservekopie opgeslagen: {file.Name} ({data.Length / 1024} kB).";
+        vm.BackupStatus = Tr.F("Reservekopie opgeslagen: {0} ({1} kB).", file.Name, data.Length / 1024);
     }
 
     private async void OnRestore(object? sender, RoutedEventArgs e)
@@ -68,7 +69,7 @@ public partial class SettingsView : UserControl
         if (DataContext is not SettingsTool vm || TopLevel.GetTopLevel(this)?.StorageProvider is not { } storage) return;
         var files = await storage.OpenFilePickerAsync(new FilePickerOpenOptions
         {
-            Title = "Reservekopie terugzetten (vervangt alle instellingen van de engine)",
+            Title = Tr.T("Reservekopie terugzetten (vervangt alle instellingen van de engine)"),
             FileTypeFilter = [BackupType],
         });
         if (files.Count == 0) return;

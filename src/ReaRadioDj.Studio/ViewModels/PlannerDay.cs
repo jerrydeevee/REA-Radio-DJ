@@ -1,3 +1,4 @@
+using ReaRadioDj.Contracts.Localization;
 using System.Collections.ObjectModel;
 using System.Globalization;
 using Avalonia.Media;
@@ -38,7 +39,7 @@ public sealed class WeekBlockVm(DateTime date, int start, string name, string sp
     public IBrush Brush { get; } = brush;
     public double Height { get; } = height;
     public bool IsNow { get; } = now;
-    public string Events { get; } = events > 0 ? $"{events} vaste tijd{(events == 1 ? "" : "en")}" : "";
+    public string Events { get; } = events > 0 ? (events == 1 ? Tr.T("1 vaste tijd") : Tr.F("{0} vaste tijden", events)) : "";
 }
 
 /// <summary>One day column in the week agenda.</summary>
@@ -58,7 +59,7 @@ public sealed record DayLine(string Time, string Text, string Detail, IBrush Bru
 /// </summary>
 public sealed partial class PlannerTool
 {
-    private static readonly CultureInfo Dutch = CultureInfo.GetCultureInfo("nl-NL");
+    private static readonly CultureInfo Dutch = Contracts.Localization.Tr.Culture;
     private List<ClockDto> _dayClocks = [];
     private Dictionary<(int Day, int Hour), long> _dayGrid = [];
 
@@ -73,7 +74,7 @@ public sealed partial class PlannerTool
 
     /// <summary>Tab to open first (from the command line, "--show planner:Klokken").</summary>
     public static string? StartTab { get; set; }
-    private static readonly string[] TabNames = ["Dag", "Week", "Klokken", "Weekgrid", "Vaste tijden", "Regels", "Externe streams"];
+    private static readonly string[] TabNames = ["Dag", Tr.T("Week"), Tr.T("Klokken"), Tr.T("Weekgrid"), Tr.T("Vaste tijden"), Tr.T("Regels"), "Externe streams"];
 
     /// <summary>Opens the tab asked for on the command line, once (call when the window appears).</summary>
     public void ApplyStartTab()
@@ -104,7 +105,7 @@ public sealed partial class PlannerTool
     {
         var date = (DayDate ?? DateTime.Today).Date;
         var monday = date.AddDays(-DayIndex(date));
-        WeekTitle = $"week {ISOWeek.GetWeekOfYear(monday)} · {monday.ToString("d MMM", Dutch)} – {monday.AddDays(6).ToString("d MMM yyyy", Dutch)}";
+        WeekTitle = Tr.F("week {0} · {1:d MMM} – {2:d MMM yyyy}", ISOWeek.GetWeekOfYear(monday), monday, monday.AddDays(6));
         var now = DateTime.Now;
         WeekDays.Clear();
         for (int d = 0; d < 7; d++)
@@ -120,7 +121,7 @@ public sealed partial class PlannerTool
                 int end = start;
                 while (end + 1 < 24 && ClockAt(day, end + 1)?.Id == clock?.Id) end++;
                 int count = end - start + 1;
-                blocks.Add(new WeekBlockVm(day, start, clock?.Name ?? "vrije rotatie", count == 24 ? "hele dag" : $"{start:00}:00–{(end + 1) % 24:00}:00",
+                blocks.Add(new WeekBlockVm(day, start, clock?.Name ?? Tr.T("vrije rotatie"), count == 24 ? Tr.T("hele dag") : $"{start:00}:00–{(end + 1) % 24:00}:00",
                     Brushes.FromHex(clock?.Color, "#334155"), count * HourHeight - 2, today && now.Hour >= start && now.Hour <= end,
                     events.Count(e => e.Hour >= start && e.Hour <= end)));
                 start = end + 1;
@@ -173,7 +174,7 @@ public sealed partial class PlannerTool
         bool today = date == DateTime.Today;
         DayTitle = date.ToString("dddd d MMMM yyyy", Dutch);
         var now = DateTime.Now;
-        NowClock = today ? $"Nu: {ClockAt(date, now.Hour)?.Name ?? "geen klok (vrije rotatie)"}" : "";
+        NowClock = today ? Tr.F("Nu: {0}", ClockAt(date, now.Hour)?.Name ?? Tr.T("geen klok (vrije rotatie)")) : "";
 
         var events = EventsOn(date).ToList();
         DayBlocks.Clear();
@@ -187,8 +188,8 @@ public sealed partial class PlannerTool
                 .Select(h => new DayHourVm(h, today && h == now.Hour, events.Count(e => e.Hour == h)) { Selected = h == _selectedHour })
                 .ToList();
             bool isNow = today && now.Hour >= start && now.Hour <= end;
-            DayBlocks.Add(new DayBlockVm(clock?.Name ?? "Geen klok — vrije rotatie", Brushes.FromHex(clock?.Color, "#475569"),
-                start == 0 && end == 23 ? "hele dag" : $"{start:00}:00 – {(end + 1) % 24:00}:00", hours, isNow));
+            DayBlocks.Add(new DayBlockVm(clock?.Name ?? Tr.T("Geen klok — vrije rotatie"), Brushes.FromHex(clock?.Color, "#475569"),
+                start == 0 && end == 23 ? Tr.T("hele dag") : $"{start:00}:00 – {(end + 1) % 24:00}:00", hours, isNow));
             start = end + 1;
         }
 
@@ -197,8 +198,8 @@ public sealed partial class PlannerTool
         foreach (var (hour, e) in events.OrderBy(x => x.Hour).ThenBy(x => x.Event.Minute).ThenBy(x => x.Event.Second))
             DayAgenda.Add(new DayLine($"{hour:00}:{e.Minute:00}:{e.Second:00}", e.Name, ActionText(e), Brushes.FromHex(TimingColor(e.Timing))));
         foreach (var w in Watches.Where(w => w.Enabled && OnDay(w.Days, date)))
-            DayAgenda.Add(new DayLine(w.Hours.Trim() == "*" ? "hele dag" : $"uur {w.Hours}", w.Name,
-                w.Mode == "overlay" ? "externe stream (overlay)" : "externe stream (neemt over)", Brushes.FromHex("#2DD4BF")));
+            DayAgenda.Add(new DayLine(w.Hours.Trim() == "*" ? Tr.T("hele dag") : Tr.F("uur {0}", w.Hours), w.Name,
+                w.Mode == "overlay" ? Tr.T("externe stream (overlay)") : Tr.T("externe stream (neemt over)"), Brushes.FromHex("#2DD4BF")));
         BuildHour();
         BuildWeek();
     }
@@ -208,13 +209,13 @@ public sealed partial class PlannerTool
         var date = (DayDate ?? DateTime.Today).Date;
         int h = _selectedHour;
         var clock = ClockAt(date, h);
-        HourTitle = $"{h:00}:00 – {(h + 1) % 24:00}:00 · {clock?.Name ?? "geen klok"}";
+        HourTitle = $"{h:00}:00 – {(h + 1) % 24:00}:00 · {clock?.Name ?? Tr.T("geen klok")}";
         HourLines.Clear();
         foreach (var (_, e) in EventsOn(date).Where(x => x.Hour == h).OrderBy(x => x.Event.Minute).ThenBy(x => x.Event.Second))
             HourLines.Add(new DayLine($"{h:00}:{e.Minute:00}:{e.Second:00}", e.Name, ActionText(e), Brushes.FromHex(TimingColor(e.Timing))));
         if (clock is null)
         {
-            HourLines.Add(new DayLine("", "Vrije rotatie", "geen klok in het weekgrid: de automatisering kiest uit alle muziek", Brushes.FromHex("#475569")));
+            HourLines.Add(new DayLine("", Tr.T("Vrije rotatie"), Tr.T("geen klok in het weekgrid: de automatisering kiest uit alle muziek"), Brushes.FromHex("#475569")));
             return;
         }
         int n = 1;
@@ -222,10 +223,10 @@ public sealed partial class PlannerTool
         {
             string what = r.Kind switch
             {
-                "media" => $"vast item {r.MediaId}",
-                "ai" or "aiBreak" => "AI-presentator",
-                "playlist" => $"afspeellijst {System.IO.Path.GetFileNameWithoutExtension(r.Source ?? "")}",
-                _ => Categories.FirstOrDefault(c => c.Id == r.CategoryId)?.Name ?? "categorie",
+                "media" => Tr.F("vast item {0}", r.MediaId),
+                "ai" or "aiBreak" => Tr.T("AI-presentator"),
+                "playlist" => Tr.F("afspeellijst {0}", System.IO.Path.GetFileNameWithoutExtension(r.Source ?? "")),
+                _ => Categories.FirstOrDefault(c => c.Id == r.CategoryId)?.Name ?? Tr.T("categorie"),
             };
             var color = Categories.FirstOrDefault(c => c.Id == r.CategoryId)?.Color;
             HourLines.Add(new DayLine($"{n++}.", what, string.IsNullOrWhiteSpace(r.Note) ? r.Mode : r.Note, Brushes.FromHex(color, clock.Color)));
@@ -237,12 +238,12 @@ public sealed partial class PlannerTool
         string timing = e.Timing switch { "soft" => "zacht", "overlay" => "overlay", _ => "hard" };
         string what = e.Action switch
         {
-            "playMedia" => "vast item",
-            "playCategory" => Categories.FirstOrDefault(c => c.Id == e.CategoryId)?.Name ?? "categorie",
-            "aiBreak" => "AI-presentator",
-            "command" => $"commando: {e.Text}",
-            "reminder" => $"herinnering: {e.Text}",
-            "alert" => $"alarm: {e.Text}",
+            "playMedia" => Tr.T("vast item"),
+            "playCategory" => Categories.FirstOrDefault(c => c.Id == e.CategoryId)?.Name ?? Tr.T("categorie"),
+            "aiBreak" => Tr.T("AI-presentator"),
+            "command" => Tr.F("commando: {0}", e.Text),
+            "reminder" => Tr.F("herinnering: {0}", e.Text),
+            "alert" => Tr.F("alarm: {0}", e.Text),
             _ => e.Action,
         };
         return $"{what} · {timing}";

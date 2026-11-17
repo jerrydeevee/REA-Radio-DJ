@@ -1,3 +1,4 @@
+using ReaRadioDj.Contracts.Localization;
 using Avalonia.Controls;
 using Avalonia.Platform.Storage;
 using ReaRadioDj.Studio.ViewModels;
@@ -12,11 +13,11 @@ public partial class VoiceView : UserControl
         MediaDrag.Bind(this);
         ClipPick.Click += async (_, _) =>
         {
-            if (DataContext is VoiceTool t && await PickWavAsync("Opname van de stem") is { } wav) await t.UploadClipAsync(wav);
+            if (DataContext is VoiceTool t && await PickWavAsync(Tr.T("Opname van de stem")) is { } wav) await t.UploadClipAsync(wav);
         };
         OwnPick.Click += async (_, _) =>
         {
-            if (DataContext is VoiceTool t && await PickWavAsync("Opname van je eigen stem") is { } wav) await t.OwnUploadAsync(wav);
+            if (DataContext is VoiceTool t && await PickWavAsync(Tr.T("Opname van je eigen stem")) is { } wav) await t.OwnUploadAsync(wav);
         };
     }
 

@@ -1,3 +1,4 @@
+using ReaRadioDj.Contracts.Localization;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
@@ -120,7 +121,7 @@ public partial class MainWindow : Window
             if (!hold.IsEnabled) return;
             hold.Stop();
             StopButton.Classes.Remove("holding");
-            if (DataContext is ViewModels.MainWindowViewModel vm) vm.Hub.Status = "Stop: houd de knop 1 seconde vast";
+            if (DataContext is ViewModels.MainWindowViewModel vm) vm.Hub.Status = Tr.T("Stop: houd de knop 1 seconde vast");
         }
         StopButton.AddHandler(PointerPressedEvent, (_, _) => { StopButton.Classes.Add("holding"); hold.Start(); }, RoutingStrategies.Tunnel);
         StopButton.AddHandler(PointerReleasedEvent, (_, _) => Release(), RoutingStrategies.Tunnel);
@@ -193,7 +194,7 @@ public partial class MainWindow : Window
         _global ??= Services.GlobalHotkeys.For(this, c => Dispatcher.UIThread.Post(() => vm.RunEngineCommandCommand.Execute(c)));
         if (_global is null) return;
         var failed = _global.Apply(ViewModels.Hotkeys.GlobalBindings(vm.Settings));
-        if (failed.Count > 0) vm.Hub.Status = $"Sneltoets niet overal te gebruiken (al in gebruik door een ander programma?): {string.Join(", ", failed)}";
+        if (failed.Count > 0) vm.Hub.Status = Tr.F("Sneltoets niet overal te gebruiken (al in gebruik door een ander programma?): {0}", string.Join(", ", failed));
     }
 
     /// <summary>
@@ -210,7 +211,7 @@ public partial class MainWindow : Window
         {
             var items = new List<Control>
             {
-                new MenuItem { Header = "Ga naar venster…", InputGesture = new Avalonia.Input.KeyGesture(Avalonia.Input.Key.K, Avalonia.Input.KeyModifiers.Control), Command = vm.OpenGoToCommand },
+                new MenuItem { Header = Tr.T("Ga naar venster…"), InputGesture = new Avalonia.Input.KeyGesture(Avalonia.Input.Key.K, Avalonia.Input.KeyModifiers.Control), Command = vm.OpenGoToCommand },
                 new Separator(),
             };
             foreach (var (group, windows) in ViewModels.DockFactory.MenuGroups())

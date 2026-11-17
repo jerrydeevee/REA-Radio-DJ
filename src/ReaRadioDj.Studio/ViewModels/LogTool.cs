@@ -1,3 +1,4 @@
+using ReaRadioDj.Contracts.Localization;
 using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -20,7 +21,7 @@ public sealed partial class LogRow : ObservableObject
     public bool IsContainer => Type == "container";
     public string TypeText => Type switch
     {
-        "song" => "Muziek", "jingle" => "Jingle", "aiBreak" => "AI", "voiceTrack" => "Voicetrack", "container" => "Container", _ => Type,
+        "song" => Tr.T("Muziek"), "jingle" => "Jingle", "aiBreak" => "AI", "voiceTrack" => Tr.T("Voicetrack"), "container" => "Container", _ => Type,
     };
     [ObservableProperty] private string _startsAt = "";
     [ObservableProperty] private string _length = "";
@@ -58,7 +59,7 @@ public sealed partial class LogTool : StudioTool
         if (s.Engine.Current is { } c)
         {
             double len = Math.Max(0.1, c.To - c.From);
-            NowType = c.Type switch { "song" => "MUZIEK", "jingle" => "JINGLE", "voice" => "AI", _ => c.Type.ToUpperInvariant() };
+            NowType = c.Type switch { "song" => Tr.T("MUZIEK"), "jingle" => Tr.T("JINGLE"), "voice" => "AI", _ => c.Type.ToUpperInvariant() };
             NowLabel = string.IsNullOrEmpty(c.Title) ? c.Label : c.Title;
             NowDetail = string.Join(" · ", new[] { c.Artist, c.Category, c.Origin }.Where(x => !string.IsNullOrWhiteSpace(x)));
             NowPosition = StudioHub.Time(c.Position - c.From);
@@ -66,8 +67,8 @@ public sealed partial class LogTool : StudioTool
             Progress = Math.Clamp((c.Position - c.From) / len * 100, 0, 100);
             MixMark = Math.Clamp((c.MixAt - c.From) / len, 0, 1);
             IntroMark = c.Intro is double i ? Math.Clamp((i - c.From) / len, 0, 1) : 0;
-            NowIntro = c.Intro is double ii && ii > c.Position ? $"intro {StudioHub.TimeTenths(ii - c.Position)}" : "";
-            NowMix = s.Engine.AutoPlay ? $"mix over {StudioHub.TimeTenths(c.MixAt - c.Position)}" : "live-assist: wacht op F5";
+            NowIntro = c.Intro is double ii && ii > c.Position ? Tr.F("intro {0}", StudioHub.TimeTenths(ii - c.Position)) : "";
+            NowMix = s.Engine.AutoPlay ? Tr.F("mix over {0}", StudioHub.TimeTenths(c.MixAt - c.Position)) : Tr.T("live-assist: wacht op F5");
         }
         else
         {
@@ -91,7 +92,7 @@ public sealed partial class LogTool : StudioTool
             Upcoming[i].DeckBrush = i < 2 ? DeckPalette.Brush(i + 1) : null;
         }
         var total = s.Upcoming.Sum(u => u.Length);
-        Summary = $"{s.Upcoming.Count} items · {StudioHub.Time(total)}";
+        Summary = Tr.F("{0} items · {1}", s.Upcoming.Count, StudioHub.Time(total));
 
         var hkey = string.Join("|", s.History.Select(h => h.Id));
         if (hkey != _historyKey)
@@ -106,11 +107,11 @@ public sealed partial class LogTool : StudioTool
     {
         Id = u.Id,
         Type = u.Type,
-        Label = u.Type == "aiBreak" ? $"AI-presentator ({BreakText(u.BreakState)})" : (string.IsNullOrEmpty(u.Title) ? u.Label : u.Title),
+        Label = u.Type == "aiBreak" ? Tr.F("AI-presentator ({0})", BreakText(u.BreakState)) : (string.IsNullOrEmpty(u.Title) ? u.Label : u.Title),
         Detail = u.Type == "aiBreak" ? u.Script
-            : u.Type == "container" ? "klapt open als hij aan de beurt is"
+            : u.Type == "container" ? Tr.T("klapt open als hij aan de beurt is")
             : string.Join(" · ", new[] { u.Artist, u.Category }.Where(x => !string.IsNullOrWhiteSpace(x))),
-        Origin = (u.UseHook ? u.Origin + " · hook" : u.Origin) + (u.HandMadeMix ? " · eigen overgang" : ""),
+        Origin = (u.UseHook ? u.Origin + Tr.T(" · hook") : u.Origin) + (u.HandMadeMix ? Tr.T(" · eigen overgang") : ""),
         Error = u.Error,
         MediaId = u.MediaId,
         Children = ChildLines(u.Children),
@@ -122,13 +123,13 @@ public sealed partial class LogTool : StudioTool
         if (children is not { Count: > 0 }) return [];
         var lines = children.Take(8).Select(c =>
             $"{c.StartsAt:HH:mm:ss}  {(string.IsNullOrWhiteSpace(c.Artist) ? c.Title ?? c.Label : $"{c.Artist} – {c.Title}")}  ({StudioHub.Time(c.Length)})").ToList();
-        if (children.Count > 8) lines.Add($"… en {children.Count - 8} meer");
+        if (children.Count > 8) lines.Add(Tr.F("… en {0} meer", children.Count - 8));
         return lines;
     }
 
     private static string BreakText(string? state) => state switch
     {
-        "pending" => "wacht", "rendering" => "wordt gemaakt", "ready" => "klaar", "failed" => "mislukt", _ => state ?? "",
+        "pending" => "wacht", "rendering" => Tr.T("wordt gemaakt"), "ready" => "klaar", "failed" => "mislukt", _ => state ?? "",
     };
 
     [RelayCommand] private Task Remove(LogRow? row) => row is null ? Task.CompletedTask : Hub.Client.DeleteAsync($"/api/log/{row.Id}");

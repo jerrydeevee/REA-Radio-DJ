@@ -1,3 +1,4 @@
+using ReaRadioDj.Contracts.Localization;
 using System.Collections.ObjectModel;
 using System.Globalization;
 using Avalonia.Threading;
@@ -13,7 +14,7 @@ namespace ReaRadioDj.Studio.ViewModels;
 /// </summary>
 public sealed partial class ControlRoomTool : StudioTool
 {
-    private static readonly CultureInfo Nl = CultureInfo.GetCultureInfo("nl-NL");
+    private static readonly CultureInfo Nl = Contracts.Localization.Tr.Culture;
     private DispatcherTimer? _timer;
     private long _lastMessage;
 
@@ -56,10 +57,10 @@ public sealed partial class ControlRoomTool : StudioTool
         Date = t.ToString("dddd d MMMM", Nl);
         var c = s.Engine.Current;
         OnAir = s.Engine.Running && c is not null;
-        Now = c is null ? "Niets ON AIR" : string.IsNullOrWhiteSpace(c.Artist) ? c.Label : $"{c.Artist} – {c.Title}";
-        Remaining = c is null ? "" : "nog " + Services.StudioHub.Time(Math.Max(0, c.To - c.Position));
+        Now = c is null ? Tr.T("Niets ON AIR") : string.IsNullOrWhiteSpace(c.Artist) ? c.Label : $"{c.Artist} – {c.Title}";
+        Remaining = c is null ? "" : Tr.F("nog {0}", Services.StudioHub.Time(Math.Max(0, c.To - c.Position)));
         var n = s.Upcoming.FirstOrDefault();
-        Next = n is null ? "" : "Straks: " + (string.IsNullOrWhiteSpace(n.Artist) ? n.Label : $"{n.Artist} – {n.Title}");
+        Next = n is null ? "" : Tr.F("Straks: {0}", string.IsNullOrWhiteSpace(n.Artist) ? n.Label : $"{n.Artist} – {n.Title}");
     }
 
     [RelayCommand] private Task Refresh() => LoadAsync(true);
@@ -69,22 +70,22 @@ public sealed partial class ControlRoomTool : StudioTool
         Busy = true;
         var r = await Hub.Client.GetAsync<ControlRoomDto>("/api/control-room" + (refresh ? "?refresh=true" : ""));
         Busy = false;
-        if (r is null) { WeatherNote = "De engine geeft geen antwoord."; return; }
+        if (r is null) { WeatherNote = Tr.T("De engine geeft geen antwoord."); return; }
 
         HasWeather = r.Weather is not null;
         if (r.Weather is { } w)
         {
             WeatherIcon = Icon(w.Code);
             Temperature = $"{w.Temperature}°";
-            Sky = string.IsNullOrWhiteSpace(w.Place) ? Cap(w.Sky) : $"{Cap(w.Sky)} in {w.Place}";
-            WeatherDetail = $"Vandaag max. {w.Max}° · wind {w.Beaufort} Bft" + (w.RainChance >= 0 ? $" · regenkans {w.RainChance}%" : "");
+            Sky = string.IsNullOrWhiteSpace(w.Place) ? Cap(w.Sky) : Tr.F("{0} in {1}", Cap(w.Sky), w.Place);
+            WeatherDetail = Tr.F("Vandaag max. {0}° · wind {1} Bft", w.Max, w.Beaufort) + (w.RainChance >= 0 ? Tr.F(" · regenkans {0}%", w.RainChance) : "");
         }
-        WeatherNote = r.WeatherNote ?? (r.WeatherAt is DateTime wa ? $"Bijgewerkt {wa.ToLocalTime().ToString("HH:mm", Nl)} · Open-Meteo" : "");
+        WeatherNote = r.WeatherNote ?? (r.WeatherAt is DateTime wa ? Tr.F("Bijgewerkt {0} · Open-Meteo", wa.ToLocalTime().ToString("HH:mm", Nl)) : "");
 
         Headlines.Clear();
         foreach (var h in r.Headlines.Take(12)) Headlines.Add(h);
         NewsNote = r.NewsProblems.Count > 0 ? string.Join(" · ", r.NewsProblems)
-            : r.NewsAt is DateTime na ? $"Bijgewerkt {na.ToLocalTime().ToString("HH:mm", Nl)}" : "";
+            : r.NewsAt is DateTime na ? Tr.F("Bijgewerkt {0}", na.ToLocalTime().ToString("HH:mm", Nl)) : "";
     }
 
     private async Task FetchMessagesAsync()

@@ -1,3 +1,4 @@
+using ReaRadioDj.Contracts.Localization;
 using System.Collections.ObjectModel;
 using System.Globalization;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -18,7 +19,7 @@ public sealed record AdCampaignChoice(long? Id, string Name, string? Advertiser 
 /// </summary>
 public sealed partial class AdsTool : StudioTool
 {
-    private static readonly CultureInfo Nl = CultureInfo.GetCultureInfo("nl-NL");
+    private static readonly CultureInfo Nl = Contracts.Localization.Tr.Culture;
 
     public AdsTool() : base("ads", "Reclame") { }
 
@@ -26,14 +27,14 @@ public sealed partial class AdsTool : StudioTool
     public static readonly Avalonia.Data.Converters.FuncValueConverter<AdPlayDto?, string> StatusText = new(p => p switch
     {
         null => "",
-        { Complete: true } => "✓ volledig",
+        { Complete: true } => Tr.T("✓ volledig"),
         { Started: not null, Played: null } => "speelt",
         { Started: not null } => "afgebroken",
         _ when p.Scheduled > DateTime.Now.AddMinutes(-10) => "gepland",
-        _ => "niet uitgezonden",
+        _ => Tr.T("niet uitgezonden"),
     });
 
-    public static readonly string[] PositionNames = ["Maakt niet uit", "Eerste in het blok", "Laatste in het blok"];
+    public static readonly string[] PositionNames = [Tr.T("Maakt niet uit"), Tr.T("Eerste in het blok"), Tr.T("Laatste in het blok")];
     public IReadOnlyList<string> Positions => PositionNames;
     public IReadOnlyList<string> Timings => NewsTool.TimingNames;
 
@@ -100,7 +101,7 @@ public sealed partial class AdsTool : StudioTool
     [RelayCommand]
     private void AddSpot()
     {
-        if (Hub.SelectedMedia is not { } m) { CampaignError = "Kies eerst de spot in de bibliotheek."; return; }
+        if (Hub.SelectedMedia is not { } m) { CampaignError = Tr.T("Kies eerst de spot in de bibliotheek."); return; }
         if (Spots.Any(s => s.MediaId == m.Id)) return;
         Spots.Add(new AdSpotDto(m.Id, m.DisplayName, Math.Round(m.Cues.CueOut - m.Cues.CueIn, 1)));
         CampaignError = null;
@@ -118,11 +119,11 @@ public sealed partial class AdsTool : StudioTool
         var d = new AdCampaignDto(CampaignId, Advertiser, CampaignName, CampaignEnabled, (Start ?? DateTime.Today).ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
             (End ?? Start ?? DateTime.Today).ToString("yyyy-MM-dd", CultureInfo.InvariantCulture), CampaignDays.Where(x => x.On).Sum(x => 1 << x.Index),
             CampaignHours, (int)(PerDay ?? 4), (int)(PerHour ?? 1), Position switch { 1 => "first", 2 => "last", _ => "any" }, Spots.ToList(), Notes);
-        if (string.IsNullOrWhiteSpace(Advertiser)) { CampaignError = "Vul een adverteerder in."; return; }
+        if (string.IsNullOrWhiteSpace(Advertiser)) { CampaignError = Tr.T("Vul een adverteerder in."); return; }
         var saved = await Hub.Client.SendForAsync<AdCampaignDto>(HttpMethod.Post, "/api/ads/campaigns", d);
-        if (saved is null) { CampaignError = "Opslaan mislukt."; return; }
+        if (saved is null) { CampaignError = Tr.T("Opslaan mislukt."); return; }
         await LoadCampaignsAsync(saved.Id);
-        Hub.Status = $"campagne “{saved.Name}” opgeslagen";
+        Hub.Status = Tr.F("campagne “{0}” opgeslagen", saved.Name);
     }
 
     [RelayCommand]
@@ -141,9 +142,9 @@ public sealed partial class AdsTool : StudioTool
         Campaign = Campaigns.FirstOrDefault(c => c.Id == keep) ?? Campaigns.FirstOrDefault();
         if (Campaign is null) NewCampaign();
         ProofCampaigns.Clear();
-        ProofCampaigns.Add(new AdCampaignChoice(null, "alle campagnes"));
+        ProofCampaigns.Add(new AdCampaignChoice(null, Tr.T("alle campagnes")));
         foreach (var a in list.Select(c => c.Advertiser).Distinct(StringComparer.CurrentCultureIgnoreCase).Order(StringComparer.CurrentCultureIgnoreCase))
-            ProofCampaigns.Add(new AdCampaignChoice(null, $"{a} (alle campagnes)", a));
+            ProofCampaigns.Add(new AdCampaignChoice(null, Tr.F("{0} (alle campagnes)", a), a));
         foreach (var c in list) ProofCampaigns.Add(new AdCampaignChoice(c.Id, $"{c.Advertiser} – {c.Name}"));
         ProofCampaign ??= ProofCampaigns[0];
     }
@@ -207,9 +208,9 @@ public sealed partial class AdsTool : StudioTool
         var d = new AdBreakDto(BreakId, BreakName, BreakEnabled, BreakDays.Where(x => x.On).Sum(x => 1 << x.Index), BreakHours, (int)(Minute ?? 0),
             (int)(Second ?? 0), Timing == 1 ? "soft" : "hard", Opener?.Id, Closer?.Id, (int)(MaxSeconds ?? 120));
         var saved = await Hub.Client.SendForAsync<AdBreakDto>(HttpMethod.Post, "/api/ads/breaks", d);
-        if (saved is null) { PreviewText = "Opslaan mislukt."; return; }
+        if (saved is null) { PreviewText = Tr.T("Opslaan mislukt."); return; }
         await LoadBreaksAsync(saved.Id);
-        Hub.Status = $"reclameblok “{saved.Name}” opgeslagen";
+        Hub.Status = Tr.F("reclameblok “{0}” opgeslagen", saved.Name);
     }
 
     [RelayCommand]
@@ -222,12 +223,12 @@ public sealed partial class AdsTool : StudioTool
     [RelayCommand]
     private async Task PreviewBreak()
     {
-        if (BreakId <= 0) { PreviewText = "Sla het blok eerst op."; return; }
+        if (BreakId <= 0) { PreviewText = Tr.T("Sla het blok eerst op."); return; }
         var p = await Hub.Client.GetAsync<AdPreviewDto>($"/api/ads/breaks/{BreakId}/preview");
-        if (p is null) { PreviewText = "Engine niet bereikbaar."; return; }
+        if (p is null) { PreviewText = Tr.T("Engine niet bereikbaar."); return; }
         PreviewText = p.Problem is { } problem
-            ? (Break?.Next is DateTime n ? $"Om {n:HH:mm}: " : "") + problem
-            : (Break?.Next is DateTime t ? $"Om {t:HH:mm} ({p.Seconds:0} s spots):\n" : "") + string.Join("\n", p.Lines.Select(l => "• " + l));
+            ? (Break?.Next is DateTime n ? Tr.F("Om {0:HH:mm}: ", n) : "") + problem
+            : (Break?.Next is DateTime t ? Tr.F("Om {0:HH:mm} ({1:0} s spots):\n", t, p.Seconds) : "") + string.Join("\n", p.Lines.Select(l => "• " + l));
     }
 
     private async Task LoadBreaksAsync(long? select = null)
@@ -271,8 +272,8 @@ public sealed partial class AdsTool : StudioTool
         int aired = list.Count(p => p.Started is not null);
         int complete = list.Count(p => p.Complete);
         int waiting = list.Count(p => p.Started is null && p.Scheduled > DateTime.Now.AddMinutes(-10));
-        ProofSummary = string.Format(Nl, "{0} uitgezonden, waarvan {1} volledig{2}", aired, complete,
-            waiting > 0 ? $" · {waiting} gepland in een komend blok" : "");
+        ProofSummary = string.Format(Nl, Tr.T("{0} uitgezonden, waarvan {1} volledig{2}"), aired, complete,
+            waiting > 0 ? Tr.F(" · {0} gepland in een komend blok", waiting) : "");
         Report.Clear();
         if (await Hub.Client.GetAsync<List<AdReportLineDto>>("/api/ads/report?" + ProofQuery) is { } report)
             foreach (var l in report) Report.Add(l);

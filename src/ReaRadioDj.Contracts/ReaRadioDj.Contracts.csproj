@@ -3,4 +3,8 @@
   <PropertyGroup>
     <RootNamespace>ReaRadioDj.Contracts</RootNamespace>
   </PropertyGroup>
+  <ItemGroup>
+    <!-- Translations: nl (the key), en, de, es; scripts/strings.py keeps the list of texts up to date. -->
+    <EmbeddedResource Include="Localization/strings.tsv" LogicalName="ReaRadioDj.Contracts.Localization.strings.tsv" />
+  </ItemGroup>
 </Project>

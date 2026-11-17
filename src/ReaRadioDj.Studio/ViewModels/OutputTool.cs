@@ -1,3 +1,4 @@
+using ReaRadioDj.Contracts.Localization;
 using System.Collections.ObjectModel;
 using System.Globalization;
 using Avalonia.Media;
@@ -54,7 +55,7 @@ public sealed partial class OutputTool : StudioTool
         while (Channels.Count > m.Strips.Count) Channels.RemoveAt(Channels.Count - 1);
 
         var open = Channels.Where(c => c.Open).Select(c => c.Name).ToList();
-        OpenSummary = open.Count == 0 ? "Geen kanaal open" : "Open: " + string.Join(", ", open);
+        OpenSummary = open.Count == 0 ? Tr.T("Geen kanaal open") : "Open: " + string.Join(", ", open);
     }
 }
 
@@ -72,7 +73,7 @@ public sealed partial class OutputChannelVm(string id) : ObservableObject
     [ObservableProperty] private double _right;
     [ObservableProperty] private string _peak = "–";
     [ObservableProperty] private bool _open;
-    [ObservableProperty] private string _lampText = "DICHT";
+    [ObservableProperty] private string _lampText = Tr.T("DICHT");
     [ObservableProperty] private IBrush _lampBrush = OffBrush;
     [ObservableProperty] private IBrush _lampTextBrush = OffBrush;
     [ObservableProperty] private IBrush _signal = OffBrush;
@@ -91,13 +92,13 @@ public sealed partial class OutputChannelVm(string id) : ObservableObject
         bool isMic = s.Id == "mic";
         // open = it reaches the transmitter: switched on, not muted, fader up (a microphone: switched open)
         Open = isMic ? micOpen : s.OnAir && !s.Muted && s.Volume > 0.001 && s.Bus != "preview";
-        LampText = Open ? (isMic ? "MIC OPEN" : "OPEN") : s.Muted ? "STIL" : "DICHT";
+        LampText = Open ? (isMic ? "MIC OPEN" : "OPEN") : s.Muted ? Tr.T("STIL") : Tr.T("DICHT");
         LampBrush = Open ? (isMic ? MicBrush : OpenBrush) : OffBrush;
         LampTextBrush = Open ? Brushes.FromHex("#11161D") : Brushes.FromHex("#8B95A5");
         bool sound = LevelMeter.ToDb(Math.Max(s.LevelLeft, s.LevelRight)) > -45;
         Signal = sound ? SignalBrush : OffBrush;
-        Route = s.Bus == "preview" ? "PFL-uitgang" : s.Source is not null ? "ingang" : "zender";
-        string duck = s.Duck < 0.99 ? $" · gedimd tot {s.Duck * 100:0}%" : "";
+        Route = s.Bus == "preview" ? Tr.T("PFL-uitgang") : s.Source is not null ? Tr.T("ingang") : Tr.T("zender");
+        string duck = s.Duck < 0.99 ? Tr.F(" · gedimd tot {0:0}%", s.Duck * 100) : "";
         Tip = $"{s.Name}: fader {s.Volume * 100:0}%{(s.Muted ? " · gedempt" : "")}{(s.OnAir ? "" : " · niet naar de zender")}{duck}";
     }
 }

@@ -1,3 +1,4 @@
+using ReaRadioDj.Contracts.Localization;
 using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -39,7 +40,7 @@ public sealed partial class LibraryTool : StudioTool
 {
     private CancellationTokenSource? _search;
 
-    public LibraryTool() : base("library", "Bibliotheek") { }
+    public LibraryTool() : base("library", Tr.T("Bibliotheek")) { }
 
     /// <summary>The rows; a new search replaces the whole collection (see <see cref="Refresh"/>).</summary>
     [ObservableProperty] private ObservableCollection<MediaDto> _items = [];
@@ -52,22 +53,22 @@ public sealed partial class LibraryTool : StudioTool
     public ObservableCollection<SearchHelpDto> HelpLines { get; } = [];
     public List<DecadeChoice> Decades { get; } =
     [
-        new("Alle jaren", ""), new("jaren 60", "jaar:196"), new("jaren 70", "jaar:197"), new("jaren 80", "jaar:198"),
-        new("jaren 90", "jaar:199"), new("jaren 00", "jaar:200"), new("jaren 10", "jaar:201"), new("jaren 20", "jaar:202"),
+        new(Tr.T("Alle jaren"), ""), new(Tr.T("jaren 60"), "jaar:196"), new(Tr.T("jaren 70"), "jaar:197"), new(Tr.T("jaren 80"), "jaar:198"),
+        new(Tr.T("jaren 90"), "jaar:199"), new(Tr.T("jaren 00"), "jaar:200"), new(Tr.T("jaren 10"), "jaar:201"), new(Tr.T("jaren 20"), "jaar:202"),
     ];
     [ObservableProperty] private DecadeChoice? _decade;
 
     // ---- detail pane, selection, sorting, touch
     public List<SortChoice> Sorts { get; } =
     [
-        new("Beste treffer", "relevance"), new("Artiest", "artist"), new("Titel", "title"), new("Jaar", "year"),
-        new("BPM", "bpm"), new("Toonsoort", "key"), new("Duur", "duration"), new("Laatst gespeeld", "lastplayed"), new("Vaakst gespeeld", "plays"),
-        new("Nieuwste eerst", "added"),
+        new(Tr.T("Beste treffer"), "relevance"), new(Tr.T("Artiest"), "artist"), new(Tr.T("Titel"), "title"), new(Tr.T("Jaar"), "year"),
+        new(Tr.T("BPM"), "bpm"), new(Tr.T("Toonsoort"), "key"), new(Tr.T("Duur"), "duration"), new(Tr.T("Laatst gespeeld"), "lastplayed"), new(Tr.T("Vaakst gespeeld"), "plays"),
+        new(Tr.T("Nieuwste eerst"), "added"),
     ];
     public List<ClickChoice> ClickActions { get; } =
     [
-        new("Dubbelklik: PFL", "pfl"), new("Dubbelklik: als volgende", "next"), new("Dubbelklik: achteraan", "end"),
-        new("Dubbelklik: standby 1", "standby1"), new("Dubbelklik: cues", "cues"),
+        new(Tr.T("Dubbelklik: PFL"), "pfl"), new(Tr.T("Dubbelklik: als volgende"), "next"), new(Tr.T("Dubbelklik: achteraan"), "end"),
+        new(Tr.T("Dubbelklik: standby 1"), "standby1"), new(Tr.T("Dubbelklik: cues"), "cues"),
     ];
     // ---- own columns: which fields show under the title, in which order
     public ObservableCollection<FieldChoice> Fields { get; } = [];
@@ -129,7 +130,7 @@ public sealed partial class LibraryTool : StudioTool
     [ObservableProperty] private string _bulkText = "";
     private List<MediaDto> _selection = [];
     public bool HasMulti => SelectionCount > 1;
-    public string SelectionText => $"{SelectionCount} geselecteerd";
+    public string SelectionText => Tr.F("{0} geselecteerd", SelectionCount);
 
     partial void OnSelectionCountChanged(int value) { OnPropertyChanged(nameof(HasMulti)); OnPropertyChanged(nameof(SelectionText)); }
     partial void OnSortChanged(SortChoice? value) { if (value is null) return; Hub.Settings.LibrarySort = value.Key; Hub.Settings.Save(); Refresh(); }
@@ -157,8 +158,8 @@ public sealed partial class LibraryTool : StudioTool
         var ids = SelectedIds;
         if (ids.Count == 0) return;
         Hub.Status = await Hub.Client.PostAsync("/api/stems", new StemRequest(ids))
-            ? $"Stems van {ids.Count} nummer(s) worden op de achtergrond gemaakt."
-            : "Stems maken lukt niet: staat het model (data\\models\\htdemucs.onnx) erin?";
+            ? Tr.F("Stems van {0} nummer(s) worden op de achtergrond gemaakt.", ids.Count)
+            : Tr.T("Stems maken lukt niet: staat het model (data\\models\\htdemucs.onnx) erin?");
     }
 
     [RelayCommand] private Task ToClipboard() => Services.MediaClipboard.AddAsync(SelectedIds);
@@ -168,17 +169,17 @@ public sealed partial class LibraryTool : StudioTool
     private async Task Bulk(MediaBulkRequest r, string done)
     {
         var res = await Hub.Client.SendForAsync<BulkResult>(HttpMethod.Put, "/api/media/bulk", r);
-        BulkText = res is null ? "Niet gelukt." : string.Format(done, res.Changed) + " Ongedaan maken kan met Ctrl+Z.";
+        BulkText = res is null ? Tr.T("Niet gelukt.") : string.Format(done, res.Changed) + Tr.T(" Ongedaan maken kan met Ctrl+Z.");
         Refresh();
         await LoadUndoAsync();
     }
 
     private sealed record BulkResult(int Changed);
 
-    [RelayCommand] private Task BulkMove() => BulkCategory?.Id is long c ? Bulk(new MediaBulkRequest(SelectedIds, CategoryId: c), "{0} nummers verplaatst.") : Task.CompletedTask;
-    [RelayCommand] private Task BulkOn() => Bulk(new MediaBulkRequest(SelectedIds, Enabled: true), "{0} nummers aangezet.");
-    [RelayCommand] private Task BulkOff() => Bulk(new MediaBulkRequest(SelectedIds, Enabled: false), "{0} nummers uitgezet (worden niet meer ingepland).");
-    [RelayCommand] private Task BulkClearDates() => Bulk(new MediaBulkRequest(SelectedIds, ClearDates: true), "Geldigheid van {0} nummers gewist.");
+    [RelayCommand] private Task BulkMove() => BulkCategory?.Id is long c ? Bulk(new MediaBulkRequest(SelectedIds, CategoryId: c), Tr.T("{0} nummers verplaatst.")) : Task.CompletedTask;
+    [RelayCommand] private Task BulkOn() => Bulk(new MediaBulkRequest(SelectedIds, Enabled: true), Tr.T("{0} nummers aangezet."));
+    [RelayCommand] private Task BulkOff() => Bulk(new MediaBulkRequest(SelectedIds, Enabled: false), Tr.T("{0} nummers uitgezet (worden niet meer ingepland)."));
+    [RelayCommand] private Task BulkClearDates() => Bulk(new MediaBulkRequest(SelectedIds, ClearDates: true), Tr.T("Geldigheid van {0} nummers gewist."));
 
     private sealed record WrittenDto(int Written, List<string> Failed);
 
@@ -188,10 +189,10 @@ public sealed partial class LibraryTool : StudioTool
     {
         var ids = SelectedIds;
         if (ids.Count == 0) return;
-        BulkText = $"Tags schrijven in {ids.Count} bestanden…";
+        BulkText = Tr.F("Tags schrijven in {0} bestanden…", ids.Count);
         var r = await Hub.Client.SendForAsync<WrittenDto>(HttpMethod.Post, "/api/media/tags/write", new MediaIdsRequest(ids));
-        BulkText = r is null ? "Schrijven mislukt."
-            : $"Tags staan nu in {r.Written} bestanden." + (r.Failed.Count > 0 ? $" Niet gelukt: {string.Join("; ", r.Failed.Take(3))}" : "");
+        BulkText = r is null ? Tr.T("Schrijven mislukt.")
+            : Tr.F("Tags staan nu in {0} bestanden.", r.Written) + (r.Failed.Count > 0 ? " " + Tr.F("Niet gelukt: {0}", string.Join("; ", r.Failed.Take(3))) : "");
     }
 
     [RelayCommand]
@@ -199,7 +200,7 @@ public sealed partial class LibraryTool : StudioTool
     {
         int n = 0;
         foreach (var id in SelectedIds) if (await Hub.AddToLog(id, false)) n++;
-        BulkText = $"{n} nummers achteraan in de log gezet.";
+        BulkText = Tr.F("{0} nummers achteraan in de log gezet.", n);
     }
 
     /// <summary>What a double click (or a tap on the touchscreen) does, as chosen by the operator.</summary>
@@ -280,10 +281,10 @@ public sealed partial class LibraryTool : StudioTool
     [RelayCommand]
     private async Task SaveList()
     {
-        if (string.IsNullOrWhiteSpace(NewListName)) { BulkText = "Geef de lijst eerst een naam."; return; }
+        if (string.IsNullOrWhiteSpace(NewListName)) { BulkText = Tr.T("Geef de lijst eerst een naam."); return; }
         var saved = await Hub.Client.SendForAsync<SmartListDto>(HttpMethod.Post, "/api/library/lists",
             new SmartListRequest(NewListName.Trim(), Query, Category?.Id, Sort?.Key ?? ""));
-        if (saved is null) { BulkText = "Bewaren lukte niet."; return; }
+        if (saved is null) { BulkText = Tr.T("Bewaren lukte niet."); return; }
         ShowSaveList = false; NewListName = "";
         await LoadListsAsync();
         _applyingList = true; SmartList = SmartLists.FirstOrDefault(l => l.Id == saved.Id); _applyingList = false;
@@ -302,14 +303,14 @@ public sealed partial class LibraryTool : StudioTool
     {
         var u = await Hub.Client.GetAsync<UndoDto>("/api/media/undo");
         CanUndo = u is { Label.Length: > 0 };
-        UndoText = CanUndo ? $"↶ Ongedaan maken: {u!.Label}" : "";
+        UndoText = CanUndo ? Tr.F("↶ Ongedaan maken: {0}", u!.Label) : "";
     }
 
     [RelayCommand]
     private async Task Undo()
     {
         var u = await Hub.Client.SendForAsync<UndoDto>(HttpMethod.Post, "/api/media/undo", null);
-        BulkText = u is not { Label.Length: > 0 } ? "Niets meer om ongedaan te maken." : $"Teruggezet: {u.Label}.";
+        BulkText = u is not { Label.Length: > 0 } ? Tr.T("Niets meer om ongedaan te maken.") : Tr.F("Teruggezet: {0}.", u.Label);
         if (Detail is { } d) Detail = null; // shows the restored values once the list is fresh
         Refresh();
         await LoadUndoAsync();
@@ -364,7 +365,7 @@ public sealed partial class LibraryTool : StudioTool
         var body = Substitutes.Where(r => r.From.Trim().Length > 0 && r.To.Trim().Length > 0)
             .Select(r => new PathSubstituteDto(r.From.Trim(), r.To.Trim(), r.Enabled)).ToList();
         var saved = await Hub.Client.SendForAsync<List<PathSubstituteDto>>(HttpMethod.Put, "/api/library/substitutes", body);
-        SubstituteStatus = saved is null ? "Opslaan mislukt." : $"{saved.Count} vervangende locaties bewaard.";
+        SubstituteStatus = saved is null ? Tr.T("Opslaan mislukt.") : Tr.F("{0} vervangende locaties bewaard.", saved.Count);
         await LoadSubstitutesAsync();
     }
 
@@ -377,26 +378,26 @@ public sealed partial class LibraryTool : StudioTool
         {
             foreach (var r in Substitutes) r.ConfirmRelocate = false;
             row.ConfirmRelocate = true;
-            SubstituteStatus = $"Nog een keer klikken zet alle paden onder {row.From} definitief om naar {row.To} (alle gegevens blijven).";
+            SubstituteStatus = Tr.F("Nog een keer klikken zet alle paden onder {0} definitief om naar {1} (alle gegevens blijven).", row.From, row.To);
             return;
         }
         row.ConfirmRelocate = false;
         var (r2, error) = await Hub.Client.SendWithErrorAsync<RelocateResultDto>(HttpMethod.Post, "/api/library/relocate",
             new RelocateRequest(row.From.Trim(), row.To.Trim()));
-        SubstituteStatus = r2 is null ? error ?? "Omzetten mislukt."
-            : $"{r2.Changed} paden omgezet naar {row.To}; {r2.Found} daarvan staan er nu ook echt.";
+        SubstituteStatus = r2 is null ? error ?? Tr.T("Omzetten mislukt.")
+            : Tr.F("{0} paden omgezet naar {1}; {2} daarvan staan er nu ook echt.", r2.Changed, row.To, r2.Found);
         await LoadFoldersAsync();
     }
 
     [RelayCommand]
     private async Task AddFolder()
     {
-        if (string.IsNullOrWhiteSpace(NewFolderPath)) { FolderStatus = "Kies eerst een map, of typ een pad zoals \\\\server\\muziek."; return; }
-        FolderStatus = "Toevoegen…";
+        if (string.IsNullOrWhiteSpace(NewFolderPath)) { FolderStatus = Tr.T("Kies eerst een map, of typ een pad zoals \\\\server\\muziek."); return; }
+        FolderStatus = Tr.T("Toevoegen…");
         var (f, error) = await Hub.Client.SendWithErrorAsync<LibraryFolderDto>(HttpMethod.Post, "/api/library/folders",
             new LibraryFolderRequest(NewFolderPath.Trim(), NewFolderIsJingle ? "jingle" : "song", NewFolderCategory.Trim(), true, NewFolderWriteTags));
-        if (f is null) { FolderStatus = error ?? "Toevoegen mislukt."; return; }
-        FolderStatus = $"{f.Path} toegevoegd. De bestanden worden nu ingelezen en gemeten; bekende nummers worden herkend.";
+        if (f is null) { FolderStatus = error ?? Tr.T("Toevoegen mislukt."); return; }
+        FolderStatus = Tr.F("{0} toegevoegd. De bestanden worden nu ingelezen en gemeten; bekende nummers worden herkend.", f.Path);
         NewFolderPath = ""; NewFolderCategory = "";
         await LoadFoldersAsync();
     }
@@ -459,15 +460,15 @@ public sealed partial class LibraryTool : StudioTool
 
     protected override void OnFirstShow()
     {
-        Chips.Add(new FilterChip(this, "Mag nu", "is:mag", "Alleen wat nu ingepland mag worden (rotatie, geldigheid, aanwezig)"));
-        Chips.Add(new FilterChip(this, "Nieuw", "is:nieuw", "De laatste 30 dagen toegevoegd"));
-        Chips.Add(new FilterChip(this, "Nooit gespeeld", "is:nooit", "Nog nooit uitgezonden"));
-        Chips.Add(new FilterChip(this, "Lang niet gespeeld", "is:lang", "Meer dan 30 dagen niet uitgezonden"));
-        Chips.Add(new FilterChip(this, "Korter dan 3:30", "duur:<3:30", "Handig vlak voor het nieuws of een vaste tijd"));
-        Chips.Add(new FilterChip(this, "Zonder cues", "is:zondercues", "Cues nog niet met de hand nagekeken"));
-        Chips.Add(new FilterChip(this, "Mag nu niet", "is:geblokkeerd", "Mag nu niet: rotatie, verlopen, uitgezet of bestand weg"));
-        Chips.Add(new FilterChip(this, "Aandacht nodig", "is:aandacht", "Kwaliteitscontrole: te zacht of te hard, clipping, stilte, lage bitrate of dubbel"));
-        Chips.Add(new FilterChip(this, "Ontbreekt", "is:ontbreekt", "Het bestand staat niet meer in de map"));
+        Chips.Add(new FilterChip(this, Tr.T("Mag nu"), Tr.T("is:mag"), Tr.T("Alleen wat nu ingepland mag worden (rotatie, geldigheid, aanwezig)")));
+        Chips.Add(new FilterChip(this, Tr.T("Nieuw"), Tr.T("is:nieuw"), Tr.T("De laatste 30 dagen toegevoegd")));
+        Chips.Add(new FilterChip(this, Tr.T("Nooit gespeeld"), Tr.T("is:nooit"), Tr.T("Nog nooit uitgezonden")));
+        Chips.Add(new FilterChip(this, Tr.T("Lang niet gespeeld"), Tr.T("is:lang"), Tr.T("Meer dan 30 dagen niet uitgezonden")));
+        Chips.Add(new FilterChip(this, Tr.T("Korter dan 3:30"), "duur:<3:30", Tr.T("Handig vlak voor het nieuws of een vaste tijd")));
+        Chips.Add(new FilterChip(this, Tr.T("Zonder cues"), Tr.T("is:zondercues"), Tr.T("Cues nog niet met de hand nagekeken")));
+        Chips.Add(new FilterChip(this, Tr.T("Mag nu niet"), Tr.T("is:geblokkeerd"), Tr.T("Mag nu niet: rotatie, verlopen, uitgezet of bestand weg")));
+        Chips.Add(new FilterChip(this, Tr.T("Aandacht nodig"), Tr.T("is:aandacht"), Tr.T("Kwaliteitscontrole: te zacht of te hard, clipping, stilte, lage bitrate of dubbel")));
+        Chips.Add(new FilterChip(this, Tr.T("Ontbreekt"), Tr.T("is:ontbreekt"), Tr.T("Het bestand staat niet meer in de map")));
         Decade = Decades[0];
         LoadFields();
         _showDetails = Hub.Settings.LibraryDetails;
@@ -487,7 +488,7 @@ public sealed partial class LibraryTool : StudioTool
 
     protected override void OnState(StateDto s)
     {
-        Status = $"{s.Library.Songs} nummers · {s.Library.Jingles} jingles · {s.Library.Status}";
+        Status = Tr.F("{0} nummers · {1} jingles · {2}", s.Library.Songs, s.Library.Jingles, s.Library.Status);
         if (Detail is { } d) d.Playhead = s.Pfl.MediaId == d.Id && s.Pfl.State is "playing" or "paused" ? s.Pfl.Position : -1;
         PflActive = s.Pfl.State is "playing" or "paused";
         PflPlayingNow = s.Pfl.State == "playing";
@@ -507,7 +508,7 @@ public sealed partial class LibraryTool : StudioTool
     {
         var keep = Category?.Id;
         CategoryChoices.Clear();
-        CategoryChoices.Add(new CategoryChoice(null, "Alle categorieën"));
+        CategoryChoices.Add(new CategoryChoice(null, Tr.T("Alle categorieën")));
         foreach (var c in Hub.Categories) CategoryChoices.Add(new CategoryChoice(c.Id, $"{c.Name} ({(c.Kind == "jingle" ? "jingle" : "muziek")})"));
         Category = CategoryChoices.FirstOrDefault(c => c.Id == keep) ?? CategoryChoices[0];
     }
@@ -540,8 +541,8 @@ public sealed partial class LibraryTool : StudioTool
                 if (Detail is { } d && Items.FirstOrDefault(i => i.Id == d.Id) is { } fresh && fresh != d.Media && ShowDetails) Detail = new MediaDetailVm(this, fresh) { SaveText = d.SaveText };
                 int blocked = items.Count(i => !i.Allowed);
                 ResultText = items.Count == 0
-                    ? (Query.Length > 0 ? "Niets gevonden. Typ ? voor de zoekmogelijkheden." : "De bibliotheek is leeg.")
-                    : $"{items.Count}{(items.Count >= 1000 ? "+" : "")} gevonden" + (blocked > 0 ? $" · {blocked} mogen nu niet" : "");
+                    ? (Query.Length > 0 ? Tr.T("Niets gevonden. Typ ? voor de zoekmogelijkheden.") : Tr.T("De bibliotheek is leeg."))
+                    : Tr.F("{0}{1} gevonden", items.Count, items.Count >= 1000 ? "+" : "") + (blocked > 0 ? Tr.F(" · {0} mogen nu niet", blocked) : "");
             });
         }, cts.Token);
     }
@@ -605,7 +606,7 @@ public sealed partial class LibraryTool : StudioTool
         foreach (var m in rows)
             if (await Hub.Client.SendForAsync<MediaDto>(HttpMethod.Put, $"/api/media/{m.Id}/kind",
                     new MediaKindRequest(m.Kind == "jingle" ? "song" : "jingle")) is not null) n++;
-        BulkText = n == rows.Count ? $"{n} omgezet (muziek ↔ jingle)." : $"{n} van {rows.Count} omgezet.";
+        BulkText = n == rows.Count ? Tr.F("{0} omgezet (muziek ↔ jingle).", n) : Tr.F("{0} van {1} omgezet.", n, rows.Count);
         Refresh();
         await LoadUndoAsync();
     }

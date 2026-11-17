@@ -1,3 +1,4 @@
+using ReaRadioDj.Contracts.Localization;
 using System.Collections.ObjectModel;
 using System.Globalization;
 using Avalonia.Media;
@@ -68,7 +69,7 @@ public sealed partial class EventRow : ObservableObject
     public string Kind { get; }
     public bool IsVolume => Kind == "volume";
     public bool IsCommand => !IsVolume;
-    public string Title => IsVolume ? "Volume" : "Opdracht";
+    public string Title => IsVolume ? Tr.T("Volume") : Tr.T("Opdracht");
     public Color Color => Color.Parse(IsVolume ? "#38BDF8" : "#E879F9");
     public IBrush Brush => new SolidColorBrush(Color);
     /// <summary>Short text on the waveform.</summary>
@@ -117,20 +118,20 @@ public sealed partial class EventRow : ObservableObject
 /// </summary>
 public sealed partial class CueEditorTool : StudioTool
 {
-    public CueEditorTool() : base("cues", "Cue-editor")
+    public CueEditorTool() : base("cues", Tr.T("Cue-editor"))
     {
         Rows =
         [
-            new(this, "cueIn", "In", "#3DBD7D", false, "eerste geluid; hier begint het item"),
-            new(this, "fullLevel", "Vol", "#2DD4BF", true, "einde van de fade-in"),
-            new(this, "intro", "Intro", "#F0B429", true, "einde intro: tot hier kan de presentator praten"),
-            new(this, "intro2", "Intro 2", "#FBBF24", true, "tweede intro-punt (bijv. na de eerste zanglijn)"),
-            new(this, "outro", "Outro", "#FB923C", true, "begin van het instrumentale einde"),
-            new(this, "fadeOut", "Fade", "#F472B6", true, "hier begint de fade-out"),
-            new(this, "mix", "Mix", "#E5484D", false, "hier start het volgende item"),
-            new(this, "cueOut", "Uit", "#A1A1AA", false, "laatste geluid"),
-            new(this, "hookIn", "Hook in", "#A78BFA", true, "begin herkenbaar fragment (teasers)"),
-            new(this, "hookOut", "Hook uit", "#8B5CF6", true, "einde herkenbaar fragment"),
+            new(this, "cueIn", Tr.T("In"), "#3DBD7D", false, Tr.T("eerste geluid; hier begint het item")),
+            new(this, "fullLevel", Tr.T("Vol"), "#2DD4BF", true, Tr.T("einde van de fade-in")),
+            new(this, "intro", Tr.T("Intro"), "#F0B429", true, Tr.T("einde intro: tot hier kan de presentator praten")),
+            new(this, "intro2", Tr.T("Intro 2"), "#FBBF24", true, Tr.T("tweede intro-punt (bijv. na de eerste zanglijn)")),
+            new(this, "outro", "Outro", "#FB923C", true, Tr.T("begin van het instrumentale einde")),
+            new(this, "fadeOut", Tr.T("Fade"), "#F472B6", true, Tr.T("hier begint de fade-out")),
+            new(this, "mix", "Mix", "#E5484D", false, Tr.T("hier start het volgende item")),
+            new(this, "cueOut", Tr.T("Uit"), "#A1A1AA", false, Tr.T("laatste geluid")),
+            new(this, "hookIn", Tr.T("Hook in"), "#A78BFA", true, Tr.T("begin herkenbaar fragment (teasers)")),
+            new(this, "hookOut", Tr.T("Hook uit"), "#8B5CF6", true, Tr.T("einde herkenbaar fragment")),
         ];
     }
 
@@ -142,7 +143,7 @@ public sealed partial class CueEditorTool : StudioTool
     [ObservableProperty] private IReadOnlyList<WaveMarker> _markers = [];
     [ObservableProperty] private double _cursor;
     [ObservableProperty] private double _playhead = -1;
-    [ObservableProperty] private string _heading = "Geen item gekozen";
+    [ObservableProperty] private string _heading = Tr.T("Geen item gekozen");
     [ObservableProperty] private string _info = "";
     [ObservableProperty] private string _cursorText = "0:00.000";
     [ObservableProperty] private bool _dirty;
@@ -174,8 +175,8 @@ public sealed partial class CueEditorTool : StudioTool
         _loading = true;
         Media = media;
         Heading = media.DisplayName;
-        Info = $"{media.Category} · {Format(media.Duration)} · {(media.Lufs is double l ? $"{l:0.0} LUFS" : "luidheid onbekend")}" +
-               (media.CuesManual ? " · handmatig aangepast" : " · automatisch bepaald");
+        Info = $"{media.Category} · {Format(media.Duration)} · {(media.Lufs is double l ? $"{l:0.0} LUFS" : Tr.T("luidheid onbekend"))}" +
+               (media.CuesManual ? Tr.T(" · handmatig aangepast") : Tr.T(" · automatisch bepaald"));
         if (peaks is not null)
         {
             var bytes = Convert.FromBase64String(peaks.Data);
@@ -285,7 +286,7 @@ public sealed partial class CueEditorTool : StudioTool
         var events = Events.Select(e => e.ToDto()).Where(e => e.Kind == "volume" || !string.IsNullOrWhiteSpace(e.Text)).ToList();
         saved = await Hub.Client.SendForAsync<MediaDto>(HttpMethod.Put, $"/api/media/{Media.Id}/events", events) ?? saved;
         await LoadAsync(saved.Id);
-        Hub.Status = $"cues opgeslagen: {saved.DisplayName}";
+        Hub.Status = Tr.F("cues opgeslagen: {0}", saved.DisplayName);
         Hub.NotifyLibraryChanged();
     }
 

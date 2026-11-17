@@ -1,3 +1,4 @@
+using ReaRadioDj.Contracts.Localization;
 using System.Collections.ObjectModel;
 using System.Globalization;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -20,7 +21,7 @@ public sealed partial class ItemTool : StudioTool
 
     /// <summary>True = the item ON AIR; false = the item selected in the library.</summary>
     [ObservableProperty] private bool _followOnAir = true;
-    [ObservableProperty] private string _heading = "Nog geen item";
+    [ObservableProperty] private string _heading = Tr.T("Nog geen item");
     [ObservableProperty] private string _sub = "";
     [ObservableProperty] private string _kind = "";
     public ObservableCollection<ItemField> Fields { get; } = [];
@@ -50,7 +51,7 @@ public sealed partial class ItemTool : StudioTool
         var c = s.Engine.Current;
         if (c is null || c.MediaId <= 0)
         {
-            if (_shown is not null || Fields.Count == 0) { _shown = null; Clear(c?.Label ?? "Niets ON AIR"); }
+            if (_shown is not null || Fields.Count == 0) { _shown = null; Clear(c?.Label ?? Tr.T("Niets ON AIR")); }
             return;
         }
         if (_shown == c.MediaId) return;
@@ -79,29 +80,29 @@ public sealed partial class ItemTool : StudioTool
         Heading = string.IsNullOrWhiteSpace(m.Title) ? Path.GetFileNameWithoutExtension(m.Path) : m.Title;
         Sub = string.Join(" · ", new[] { m.Artist, m.Album }.Where(t => !string.IsNullOrWhiteSpace(t)));
         Kind = m.Kind;
-        var nl = CultureInfo.GetCultureInfo("nl-NL");
+        var nl = Contracts.Localization.Tr.Culture;
         var c = m.Cues;
         var rows = new List<ItemField>
         {
-            new("Categorie", m.Category),
-            new("Jaar", m.Year?.ToString(nl) ?? ""),
-            new("Genre", m.Genre),
-            new("Lengte", StudioHub.Time(c.CueOut - c.CueIn)),
-            new("Intro", c.Intro is double i && i > c.CueIn ? StudioHub.TimeTenths(i - c.CueIn) : m.EstIntro is double e ? $"± {StudioHub.TimeTenths(e)}" : ""),
-            new("Mixpunt", StudioHub.Time(c.Mix - c.CueIn)),
-            new("Tempo", m.Bpm is double b ? $"{b.ToString("0.#", nl)} BPM" : ""),
-            new("Toonsoort", string.Join(" · ", new[] { m.Key, m.Camelot }.Where(t => !string.IsNullOrWhiteSpace(t)))),
-            new("Luidheid", m.Lufs is double l ? $"{l.ToString("0.0", nl)} LUFS" : ""),
-            new("Energie", m.EnergyLevel is int en ? $"{en} / 10" : ""),
-            new("Stemming", m.Mood),
-            new("Taal", m.Language),
-            new("Gespeeld", m.PlayCount == 0 ? "nog nooit" : $"{m.PlayCount}×" + (m.LastPlayed is DateTime lp ? $", laatst {lp.ToLocalTime().ToString("d MMM yyyy HH:mm", nl)}" : "")),
-            new("Toegevoegd", m.Added?.ToLocalTime().ToString("d MMM yyyy", nl) ?? ""),
-            new("Geldig", m.ValidFrom is null && m.ValidUntil is null ? "" :
+            new(Tr.T("Categorie"), m.Category),
+            new(Tr.T("Jaar"), m.Year?.ToString(nl) ?? ""),
+            new(Tr.T("Genre"), m.Genre),
+            new(Tr.T("Lengte"), StudioHub.Time(c.CueOut - c.CueIn)),
+            new(Tr.T("Intro"), c.Intro is double i && i > c.CueIn ? StudioHub.TimeTenths(i - c.CueIn) : m.EstIntro is double e ? $"± {StudioHub.TimeTenths(e)}" : ""),
+            new(Tr.T("Mixpunt"), StudioHub.Time(c.Mix - c.CueIn)),
+            new(Tr.T("Tempo"), m.Bpm is double b ? $"{b.ToString("0.#", nl)} BPM" : ""),
+            new(Tr.T("Toonsoort"), string.Join(" · ", new[] { m.Key, m.Camelot }.Where(t => !string.IsNullOrWhiteSpace(t)))),
+            new(Tr.T("Luidheid"), m.Lufs is double l ? $"{l.ToString("0.0", nl)} LUFS" : ""),
+            new(Tr.T("Energie"), m.EnergyLevel is int en ? $"{en} / 10" : ""),
+            new(Tr.T("Stemming"), m.Mood),
+            new(Tr.T("Taal"), m.Language),
+            new(Tr.T("Gespeeld"), m.PlayCount == 0 ? Tr.T("nog nooit") : $"{m.PlayCount}×" + (m.LastPlayed is DateTime lp ? Tr.F(", laatst {0}", lp.ToLocalTime().ToString("d MMM yyyy HH:mm", nl)) : "")),
+            new(Tr.T("Toegevoegd"), m.Added?.ToLocalTime().ToString("d MMM yyyy", nl) ?? ""),
+            new(Tr.T("Geldig"), m.ValidFrom is null && m.ValidUntil is null ? "" :
                 $"{m.ValidFrom?.ToString("d MMM yyyy", nl) ?? "…"} t/m {m.ValidUntil?.ToString("d MMM yyyy", nl) ?? "…"}"),
-            new("Kwaliteit", m.Bitrate is int br ? $"{br} kbit/s" : ""),
-            new("Let op", m.Missing ? "bestand niet gevonden" : m.Issues is { Count: > 0 } iss ? string.Join(", ", iss) : ""),
-            new("Bestand", m.Path),
+            new(Tr.T("Kwaliteit"), m.Bitrate is int br ? Tr.F("{0} kbit/s", br) : ""),
+            new(Tr.T("Let op"), m.Missing ? Tr.T("bestand niet gevonden") : m.Issues is { Count: > 0 } iss ? string.Join(", ", iss) : ""),
+            new(Tr.T("Bestand"), m.Path),
         };
         Fields.Clear();
         foreach (var r in rows.Where(r => !string.IsNullOrWhiteSpace(r.Value))) Fields.Add(r);

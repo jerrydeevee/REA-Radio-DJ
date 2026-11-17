@@ -1,3 +1,4 @@
+using ReaRadioDj.Contracts.Localization;
 using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -13,7 +14,7 @@ namespace ReaRadioDj.Studio.ViewModels;
 /// </summary>
 public sealed partial class WishlistTool : StudioTool
 {
-    public static readonly string[] Filters = ["Alles", "Ontbreekt nog", "In de bibliotheek"];
+    public static readonly string[] Filters = [Tr.T("Alles"), Tr.T("Ontbreekt nog"), Tr.T("In de bibliotheek")];
     private List<WishItemDto> _all = [];
 
     public WishlistTool() : base("wishlist", "Wensenlijst (Spotify)") { }
@@ -44,18 +45,18 @@ public sealed partial class WishlistTool : StudioTool
         _all = list;
         var keep = Playlist;
         Playlists.Clear();
-        Playlists.Add("(alle playlists)");
+        Playlists.Add(Tr.T("(alle playlists)"));
         foreach (var p in status.Playlists) Playlists.Add(p);
         Playlist = Playlists.Contains(keep ?? "") ? keep : Playlists[0];
-        Status = status.Total == 0 ? "nog leeg: plak een link naar een openbare Spotify-playlist"
-            : $"{status.Total} nummers · {status.InLibrary} in de bibliotheek · {status.Total - status.InLibrary} ontbreken";
+        Status = status.Total == 0 ? Tr.T("nog leeg: plak een link naar een openbare Spotify-playlist")
+            : Tr.F("{0} nummers · {1} in de bibliotheek · {2} ontbreken", status.Total, status.InLibrary, status.Total - status.InLibrary);
         Fill();
     }
 
     private void Fill()
     {
         IEnumerable<WishItemDto> q = _all;
-        if (Playlist is { } p && p != "(alle playlists)") q = q.Where(w => w.Playlist == p);
+        if (Playlist is { } p && p != Tr.T("(alle playlists)")) q = q.Where(w => w.Playlist == p);
         q = Filter switch { 1 => q.Where(w => !w.InLibrary), 2 => q.Where(w => w.InLibrary), _ => q };
         Items.Clear();
         foreach (var w in q) Items.Add(w);
@@ -66,16 +67,16 @@ public sealed partial class WishlistTool : StudioTool
     {
         if (Busy || string.IsNullOrWhiteSpace(Link)) return;
         Busy = true;
-        Status = "playlist ophalen bij Spotify…";
+        Status = Tr.T("playlist ophalen bij Spotify…");
         try
         {
             var r = await Hub.Client.SendForAsync<WishImportResultDto>(HttpMethod.Post, "/api/wishlist/import", new WishImportRequest(Link));
-            if (r is null) { Status = "geen antwoord van de engine"; return; }
-            if (!r.Ok) { Status = r.Error ?? "import mislukt"; return; }
+            if (r is null) { Status = Tr.T("geen antwoord van de engine"); return; }
+            if (!r.Ok) { Status = r.Error ?? Tr.T("import mislukt"); return; }
             Link = "";
             await ReloadAsync();
             Playlist = r.Playlist;
-            Status = $"'{r.Playlist}': {r.Total} nummers ({r.Added} nieuw) · {r.InLibrary} al in de bibliotheek · {r.Total - r.InLibrary} ontbreken";
+            Status = Tr.F("'{0}': {1} nummers ({2} nieuw) · {3} al in de bibliotheek · {4} ontbreken", r.Playlist, r.Total, r.Added, r.InLibrary, r.Total - r.InLibrary);
         }
         finally { Busy = false; }
     }
@@ -97,7 +98,7 @@ public sealed partial class WishlistTool : StudioTool
         int n = 0;
         foreach (var w in Items.Where(w => w.MediaId is not null).ToList())
             if (await Hub.AddToLog(w.MediaId!.Value, false)) n++;
-        Hub.Status = $"{n} nummers achteraan in de log gezet";
+        Hub.Status = Tr.F("{0} nummers achteraan in de log gezet", n);
     }
 
     [RelayCommand]
@@ -109,7 +110,7 @@ public sealed partial class WishlistTool : StudioTool
     [RelayCommand]
     private async Task DeletePlaylist()
     {
-        if (Playlist is not { } p || p == "(alle playlists)") return;
+        if (Playlist is not { } p || p == Tr.T("(alle playlists)")) return;
         if (await Hub.Client.DeleteAsync($"/api/wishlist?playlist={Uri.EscapeDataString(p)}")) { Playlist = null; await ReloadAsync(); }
     }
 

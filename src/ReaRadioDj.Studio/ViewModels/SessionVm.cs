@@ -1,3 +1,4 @@
+using ReaRadioDj.Contracts.Localization;
 using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -39,8 +40,8 @@ public sealed partial class SessionVm : ObservableObject
     [ObservableProperty] private bool _canClose;
     public ObservableCollection<string> Names { get; } = [];
 
-    public string Title => Locked ? "Studio vergrendeld" : "Aanmelden";
-    public string ActionText => Locked ? "Ontgrendelen" : "Aanmelden";
+    public string Title => Locked ? Tr.T("Studio vergrendeld") : Tr.T("Aanmelden");
+    public string ActionText => Locked ? "Ontgrendelen" : Tr.T("Aanmelden");
 
     /// <summary>Asks the engine who is signed in and whether there are users; shows the sign-in screen when needed.</summary>
     public async Task RefreshAsync()
@@ -77,14 +78,14 @@ public sealed partial class SessionVm : ObservableObject
     private async Task SignIn()
     {
         if (Busy) return;
-        if (string.IsNullOrWhiteSpace(Name)) { Error = "Kies je naam."; return; }
-        if (Pin.Length == 0) { Error = "Typ je pincode."; return; }
+        if (string.IsNullOrWhiteSpace(Name)) { Error = Tr.T("Kies je naam."); return; }
+        if (Pin.Length == 0) { Error = Tr.T("Typ je pincode."); return; }
         Busy = true;
         try
         {
             var (s, error) = await _hub.Client.SendWithErrorAsync<SessionDto>(HttpMethod.Post, "/api/users/login", new LoginRequest(Name, Pin));
             Pin = "";
-            if (s is null) { Error = error ?? "Niet gelukt."; return; }
+            if (s is null) { Error = error ?? Tr.T("Niet gelukt."); return; }
             var old = _token;
             _token = s.Token;
             _hub.Client.SetSession(s.Token);
@@ -93,7 +94,7 @@ public sealed partial class SessionVm : ObservableObject
             Error = "";
             Open = false;
             Locked = false;
-            _hub.Status = $"Aangemeld als {s.Name} ({s.Role}).";
+            _hub.Status = Tr.F("Aangemeld als {0} ({1}).", s.Name, s.Role);
         }
         finally { Busy = false; }
     }
@@ -120,7 +121,7 @@ public sealed partial class SessionVm : ObservableObject
     [RelayCommand]
     private void Lock()
     {
-        if (!_hub.UsersActive) { _hub.Status = "Vergrendelen kan als er gebruikers zijn (Instellingen › Gebruikers)."; return; }
+        if (!_hub.UsersActive) { _hub.Status = Tr.T("Vergrendelen kan als er gebruikers zijn (Instellingen › Gebruikers)."); return; }
         if (_hub.UserName.Length == 0) { ShowSignIn(); return; }
         Name = _hub.UserName;
         Pin = "";
@@ -143,7 +144,7 @@ public sealed partial class SessionVm : ObservableObject
     private async Task ShowSignInScreen()
     {
         await RefreshAsync();
-        if (!_hub.UsersActive) { _hub.Status = "Er zijn nog geen gebruikers; maak ze aan bij Instellingen › Gebruikers."; return; }
+        if (!_hub.UsersActive) { _hub.Status = Tr.T("Er zijn nog geen gebruikers; maak ze aan bij Instellingen › Gebruikers."); return; }
         ShowSignIn();
     }
 

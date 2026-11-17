@@ -1,3 +1,4 @@
+using ReaRadioDj.Contracts.Localization;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -24,7 +25,7 @@ public sealed partial class CentralVm : ObservableObject
 
     public bool IsStudio => Mode == "studio";
     public bool IsOn => Mode != "uit";
-    public string KeyWatermark => HasKey ? "(bewaard; leeg laten houdt het)" : "het bedieningswachtwoord van de bibliotheek-engine";
+    public string KeyWatermark => HasKey ? Tr.T("(bewaard; leeg laten houdt het)") : Tr.T("het bedieningswachtwoord van de bibliotheek-engine");
     partial void OnModeChanged(string value) { OnPropertyChanged(nameof(IsStudio)); OnPropertyChanged(nameof(IsOn)); }
     partial void OnHasKeyChanged(bool value) => OnPropertyChanged(nameof(KeyWatermark));
 
@@ -53,9 +54,9 @@ public sealed partial class CentralVm : ObservableObject
         if (st.Mode == "studio")
         {
             if (st.Result is { } r) lines.Add(r);
-            if (st.Fetching > 0) lines.Add($"Nog {st.Fetching} bestanden op te halen" + (st.Fetched is { } f ? $" ({f})" : ""));
+            if (st.Fetching > 0) lines.Add(Tr.F("Nog {0} bestanden op te halen", st.Fetching) + (st.Fetched is { } f ? $" ({f})" : ""));
             else if (st.Fetched is { } f) lines.Add(f);
-            if (st.Error is { } e) lines.Add("Fout: " + e);
+            if (st.Error is { } e) lines.Add(Tr.T("Fout: ") + e);
         }
         Detail = string.Join(Environment.NewLine, lines);
     }
@@ -66,7 +67,7 @@ public sealed partial class CentralVm : ObservableObject
         if (!Loaded) return null;
         var (saved, error) = await StudioHub.Current.Client.SendWithErrorAsync<CentralSettingsDto>(HttpMethod.Put, "/api/central/settings",
             new CentralSettingsDto(Mode, Address.Trim(), Key, HasKey, (int)(IntervalMinutes ?? 15), AlwaysFetch));
-        if (error is not null) return Result = "Centrale bibliotheek niet opgeslagen: " + VoipLineVm.ErrorText(error);
+        if (error is not null) return Result = Tr.T("Centrale bibliotheek niet opgeslagen: ") + VoipLineVm.ErrorText(error);
         if (saved is not null) Fill(saved);
         Result = "";
         await RefreshAsync();
@@ -77,7 +78,7 @@ public sealed partial class CentralVm : ObservableObject
     private async Task SyncNow()
     {
         var (_, error) = await StudioHub.Current.Client.SendWithErrorAsync<object>(HttpMethod.Post, "/api/central/sync", null);
-        Result = error is null ? "" : "Niet gelukt: " + VoipLineVm.ErrorText(error);
+        Result = error is null ? "" : Tr.T("Niet gelukt: ") + VoipLineVm.ErrorText(error);
         await RefreshAsync();
     }
 }

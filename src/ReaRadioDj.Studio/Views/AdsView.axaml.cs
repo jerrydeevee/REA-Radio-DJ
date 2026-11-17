@@ -1,3 +1,4 @@
+using ReaRadioDj.Contracts.Localization;
 using Avalonia.Controls;
 using ReaRadioDj.Studio.ViewModels;
 
@@ -11,15 +12,15 @@ public partial class AdsView : UserControl
         MediaDrag.Bind(this);
         Export.Click += async (_, _) =>
         {
-            if (DataContext is AdsTool t) await FileSave.FromEngineAsync(this, "Uitzendbewijs opslaan", t.ProofFileName, t.ProofUrl);
+            if (DataContext is AdsTool t) await FileSave.FromEngineAsync(this, Tr.T("Uitzendbewijs opslaan"), t.ProofFileName, t.ProofUrl);
         };
         ExportReport.Click += async (_, _) =>
         {
-            if (DataContext is AdsTool t) await FileSave.FromEngineAsync(this, "Reclamerapport opslaan", t.ReportFileName, t.ReportUrl);
+            if (DataContext is AdsTool t) await FileSave.FromEngineAsync(this, Tr.T("Reclamerapport opslaan"), t.ReportFileName, t.ReportUrl);
         };
         ExportJson.Click += async (_, _) =>
         {
-            if (DataContext is AdsTool t) await FileSave.FromEngineAsync(this, "Uitzendbewijs als JSON opslaan", t.JsonFileName, t.JsonUrl);
+            if (DataContext is AdsTool t) await FileSave.FromEngineAsync(this, Tr.T("Uitzendbewijs als JSON opslaan"), t.JsonFileName, t.JsonUrl);
         };
     }
 }

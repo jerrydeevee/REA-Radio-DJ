@@ -1,3 +1,4 @@
+using ReaRadioDj.Contracts.Localization;
 using System.Collections.ObjectModel;
 using System.Net.Http;
 using System.Net.WebSockets;
@@ -37,7 +38,7 @@ public sealed partial class SoloistTool : StudioTool
 
     static SoloistTool() => Images.DefaultRequestHeaders.UserAgent.ParseAdd("REA-Radio-DJ/0.1 (+https://github.com/jerrydeevee/REA-Radio-DJ)");
 
-    public SoloistTool() : base("soloist", "Soloist (ontwikkeltest)") { }
+    public SoloistTool() : base("soloist", Tr.T("Soloist (ontwikkeltest)")) { }
 
     private ReaRadioDj.Studio.Services.SoloistSettings Settings => Hub.Settings.Soloist;
 
@@ -64,7 +65,7 @@ public sealed partial class SoloistTool : StudioTool
         {
             if (!Connecting) await Connect();
             if (Connected) return;
-            SetState(i < 7 ? "Wachten op Soloist…" : $"Geen Soloist op {Address}: start hem bij Instellingen → Spotify of zelf.", bad: i == 7);
+            SetState(i < 7 ? Tr.T("Wachten op Soloist…") : Tr.F("Geen Soloist op {0}: start hem bij Instellingen → Spotify of zelf.", Address), bad: i == 7);
             await Task.Delay(2000);
         }
     }
@@ -85,24 +86,24 @@ public sealed partial class SoloistTool : StudioTool
     {
         Disconnect();
         ReaRadioDj.Studio.Services.SoloistLauncher.Stop();
-        SetState("Soloist gestopt.");
+        SetState(Tr.T("Soloist gestopt."));
     }
 
     public ObservableCollection<SoloistQueueRow> Queue { get; } = [];
     public ObservableCollection<string> Log { get; } = [];
 
-    public string StartCommand => "soloist.exe --device-name \"REA ontwikkeltest\" --api-key %SOLOIST_API_KEY% --ws " + Address.Trim();
+    public string StartCommand => Tr.T("soloist.exe --device-name \"REA ontwikkeltest\" --api-key %SOLOIST_API_KEY% --ws ") + Address.Trim();
 
     [ObservableProperty] [NotifyPropertyChangedFor(nameof(StartCommand))] private string _address = "127.0.0.1:9090";
     [ObservableProperty] private bool _connected;
     [ObservableProperty] private bool _connecting;
-    [ObservableProperty] private string _connectText = "Verbinden";
-    [ObservableProperty] private string _state = "Niet verbonden.";
+    [ObservableProperty] private string _connectText = Tr.T("Verbinden");
+    [ObservableProperty] private string _state = Tr.T("Niet verbonden.");
     [ObservableProperty] [NotifyPropertyChangedFor(nameof(StateNeutral))] private bool _stateOk;
     [ObservableProperty] [NotifyPropertyChangedFor(nameof(StateNeutral))] private bool _stateBad;
     public bool StateNeutral => !StateOk && !StateBad;
     [ObservableProperty] private bool _loggedIn;
-    [ObservableProperty] private string _title = "Niets aan het spelen";
+    [ObservableProperty] private string _title = Tr.T("Niets aan het spelen");
     [ObservableProperty] private string _artist = "";
     [ObservableProperty] private string _album = "";
     [ObservableProperty] private string _context = "";
@@ -159,12 +160,12 @@ public sealed partial class SoloistTool : StudioTool
         if (Connected || Connecting) { Disconnect(); return; }
         if (ParseAddress(Address) is not { } uri)
         {
-            SetState("Gebruik een adres op deze computer, bijv. 127.0.0.1:9090 (de Soloist-WebSocket heeft geen beveiliging).", bad: true);
+            SetState(Tr.T("Gebruik een adres op deze computer, bijv. 127.0.0.1:9090 (de Soloist-WebSocket heeft geen beveiliging)."), bad: true);
             return;
         }
         Connecting = true;
-        ConnectText = "Stoppen";
-        SetState($"verbinden met {uri}…");
+        ConnectText = Tr.T("Stoppen");
+        SetState(Tr.F("verbinden met {0}…", uri));
         var cts = new CancellationTokenSource();
         var socket = new ClientWebSocket();
         _cts = cts;
@@ -179,8 +180,8 @@ public sealed partial class SoloistTool : StudioTool
             Connected = true;
             Connecting = false;
             ConnectText = "Verbreken";
-            SetState("Verbonden met Soloist; wachten op de aanmelding…");
-            Note($"verbonden met {uri}");
+            SetState(Tr.T("Verbonden met Soloist; wachten op de aanmelding…"));
+            Note(Tr.F("verbonden met {0}", uri));
             _clock ??= new DispatcherTimer(TimeSpan.FromMilliseconds(250), DispatcherPriority.Background, (_, _) => Tick());
             _clock.Start();
             _ = ReceiveLoop(socket, cts.Token);
@@ -189,8 +190,8 @@ public sealed partial class SoloistTool : StudioTool
         catch (Exception ex) when (ex is WebSocketException or OperationCanceledException or HttpRequestException)
         {
             Disconnect();
-            SetState($"Geen Soloist op {uri}: draait soloist.exe met --ws {uri.Authority}?", bad: true);
-            Note("verbinden: " + ex.Message);
+            SetState(Tr.F("Geen Soloist op {0}: draait soloist.exe met --ws {1}?", uri, uri.Authority), bad: true);
+            Note(Tr.T("verbinden: ") + ex.Message);
         }
     }
 
@@ -203,8 +204,8 @@ public sealed partial class SoloistTool : StudioTool
         _cts = null;
         _clock?.Stop();
         Connected = Connecting = LoggedIn = false;
-        ConnectText = "Verbinden";
-        if (!StateBad) SetState("Niet verbonden.");
+        ConnectText = Tr.T("Verbinden");
+        if (!StateBad) SetState(Tr.T("Niet verbonden."));
     }
 
     private async Task ReceiveLoop(ClientWebSocket socket, CancellationToken ct)
@@ -230,8 +231,8 @@ public sealed partial class SoloistTool : StudioTool
         {
             if (_socket != socket) return;
             Disconnect();
-            SetState("Soloist heeft de verbinding verbroken.", bad: true);
-            Note("verbinding verbroken");
+            SetState(Tr.T("Soloist heeft de verbinding verbroken."), bad: true);
+            Note(Tr.T("verbinding verbroken"));
         });
     }
 
@@ -253,7 +254,7 @@ public sealed partial class SoloistTool : StudioTool
     {
         JsonNode? e;
         try { e = JsonNode.Parse(text); }
-        catch (JsonException) { Note("onleesbaar bericht"); return; }
+        catch (JsonException) { Note(Tr.T("onleesbaar bericht")); return; }
         string type = e?["type"]?.GetValue<string>() ?? "";
         switch (type)
         {
@@ -262,12 +263,12 @@ public sealed partial class SoloistTool : StudioTool
                 string device = e["device_name"]?.GetValue<string>() ?? "";
                 if (LoggedIn)
                 {
-                    SetState($"Aangemeld: apparaat \"{device}\".", ok: true);
+                    SetState(Tr.F("Aangemeld: apparaat \"{0}\".", device), ok: true);
                     _ = Command(new JsonObject { ["command"] = "get_state" });
                     _ = Command(new JsonObject { ["command"] = "get_queue", ["limit"] = 30 });
                 }
-                else SetState($"Soloist draait (\"{device}\") maar is nog niet gekoppeld: kies dit apparaat in de Spotify-app op hetzelfde netwerk.", bad: true);
-                Note(LoggedIn ? "aangemeld" : "nog niet gekoppeld");
+                else SetState(Tr.F("Soloist draait (\"{0}\") maar is nog niet gekoppeld: kies dit apparaat in de Spotify-app op hetzelfde netwerk.", device), bad: true);
+                Note(LoggedIn ? "aangemeld" : Tr.T("nog niet gekoppeld"));
                 break;
             case "playback_state":
                 ShowPlayback(e!);
@@ -316,7 +317,7 @@ public sealed partial class SoloistTool : StudioTool
 
     private void ShowItem(JsonNode? item)
     {
-        if (item is null) { Title = "Niets aan het spelen"; Artist = Album = ""; DurationMs = 0; Cover = null; _coverUrl = ""; return; }
+        if (item is null) { Title = Tr.T("Niets aan het spelen"); Artist = Album = ""; DurationMs = 0; Cover = null; _coverUrl = ""; return; }
         Title = Name(item);
         var d = item["decorations"];
         Artist = d?["creators"] is JsonArray creators
@@ -394,7 +395,7 @@ public sealed partial class SoloistTool : StudioTool
     [RelayCommand]
     private Task PlayUri()
     {
-        if (ParseSpotify(Link) is not { } t) { Note("geen Spotify-link of URI herkend"); return Task.CompletedTask; }
+        if (ParseSpotify(Link) is not { } t) { Note(Tr.T("geen Spotify-link of URI herkend")); return Task.CompletedTask; }
         Note("afspelen: " + t.Uri);
         return Command(new JsonObject { ["command"] = "play", ["uri"] = t.Uri });
     }
@@ -402,9 +403,9 @@ public sealed partial class SoloistTool : StudioTool
     [RelayCommand]
     private async Task QueueUri()
     {
-        if (ParseSpotify(Link) is not { } t) { Note("geen Spotify-link of URI herkend"); return; }
-        if (t.Kind != "track") { Note("alleen losse nummers kunnen in de wachtrij"); return; }
-        Note("in de wachtrij: " + t.Uri);
+        if (ParseSpotify(Link) is not { } t) { Note(Tr.T("geen Spotify-link of URI herkend")); return; }
+        if (t.Kind != "track") { Note(Tr.T("alleen losse nummers kunnen in de wachtrij")); return; }
+        Note(Tr.T("in de wachtrij: ") + t.Uri);
         await Command(new JsonObject { ["command"] = "add_to_queue", ["uri"] = t.Uri });
         await Command(new JsonObject { ["command"] = "get_queue", ["limit"] = 30 });
     }

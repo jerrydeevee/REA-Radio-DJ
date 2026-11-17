@@ -1,3 +1,4 @@
+using ReaRadioDj.Contracts.Localization;
 using System.Diagnostics;
 using System.Net.Http.Json;
 using System.Net.WebSockets;
@@ -53,7 +54,7 @@ public sealed class EngineClient : IDisposable
             try
             {
                 await ws.ConnectAsync(wsUri, ct);
-                ConnectionChanged?.Invoke(true, $"verbonden met {BaseUri.Authority}");
+                ConnectionChanged?.Invoke(true, Tr.F("verbonden met {0}", BaseUri.Authority));
                 var buffer = new byte[64 * 1024];
                 using var message = new MemoryStream();
                 while (ws.State == WebSocketState.Open && !ct.IsCancellationRequested)
@@ -66,12 +67,12 @@ public sealed class EngineClient : IDisposable
                     message.SetLength(0);
                     if (state is not null) StateReceived?.Invoke(state);
                 }
-                ConnectionChanged?.Invoke(false, "verbinding verbroken");
+                ConnectionChanged?.Invoke(false, Tr.T("verbinding verbroken"));
             }
             catch (OperationCanceledException) when (ct.IsCancellationRequested) { return; }
             catch (Exception ex) when (ex is WebSocketException or HttpRequestException or JsonException or IOException)
             {
-                ConnectionChanged?.Invoke(false, $"geen engine op {BaseUri.Authority}");
+                ConnectionChanged?.Invoke(false, Tr.F("geen engine op {0}", BaseUri.Authority));
             }
             try { await Task.Delay(1500, ct); } catch (OperationCanceledException) { return; }
         }
@@ -120,7 +121,7 @@ public sealed class EngineClient : IDisposable
                 string text;
                 try { text = raw.StartsWith('"') ? JsonSerializer.Deserialize<string>(raw) ?? "" : raw; }
                 catch (JsonException) { text = raw.Trim('"'); }
-                return (default, text.Length > 0 ? text : $"Niet gelukt ({(int)response.StatusCode}).");
+                return (default, text.Length > 0 ? text : Tr.F("Niet gelukt ({0}).", (int)response.StatusCode));
             }
             return (await response.Content.ReadFromJsonAsync<T>(Wire.Json), null);
         }
@@ -187,10 +188,10 @@ public sealed class EngineClient : IDisposable
     {
         var exe = settings.EnginePath;
         if (string.IsNullOrWhiteSpace(exe) || !File.Exists(exe)) exe = FindEngine();
-        if (exe is null) return "REA-Radio-DJ.exe niet gevonden; stel het pad in bij Instellingen.";
+        if (exe is null) return Tr.T("REA-Radio-DJ.exe niet gevonden; stel het pad in bij Instellingen.");
         var dir = string.IsNullOrWhiteSpace(settings.EngineWorkingDirectory) ? Path.GetDirectoryName(exe)! : settings.EngineWorkingDirectory;
         // With the watchdog: the engine is started again after a crash, also when the studio is closed.
-        Process.Start(new ProcessStartInfo(exe, $"--watchdog --urls {settings.EffectiveEngineUrl}") { WorkingDirectory = dir, UseShellExecute = true, WindowStyle = ProcessWindowStyle.Hidden });
+        Process.Start(new ProcessStartInfo(exe, Tr.F("--watchdog --urls {0}", settings.EffectiveEngineUrl)) { WorkingDirectory = dir, UseShellExecute = true, WindowStyle = ProcessWindowStyle.Hidden });
         return null;
     }
 

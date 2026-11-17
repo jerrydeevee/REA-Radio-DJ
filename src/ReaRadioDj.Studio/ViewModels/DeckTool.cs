@@ -1,3 +1,4 @@
+using ReaRadioDj.Contracts.Localization;
 using System.Collections.ObjectModel;
 using Avalonia.Media;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -18,11 +19,11 @@ public static class DeckPalette
 
     public static readonly Preset[] Presets =
     [
-        new("Studio (rood · amber · blauw)", "#E5484D", "#F0B429", "#3FA7FF", "#F5F7FA"),
-        new("Verkeerslicht (rood · groen · blauw)", "#E5484D", "#3DBD7D", "#3FA7FF", "#F5F7FA"),
+        new(Tr.T("Studio (rood · amber · blauw)"), "#E5484D", "#F0B429", "#3FA7FF", "#F5F7FA"),
+        new(Tr.T("Verkeerslicht (rood · groen · blauw)"), "#E5484D", "#3DBD7D", "#3FA7FF", "#F5F7FA"),
         new("Neon", "#FF3D7F", "#00E5A0", "#00B3FF", "#FFE45C"),
         new("Warm", "#FB923C", "#FBBF24", "#A78BFA", "#FDE68A"),
-        new("Rustig (grijstinten)", "#CBD5E1", "#94A3B8", "#64748B", "#F5F7FA"),
+        new(Tr.T("Rustig (grijstinten)"), "#CBD5E1", "#94A3B8", "#64748B", "#F5F7FA"),
     ];
 
     public static event Action? Changed;
@@ -130,7 +131,7 @@ public sealed partial class DeckVm(int index) : ObservableObject
     public void OnAir(NowPlayingDto c, DateTime now)
     {
         Empty = false;
-        Status = "ON AIR";
+        Status = Tr.T("ON AIR");
         Title = string.IsNullOrWhiteSpace(c.Title) ? c.Label : c.Title;
         Artist = c.Artist;
         Type = c.Category;
@@ -158,7 +159,7 @@ public sealed partial class DeckVm(int index) : ObservableObject
     {
         Empty = false;
         LogId = u.Id;
-        Status = next ? $"VOLGENDE · {u.StartsAt:HH:mm:ss}" : $"DAARNA · {u.StartsAt:HH:mm:ss}";
+        Status = next ? Tr.F("VOLGENDE · {0:HH:mm:ss}", u.StartsAt) : Tr.F("DAARNA · {0:HH:mm:ss}", u.StartsAt);
         Title = string.IsNullOrWhiteSpace(u.Title) ? u.Label : u.Title!;
         Artist = u.Artist ?? "";
         Type = u.Category ?? u.Type;
@@ -227,17 +228,17 @@ public sealed partial class DeckTool : StudioTool
     protected override void OnState(StateDto s)
     {
         if (s.Engine.Current is { } c) { Decks[0].OnAir(c, s.Time); Decks[0].Signal(s.Engine.LevelLeft, s.Engine.LevelRight); }
-        else Decks[0].Clear(s.Engine.AutoPlay ? "WACHTEN" : "STIL");
+        else Decks[0].Clear(s.Engine.AutoPlay ? Tr.T("WACHTEN") : Tr.T("STIL"));
         for (int i = 1; i < 3; i++)
         {
             if (s.Upcoming.Count >= i) Decks[i].Coming(s.Upcoming[i - 1], i == 1);
-            else Decks[i].Clear("LEEG");
+            else Decks[i].Clear(Tr.T("LEEG"));
         }
     }
 
     [RelayCommand] private void ToggleOptions() => ShowOptions = !ShowOptions;
     [RelayCommand] private Task Next() => Hub.Client.RunCommandAsync("NEXT");
-    [RelayCommand] private Task Stop() => Hub.Client.RunCommandAsync("STOP");
+    [RelayCommand] private Task Stop() => Hub.Client.RunCommandAsync(Tr.T("STOP"));
     [RelayCommand] private Task Skip() => Hub.Client.RunCommandAsync("SKIP");
     [RelayCommand] private Task Remove(DeckVm? d) => d is { LogId: > 0 } ? Hub.Client.DeleteAsync($"/api/log/{d.LogId}") : Task.CompletedTask;
 }

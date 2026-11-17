@@ -1,3 +1,4 @@
+using ReaRadioDj.Contracts.Localization;
 using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -42,7 +43,7 @@ public sealed partial class MediaDetailVm : ObservableObject
     public static List<LevelChoice> Stars { get; } =
         [new(0, "geen"), new(1, "★"), new(2, "★★"), new(3, "★★★"), new(4, "★★★★"), new(5, "★★★★★")];
     public static List<LevelChoice> Energies { get; } =
-        [new(0, "niet gezet"), new(1, "1 rustig"), new(2, "2"), new(3, "3 midden"), new(4, "4"), new(5, "5 knallen")];
+        [new(0, Tr.T("niet gezet")), new(1, "1 rustig"), new(2, "2"), new(3, "3 midden"), new(4, "4"), new(5, "5 knallen")];
 
     /// <summary>What the quality check found, one line each (empty = nothing).</summary>
     public IReadOnlyList<string> Issues => Media.Issues ?? [];
@@ -57,10 +58,10 @@ public sealed partial class MediaDetailVm : ObservableObject
     /// <summary>A jingle without a picture of its own gets the standard jingle cover.</summary>
     public bool ShowJingleCover => Cover is null && IsJingle;
     public bool IsJingle => Media.Kind == "jingle";
-    public string KindButtonText => IsJingle ? "Maak er muziek van" : "Maak er een jingle van";
+    public string KindButtonText => IsJingle ? Tr.T("Maak er muziek van") : Tr.T("Maak er een jingle van");
     public string KindTip => IsJingle
-        ? "Dit is nu een jingle (gele streep). Zet het om naar muziek (blauw), in een muziekcategorie; een nieuwe scan houdt dat vast."
-        : "Dit is nu muziek (blauwe streep). Zet het om naar een jingle (geel), in de categorie Jingles; een nieuwe scan houdt dat vast.";
+        ? Tr.T("Dit is nu een jingle (gele streep). Zet het om naar muziek (blauw), in een muziekcategorie; een nieuwe scan houdt dat vast.")
+        : Tr.T("Dit is nu muziek (blauwe streep). Zet het om naar een jingle (geel), in de categorie Jingles; een nieuwe scan houdt dat vast.");
     partial void OnCoverChanged(Avalonia.Media.Imaging.Bitmap? value) => OnPropertyChanged(nameof(ShowJingleCover));
     /// <summary>Position on PFL while this item is pre-listened; -1 otherwise.</summary>
     [ObservableProperty] private double _playhead = -1;
@@ -78,9 +79,9 @@ public sealed partial class MediaDetailVm : ObservableObject
         Media.Bpm is double b ? $"{b:0.0} BPM" : null,
         Media.Camelot is { } k ? $"{k} ({Media.Key})" : null,
         Media.ReplayGain is double rg ? $"ReplayGain {rg:+0.0;-0.0} dB" : null,
-        Media.Bitrate is int kbps ? $"{kbps} kbps" : null,
+        Media.Bitrate is int kbps ? Tr.F("{0} kbps", kbps) : null,
         Media.Category,
-        Media.Kind == "jingle" ? "jingle" : null,
+        Media.Kind == "jingle" ? Tr.T("jingle") : null,
     }.Where(x => !string.IsNullOrEmpty(x)));
 
     public string MarkerText
@@ -88,31 +89,31 @@ public sealed partial class MediaDetailVm : ObservableObject
         get
         {
             var c = Media.Cues;
-            var parts = new List<string> { $"in {StudioHub.TimeTenths(c.CueIn)}" };
-            if (c.Intro is double i) parts.Add($"intro {StudioHub.TimeTenths(i)}");
-            if (Media.EstIntro is double ei && c.Intro is null) parts.Add($"op niveau ±{StudioHub.Time(ei)}");
-            parts.Add($"mix {StudioHub.TimeTenths(c.Mix)}");
-            if (Media.EstOutro is double eo) parts.Add($"einde begint ±{StudioHub.Time(eo)}");
-            parts.Add($"uit {StudioHub.TimeTenths(c.CueOut)}");
-            if (Media.FirstBeat is double fb && Media.Bpm is double) parts.Add($"eerste tel {fb:0.00} s");
-            return string.Join("  ·  ", parts) + (Media.CuesManual ? "  (met de hand nagekeken)" : "  (automatisch)");
+            var parts = new List<string> { Tr.F("in {0}", StudioHub.TimeTenths(c.CueIn)) };
+            if (c.Intro is double i) parts.Add(Tr.F("intro {0}", StudioHub.TimeTenths(i)));
+            if (Media.EstIntro is double ei && c.Intro is null) parts.Add(Tr.F("op niveau ±{0}", StudioHub.Time(ei)));
+            parts.Add(Tr.F("mix {0}", StudioHub.TimeTenths(c.Mix)));
+            if (Media.EstOutro is double eo) parts.Add(Tr.F("einde begint ±{0}", StudioHub.Time(eo)));
+            parts.Add(Tr.F("uit {0}", StudioHub.TimeTenths(c.CueOut)));
+            if (Media.FirstBeat is double fb && Media.Bpm is double) parts.Add(Tr.F("eerste tel {0:0.00} s", fb));
+            return string.Join("  ·  ", parts) + (Media.CuesManual ? Tr.T("  (met de hand nagekeken)") : "  (automatisch)");
         }
     }
 
     public string PlayText => Media.PlayCount == 0
-        ? "Nog nooit uitgezonden"
-        : $"{Media.PlayCount}× uitgezonden, laatst {Media.LastPlayed:d-M-yyyy HH:mm}";
+        ? Tr.T("Nog nooit uitgezonden")
+        : Tr.F("{0}× uitgezonden, laatst {1:d-M-yyyy HH:mm}", Media.PlayCount, Media.LastPlayed);
 
     public string AddedText => Media.Added is DateTime a ? $"Toegevoegd {a:d-M-yyyy}" : "";
     public string ValidText => (Media.ValidFrom, Media.ValidUntil) switch
     {
         (null, null) => "",
-        (DateTime f, null) => $"Geldig vanaf {f:d-M-yyyy}",
-        (null, DateTime u) => $"Geldig tot {u:d-M-yyyy}",
+        (DateTime f, null) => Tr.F("Geldig vanaf {0:d-M-yyyy}", f),
+        (null, DateTime u) => Tr.F("Geldig tot {0:d-M-yyyy}", u),
         (DateTime f, DateTime u) => $"Geldig {f:d-M-yyyy} t/m {u:d-M-yyyy}",
     };
     public bool Blocked => !Media.Allowed;
-    public string BlockText => Media.Block is { } b ? $"Nu niet: {b}" : "Mag nu ingepland worden";
+    public string BlockText => Media.Block is { } b ? Tr.F("Nu niet: {0}", b) : Tr.T("Mag nu ingepland worden");
 
     private async Task LoadAsync()
     {
@@ -121,7 +122,7 @@ public sealed partial class MediaDetailVm : ObservableObject
         History.Clear();
         foreach (var h in history ?? [])
             History.Add($"{h.Started:ddd d-M HH:mm}" + (h.Played is double p ? $"  ({StudioHub.Time(p)})" : "") + (h.Source != "log" ? $"  {h.Source}" : ""));
-        HistoryText = History.Count == 0 ? "Nog niet uitgezonden." : "";
+        HistoryText = History.Count == 0 ? Tr.T("Nog niet uitgezonden.") : "";
 
         if (await hub.Client.GetAsync<PresenterTextDto>($"/api/media/{Id}/presenter-text") is { } pt) PresenterText = pt.Text;
         await LoadCoverAsync();
@@ -148,7 +149,7 @@ public sealed partial class MediaDetailVm : ObservableObject
     private async Task SavePresenterText()
     {
         var r = await StudioHub.Current.Client.SendForAsync<PresenterTextDto>(HttpMethod.Put, $"/api/media/{Id}/presenter-text", new PresenterTextDto(PresenterText));
-        PresenterSaveText = r is null ? "Opslaan mislukt." : r.Text.Length == 0 ? "Geen tekst meer bij dit item." : "Opgeslagen; staat groot in beeld zolang dit item speelt.";
+        PresenterSaveText = r is null ? Tr.T("Opslaan mislukt.") : r.Text.Length == 0 ? Tr.T("Geen tekst meer bij dit item.") : Tr.T("Opgeslagen; staat groot in beeld zolang dit item speelt.");
         if (r is not null) PresenterText = r.Text;
     }
 
@@ -158,7 +159,7 @@ public sealed partial class MediaDetailVm : ObservableObject
         int? year = int.TryParse(Year.Trim(), out var y) && y is > 0 and < 3000 ? y : null;
         var r = await StudioHub.Current.Client.SendForAsync<MediaDto>(HttpMethod.Put, $"/api/media/{Id}/tags",
             new MediaTagsRequest(Artist, Title, Album, Genre, year, Language, Mood, Rating.Value, EnergyLevel.Value));
-        SaveText = r is null ? "Opslaan mislukt." : "Opgeslagen.";
+        SaveText = r is null ? Tr.T("Opslaan mislukt.") : Tr.T("Opgeslagen.");
         if (r is not null) { Media = r; _owner.Refresh(); _ = _owner.LoadUndoAsync(); }
     }
 
@@ -170,11 +171,11 @@ public sealed partial class MediaDetailVm : ObservableObject
     {
         var r = await StudioHub.Current.Client.SendForAsync<MediaDto>(HttpMethod.Put, $"/api/media/{Id}/kind",
             new MediaKindRequest(IsJingle ? "song" : "jingle"));
-        if (r is null) { SaveText = "Omzetten lukte niet."; return; }
+        if (r is null) { SaveText = Tr.T("Omzetten lukte niet."); return; }
         Media = r;
         foreach (var name in new[] { nameof(IsJingle), nameof(KindButtonText), nameof(KindTip), nameof(ShowJingleCover), nameof(Facts) })
             OnPropertyChanged(name);
-        SaveText = r.Kind == "jingle" ? $"Nu een jingle, in {r.Category}." : $"Nu muziek, in {r.Category}.";
+        SaveText = r.Kind == "jingle" ? Tr.F("Nu een jingle, in {0}.", r.Category) : Tr.F("Nu muziek, in {0}.", r.Category);
         _owner.Refresh();
         _ = _owner.LoadUndoAsync();
     }
@@ -186,14 +187,14 @@ public sealed partial class MediaDetailVm : ObservableObject
     private async Task WriteAllTags()
     {
         var (r, error) = await StudioHub.Current.Client.SendWithErrorAsync<WrittenDto>(HttpMethod.Post, $"/api/media/{Id}/tags/write", null);
-        SaveText = r is not null ? "Alle tags staan nu ook in het bestand." : error ?? "Schrijven lukte niet.";
+        SaveText = r is not null ? Tr.T("Alle tags staan nu ook in het bestand.") : error ?? Tr.T("Schrijven lukte niet.");
     }
 
     /// <summary>Puts this picture into the file as its cover.</summary>
     public async Task SetCoverAsync(byte[] image)
     {
         var (r, error) = await StudioHub.Current.Client.PostBytesAsync<WrittenDto>($"/api/media/{Id}/cover", image);
-        SaveText = r is not null ? "Hoes staat in het bestand." : error ?? "Hoes zetten lukte niet.";
+        SaveText = r is not null ? Tr.T("Hoes staat in het bestand.") : error ?? Tr.T("Hoes zetten lukte niet.");
         if (r is not null) await LoadCoverAsync();
     }
 
@@ -201,7 +202,7 @@ public sealed partial class MediaDetailVm : ObservableObject
     private async Task RemoveCover()
     {
         var (r, error) = await StudioHub.Current.Client.SendWithErrorAsync<WrittenDto>(HttpMethod.Delete, $"/api/media/{Id}/cover", null);
-        SaveText = r is not null ? "Afbeeldingen uit het bestand gehaald." : error ?? "Weghalen lukte niet.";
+        SaveText = r is not null ? Tr.T("Afbeeldingen uit het bestand gehaald.") : error ?? Tr.T("Weghalen lukte niet.");
         if (r is not null) await LoadCoverAsync();
     }
 
@@ -219,7 +220,7 @@ public sealed partial class MediaDetailVm : ObservableObject
     private async Task WriteMarkers()
     {
         bool ok = await StudioHub.Current.Client.PostAsync($"/api/media/{Id}/markers/write");
-        SaveText = ok ? "Markers staan nu ook in het bestand." : "Schrijven in het bestand lukte niet.";
+        SaveText = ok ? Tr.T("Markers staan nu ook in het bestand.") : Tr.T("Schrijven in het bestand lukte niet.");
     }
 }
 

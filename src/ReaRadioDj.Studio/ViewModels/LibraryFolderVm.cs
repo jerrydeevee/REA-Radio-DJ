@@ -1,3 +1,4 @@
+using ReaRadioDj.Contracts.Localization;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using ReaRadioDj.Contracts;
@@ -13,7 +14,7 @@ public sealed partial class SubstituteRow : ObservableObject
     [ObservableProperty] private bool _enabled = true;
     [ObservableProperty] private bool _reachable = true;
     [ObservableProperty] [NotifyPropertyChangedFor(nameof(RelocateText))] private bool _confirmRelocate;
-    public string RelocateText => ConfirmRelocate ? "Zeker? Omzetten" : "Definitief omzetten";
+    public string RelocateText => ConfirmRelocate ? Tr.T("Zeker? Omzetten") : Tr.T("Definitief omzetten");
 }
 
 /// <summary>One folder of the library in the folder list: its settings, what the last scan found, and removing it.</summary>
@@ -37,9 +38,9 @@ public sealed partial class LibraryFolderVm : ObservableObject
         _loading = false;
         StateText = f.Reachable switch
         {
-            null => f.Enabled ? "nog niet ingelezen" : "uitgezet",
+            null => f.Enabled ? Tr.T("nog niet ingelezen") : "uitgezet",
             false => f.Error,
-            true => $"{f.Files} bestanden · {f.Scanned:HH:mm}",
+            true => Tr.F("{0} bestanden · {1:HH:mm}", f.Files, f.Scanned),
         };
         Offline = f.Reachable == false;
     }
@@ -51,13 +52,13 @@ public sealed partial class LibraryFolderVm : ObservableObject
     public string KindText { get; }
     public string StateText { get; }
     public bool Offline { get; }
-    public string Title => Fixed ? $"{Path}  (vaste {KindText}map uit de instellingen)" : Path;
+    public string Title => Fixed ? Tr.F("{0}  (vaste {1}map uit de instellingen)", Path, KindText) : Path;
 
     [ObservableProperty] private string _category = "";
     [ObservableProperty] private bool _watch;
     [ObservableProperty] private bool _writeTags;
     [ObservableProperty] private bool _enabled;
-    [ObservableProperty] private string _removeText = "Verwijderen";
+    [ObservableProperty] private string _removeText = Tr.T("Verwijderen");
     private bool _confirm;
 
     partial void OnWatchChanged(bool value) => Save();
@@ -83,9 +84,9 @@ public sealed partial class LibraryFolderVm : ObservableObject
     {
         if (Fixed) return;
         // Two clicks: the first asks, the second removes. The tracks and their data are kept.
-        if (!_confirm) { _confirm = true; RemoveText = "Zeker? Klik nogmaals"; return; }
+        if (!_confirm) { _confirm = true; RemoveText = Tr.T("Zeker? Klik nogmaals"); return; }
         var r = await StudioHub.Current.Client.SendForAsync<RemovedDto>(HttpMethod.Delete, $"/api/library/folders/{Id}", null);
-        _owner.FolderStatus = r is null ? "Verwijderen mislukt." : $"Map verwijderd. {r.Kept} nummers zijn met al hun gegevens bewaard en komen terug als ze weer gevonden worden.";
+        _owner.FolderStatus = r is null ? Tr.T("Verwijderen mislukt.") : Tr.F("Map verwijderd. {0} nummers zijn met al hun gegevens bewaard en komen terug als ze weer gevonden worden.", r.Kept);
         await _owner.LoadFoldersAsync();
         StudioHub.Current.NotifyLibraryChanged();
     }

@@ -1,3 +1,4 @@
+using ReaRadioDj.Contracts.Localization;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using ReaRadioDj.Studio.ViewModels;
@@ -24,8 +25,8 @@ public partial class LogView : UserControl
     }
 
     private async void OnExportPdf(object? sender, RoutedEventArgs e) =>
-        await FileSave.FromEngineAsync(this, "Programmalog opslaan als PDF", $"programmalog-{DateTime.Now:yyyy-MM-dd-HHmm}.pdf", "/api/log/export.pdf");
+        await FileSave.FromEngineAsync(this, Tr.T("Programmalog opslaan als PDF"), $"programmalog-{DateTime.Now:yyyy-MM-dd-HHmm}.pdf", "/api/log/export.pdf");
 
     private async void OnExportCsv(object? sender, RoutedEventArgs e) =>
-        await FileSave.FromEngineAsync(this, "Programmalog opslaan als CSV", $"programmalog-{DateTime.Now:yyyy-MM-dd-HHmm}.csv", "/api/log/export.csv");
+        await FileSave.FromEngineAsync(this, Tr.T("Programmalog opslaan als CSV"), $"programmalog-{DateTime.Now:yyyy-MM-dd-HHmm}.csv", "/api/log/export.csv");
 }

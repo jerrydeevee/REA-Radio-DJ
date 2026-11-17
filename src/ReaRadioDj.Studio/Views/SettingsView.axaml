@@ -777,6 +777,9 @@
         <ScrollViewer><StackPanel Classes="page">
           <TextBlock Classes="title" Text="Uiterlijk van deze studiocomputer" />
           <TextBlock Classes="help" Text="Wijzigingen zie je meteen, in alle vensters en werkbladen. Ze gelden alleen voor deze computer." />
+          <TextBlock Classes="field" Text="Taal · Language · Sprache · Idioma" />
+          <ComboBox ItemsSource="{Binding LanguageNames}" SelectedIndex="{Binding LanguageIndex}" MinWidth="320" />
+          <TextBlock Classes="help" Text="De taal van deze studio. Wordt actief als de studio opnieuw start. De taal van de AI-presentator en het nieuws stel je in bij Station." />
           <TextBlock Classes="field" Text="Stijl" />
           <ComboBox ItemsSource="{Binding ThemeNames}" SelectedIndex="{Binding ThemeIndex}" MinWidth="320" />
           <TextBlock Classes="help" Text="Studio donker is het standaardontwerp. Nacht is gedimd voor een donkere studio, Licht is voor veel daglicht, Hoog contrast voor wie het scherp wil zien." />

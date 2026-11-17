@@ -1,3 +1,4 @@
+using ReaRadioDj.Contracts.Localization;
 using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -21,21 +22,21 @@ public sealed record HwMackieChoice(string Id, string Name)
 public sealed record HwInputRow(HwInputDto Input, string Device)
 {
     public string Line => $"{Device}: {Input.Trigger}";
-    public string Does => (Input.OnCommand.Length > 0 ? "aan → " + Input.OnCommand : "")
-        + (Input.OffCommand.Length > 0 ? (Input.OnCommand.Length > 0 ? "   " : "") + "uit → " + Input.OffCommand : "");
+    public string Does => (Input.OnCommand.Length > 0 ? Tr.T("aan → ") + Input.OnCommand : "")
+        + (Input.OffCommand.Length > 0 ? (Input.OnCommand.Length > 0 ? "   " : "") + Tr.T("uit → ") + Input.OffCommand : "");
 }
 
 /// <summary>A tally as shown in the list.</summary>
 public sealed record HwOutputRow(HwOutputDto Output, string Device)
 {
     public string Line => $"{HardwareTool.StateLabel(Output.State)} → {Device}";
-    public string Does => Output.Target.Length > 0 ? Output.Target : $"aan: {Output.OnText}   uit: {Output.OffText}";
+    public string Does => Output.Target.Length > 0 ? Output.Target : Tr.F("aan: {0}   uit: {1}", Output.OnText, Output.OffText);
 }
 
 /// <summary>A node or parameter in the Ember+ tree of a device.</summary>
 public sealed record HwEmberRow(HwEmberItemDto Item)
 {
-    public string Title => (Item.Identifier.Length > 0 ? Item.Identifier : "(zonder naam)")
+    public string Title => (Item.Identifier.Length > 0 ? Item.Identifier : Tr.T("(zonder naam)"))
         + (Item.Description.Length > 0 && Item.Description != Item.Identifier ? " — " + Item.Description : "");
     public string Detail => Item.IsNode ? $"{Item.Path} · {Item.Type}" : $"{Item.Path} · {Item.Type}{(Item.Writable ? " · schrijfbaar" : "")} = {Item.Value}";
     public bool IsNode => Item.IsNode && Item.Type == "node";
@@ -56,12 +57,12 @@ public sealed record HwEventRow(HwEventDto E)
 /// </summary>
 public sealed partial class HardwareTool : StudioTool
 {
-    public HardwareTool() : base("hardware", "Hardware") { }
+    public HardwareTool() : base("hardware", Tr.T("Hardware")) { }
 
-    public static readonly string[] KindNames = ["MIDI", "Serieel (COM-poort)", "Livewire (GPIO via LWRP)", "Ember+ (Lawo-mengtafel e.a.)", "Mackie Control (bedieningspaneel met motorfaders)"];
+    public static readonly string[] KindNames = ["MIDI", Tr.T("Serieel (COM-poort)"), Tr.T("Livewire (GPIO via LWRP)"), Tr.T("Ember+ (Lawo-mengtafel e.a.)"), Tr.T("Mackie Control (bedieningspaneel met motorfaders)")];
     private static readonly string[] KindValues = ["midi", "serial", "livewire", "ember", "mackie"];
-    public static readonly string[] StateNames = ["Microfoon open", "ON AIR (er speelt iets)", "Automatisch",
-        "VoIP 1 gaat over", "VoIP 1 verbonden", "VoIP 2 gaat over", "VoIP 2 verbonden"];
+    public static readonly string[] StateNames = [Tr.T("Microfoon open"), Tr.T("ON AIR (er speelt iets)"), Tr.T("Automatisch"),
+        Tr.T("VoIP 1 gaat over"), Tr.T("VoIP 1 verbonden"), Tr.T("VoIP 2 gaat over"), Tr.T("VoIP 2 verbonden")];
     private static readonly string[] StateValues = ["mic", "onair", "auto", "voip1-ringing", "voip1-connected", "voip2-ringing", "voip2-connected"];
     public static string StateLabel(string state) => StateNames[Math.Max(0, Array.IndexOf(StateValues, state))];
 
@@ -131,11 +132,11 @@ public sealed partial class HardwareTool : StudioTool
     }
 
     private void ShowStates(Dictionary<string, bool> s) => StateLine =
-        $"Nu: microfoon {(s.GetValueOrDefault("mic") ? "OPEN" : "dicht")} · on air {(s.GetValueOrDefault("onair") ? "ja" : "nee")} · automatisch {(s.GetValueOrDefault("auto") ? "aan" : "uit")}" +
+        Tr.F("Nu: microfoon {0} · on air {1} · automatisch {2}", s.GetValueOrDefault("mic") ? Tr.T("OPEN") : Tr.T("dicht"), s.GetValueOrDefault("onair") ? Tr.T("ja") : Tr.T("nee"), s.GetValueOrDefault("auto") ? Tr.T("aan") : Tr.T("uit")) +
         $" · VoIP 1 {Voip(s, "voip1")} · VoIP 2 {Voip(s, "voip2")}";
 
     private static string Voip(Dictionary<string, bool> s, string id) =>
-        s.GetValueOrDefault(id + "-ringing") ? "GAAT OVER" : s.GetValueOrDefault(id + "-connected") ? "verbonden" : "stil";
+        s.GetValueOrDefault(id + "-ringing") ? Tr.T("GAAT OVER") : s.GetValueOrDefault(id + "-connected") ? Tr.T("verbonden") : Tr.T("stil");
 
     private static string StatusText(HwDeviceDto d) => (d.Connected ? "● " : "○ ") + d.Status;
 
@@ -159,11 +160,11 @@ public sealed partial class HardwareTool : StudioTool
     public bool CanBrowseEmber => IsEmber && Id > 0;
     public string PortHint => Kind switch
     {
-        0 => "naam van het MIDI-apparaat (kies hieronder)",
-        1 => "COM-poort, bijv. COM3 (kies hieronder)",
-        2 => "IP-adres of naam van de Livewire-node (poort 93)",
-        4 => "naam van het MIDI-apparaat; zet het paneel zelf in de Mackie Control-modus (kies hieronder)",
-        _ => "IP-adres van het apparaat, bijv. 192.168.1.50 (poort 9000, anders :poort erachter)",
+        0 => Tr.T("naam van het MIDI-apparaat (kies hieronder)"),
+        1 => Tr.T("COM-poort, bijv. COM3 (kies hieronder)"),
+        2 => Tr.T("IP-adres of naam van de Livewire-node (poort 93)"),
+        4 => Tr.T("naam van het MIDI-apparaat; zet het paneel zelf in de Mackie Control-modus (kies hieronder)"),
+        _ => Tr.T("IP-adres van het apparaat, bijv. 192.168.1.50 (poort 9000, anders :poort erachter)"),
     };
 
     partial void OnKindChanged(int value)
@@ -223,9 +224,9 @@ public sealed partial class HardwareTool : StudioTool
     {
         var d = new HwDeviceDto(Id, Name, Enabled, KindValues[Kind], Port, (int)(Baud ?? 9600), Password);
         var saved = await Hub.Client.SendForAsync<HwDeviceDto>(HttpMethod.Post, "/api/hardware/devices", d);
-        if (saved is null) { DeviceStatus = "Opslaan mislukt."; return; }
+        if (saved is null) { DeviceStatus = Tr.T("Opslaan mislukt."); return; }
         await LoadAsync(saved.Id);
-        Hub.Status = $"apparaat “{saved.Name}” opgeslagen";
+        Hub.Status = Tr.F("apparaat “{0}” opgeslagen", saved.Name);
     }
 
     [RelayCommand]
@@ -260,13 +261,13 @@ public sealed partial class HardwareTool : StudioTool
     {
         var bank = m.Devices.FirstOrDefault(d => d.Id == Id)?.Bank ?? 0;
         var on = m.Channels.Skip(bank).Take(8).Select((c, i) => $"{i + 1} {c.Name}");
-        MackieChannels = m.Channels.Count == 0 ? "De engine heeft (nog) geen mengkanalen." : "Op de strips: " + string.Join(" · ", on)
-            + (m.Channels.Count > 8 ? $". Met Bank en Channel schuif je over alle {m.Channels.Count} kanalen." : ".");
+        MackieChannels = m.Channels.Count == 0 ? Tr.T("De engine heeft (nog) geen mengkanalen.") : Tr.T("Op de strips: ") + string.Join(" · ", on)
+            + (m.Channels.Count > 8 ? Tr.F(". Met Bank en Channel schuif je over alle {0} kanalen.", m.Channels.Count) : ".");
         MackieRecent = string.Join("\n", m.Recent.Take(14));
         if (!settings) return;
         _mackieLoading = true;
         MackieMasters.Clear();
-        MackieMasters.Add(new HwMackieChoice("", "Niets (de masterfader doet niets)"));
+        MackieMasters.Add(new HwMackieChoice("", Tr.T("Niets (de masterfader doet niets)")));
         foreach (var c in m.Channels) MackieMasters.Add(new HwMackieChoice(c.Id, c.Name));
         MackieMaster = MackieMasters.FirstOrDefault(c => c.Id == m.Settings.MasterStrip) ?? MackieMasters[0];
         MackieTransport = m.Settings.Transport;
@@ -316,9 +317,9 @@ public sealed partial class HardwareTool : StudioTool
     private async Task WriteIcon()
     {
         if (Id <= 0) return;
-        IconResult = "bezig…";
+        IconResult = Tr.T("bezig…");
         var r = await Hub.Client.SendForAsync<IconWriteDto>(HttpMethod.Post, $"/api/hardware/devices/{Id}/icon", null);
-        IconResult = r?.Text ?? "geen antwoord van de engine";
+        IconResult = r?.Text ?? Tr.T("geen antwoord van de engine");
     }
 
     // ---------------------------------------------------------------- Ember+ tree
@@ -336,13 +337,13 @@ public sealed partial class HardwareTool : StudioTool
     private async Task BrowseAsync(string path)
     {
         if (Id <= 0) return;
-        EmberProblem = "bezig…";
+        EmberProblem = Tr.T("bezig…");
         var items = await Hub.Client.GetAsync<List<HwEmberItemDto>>($"/api/hardware/devices/{Id}/ember?path={Uri.EscapeDataString(path)}");
-        if (items is null) { EmberProblem = "Niet verbonden: sla het apparaat op en wacht tot het verbonden is."; return; }
+        if (items is null) { EmberProblem = Tr.T("Niet verbonden: sla het apparaat op en wacht tot het verbonden is."); return; }
         EmberPath = path;
         EmberItems.Clear();
         foreach (var i in items) EmberItems.Add(new HwEmberRow(i));
-        EmberProblem = items.Count == 0 ? "Hier staat niets (of het apparaat antwoordt niet)." : null;
+        EmberProblem = items.Count == 0 ? Tr.T("Hier staat niets (of het apparaat antwoordt niet).") : null;
     }
 
     /// <summary>A parameter becomes the trigger of a new button on this device.</summary>
@@ -415,10 +416,10 @@ public sealed partial class HardwareTool : StudioTool
     [RelayCommand]
     private async Task SaveInput()
     {
-        if (InputDevice is null) { InputProblem = "Kies een apparaat."; return; }
+        if (InputDevice is null) { InputProblem = Tr.T("Kies een apparaat."); return; }
         var saved = await Hub.Client.SendForAsync<HwInputDto>(HttpMethod.Post, "/api/hardware/inputs",
             new HwInputDto(InputId, InputDevice.Id, Trigger, OnCommand, OffCommand));
-        if (saved is null) { InputProblem = "Opslaan mislukt: vul in wat het apparaat stuurt."; return; }
+        if (saved is null) { InputProblem = Tr.T("Opslaan mislukt: vul in wat het apparaat stuurt."); return; }
         InputProblem = null;
         await LoadAsync();
         SelectedInput = Inputs.FirstOrDefault(i => i.Input.Id == saved.Id);
@@ -471,10 +472,10 @@ public sealed partial class HardwareTool : StudioTool
     [RelayCommand]
     private async Task SaveOutput()
     {
-        if (OutputDevice is null) { OutputProblem = "Kies een apparaat."; return; }
+        if (OutputDevice is null) { OutputProblem = Tr.T("Kies een apparaat."); return; }
         var saved = await Hub.Client.SendForAsync<HwOutputDto>(HttpMethod.Post, "/api/hardware/outputs",
             new HwOutputDto(OutputId, OutputDevice.Id, StateValues[OutputState], Target, OnText, OffText));
-        if (saved is null) { OutputProblem = "Opslaan mislukt."; return; }
+        if (saved is null) { OutputProblem = Tr.T("Opslaan mislukt."); return; }
         OutputProblem = null;
         await LoadAsync();
         SelectedOutput = Outputs.FirstOrDefault(o => o.Output.Id == saved.Id);
@@ -493,8 +494,8 @@ public sealed partial class HardwareTool : StudioTool
 
     private async Task TestAsync(bool on)
     {
-        if (OutputId <= 0) { OutputProblem = "Sla de uitgang eerst op."; return; }
+        if (OutputId <= 0) { OutputProblem = Tr.T("Sla de uitgang eerst op."); return; }
         OutputProblem = await Hub.Client.PostAsync($"/api/hardware/outputs/{OutputId}/test?on={on.ToString().ToLowerInvariant()}")
-            ? null : "Apparaat niet verbonden.";
+            ? null : Tr.T("Apparaat niet verbonden.");
     }
 }

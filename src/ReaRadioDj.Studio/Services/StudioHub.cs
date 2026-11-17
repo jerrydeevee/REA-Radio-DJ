@@ -1,3 +1,4 @@
+using ReaRadioDj.Contracts.Localization;
 using System.Collections.ObjectModel;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -80,7 +81,7 @@ public sealed partial class StudioHub : ObservableObject
     private bool Free => !UsersActive || !UsersEnforced;
     public bool IsAdmin => Free || UserRoles.Rank(UserRole) >= 2;
     public bool IsTechnician => Free || UserRoles.Rank(UserRole) >= 1;
-    public string UserText => !UsersActive ? "" : !UsersEnforced ? "rechten uit (herstelstand)" : UserName.Length == 0 ? "niet aangemeld" : $"{UserName} · {UserRole}";
+    public string UserText => !UsersActive ? "" : !UsersEnforced ? Tr.T("rechten uit (herstelstand)") : UserName.Length == 0 ? Tr.T("niet aangemeld") : $"{UserName} · {UserRole}";
 
     /// <summary>The role a window needs: the station settings an administrator, the technique a technician.</summary>
     public static int RequiredRank(string? windowId) => windowId switch

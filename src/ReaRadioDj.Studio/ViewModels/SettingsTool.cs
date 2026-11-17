@@ -1,3 +1,4 @@
+using ReaRadioDj.Contracts.Localization;
 using ReaRadioDj.Studio.Services;
 using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -12,7 +13,7 @@ namespace ReaRadioDj.Studio.ViewModels;
 /// </summary>
 public sealed partial class SettingsTool : StudioTool
 {
-    public SettingsTool() : base("settings", "Instellingen") { }
+    public SettingsTool() : base("settings", Tr.T("Instellingen")) { }
 
     public ObservableCollection<DeviceDto> Outputs { get; } = [];
     public ObservableCollection<DeviceDto> Inputs { get; } = [];
@@ -70,7 +71,7 @@ public sealed partial class SettingsTool : StudioTool
             return Environment.MachineName.ToLowerInvariant();
         }
     }
-    public string[] StartModeNames { get; } = ["Automatisch (AUTO)", "Semi: wacht als de DJ zelf iets speelt", "Met de hand (HAND)"];
+    public string[] StartModeNames { get; } = ["Automatisch (AUTO)", Tr.T("Semi: wacht als de DJ zelf iets speelt"), "Met de hand (HAND)"];
     /// <summary>The play mode the engine starts in: 0 AUTO, 1 SEMI, 2 HAND.</summary>
     public int StartMode
     {
@@ -114,7 +115,7 @@ public sealed partial class SettingsTool : StudioTool
     [ObservableProperty] private decimal _silenceSeconds = 20;
     /// <summary>0 = only warn, 1 = also start the automation, 2 = play from the emergency category, 3 = a random song.</summary>
     [ObservableProperty] [NotifyPropertyChangedFor(nameof(UsesEmergencyCategory))] private int _silenceAction = 1;
-    public IReadOnlyList<string> SilenceActions { get; } = ["Alleen melden in de studio", "Melden en de automatisering starten", "Melden en direct iets uit de noodcategorie spelen (lege categorie: willekeurig nummer)", "Melden en direct een willekeurig nummer uit de muziekbibliotheek spelen"];
+    public IReadOnlyList<string> SilenceActions { get; } = ["Alleen melden in de studio", Tr.T("Melden en de automatisering starten"), Tr.T("Melden en direct iets uit de noodcategorie spelen (lege categorie: willekeurig nummer)"), "Melden en direct een willekeurig nummer uit de muziekbibliotheek spelen"];
     [ObservableProperty] private CategoryDto? _silenceCategory;
     public ObservableCollection<CategoryDto> Categories => Hub.Categories;
     public bool UsesEmergencyCategory => SilenceAction == 2;
@@ -139,7 +140,7 @@ public sealed partial class SettingsTool : StudioTool
     [ObservableProperty] private string _spotifyClientId = "";
     [ObservableProperty] private string _spotifySecret = "";
     [ObservableProperty] private string _spotifySecretHint = "";
-    [ObservableProperty] private string _spotifyMarket = "NL";
+    [ObservableProperty] private string _spotifyMarket = Tr.T("NL");
     [ObservableProperty] private string _spotifyStatus = "";
     [ObservableProperty] private bool _spotifyOk;
     [ObservableProperty] private bool _spotifyFailed;
@@ -159,7 +160,7 @@ public sealed partial class SettingsTool : StudioTool
 
     // Spotify Soloist on this computer (studio settings, not the engine)
     [ObservableProperty] private string _soloistPath = "";
-    [ObservableProperty] private string _soloistDevice = "REA ontwikkeltest";
+    [ObservableProperty] private string _soloistDevice = Tr.T("REA ontwikkeltest");
     [ObservableProperty] private decimal _soloistPort = 9090;
     [ObservableProperty] private string _soloistKey = "";
     [ObservableProperty] private string _soloistKeyHint = "";
@@ -217,7 +218,21 @@ public sealed partial class SettingsTool : StudioTool
     [ObservableProperty] private string _engineUrl = "";
 
     // ---- appearance of this computer: applied at once, saved in studio.json
-    public IReadOnlyList<string> ThemeNames { get; } = [.. Appearance.Themes.Select(t => t.Name)];
+    public IReadOnlyList<string> LanguageNames { get; } = [.. Contracts.Localization.Tr.Languages.Select(l => l.Name)];
+
+    [ObservableProperty] private int _languageIndex = Math.Max(0, Array.FindIndex(Contracts.Localization.Tr.Languages, l => l.Code == Contracts.Localization.Tr.Normalize(StudioHub.Current.Settings.Language)));
+
+    partial void OnLanguageIndexChanged(int value)
+    {
+        if (value < 0) return;
+        Hub.Settings.Language = Contracts.Localization.Tr.Languages[value].Code;
+        Hub.Settings.Save();
+        Hub.Status = Hub.Settings.Language == Contracts.Localization.Tr.Language
+            ? Contracts.Localization.Tr.T("Taal ingesteld.")
+            : Contracts.Localization.Tr.T("De nieuwe taal wordt actief als de studio opnieuw start.");
+    }
+
+    public IReadOnlyList<string> ThemeNames { get; } = [.. Appearance.Themes.Select(t => Contracts.Localization.Tr.T(t.Name))];
     public IReadOnlyList<string> CornerNames { get; } = [.. Appearance.Corners.Select(c => c.Name)];
     public IReadOnlyList<string> ScaleNames { get; } = [.. Appearance.Scales.Select(p => $"{p} %")];
     [ObservableProperty] private int _themeIndex = Math.Max(0, Array.FindIndex(Appearance.Themes, t => t.Key == StudioHub.Current.Settings.Theme));
@@ -230,7 +245,7 @@ public sealed partial class SettingsTool : StudioTool
 
     // Accent and waveform colours: "Van de stijl" (empty) or one of the kind colours.
     public IReadOnlyList<LookColorChoice> AccentChoices { get; } =
-        [new LookColorChoice("Van de stijl", "", Avalonia.Media.Brushes.Transparent), .. Appearance.KindColors.Select(c => new LookColorChoice(c.Name, c.Hex, Brushes.FromHex(c.Hex)))];
+        [new LookColorChoice(Tr.T("Van de stijl"), "", Avalonia.Media.Brushes.Transparent), .. Appearance.KindColors.Select(c => new LookColorChoice(c.Name, c.Hex, Brushes.FromHex(c.Hex)))];
     public IReadOnlyList<string> ButtonStyleNames { get; } = [.. Appearance.ButtonStyles.Select(b => b.Name)];
     public IReadOnlyList<string> WaveStyleNames { get; } = [.. Appearance.WaveStyles.Select(w => w.Name)];
     [ObservableProperty] private int _accentIndex = ChoiceIndex(StudioHub.Current.Settings.Accent);
@@ -284,9 +299,9 @@ public sealed partial class SettingsTool : StudioTool
         DeskStatus = Describe(m);
     }
 
-    private static string Describe(MixingMode m) => !m.Desk ? "De engine mengt; faders, dempen en automatisch zachter werken op alle kanalen."
-        : m.Direct.Count == 0 ? "Mengtafel, maar nog geen kanaal heeft een eigen uitgang: geef ze hieronder een uitgang."
-        : $"Op vol naar de tafel: {string.Join(", ", m.Direct)}.";
+    private static string Describe(MixingMode m) => !m.Desk ? Tr.T("De engine mengt; faders, dempen en automatisch zachter werken op alle kanalen.")
+        : m.Direct.Count == 0 ? Tr.T("Mengtafel, maar nog geen kanaal heeft een eigen uitgang: geef ze hieronder een uitgang.")
+        : Tr.F("Op vol naar de tafel: {0}.", string.Join(", ", m.Direct));
 
     // The two choices as their own properties that only ever switch ON. A radio button bound to "!DeskMode" wrote
     // back when the group unchecked it while the look was applied again (a new button style re-templates every button):
@@ -317,7 +332,7 @@ public sealed partial class SettingsTool : StudioTool
             {
                 _deskWanted = null;
                 var m = await Hub.Client.SendForAsync<MixingMode>(HttpMethod.Put, "/api/mixing-mode", new { desk = want });
-                DeskStatus = m is null ? "Omschakelen mislukt." : Describe(m);
+                DeskStatus = m is null ? Tr.T("Omschakelen mislukt.") : Describe(m);
             }
         }
         finally { _deskSending = false; }
@@ -334,7 +349,7 @@ public sealed partial class SettingsTool : StudioTool
     [ObservableProperty] private bool _recSpeech;
     [ObservableProperty] private decimal _recSpeechThreshold = -40;
     [ObservableProperty] private decimal _recSpeechHang = 2;
-    private static readonly OutputChoiceDto MicChoice = new("mic", "Microfoon");
+    private static readonly OutputChoiceDto MicChoice = new("mic", Tr.T("Microfoon"));
     [ObservableProperty] private List<OutputChoiceDto> _recSpeechSources = [MicChoice];
     [ObservableProperty] private OutputChoiceDto? _recSpeechSource = MicChoice;
     public int[] RecBitrates { get; } = [64, 96, 128, 160, 192, 256, 320];
@@ -355,7 +370,7 @@ public sealed partial class SettingsTool : StudioTool
         DevWatchEnabled = d.Enabled;
         DevWatchRestore = d.Restore;
         DevWatchCards = d.Cards.Select(c =>
-            $"{c.Name} — {c.Uses}: {(c.Volume is double v ? (c.Muted ? "gedempt" : $"{v:0}%") : "volume niet uit te lezen")}{(c.Note.Length > 0 && c.Volume is not null ? $" ({c.Note})" : "")}").ToList();
+            $"{c.Name} — {c.Uses}: {(c.Volume is double v ? (c.Muted ? Tr.T("gedempt") : $"{v:0}%") : Tr.T("volume niet uit te lezen"))}{(c.Note.Length > 0 && c.Volume is not null ? $" ({c.Note})" : "")}").ToList();
         if (DevWatchCards.Count == 0) DevWatchCards = ["Geen Windows-kaart in gebruik (ASIO of geen geluid)."];
     }
 
@@ -363,7 +378,7 @@ public sealed partial class SettingsTool : StudioTool
     private async Task SaveDeviceWatch()
     {
         var d = await Hub.Client.SendForAsync<DeviceWatchDto>(HttpMethod.Put, "/api/devicewatch", new DeviceWatchDto(DevWatchEnabled, DevWatchRestore, []));
-        DevWatchStatus = d is null ? "Opslaan mislukt." : "Bewaard.";
+        DevWatchStatus = d is null ? Tr.T("Opslaan mislukt.") : "Bewaard.";
         if (d is not null) ShowDeviceWatch(d);
     }
 
@@ -371,7 +386,7 @@ public sealed partial class SettingsTool : StudioTool
     private async Task AcceptDeviceWatch()
     {
         var d = await Hub.Client.SendForAsync<DeviceWatchDto>(HttpMethod.Post, "/api/devicewatch/accept", new { });
-        DevWatchStatus = d is null ? "Mislukt." : "De huidige stand van de kaarten is nu de normale stand.";
+        DevWatchStatus = d is null ? Tr.T("Mislukt.") : Tr.T("De huidige stand van de kaarten is nu de normale stand.");
         if (d is not null) ShowDeviceWatch(d);
     }
 
@@ -388,18 +403,18 @@ public sealed partial class SettingsTool : StudioTool
         var sources = new List<OutputChoiceDto> { MicChoice };
         if (Hub.State is { } st)
             sources.AddRange(st.Mixer.Strips.Where(x => x.Source is not null).Select(x => new OutputChoiceDto(x.Id, x.Name)));
-        if (sources.All(x => x.Id != r.SpeechSource)) sources.Add(new(r.SpeechSource, r.SpeechSource + " (niet gevonden)"));
+        if (sources.All(x => x.Id != r.SpeechSource)) sources.Add(new(r.SpeechSource, r.SpeechSource + Tr.T(" (niet gevonden)")));
         RecSpeechSources = sources;
         RecSpeechSource = sources.First(x => x.Id == r.SpeechSource);
         RecSpeech = r.Speech; RecSpeechThreshold = (decimal)r.SpeechThresholdDb; RecSpeechHang = (decimal)r.SpeechHangSeconds;
         var now = new List<string>();
-        if (r.ProgramFile is { } p) now.Add($"neemt nu op: {Path.GetFileName(p)}");
-        if (r.MicFile is { } m) now.Add($"microfoon: {Path.GetFileName(m)}");
+        if (r.ProgramFile is { } p) now.Add(Tr.F("neemt nu op: {0}", Path.GetFileName(p)));
+        if (r.MicFile is { } m) now.Add(Tr.F("microfoon: {0}", Path.GetFileName(m)));
         if (r.Speech)
             now.Add(r.SpeechFile is { } sf
                 ? $"spraak: {Path.GetFileName(sf)}{(r.SpeechRecording ? " (neemt nu op)" : "")}, {r.SpeechTakes} keer"
-                : "spraak: wacht op de microfoon");
-        RecStatus = (r.Error.Length > 0 ? r.Error + "  " : "") + $"Map: {r.FolderInUse}" + (now.Count > 0 ? "  ·  " + string.Join("  ·  ", now) : "");
+                : Tr.T("spraak: wacht op de microfoon"));
+        RecStatus = (r.Error.Length > 0 ? r.Error + "  " : "") + Tr.F("Map: {0}", r.FolderInUse) + (now.Count > 0 ? "  ·  " + string.Join("  ·  ", now) : "");
     }
 
     [RelayCommand]
@@ -408,7 +423,7 @@ public sealed partial class SettingsTool : StudioTool
         var r = await Hub.Client.SendForAsync<RecordingSettingsDto>(HttpMethod.Put, "/api/recordings/settings",
             new RecordingSettingsDto(RecProgram, RecMic, RecMicToLibrary, RecBitrate, (int)RecKeepDays, RecFolder.Trim(),
                 Speech: RecSpeech, SpeechSource: RecSpeechSource?.Id ?? "mic", SpeechThresholdDb: (double)RecSpeechThreshold, SpeechHangSeconds: (double)RecSpeechHang));
-        if (r is null) { RecStatus = "Opslaan mislukt."; return; }
+        if (r is null) { RecStatus = Tr.T("Opslaan mislukt."); return; }
         await Task.Delay(1500);   // the recorder starts on its next tick
         await LoadRecordingAsync();
     }
@@ -473,13 +488,13 @@ public sealed partial class SettingsTool : StudioTool
         var body = PlayLimits.Where(l => l.Side is not null)
             .Select(l => new LimitWire(l.Side!.Key, (double)l.MaxSeconds, (double)l.NoFadeUnder, l.Enabled)).ToList();
         var saved = await Hub.Client.SendForAsync<List<LimitWire>>(HttpMethod.Put, "/api/play-limits", body);
-        LimitStatus = saved is null ? "Opslaan mislukt." : $"{saved.Count} speelduurregels bewaard; ze gelden vanaf het volgende item.";
+        LimitStatus = saved is null ? Tr.T("Opslaan mislukt.") : Tr.F("{0} speelduurregels bewaard; ze gelden vanaf het volgende item.", saved.Count);
         await LoadLimitsAsync();
     }
 
     // A category that no longer exists still shows, so the rule is not lost unnoticed.
     private KeyChoice Side(string key) => RuleSides.FirstOrDefault(s => s.Key == key) ?? AddSide(key);
-    private KeyChoice AddSide(string key) { var c = new KeyChoice(key, key + " (bestaat niet meer)"); RuleSides.Add(c); return c; }
+    private KeyChoice AddSide(string key) { var c = new KeyChoice(key, key + Tr.T(" (bestaat niet meer)")); RuleSides.Add(c); return c; }
 
     [RelayCommand]
     private void AddRule() => TransitionRules.Add(new TransitionRuleRow
@@ -503,7 +518,7 @@ public sealed partial class SettingsTool : StudioTool
         var body = TransitionRules.Where(r => r.From is not null && r.To is not null && r.Mode is not null)
             .Select(r => new RuleWire(r.From!.Key, r.To!.Key, r.Mode!.Key, (double)r.Seconds, r.Enabled)).ToList();
         var saved = await Hub.Client.SendForAsync<List<RuleWire>>(HttpMethod.Put, "/api/transition-rules", body);
-        RuleStatus = saved is null ? "Opslaan mislukt." : $"{saved.Count} overgangsregels bewaard; ze gelden vanaf het volgende item.";
+        RuleStatus = saved is null ? Tr.T("Opslaan mislukt.") : Tr.F("{0} overgangsregels bewaard; ze gelden vanaf het volgende item.", saved.Count);
         await LoadRulesAsync();
         await LoadRecordingAsync();
     }
@@ -528,7 +543,7 @@ public sealed partial class SettingsTool : StudioTool
         if (s is null || outs is null || ins is null || r is null)
         {
             Loaded = false;
-            Status = "De engine geeft geen instellingen: is hij verbonden en bijgewerkt?";
+            Status = Tr.T("De engine geeft geen instellingen: is hij verbonden en bijgewerkt?");
             return;
         }
         Show(s);
@@ -545,10 +560,10 @@ public sealed partial class SettingsTool : StudioTool
         LoadSoloist();
         if (await Hub.Client.GetAsync<MasterDto>("/api/master") is { } m) { LimiterOn = m.LimiterOn; LimiterCeiling = (decimal)m.CeilingDb; _masterLoaded = true; }
         Outputs.Clear();
-        Outputs.Add(new DeviceDto(-1, "Standaard geluidskaart van Windows", true, false));
+        Outputs.Add(new DeviceDto(-1, Tr.T("Standaard geluidskaart van Windows"), true, false));
         foreach (var d in outs) Outputs.Add(d);
         Inputs.Clear();
-        Inputs.Add(new DeviceDto(-1, "Standaard invoer van Windows", true, false));
+        Inputs.Add(new DeviceDto(-1, Tr.T("Standaard invoer van Windows"), true, false));
         foreach (var d in ins) Inputs.Add(d);
         OutputDevice = Outputs.FirstOrDefault(d => d.Index == r.OutputDevice);
         PreviewDevice = Outputs.FirstOrDefault(d => d.Index == r.PreviewDevice);
@@ -565,7 +580,7 @@ public sealed partial class SettingsTool : StudioTool
     {
         var a = await Hub.Client.GetAsync<AudioSettingsDto>("/api/audio");
         AudioLoaded = a is not null;
-        if (a is null) { AudioStatus = "De engine kent ASIO en buffers nog niet: werk hem bij."; return; }
+        if (a is null) { AudioStatus = Tr.T("De engine kent ASIO en buffers nog niet: werk hem bij."); return; }
         ShowAudio(a);
     }
 
@@ -579,10 +594,10 @@ public sealed partial class SettingsTool : StudioTool
         BufferMs = a.BufferMs;
         AsioBuffer = a.AsioBuffer;
         var notes = new List<string>();
-        if (!a.AsioAvailable) notes.Add("bassasio.dll ontbreekt: draai scripts\\fetch-bass.ps1 en bouw opnieuw.");
-        else if (a.AsioChoices.Count <= 1) notes.Add("Geen ASIO-stuurprogramma gevonden op de pc van de engine.");
-        if (a.ProgramNow.Length > 0) notes.Add($"Nu: {a.ProgramNow} en {a.PreviewNow}.");
-        if (a.NeedsRestart) notes.Add("Gewijzigd: actief na een herstart van de engine (Instellingen › Systeem).");
+        if (!a.AsioAvailable) notes.Add(Tr.T("bassasio.dll ontbreekt: draai scripts\\fetch-bass.ps1 en bouw opnieuw."));
+        else if (a.AsioChoices.Count <= 1) notes.Add(Tr.T("Geen ASIO-stuurprogramma gevonden op de pc van de engine."));
+        if (a.ProgramNow.Length > 0) notes.Add(Tr.F("Nu: {0} en {1}.", a.ProgramNow, a.PreviewNow));
+        if (a.NeedsRestart) notes.Add(Tr.T("Gewijzigd: actief na een herstart van de engine (Instellingen › Systeem)."));
         AudioStatus = string.Join(" ", notes);
     }
 
@@ -590,44 +605,44 @@ public sealed partial class SettingsTool : StudioTool
     {
         StripOutputs.Clear();
         var o = await Hub.Client.GetAsync<OutputsDto>("/api/outputs");
-        if (o is null) { OutputStatus = "De engine kent uitgangen per kanaal nog niet: werk hem bij."; return; }
+        if (o is null) { OutputStatus = Tr.T("De engine kent uitgangen per kanaal nog niet: werk hem bij."); return; }
         foreach (var s in o.Strips) StripOutputs.Add(new OutputRouteVm(this, s, o.Targets));
     }
 
     internal async Task RouteAsync(OutputRouteVm row, OutputChoiceDto target)
     {
-        OutputStatus = $"{row.Name} omzetten…";
+        OutputStatus = Tr.F("{0} omzetten…", row.Name);
         var r = await Hub.Client.SendForAsync<OutputsDto>(HttpMethod.Put, $"/api/outputs/{row.Strip}", new OutputRouteRequest(target.Id));
         var now = r?.Strips.FirstOrDefault(s => s.Strip == row.Strip);
         row.Show(now?.Target ?? "");
         OutputStatus = r is null ? $"{row.Name}: deze uitgang werkt niet (zie de statusregel)." :
-            string.IsNullOrEmpty(now?.Target) ? $"{row.Name} gaat via de normale uitgang." : $"{row.Name} heeft nu een eigen uitgang.";
+            string.IsNullOrEmpty(now?.Target) ? Tr.F("{0} gaat via de normale uitgang.", row.Name) : Tr.F("{0} heeft nu een eigen uitgang.", row.Name);
     }
 
     internal async Task TestToneAsync(string output)
     {
         OutputStatus = await Hub.Client.PostAsync("/api/outputs/test", new OutputRouteRequest(output))
-            ? "Testtoon: 1 kHz, -18 dBFS, anderhalve seconde." : "Testtoon niet gelukt.";
+            ? Tr.T("Testtoon: 1 kHz, -18 dBFS, anderhalve seconde.") : Tr.T("Testtoon niet gelukt.");
     }
 
     [RelayCommand] private Task TestProgram() => TestToneAsync("program");
-    [RelayCommand] private async Task ResetLoudness() => OutputStatus = await Hub.Client.PostAsync("/api/master/reset") ? "Geïntegreerde loudness begint opnieuw." : "";
+    [RelayCommand] private async Task ResetLoudness() => OutputStatus = await Hub.Client.PostAsync("/api/master/reset") ? Tr.T("Geïntegreerde loudness begint opnieuw.") : "";
     [RelayCommand] private Task TestPreview() => TestToneAsync("preview");
 
     private async Task LoadSystemAsync()
     {
         var sys = await Hub.Client.GetAsync<SystemDto>("/api/system");
         SystemLoaded = sys is not null;
-        if (sys is null) { WatchText = "De engine kent deze instellingen nog niet: werk hem bij."; return; }
+        if (sys is null) { WatchText = Tr.T("De engine kent deze instellingen nog niet: werk hem bij."); return; }
         Watched = sys.Watched;
         AutoStart = sys.AutoStart;
         DetailedLog = sys.DetailedLog;
         AutoStartCommand = sys.AutoStartCommand ?? "";
         WatchText = sys.Watched
-            ? "De engine draait met bewaking: na een crash of vastloper start hij binnen enkele seconden opnieuw en gaat hij verder waar hij was."
-            : "De engine draait zonder bewaking. Start hem met --watchdog (de studio doet dat zelf als zij de engine start), of zet hieronder starten bij aanmelden aan.";
-        WatchdogLog = sys.WatchdogLog.Count == 0 ? "(nog niets)" : string.Join(Environment.NewLine, sys.WatchdogLog.Reverse());
-        if (sys.RestorePending) BackupStatus = "Er staat een reservekopie klaar die bij de volgende start van de engine wordt teruggezet.";
+            ? Tr.T("De engine draait met bewaking: na een crash of vastloper start hij binnen enkele seconden opnieuw en gaat hij verder waar hij was.")
+            : Tr.T("De engine draait zonder bewaking. Start hem met --watchdog (de studio doet dat zelf als zij de engine start), of zet hieronder starten bij aanmelden aan.");
+        WatchdogLog = sys.WatchdogLog.Count == 0 ? Tr.T("(nog niets)") : string.Join(Environment.NewLine, sys.WatchdogLog.Reverse());
+        if (sys.RestorePending) BackupStatus = Tr.T("Er staat een reservekopie klaar die bij de volgende start van de engine wordt teruggezet.");
         ShowAutoBackup(await Hub.Client.GetAsync<AutoBackupDto>("/api/backup/auto"));
         await RefreshPorts();
         await RefreshLog();
@@ -648,8 +663,8 @@ public sealed partial class SettingsTool : StudioTool
     private async Task RestartEngine()
     {
         BackupStatus = await Hub.Client.PostAsync("/api/system/restart")
-            ? "De engine start opnieuw; de studio maakt vanzelf weer verbinding."
-            : "Opnieuw starten kan alleen als de engine met bewaking draait.";
+            ? Tr.T("De engine start opnieuw; de studio maakt vanzelf weer verbinding.")
+            : Tr.T("Opnieuw starten kan alleen als de engine met bewaking draait.");
     }
 
     [RelayCommand]
@@ -657,36 +672,36 @@ public sealed partial class SettingsTool : StudioTool
     {
         var p = await Hub.Client.GetAsync<PortsDto>("/api/system/ports");
         Ports.Clear();
-        if (p is null) { FirewallCommand = "De engine kent het poortenoverzicht nog niet: werk hem bij."; return; }
+        if (p is null) { FirewallCommand = Tr.T("De engine kent het poortenoverzicht nog niet: werk hem bij."); return; }
         foreach (var port in p.Ports) Ports.Add(port);
         FirewallCommand = p.Firewall.Length > 0 ? p.Firewall
-            : "Geen poort staat open voor het netwerk: alles luistert alleen op deze pc, dus er is geen firewallregel nodig.";
+            : Tr.T("Geen poort staat open voor het netwerk: alles luistert alleen op deze pc, dus er is geen firewallregel nodig.");
     }
 
     private void ShowAutoBackup(AutoBackupDto? a)
     {
         AutoBackupLoaded = a is not null;
-        if (a is null) { AutoBackupInfo = "De engine kent de dagelijkse reservekopie nog niet: werk hem bij."; AutoBackupFiles = ""; return; }
+        if (a is null) { AutoBackupInfo = Tr.T("De engine kent de dagelijkse reservekopie nog niet: werk hem bij."); AutoBackupFiles = ""; return; }
         AutoBackupEnabled = a.Enabled;
         AutoBackupFolder = a.Folder;
         AutoBackupTime = a.Time;
         AutoBackupKeep = a.KeepDays;
-        var lines = new List<string> { $"Map: {a.UsedFolder}" };
-        if (a.SameDisk) lines.Add("Let op: deze map staat op dezelfde schijf als de database. Gaat die schijf kapot, dan ben je beide kwijt; kies een andere schijf of een NAS.");
-        if (a.Next is { } next) lines.Add($"Volgende: {next:dddd d MMMM HH:mm}" + (a.Files.Count == 0 ? " (of binnen een minuut als er nog geen is)" : ""));
-        if (a.LastError is { } e) lines.Add($"Laatste poging mislukt: {e}");
+        var lines = new List<string> { Tr.F("Map: {0}", a.UsedFolder) };
+        if (a.SameDisk) lines.Add(Tr.T("Let op: deze map staat op dezelfde schijf als de database. Gaat die schijf kapot, dan ben je beide kwijt; kies een andere schijf of een NAS."));
+        if (a.Next is { } next) lines.Add($"Volgende: {next:dddd d MMMM HH:mm}" + (a.Files.Count == 0 ? Tr.T(" (of binnen een minuut als er nog geen is)") : ""));
+        if (a.LastError is { } e) lines.Add(Tr.F("Laatste poging mislukt: {0}", e));
         AutoBackupInfo = string.Join(Environment.NewLine, lines);
-        AutoBackupFiles = a.Files.Count == 0 ? "(nog geen automatische reservekopieën)"
+        AutoBackupFiles = a.Files.Count == 0 ? Tr.T("(nog geen automatische reservekopieën)")
             : string.Join(Environment.NewLine, a.Files.Select(f => $"{f.Time:ddd d-M-yyyy HH:mm}   {f.Bytes / 1024.0 / 1024.0:0.0} MB   {f.Name}"));
     }
 
     [RelayCommand]
     private async Task RunAutoBackup()
     {
-        AutoBackupInfo = "reservekopie maken…";
+        AutoBackupInfo = Tr.T("reservekopie maken…");
         var (r, error) = await Hub.Client.SendWithErrorAsync<AutoBackupDto>(HttpMethod.Post, "/api/backup/auto/run", null);
         ShowAutoBackup(r ?? await Hub.Client.GetAsync<AutoBackupDto>("/api/backup/auto"));
-        BackupStatus = r is null ? $"Niet gelukt: {error}" : $"Reservekopie gemaakt: {r.Files.FirstOrDefault()?.Name}";
+        BackupStatus = r is null ? Tr.F("Niet gelukt: {0}", error) : Tr.F("Reservekopie gemaakt: {0}", r.Files.FirstOrDefault()?.Name);
     }
 
     /// <summary>Stores the daily backup settings; returns an error text when the engine refused them.</summary>
@@ -696,27 +711,27 @@ public sealed partial class SettingsTool : StudioTool
         var (r, error) = await Hub.Client.SendWithErrorAsync<AutoBackupDto>(HttpMethod.Put, "/api/backup/auto",
             new AutoBackupSettingsDto(AutoBackupEnabled, AutoBackupFolder.Trim(), AutoBackupTime.Trim(), (int)AutoBackupKeep));
         if (r is not null) ShowAutoBackup(r);
-        return r is null ? $"Dagelijkse reservekopie niet opgeslagen: {error}" : null;
+        return r is null ? Tr.F("Dagelijkse reservekopie niet opgeslagen: {0}", error) : null;
     }
 
     /// <summary>Fetches a backup of the whole station from the engine.</summary>
     public async Task<byte[]?> FetchBackupAsync()
     {
-        BackupStatus = "reservekopie maken…";
+        BackupStatus = Tr.T("reservekopie maken…");
         var data = await Hub.Client.GetBytesAsync("/api/backup");
-        if (data is null) BackupStatus = "De engine maakte geen reservekopie.";
+        if (data is null) BackupStatus = Tr.T("De engine maakte geen reservekopie.");
         return data;
     }
 
     /// <summary>Sends a backup to the engine; it is put back when the engine starts again.</summary>
     public async Task RestoreBackupAsync(byte[] data)
     {
-        BackupStatus = "reservekopie versturen…";
+        BackupStatus = Tr.T("reservekopie versturen…");
         var (r, error) = await Hub.Client.PostBytesAsync<BackupStagedDto>("/api/backup", data);
         BackupStatus = r is null
-            ? $"Niet teruggezet: {error}"
-            : $"Reservekopie van {r.Station} ({r.Created:d-M-yyyy HH:mm}, {r.Machine}) "
-              + (r.Restarting ? "wordt nu teruggezet; de engine start opnieuw." : "wordt teruggezet als je de engine opnieuw start.");
+            ? Tr.F("Niet teruggezet: {0}", error)
+            : Tr.F("Reservekopie van {0} ({1:d-M-yyyy HH:mm}, {2}) ", r.Station, r.Created, r.Machine)
+              + (r.Restarting ? Tr.T("wordt nu teruggezet; de engine start opnieuw.") : Tr.T("wordt teruggezet als je de engine opnieuw start."));
     }
 
     private static decimal Percent(double level) => Math.Round((decimal)level * 100);
@@ -732,11 +747,11 @@ public sealed partial class SettingsTool : StudioTool
         SilenceEnabled = s.SilenceEnabled; SilenceDb = (decimal)s.SilenceDb; SilenceSeconds = (decimal)s.SilenceSeconds; SilenceAction = Math.Max(0, Array.IndexOf(SilenceActionNames, s.SilenceAction)); SilenceCategory = Hub.Categories.FirstOrDefault(c => c.Id == s.SilenceCategoryId);
         StreamEnabled = s.StreamEnabled; StreamServer = s.StreamServer; StreamBitrate = s.StreamBitrate; StreamGenre = s.StreamGenre; StreamUrl = s.StreamUrl;
         StreamPassword = "";
-        StreamPasswordHint = s.StreamPasswordSet ? "er is een wachtwoord opgeslagen; leeg laten = houden" : "nog geen wachtwoord";
+        StreamPasswordHint = s.StreamPasswordSet ? Tr.T("er is een wachtwoord opgeslagen; leeg laten = houden") : Tr.T("nog geen wachtwoord");
         ControlBindAddress = s.ControlBindAddress; ControlTcpPort = s.ControlTcpPort; ControlOscPort = s.ControlOscPort;
         ControlPassword = "";
         ClearControlPassword = false;
-        ControlPasswordHint = s.ControlPasswordSet ? "er is een wachtwoord opgeslagen; leeg laten = houden" : "geen wachtwoord: iedereen op het netwerk mag bedienen";
+        ControlPasswordHint = s.ControlPasswordSet ? Tr.T("er is een wachtwoord opgeslagen; leeg laten = houden") : Tr.T("geen wachtwoord: iedereen op het netwerk mag bedienen");
     }
 
     [RelayCommand]
@@ -785,12 +800,12 @@ public sealed partial class SettingsTool : StudioTool
         Hub.Settings.StartEngine = StartEngine;
         Hub.Settings.Save();
 
-        if (saved is null) { Status = "Opslaan mislukt: de engine nam de instellingen niet aan."; return; }
+        if (saved is null) { Status = Tr.T("Opslaan mislukt: de engine nam de instellingen niet aan."); return; }
         Show(saved.Settings);
-        var notes = new List<string> { "Opgeslagen." };
-        if (!routed) notes.Add("De geluidskaarten zijn niet gewisseld (kaart niet beschikbaar?).");
-        if (saved.Rescanning) notes.Add("De bibliotheek wordt opnieuw ingelezen uit de nieuwe mappen.");
-        if (saved.NeedsRestart.Count > 0) notes.Add("Actief na een herstart van de engine: " + string.Join(", ", saved.NeedsRestart) + ".");
+        var notes = new List<string> { Tr.T("Opgeslagen.") };
+        if (!routed) notes.Add(Tr.T("De geluidskaarten zijn niet gewisseld (kaart niet beschikbaar?)."));
+        if (saved.Rescanning) notes.Add(Tr.T("De bibliotheek wordt opnieuw ingelezen uit de nieuwe mappen."));
+        if (saved.NeedsRestart.Count > 0) notes.Add(Tr.T("Actief na een herstart van de engine: ") + string.Join(", ", saved.NeedsRestart) + ".");
         if (failoverError is not null) notes.Add(failoverError + ".");
         if (centralError is not null) notes.Add(centralError + ".");
         if (autoBackupError is not null) notes.Add(autoBackupError);
@@ -816,8 +831,8 @@ public sealed partial class SettingsTool : StudioTool
         SpotifyMarket = s.Market;
         SpotifySecret = "";
         SpotifySecretHint = s.SecretSet
-            ? $"Er is een Client Secret opgeslagen ({s.SecretHint}); leeg laten = houden."
-            : "Nog geen Client Secret opgeslagen.";
+            ? Tr.F("Er is een Client Secret opgeslagen ({0}); leeg laten = houden.", s.SecretHint)
+            : Tr.T("Nog geen Client Secret opgeslagen.");
     }
 
     private void SpotifyResult(bool ok, string text)
@@ -831,7 +846,7 @@ public sealed partial class SettingsTool : StudioTool
     {
         var (s, error) = await Hub.Client.SendWithErrorAsync<SpotifySettingsDto>(HttpMethod.Put, "/api/spotify/settings",
             new SpotifySettingsRequest(SpotifyClientId.Trim(), SpotifySecret.Trim(), SpotifyMarket.Trim()));
-        if (s is null) { SpotifyResult(false, error ?? "Opslaan mislukt."); return false; }
+        if (s is null) { SpotifyResult(false, error ?? Tr.T("Opslaan mislukt.")); return false; }
         ShowSpotify(s);
         return true;
     }
@@ -842,13 +857,13 @@ public sealed partial class SettingsTool : StudioTool
     {
         if (SpotifyBusy) return;
         SpotifyBusy = true;
-        SpotifyResult(true, "verbinden met Spotify…");
+        SpotifyResult(true, Tr.T("verbinden met Spotify…"));
         SpotifyFailed = SpotifyOk = false;
         try
         {
             if (SpotifyChanged && !await SaveSpotifyAsync()) return;
             var r = await Hub.Client.SendForAsync<SpotifyTestDto>(HttpMethod.Post, "/api/spotify/test", null);
-            if (r is null) SpotifyResult(false, "De engine gaf geen antwoord.");
+            if (r is null) SpotifyResult(false, Tr.T("De engine gaf geen antwoord."));
             else SpotifyResult(r.Ok, r.Message);
         }
         finally { SpotifyBusy = false; }
@@ -861,7 +876,7 @@ public sealed partial class SettingsTool : StudioTool
             new SpotifySettingsRequest(null, null, null, Clear: true));
         if (s is null) return;
         ShowSpotify(s);
-        SpotifyResult(true, "De Spotify-gegevens zijn gewist.");
+        SpotifyResult(true, Tr.T("De Spotify-gegevens zijn gewist."));
     }
 
     /// <summary>
@@ -883,7 +898,7 @@ public sealed partial class SettingsTool : StudioTool
     [RelayCommand]
     private void OpenSpotifyPlayer()
     {
-        if (!SpotifyPlayerLocal) { SpotifyResult(false, "De testpagina werkt alleen op de computer waar de engine draait."); return; }
+        if (!SpotifyPlayerLocal) { SpotifyResult(false, Tr.T("De testpagina werkt alleen op de computer waar de engine draait.")); return; }
         try { System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(SpotifyPlayerUrl) { UseShellExecute = true }); }
         catch (System.ComponentModel.Win32Exception) { }
     }
@@ -900,9 +915,9 @@ public sealed partial class SettingsTool : StudioTool
     private void ShowAcoustId(AcoustIdSettingsDto s)
     {
         AcoustIdKey = "";
-        AcoustIdKeyHint = s.KeySet ? $"Er is een sleutel opgeslagen ({s.KeyHint}). Leeg laten = die houden." : "Nog geen sleutel opgeslagen.";
-        AcoustIdFpcalc = s.FpcalcFound ? "fpcalc (Chromaprint) is gevonden bij de engine."
-            : "fpcalc ontbreekt bij de engine: voer scripts\\fetch-fpcalc.ps1 uit en bouw de engine opnieuw.";
+        AcoustIdKeyHint = s.KeySet ? Tr.F("Er is een sleutel opgeslagen ({0}). Leeg laten = die houden.", s.KeyHint) : Tr.T("Nog geen sleutel opgeslagen.");
+        AcoustIdFpcalc = s.FpcalcFound ? Tr.T("fpcalc (Chromaprint) is gevonden bij de engine.")
+            : Tr.T("fpcalc ontbreekt bij de engine: voer scripts\\fetch-fpcalc.ps1 uit en bouw de engine opnieuw.");
         if (s.RegisterUrl.StartsWith("https://", StringComparison.Ordinal)) _acoustIdRegisterUrl = s.RegisterUrl;
     }
 
@@ -917,7 +932,7 @@ public sealed partial class SettingsTool : StudioTool
     {
         var (s, error) = await Hub.Client.SendWithErrorAsync<AcoustIdSettingsDto>(HttpMethod.Put, "/api/acoustid/settings",
             new AcoustIdSettingsRequest(AcoustIdKey.Trim()));
-        if (s is null) { AcoustIdResult(false, error ?? "Opslaan mislukt."); return false; }
+        if (s is null) { AcoustIdResult(false, error ?? Tr.T("Opslaan mislukt.")); return false; }
         ShowAcoustId(s);
         return true;
     }
@@ -929,12 +944,12 @@ public sealed partial class SettingsTool : StudioTool
         if (AcoustIdBusy) return;
         AcoustIdBusy = true;
         AcoustIdOk = AcoustIdFailed = false;
-        AcoustIdStatus = "verbinden met AcoustID…";
+        AcoustIdStatus = Tr.T("verbinden met AcoustID…");
         try
         {
             if (AcoustIdKey.Trim().Length > 0 && !await SaveAcoustIdAsync()) return;
             var r = await Hub.Client.SendForAsync<AcoustIdTestDto>(HttpMethod.Post, "/api/acoustid/test", null);
-            if (r is null) AcoustIdResult(false, "De engine gaf geen antwoord.");
+            if (r is null) AcoustIdResult(false, Tr.T("De engine gaf geen antwoord."));
             else AcoustIdResult(r.Ok, r.Message);
         }
         finally { AcoustIdBusy = false; }
@@ -946,7 +961,7 @@ public sealed partial class SettingsTool : StudioTool
         var s = await Hub.Client.SendForAsync<AcoustIdSettingsDto>(HttpMethod.Put, "/api/acoustid/settings", new AcoustIdSettingsRequest(null, Clear: true));
         if (s is null) return;
         ShowAcoustId(s);
-        AcoustIdResult(true, "De AcoustID-sleutel is gewist.");
+        AcoustIdResult(true, Tr.T("De AcoustID-sleutel is gewist."));
     }
 
     /// <summary>The page on acoustid.org where an application is registered (sign in, then "Register a new application").</summary>
@@ -987,15 +1002,15 @@ public sealed partial class SettingsTool : StudioTool
 
     private void ShowSoloist()
     {
-        SoloistKeyHint = "Sleutel: " + SoloistLauncher.KeySource(Hub.Settings.Soloist) + ".";
+        SoloistKeyHint = Tr.T("Sleutel: ") + SoloistLauncher.KeySource(Hub.Settings.Soloist) + ".";
         SoloistRunning = SoloistLauncher.Running;
         var probe = new SoloistSettings { ExePath = SoloistPath };
         SoloistFound = SoloistLauncher.FindExe(probe) is { } exe
-            ? "Gevonden: " + exe
-            : SoloistPath.Trim().Length > 0 ? "Op het eigen pad staat geen soloist.exe."
-            : "Nog niet gevonden. Gezocht in: " + string.Join("; ", SoloistLauncher.SearchFolders()) + ".";
+            ? Tr.T("Gevonden: ") + exe
+            : SoloistPath.Trim().Length > 0 ? Tr.T("Op het eigen pad staat geen soloist.exe.")
+            : Tr.T("Nog niet gevonden. Gezocht in: ") + string.Join("; ", SoloistLauncher.SearchFolders()) + ".";
         SoloistStatus = SoloistLauncher.LastMessage.Length > 0 ? SoloistLauncher.LastMessage
-            : SoloistRunning ? "Soloist draait." : "Soloist is niet door de studio gestart.";
+            : SoloistRunning ? Tr.T("Soloist draait.") : Tr.T("Soloist is niet door de studio gestart.");
     }
 
     /// <summary>Puts the fields into the studio settings (a new key is encrypted; an empty field keeps the stored key).</summary>
@@ -1003,7 +1018,7 @@ public sealed partial class SettingsTool : StudioTool
     {
         var s = Hub.Settings.Soloist;
         s.ExePath = SoloistPath.Trim().Trim('"');
-        s.DeviceName = string.IsNullOrWhiteSpace(SoloistDevice) ? "REA ontwikkeltest" : SoloistDevice.Trim();
+        s.DeviceName = string.IsNullOrWhiteSpace(SoloistDevice) ? Tr.T("REA ontwikkeltest") : SoloistDevice.Trim();
         s.Port = (int)Math.Clamp(SoloistPort, 1024, 65535);
         if (SoloistKey.Trim().Length > 0) s.ApiKeyProtected = SoloistLauncher.Protect(SoloistKey.Trim());
         s.StartWithStudio = SoloistStartWithStudio;
@@ -1062,7 +1077,7 @@ public sealed partial class SettingsTool : StudioTool
         Hub.Settings.Save();
         SoloistKey = "";
         ShowSoloist();
-        SoloistStatus = "De opgeslagen Soloist-sleutel is gewist.";
+        SoloistStatus = Tr.T("De opgeslagen Soloist-sleutel is gewist.");
     }
 
     [RelayCommand]

@@ -1,3 +1,4 @@
+using ReaRadioDj.Contracts.Localization;
 using System.Collections.ObjectModel;
 using System.Globalization;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -12,7 +13,7 @@ namespace ReaRadioDj.Studio.ViewModels;
 /// </summary>
 public sealed partial class AirCutTool : StudioTool
 {
-    public AirCutTool() : base("aircut", "Uit de uitzending knippen") { }
+    public AirCutTool() : base("aircut", Tr.T("Uit de uitzending knippen")) { }
 
     private static readonly string[] TimeFormats = [@"h\:mm\:ss", @"h\:mm", @"hh\:mm\:ss", @"hh\:mm"];
 
@@ -40,11 +41,11 @@ public sealed partial class AirCutTool : StudioTool
         var day = (Day ?? DateTime.Today).Date;
         var files = await Hub.Client.GetAsync<List<RecordedFileDto>>($"/api/recordings/program?date={day:yyyy-MM-dd}");
         Hours.Clear();
-        if (files is null) { HoursText = "De engine kent het knippen uit de uitzending nog niet: werk hem bij."; return; }
+        if (files is null) { HoursText = Tr.T("De engine kent het knippen uit de uitzending nog niet: werk hem bij."); return; }
         foreach (var f in files) Hours.Add($"{f.Start:HH:mm:ss} – {f.End:HH:mm:ss}   {f.Name}");
         HoursText = files.Count == 0
-            ? "Van deze dag is geen uitzendopname. Zet Instellingen › Opnemen › Uitzending opnemen aan."
-            : $"Opgenomen op {day:dddd d MMMM}:";
+            ? Tr.T("Van deze dag is geen uitzendopname. Zet Instellingen › Opnemen › Uitzending opnemen aan.")
+            : Tr.F("Opgenomen op {0:dddd d MMMM}:", day);
     }
 
     /// <summary>The last minutes until now, on today.</summary>
@@ -68,8 +69,8 @@ public sealed partial class AirCutTool : StudioTool
     [RelayCommand]
     private async Task Cut()
     {
-        if (At(FromText) is not DateTime from) { Status = "Begin: geef een tijd als 14:05 of 14:05:30."; return; }
-        if (At(ToText) is not DateTime to) { Status = "Einde: geef een tijd als 14:15 of 14:15:30."; return; }
+        if (At(FromText) is not DateTime from) { Status = Tr.T("Begin: geef een tijd als 14:05 of 14:05:30."); return; }
+        if (At(ToText) is not DateTime to) { Status = Tr.T("Einde: geef een tijd als 14:15 of 14:15:30."); return; }
         if (to <= from) to = to.AddDays(1);   // over midnight
         Busy = true;
         Status = $"Knippen: {from:HH:mm:ss} – {to:HH:mm:ss} …";
@@ -78,8 +79,8 @@ public sealed partial class AirCutTool : StudioTool
             var (r, error) = await Hub.Client.SendWithErrorAsync<RecordingCutDto>(HttpMethod.Post, "/api/recordings/cut",
                 new RecordingCutRequest(from, to, Title, Artist));
             Status = r is null
-                ? $"Niet gelukt: {error}"
-                : $"In de bibliotheek (categorie Opnamen): {r.File}, {TimeSpan.FromSeconds(r.Seconds):h\\:mm\\:ss}.";
+                ? Tr.F("Niet gelukt: {0}", error)
+                : Tr.F("In de bibliotheek (categorie Opnamen): {0}, {1:h\\:mm\\:ss}.", r.File, TimeSpan.FromSeconds(r.Seconds));
         }
         finally { Busy = false; }
     }

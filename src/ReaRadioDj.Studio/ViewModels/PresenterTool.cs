@@ -1,3 +1,4 @@
+using ReaRadioDj.Contracts.Localization;
 using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -22,10 +23,10 @@ public sealed partial class BreakVm : ObservableObject
     public string StateText => State switch
     {
         "pending" => "wacht",
-        "rendering" => "bezig…",
+        "rendering" => Tr.T("bezig…"),
         "awaitingApproval" => "goedkeuren",
         "ready" => "klaar",
-        "failed" => "mislukt (jingle in de plaats)",
+        "failed" => Tr.T("mislukt (jingle in de plaats)"),
         _ => State,
     };
 
@@ -43,7 +44,7 @@ public sealed partial class BreakVm : ObservableObject
         string? extra = d.Extra switch
         {
             "weather" => "weer", "news" => "nieuws", "note" => "bericht",
-            { } x when x.StartsWith("theme:", StringComparison.Ordinal) => $"thema ({x[6..]})",
+            { } x when x.StartsWith("theme:", StringComparison.Ordinal) => Tr.F("thema ({0})", x[6..]),
             _ => null,
         };
         Info = string.Join(" · ", new[] { d.ScriptSource, d.Voice, extra }.Where(x => !string.IsNullOrEmpty(x)));
@@ -64,11 +65,11 @@ public sealed record ToneChoice(string Key, string Name)
 
     public static readonly ToneChoice[] All =
     [
-        new("random", "willekeurig (naar verhouding)"),
-        new("serieus", "altijd serieus"),
-        new("grappig", "altijd grappig"),
-        new("leuk", "altijd luchtig en leuk"),
-        new("randje", "altijd een tikkie op het randje"),
+        new("random", Tr.T("willekeurig (naar verhouding)")),
+        new("serieus", Tr.T("altijd serieus")),
+        new("grappig", Tr.T("altijd grappig")),
+        new("leuk", Tr.T("altijd luchtig en leuk")),
+        new("randje", Tr.T("altijd een tikkie op het randje")),
     ];
 }
 
@@ -79,7 +80,7 @@ public sealed record ToneChoice(string Key, string Name)
 /// </summary>
 public sealed partial class PresenterTool : StudioTool
 {
-    public PresenterTool() : base("presenter", "AI-presentator") { }
+    public PresenterTool() : base("presenter", Tr.T("AI-presentator")) { }
 
     public ObservableCollection<BreakVm> Breaks { get; } = [];
     public ObservableCollection<string> Models { get; } = [];
@@ -142,7 +143,7 @@ public sealed partial class PresenterTool : StudioTool
     {
         var d = new PresenterExtrasDto(Outro?.Id, WeatherEnabled, Place, (double)(Latitude ?? 0), (double)(Longitude ?? 0),
             (int)(WeatherEvery ?? 30), NewsEnabled, NewsFeeds, (int)(NewsEvery ?? 60));
-        if (await Hub.Client.PutAsync("/api/presenter/extras", d)) Hub.Status = "AI-presentator: weer, nieuws en outro opgeslagen";
+        if (await Hub.Client.PutAsync("/api/presenter/extras", d)) Hub.Status = Tr.T("AI-presentator: weer, nieuws en outro opgeslagen");
     }
 
     /// <summary>Saves, then shows what the presenter would say about the weather and the news right now.</summary>
@@ -152,9 +153,9 @@ public sealed partial class PresenterTool : StudioTool
         ExtrasPreview = "ophalen…";
         await SaveExtras();
         var r = await Hub.Client.GetAsync<ExtrasPreviewDto>("/api/presenter/extras/preview");
-        ExtrasPreview = r is null ? "geen antwoord" : string.Join("\n", new[]
+        ExtrasPreview = r is null ? Tr.T("geen antwoord") : string.Join("\n", new[]
         {
-            r.Weather is null ? null : "Weer: " + r.Weather,
+            r.Weather is null ? null : Tr.T("Weer: ") + r.Weather,
             r.Headline is null ? null : "Nieuws: " + r.Headline,
             r.Error,
         }.Where(x => x is not null));
@@ -236,7 +237,7 @@ public sealed partial class PresenterTool : StudioTool
         CreativeVoice = VoiceChoices.FirstOrDefault(v => v.Id == c.VoiceId) ?? VoiceChoices.FirstOrDefault();
         ToneVoice = c.ToneVoice;
         RepeatHours = c.RepeatHours;
-        CreativeStatus = c.LlmReady ? "" : "Let op: werkt alleen met een taalmodel (zie Instellingen). Zonder taalmodel blijven het gewone aankondigingen.";
+        CreativeStatus = c.LlmReady ? "" : Tr.T("Let op: werkt alleen met een taalmodel (zie Instellingen). Zonder taalmodel blijven het gewone aankondigingen.");
     }
 
     [RelayCommand]
@@ -248,7 +249,7 @@ public sealed partial class PresenterTool : StudioTool
         if (await Hub.Client.SendForAsync<CreativeSettingsDto>(HttpMethod.Put, "/api/presenter/creative", d) is { } saved)
         {
             ShowCreative(saved);
-            Hub.Status = "Creatieve presentator: instellingen opgeslagen";
+            Hub.Status = Tr.T("Creatieve presentator: instellingen opgeslagen");
         }
     }
 
@@ -259,8 +260,8 @@ public sealed partial class PresenterTool : StudioTool
         ThemePreview = "ophalen…";
         await SaveCreative();
         var list = await Hub.Client.GetAsync<List<CreativeThemeDto>>("/api/presenter/creative/themes");
-        if (list is null) { ThemePreview = "geen antwoord"; return; }
-        ThemePreview = $"{list.Count} thema's: " + string.Join(", ", list.GroupBy(t => t.Source).Select(g => $"{g.Count()} {g.Key}")) + "\n"
+        if (list is null) { ThemePreview = Tr.T("geen antwoord"); return; }
+        ThemePreview = Tr.F("{0} thema's: ", list.Count) + string.Join(", ", list.GroupBy(t => t.Source).Select(g => $"{g.Count()} {g.Key}")) + "\n"
             + string.Join("\n", list.GroupBy(t => t.Source).SelectMany(g => g.Take(4))
                 .Select(t => $"• {(t.Tone is null ? "" : t.Tone + ": ")}{t.Theme}  ({t.Source})"));
     }
@@ -273,16 +274,16 @@ public sealed partial class PresenterTool : StudioTool
     {
         if (Trying) return;
         Trying = true;
-        CreativeTrial = speak ? "schrijven en inspreken…" : "schrijven…";
+        CreativeTrial = speak ? Tr.T("schrijven en inspreken…") : "schrijven…";
         try
         {
             await SaveCreative();
             var r = await Hub.Client.SendForAsync<CreativeTryDto>(HttpMethod.Post, "/api/presenter/creative/try",
                 new CreativeTryRequest(TrialTone.Key, string.IsNullOrWhiteSpace(TrialTheme) ? null : TrialTheme.Trim(), speak, speak));
-            CreativeTrial = r is null ? "geen antwoord"
-                : r.Error is { } e ? "Mislukt: " + e
-                : $"Thema: {r.Theme} ({r.ThemeSource}) · toon: {r.Tone}\n\n{r.Script}\n\n— {r.Source}, {r.Words} woorden, {r.Seconds:0.0} s"
-                  + (r.Voice is null ? "" : $" · stem: {r.Voice}{(r.Length is double l ? $", {l:0.0} s, speelt op PFL" : "")}");
+            CreativeTrial = r is null ? Tr.T("geen antwoord")
+                : r.Error is { } e ? Tr.T("Mislukt: ") + e
+                : Tr.F("Thema: {0} ({1}) · toon: {2}\n\n{3}\n\n— {4}, {5} woorden, {6:0.0} s", r.Theme, r.ThemeSource, r.Tone, r.Script, r.Source, r.Words, r.Seconds)
+                  + (r.Voice is null ? "" : " · " + Tr.F("stem: {0}", r.Voice) + (r.Length is double l ? ", " + Tr.F("{0:0.0} s, speelt op PFL", l) : ""));
         }
         finally { Trying = false; }
     }
@@ -319,7 +320,7 @@ public sealed partial class PresenterTool : StudioTool
     private void NewPersona()
     {
         SelectedPersona = null;
-        PersonaName = "Nieuwe persona";
+        PersonaName = Tr.T("Nieuwe persona");
         PersonaEnabled = true;
         PersonaHours = "6-9";
         PersonaPresenter = "";
@@ -339,7 +340,7 @@ public sealed partial class PresenterTool : StudioTool
         bool ok = d.Id > 0
             ? await Hub.Client.PutAsync($"/api/presenter/personas/{d.Id}", d)
             : await Hub.Client.PostAsync("/api/presenter/personas", d);
-        if (ok) { Hub.Status = $"persona '{d.Name}' opgeslagen"; await LoadPersonasAsync(d.Name); }
+        if (ok) { Hub.Status = Tr.F("persona '{0}' opgeslagen", d.Name); await LoadPersonasAsync(d.Name); }
     }
 
     [RelayCommand]
@@ -353,7 +354,7 @@ public sealed partial class PresenterTool : StudioTool
         if (await Hub.Client.GetAsync<List<PersonaDto>>("/api/presenter/personas") is not { } list) return;
         Personas.Clear();
         foreach (var p in list) Personas.Add(p);
-        PersonaNow = list.FirstOrDefault(p => p.OnAirNow) is { } now ? $"nu: {now.Name}" : "nu: algemene instellingen";
+        PersonaNow = list.FirstOrDefault(p => p.OnAirNow) is { } now ? Tr.F("nu: {0}", now.Name) : Tr.T("nu: algemene instellingen");
         SelectedPersona = Personas.FirstOrDefault(p => p.Name == select) ?? Personas.FirstOrDefault();
     }
 
@@ -361,11 +362,11 @@ public sealed partial class PresenterTool : StudioTool
     {
         var cats = await Hub.Client.GetAsync<List<CategoryDto>>("/api/categories") ?? [];
         BedChoices.Clear();
-        BedChoices.Add(new Choice(null, "(geen bed)"));
+        BedChoices.Add(new Choice(null, Tr.T("(geen bed)")));
         foreach (var c in cats.Where(c => c.Kind != "song")) BedChoices.Add(new Choice(c.Id, c.Name));
         var voices = await Hub.Client.GetAsync<List<VoiceProfileDto>>("/api/voice/profiles") ?? [];
         VoiceChoices.Clear();
-        VoiceChoices.Add(new Choice(null, "(standaardstem)"));
+        VoiceChoices.Add(new Choice(null, Tr.T("(standaardstem)")));
         foreach (var v in voices) VoiceChoices.Add(new Choice(v.Id, v.Name));
     }
 
@@ -374,18 +375,18 @@ public sealed partial class PresenterTool : StudioTool
     // ---------------------------------------------------------------- the Higgs voice server
 
     [ObservableProperty] private bool _higgsAutoStart;
-    [ObservableProperty] private string _higgsUrl = "http://localhost:8001";
+    [ObservableProperty] private string _higgsUrl = Tr.T("http://localhost:8001");
     [ObservableProperty] private string _higgsCommand = "";
     [ObservableProperty] private string _higgsArguments = "";
     [ObservableProperty] private string _higgsFolder = "";
     [ObservableProperty] private bool _higgsEditable = true;
-    [ObservableProperty] private string _higgsState = "Stemserver: controleren…";
+    [ObservableProperty] private string _higgsState = Tr.T("Stemserver: controleren…");
     [ObservableProperty] private bool _higgsOnline;
     [ObservableProperty] private bool _higgsRunning;
     [ObservableProperty] private string _higgsResult = "";
     /// <summary>Online but not started by this engine: it runs elsewhere (by hand, another engine), so no second one.</summary>
     public bool HiggsElsewhere => HiggsOnline && !HiggsRunning;
-    public string HiggsButtonText => HiggsRunning ? "Server stoppen" : HiggsElsewhere ? "Draait al" : "Server starten";
+    public string HiggsButtonText => HiggsRunning ? Tr.T("Server stoppen") : HiggsElsewhere ? Tr.T("Draait al") : Tr.T("Server starten");
     partial void OnHiggsRunningChanged(bool value) { OnPropertyChanged(nameof(HiggsButtonText)); OnPropertyChanged(nameof(HiggsElsewhere)); }
     partial void OnHiggsOnlineChanged(bool value) { OnPropertyChanged(nameof(HiggsButtonText)); OnPropertyChanged(nameof(HiggsElsewhere)); }
 
@@ -409,8 +410,8 @@ public sealed partial class PresenterTool : StudioTool
         if (await Hub.Client.GetAsync<VoiceStatusDto>("/api/voice/status") is not { } s) return;
         HiggsOnline = s.ServerOnline;
         HiggsRunning = s.ServerRunning;
-        HiggsState = s.ServerOnline ? $"Stemserver online ({s.LatencyMs:0} ms) · {s.Model}"
-            : s.ServerRunning ? "Stemserver start op (het model laden duurt een paar minuten)…"
+        HiggsState = s.ServerOnline ? Tr.F("Stemserver online ({0:0} ms) · {1}", s.LatencyMs, s.Model)
+            : s.ServerRunning ? Tr.T("Stemserver start op (het model laden duurt een paar minuten)…")
             : $"Stemserver offline{(s.FallbackToSapi ? ": tot hij draait spreekt Windows-spraak" : "")}";
     }
 
@@ -420,16 +421,16 @@ public sealed partial class PresenterTool : StudioTool
         var (d, error) = await Hub.Client.SendWithErrorAsync<HiggsServerSettingsDto>(HttpMethod.Put, "/api/voice/server/settings",
             new HiggsServerSettingsDto(HiggsAutoStart, HiggsUrl.Trim(), HiggsCommand.Trim(), HiggsArguments.Trim(), HiggsFolder.Trim()));
         HiggsResult = error is not null ? $"✕ {error}"
-            : d!.AutoStart ? "✓ Opgeslagen: de stemserver start voortaan mee met de engine."
-            : "✓ Opgeslagen: de stemserver start alleen met de knop.";
+            : d!.AutoStart ? Tr.T("✓ Opgeslagen: de stemserver start voortaan mee met de engine.")
+            : Tr.T("✓ Opgeslagen: de stemserver start alleen met de knop.");
     }
 
     [RelayCommand]
     private async Task ToggleHiggs()
     {
-        if (HiggsElsewhere) { HiggsResult = "De stemserver draait al, buiten deze engine gestart; daar ook stoppen."; return; }
+        if (HiggsElsewhere) { HiggsResult = Tr.T("De stemserver draait al, buiten deze engine gestart; daar ook stoppen."); return; }
         var path = HiggsRunning ? "/api/voice/server/stop" : "/api/voice/server/start";
-        if (!HiggsRunning && string.IsNullOrWhiteSpace(HiggsCommand)) { HiggsResult = "✕ Vul eerst het startcommando in en sla op."; return; }
+        if (!HiggsRunning && string.IsNullOrWhiteSpace(HiggsCommand)) { HiggsResult = Tr.T("✕ Vul eerst het startcommando in en sla op."); return; }
         await Hub.Client.PostAsync(path);
         await RefreshHiggsAsync();
     }
@@ -467,7 +468,7 @@ public sealed partial class PresenterTool : StudioTool
         if (b is null) return;
         b.Busy = true;
         if (await Hub.Client.PostAsync($"/api/log/{b.Id}/break/approve", new ApproveBreakRequest(b.EditScript)))
-            Hub.Status = "AI-break goedgekeurd en ingesproken";
+            Hub.Status = Tr.T("AI-break goedgekeurd en ingesproken");
         b.Busy = false;
     }
 
@@ -509,7 +510,7 @@ public sealed partial class PresenterTool : StudioTool
     [RelayCommand]
     private async Task RefreshModelsAsync()
     {
-        if (string.IsNullOrWhiteSpace(LlmBaseUrl)) { LlmStatus = "geen taalmodel: de presentator gebruikt sjabloonteksten"; return; }
+        if (string.IsNullOrWhiteSpace(LlmBaseUrl)) { LlmStatus = Tr.T("geen taalmodel: de presentator gebruikt sjabloonteksten"); return; }
         var r = await Hub.Client.GetAsync<LlmModelsDto>($"/api/presenter/models?url={Uri.EscapeDataString(LlmBaseUrl)}");
         if (r is null) return;
         var keep = LlmModel;
@@ -517,7 +518,7 @@ public sealed partial class PresenterTool : StudioTool
         foreach (var m in r.Models) Models.Add(m);
         if (!string.IsNullOrEmpty(keep) && !Models.Contains(keep)) Models.Insert(0, keep);
         LlmModel = keep is { Length: > 0 } ? keep : Models.FirstOrDefault();
-        LlmStatus = r.Ok ? $"verbonden · {r.Models.Count} modellen" : r.Error ?? "niet bereikbaar";
+        LlmStatus = r.Ok ? Tr.F("verbonden · {0} modellen", r.Models.Count) : r.Error ?? Tr.T("niet bereikbaar");
     }
 
     [RelayCommand]
@@ -528,7 +529,7 @@ public sealed partial class PresenterTool : StudioTool
         if (await Hub.Client.SendForAsync<PresenterSettingsDto>(HttpMethod.Put, "/api/presenter/settings", d) is { } saved)
         {
             LlmApiKey = saved.LlmApiKey;
-            Hub.Status = "AI-presentator: instellingen opgeslagen";
+            Hub.Status = Tr.T("AI-presentator: instellingen opgeslagen");
         }
     }
 
@@ -543,7 +544,7 @@ public sealed partial class PresenterTool : StudioTool
         {
             await Save();
             var r = await Hub.Client.SendForAsync<ScriptTryDto>(HttpMethod.Post, "/api/presenter/try", new ScriptTryRequest(null));
-            Trial = r is null ? "geen antwoord" : Describe(r);
+            Trial = r is null ? Tr.T("geen antwoord") : Describe(r);
         }
         finally { Trying = false; }
     }
@@ -559,7 +560,7 @@ public sealed partial class PresenterTool : StudioTool
         {
             await SavePersona();
             var r = await Hub.Client.SendForAsync<ScriptTryDto>(HttpMethod.Post, "/api/presenter/try", new ScriptTryRequest(SelectedPersona?.Id));
-            Trial = r is null ? "geen antwoord" : Describe(r);
+            Trial = r is null ? Tr.T("geen antwoord") : Describe(r);
         }
         finally { Trying = false; }
     }

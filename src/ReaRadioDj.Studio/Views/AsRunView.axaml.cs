@@ -1,3 +1,4 @@
+using ReaRadioDj.Contracts.Localization;
 using Avalonia.Controls;
 using Avalonia.Platform.Storage;
 using ReaRadioDj.Studio.ViewModels;
@@ -15,7 +16,7 @@ public partial class AsRunView : UserControl
             if (DataContext is not AsRunTool tool || TopLevel.GetTopLevel(this)?.StorageProvider is not { } storage) return;
             var file = await storage.SaveFilePickerAsync(new FilePickerSaveOptions
             {
-                Title = "As-run exporteren",
+                Title = Tr.T("As-run exporteren"),
                 SuggestedFileName = tool.SuggestedFileName,
                 DefaultExtension = "csv",
                 FileTypeChoices = [new FilePickerFileType("CSV") { Patterns = ["*.csv"] }],
@@ -26,19 +27,19 @@ public partial class AsRunView : UserControl
         };
         Report.Click += async (_, _) =>
         {
-            if (DataContext is AsRunTool t) await FileSave.FromEngineAsync(this, "Muziekrapport opslaan", t.ReportFileName(false), t.ReportUrl(false));
+            if (DataContext is AsRunTool t) await FileSave.FromEngineAsync(this, Tr.T("Muziekrapport opslaan"), t.ReportFileName(false), t.ReportUrl(false));
         };
         ReportPdf.Click += async (_, _) =>
         {
-            if (DataContext is AsRunTool t) await FileSave.FromEngineAsync(this, "Muziekrapport als PDF opslaan", t.ReportFileName(false, "pdf"), t.ReportUrl(false, "pdf"));
+            if (DataContext is AsRunTool t) await FileSave.FromEngineAsync(this, Tr.T("Muziekrapport als PDF opslaan"), t.ReportFileName(false, "pdf"), t.ReportUrl(false, "pdf"));
         };
         ReportSumPdf.Click += async (_, _) =>
         {
-            if (DataContext is AsRunTool t) await FileSave.FromEngineAsync(this, "Overzicht als PDF opslaan", t.ReportFileName(true, "pdf"), t.ReportUrl(true, "pdf"));
+            if (DataContext is AsRunTool t) await FileSave.FromEngineAsync(this, Tr.T("Overzicht als PDF opslaan"), t.ReportFileName(true, "pdf"), t.ReportUrl(true, "pdf"));
         };
         ReportSum.Click += async (_, _) =>
         {
-            if (DataContext is AsRunTool t) await FileSave.FromEngineAsync(this, "Overzicht per nummer opslaan", t.ReportFileName(true), t.ReportUrl(true));
+            if (DataContext is AsRunTool t) await FileSave.FromEngineAsync(this, Tr.T("Overzicht per nummer opslaan"), t.ReportFileName(true), t.ReportUrl(true));
         };
     }
 }

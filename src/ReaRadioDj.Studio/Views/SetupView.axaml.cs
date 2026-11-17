@@ -1,3 +1,4 @@
+using ReaRadioDj.Contracts.Localization;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.Platform.Storage;
@@ -11,12 +12,12 @@ public partial class SetupView : UserControl
 
     private async void OnBrowseMusic(object? sender, RoutedEventArgs e)
     {
-        if (DataContext is SetupWizardVm vm && await PickAsync("Map met muziek") is { } path) vm.MusicFolder = path;
+        if (DataContext is SetupWizardVm vm && await PickAsync(Tr.T("Map met muziek")) is { } path) vm.MusicFolder = path;
     }
 
     private async void OnBrowseJingles(object? sender, RoutedEventArgs e)
     {
-        if (DataContext is SetupWizardVm vm && await PickAsync("Map met jingles") is { } path) vm.JingleFolder = path;
+        if (DataContext is SetupWizardVm vm && await PickAsync(Tr.T("Map met jingles")) is { } path) vm.JingleFolder = path;
     }
 
     private async Task<string?> PickAsync(string title)

@@ -1,3 +1,4 @@
+using ReaRadioDj.Contracts.Localization;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Platform.Storage;
@@ -25,7 +26,7 @@ public static class FileSave
         if (bytes is null) return false;
         await using var stream = await file.OpenWriteAsync();
         await stream.WriteAsync(bytes);
-        StudioHub.Current.Status = $"opgeslagen: {file.Name}";
+        StudioHub.Current.Status = Tr.F("opgeslagen: {0}", file.Name);
         return true;
     }
 }

@@ -1,3 +1,4 @@
+using ReaRadioDj.Contracts.Localization;
 using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -48,6 +49,6 @@ public sealed partial class ClipboardTool : StudioTool
         bool next = where == "next";
         var name = string.IsNullOrWhiteSpace(ContainerName) ? "Container" : ContainerName.Trim();
         bool ok = await Hub.Client.PostAsync("/api/log/container", new AddContainerRequest(name, Items.Select(m => m.Id).ToList(), next ? 0 : null));
-        ContainerResult = ok ? $"\"{name}\" staat {(next ? "als volgende" : "achteraan")} in de log ({Items.Count} items)." : "Niet gelukt: is de engine bereikbaar?";
+        ContainerResult = ok ? (next ? Tr.F("\"{0}\" staat als volgende in de log ({1} items).", name, Items.Count) : Tr.F("\"{0}\" staat achteraan in de log ({1} items).", name, Items.Count)) : Tr.T("Niet gelukt: is de engine bereikbaar?");
     }
 }

@@ -1,3 +1,4 @@
+using ReaRadioDj.Contracts.Localization;
 using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -18,10 +19,10 @@ public sealed record NewsJingle(long? Id, string Name)
 /// </summary>
 public sealed partial class NewsTool : StudioTool
 {
-    public NewsTool() : base("news", "Nieuws") { }
+    public NewsTool() : base("news", Tr.T("Nieuws")) { }
 
-    public static readonly string[] SourceNames = ["Nieuwste bestand in een map", "Item uit een categorie", "Koppen uit RSS, letterlijk voorgelezen door de AI-stem",
-        "AI-nieuws: landelijk en regionaal, herschreven door het taalmodel", "Weerbericht voor een plaats (AI)"];
+    public static readonly string[] SourceNames = ["Nieuwste bestand in een map", Tr.T("Item uit een categorie"), Tr.T("Koppen uit RSS, letterlijk voorgelezen door de AI-stem"),
+        Tr.T("AI-nieuws: landelijk en regionaal, herschreven door het taalmodel"), "Weerbericht voor een plaats (AI)"];
     private static readonly string[] SourceKeys = ["folder", "category", "headlines", "ainews", "weather"];
     public static readonly string[] TimingNames = ["Hard (op de seconde, onderbreekt)", "Zacht (na het lopende item)"];
     public IReadOnlyList<string> Sources => SourceNames;
@@ -34,7 +35,7 @@ public sealed partial class NewsTool : StudioTool
 
     [ObservableProperty] private NewsBlockDto? _selected;
     [ObservableProperty] private long _id;
-    [ObservableProperty] private string _name = "Nieuws";
+    [ObservableProperty] private string _name = Tr.T("Nieuws");
     [ObservableProperty] private bool _enabled = true;
     [ObservableProperty] private string _hours = "*";
     [ObservableProperty] private decimal? _minute = 0;
@@ -70,13 +71,13 @@ public sealed partial class NewsTool : StudioTool
     [ObservableProperty] private bool _busy;
     public ObservableCollection<PlaceDto> Places { get; } = [];
     public bool HasPlaces => Places.Count > 0;
-    public ObservableCollection<NewsJingle> Voices { get; } = [new(null, "stem van de rol: nieuwslezer of weerman/weervrouw (venster Stemmen)")];
+    public ObservableCollection<NewsJingle> Voices { get; } = [new(null, Tr.T("stem van de rol: nieuwslezer of weerman/weervrouw (venster Stemmen)"))];
 
-    public string LengthText => $"woorden, ongeveer {Math.Round((double)(Words ?? 120) / 2.5 / 5) * 5:0} seconden";
+    public string LengthText => Tr.F("woorden, ongeveer {0:0} seconden", Math.Round((double)(Words ?? 120) / 2.5 / 5) * 5);
     public string PlaceText => Latitude == 0 && Longitude == 0
-        ? "Geen plaats gekozen: dan geldt de plaats van de AI-presentator."
-        : string.Create(System.Globalization.CultureInfo.InvariantCulture,
-            $"Weer voor {(Place.Length > 0 ? Place : "plaats")} ({Latitude:0.###}, {Longitude:0.###})");
+        ? Tr.T("Geen plaats gekozen: dan geldt de plaats van de AI-presentator.")
+        : string.Format(System.Globalization.CultureInfo.InvariantCulture,
+            Tr.T("Weer voor {0} ({1:0.###}, {2:0.###})"), Place.Length > 0 ? Place : Tr.T("plaats"), Latitude, Longitude);
 
     partial void OnPlaceChoiceChanged(PlaceDto? value)
     {
@@ -93,7 +94,7 @@ public sealed partial class NewsTool : StudioTool
     public bool IsWeather => Source == 4;
     public bool HasFeeds => Source is 2 or 3;
     public bool IsAi => Source is 3 or 4;
-    public string FeedsLabel => Source == 3 ? "Landelijke bronnen (bijv. de NOS), één per regel: adres | naam" : "Bronnen (RSS/Atom), één per regel: adres | naam";
+    public string FeedsLabel => Source == 3 ? Tr.T("Landelijke bronnen (bijv. de NOS), één per regel: adres | naam") : Tr.T("Bronnen (RSS/Atom), één per regel: adres | naam");
     public bool HasSelection => Selected is not null || Id == 0;
 
     partial void OnSourceChanged(int value)
@@ -149,7 +150,7 @@ public sealed partial class NewsTool : StudioTool
         if (await Hub.Client.GetAsync<List<CategoryDto>>("/api/categories") is { } cats)
             foreach (var c in cats) Categories.Add(c);
         if (await Hub.Client.GetAsync<List<VoiceProfileDto>>("/api/voice/profiles") is { } profiles)
-            foreach (var p in profiles) Voices.Add(new NewsJingle(p.Id, string.IsNullOrWhiteSpace(p.Name) ? $"stem {p.Id}" : p.Name!));
+            foreach (var p in profiles) Voices.Add(new NewsJingle(p.Id, string.IsNullOrWhiteSpace(p.Name) ? Tr.F("stem {0}", p.Id) : p.Name!));
         Opener ??= Jingles[0];
         Closer ??= Jingles[0];
         Bed ??= Jingles[0];
@@ -182,7 +183,7 @@ public sealed partial class NewsTool : StudioTool
     {
         Selected = null;
         Id = 0;
-        Name = "Nieuws";
+        Name = Tr.T("Nieuws");
         Enabled = true;
         Hours = "*";
         Minute = 0;
@@ -225,7 +226,7 @@ public sealed partial class NewsTool : StudioTool
         switch (kind)
         {
             case "kort":
-                Name = "Kort regionaal nieuws (half uur)";
+                Name = Tr.T("Kort regionaal nieuws (half uur)");
                 Minute = 30;
                 Timing = 1;
                 Source = 3;
@@ -238,7 +239,7 @@ public sealed partial class NewsTool : StudioTool
                 Opener = JingleLike("nieuws");
                 break;
             case "weer":
-                Name = "Weerbericht";
+                Name = Tr.T("Weerbericht");
                 Minute = 58;
                 Timing = 1;
                 Source = 4;
@@ -246,7 +247,7 @@ public sealed partial class NewsTool : StudioTool
                 Closer = JingleLike("weer");
                 break;
             default:
-                Name = "Nieuws op het hele uur";
+                Name = Tr.T("Nieuws op het hele uur");
                 Source = 3;
                 Feeds = NosFeed;
                 MaxHeadlines = 4;
@@ -256,7 +257,7 @@ public sealed partial class NewsTool : StudioTool
                 Opener = JingleLike("nieuws");
                 break;
         }
-        CheckText = "Voorbeeld ingevuld. Pas aan wat je wilt en kies Opslaan.";
+        CheckText = Tr.T("Voorbeeld ingevuld. Pas aan wat je wilt en kies Opslaan.");
     }
 
     [RelayCommand]
@@ -266,11 +267,11 @@ public sealed partial class NewsTool : StudioTool
         CheckProblem = null;
         var (list, error) = await Hub.Client.SendWithErrorAsync<List<PlaceDto>>(HttpMethod.Get,
             $"/api/news/places?name={Uri.EscapeDataString(PlaceQuery ?? "")}", null);
-        if (list is null) { CheckProblem = error ?? "Plaats zoeken mislukt."; return; }
+        if (list is null) { CheckProblem = error ?? Tr.T("Plaats zoeken mislukt."); return; }
         foreach (var p in list) Places.Add(p);
         OnPropertyChanged(nameof(HasPlaces));
         PlaceChoice = Places.FirstOrDefault();
-        if (Places.Count == 0) CheckProblem = $"Geen plaats gevonden voor “{PlaceQuery}”.";
+        if (Places.Count == 0) CheckProblem = Tr.F("Geen plaats gevonden voor “{0}”.", PlaceQuery);
     }
 
     /// <summary>Writes the bulletin with the language model as it would go on air; "stem" also speaks it into PFL.</summary>
@@ -280,7 +281,7 @@ public sealed partial class NewsTool : StudioTool
         if (Busy) return;
         Busy = true;
         bool speak = mode == "stem";
-        CheckText = speak ? "schrijven en inspreken… (kan een minuut duren)" : "schrijven met het taalmodel…";
+        CheckText = speak ? Tr.T("schrijven en inspreken… (kan een minuut duren)") : Tr.T("schrijven met het taalmodel…");
         CheckProblem = null;
         Script = null;
         Note = null;
@@ -288,16 +289,16 @@ public sealed partial class NewsTool : StudioTool
         {
             var (r, error) = await Hub.Client.SendWithErrorAsync<NewsCheckDto>(HttpMethod.Post, "/api/news/try",
                 new NewsTryRequest(Current(), Speak: speak, Play: speak));   // with the voice: load and play it on PFL
-            if (r is null) { CheckText = ""; CheckProblem = error ?? "Proef mislukt: engine niet bereikbaar?"; return; }
+            if (r is null) { CheckText = ""; CheckProblem = error ?? Tr.T("Proef mislukt: engine niet bereikbaar?"); return; }
             Show(r);
-            if (r.Seconds is double s) CheckText += $"\n• ingesproken: {s:0} seconden, speelt op PFL (niet op de lucht)";
+            if (r.Seconds is double s) CheckText += Tr.F("\n• ingesproken: {0:0} seconden, speelt op PFL (niet op de lucht)", s);
         }
         finally { Busy = false; }
     }
 
     private void Show(NewsCheckDto r)
     {
-        CheckText = (r.Ok ? "Nu zou spelen:\n" : "Zou nu overgeslagen worden.\n") + string.Join("\n", r.Parts.Select(p => "• " + p));
+        CheckText = (r.Ok ? Tr.T("Nu zou spelen:\n") : Tr.T("Zou nu overgeslagen worden.\n")) + string.Join("\n", r.Parts.Select(p => "• " + p));
         CheckProblem = r.Problem;
         Script = r.Script;
         Note = r.Note;
@@ -307,9 +308,9 @@ public sealed partial class NewsTool : StudioTool
     private async Task Save()
     {
         var saved = await Hub.Client.SendForAsync<NewsBlockDto>(HttpMethod.Post, "/api/news", Current());
-        if (saved is null) { CheckProblem = "Opslaan mislukt."; return; }
+        if (saved is null) { CheckProblem = Tr.T("Opslaan mislukt."); return; }
         await LoadBlocksAsync(saved.Id);
-        Hub.Status = $"nieuwsblok “{saved.Name}” opgeslagen";
+        Hub.Status = Tr.F("nieuwsblok “{0}” opgeslagen", saved.Name);
     }
 
     [RelayCommand]
@@ -324,11 +325,11 @@ public sealed partial class NewsTool : StudioTool
     [RelayCommand]
     private async Task Check()
     {
-        CheckText = "bezig…";
+        CheckText = Tr.T("bezig…");
         CheckProblem = null;
         Script = null;
         var r = await Hub.Client.SendForAsync<NewsCheckDto>(HttpMethod.Post, "/api/news/check", Current());
-        if (r is null) { CheckText = ""; CheckProblem = "Test mislukt: engine niet bereikbaar?"; return; }
+        if (r is null) { CheckText = ""; CheckProblem = Tr.T("Test mislukt: engine niet bereikbaar?"); return; }
         Show(r);
     }
 }

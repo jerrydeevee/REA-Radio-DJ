@@ -1,3 +1,4 @@
+using ReaRadioDj.Contracts.Localization;
 using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -20,7 +21,7 @@ public sealed partial class VoipLineVm(string id, string name) : ObservableObjec
     [ObservableProperty] private decimal? _jitterMs = 60;
 
     [ObservableProperty] private bool _connected;
-    [ObservableProperty] private string _state = "niet verbonden";
+    [ObservableProperty] private string _state = Tr.T("niet verbonden");
     [ObservableProperty] private string _detail = "";
     [ObservableProperty] private string _quality = "";
     [ObservableProperty] private bool _warning;
@@ -45,11 +46,11 @@ public sealed partial class VoipLineVm(string id, string name) : ObservableObjec
     [RelayCommand]
     private async Task UseStation()
     {
-        if (Station is not { } st) { Result = "Kies een station uit het adresboek."; return; }
-        if (st.Id.Length == 0) { Result = "Sla het adresboek eerst op."; return; }
+        if (Station is not { } st) { Result = Tr.T("Kies een station uit het adresboek."); return; }
+        if (st.Id.Length == 0) { Result = Tr.T("Sla het adresboek eerst op."); return; }
         var (_, error) = await StudioHub.Current.Client.SendWithErrorAsync<object>(HttpMethod.Post,
             $"/api/voip/{Id}/station/{Uri.EscapeDataString(st.Id)}", null);
-        Result = error is null ? "" : "Niet gelukt: " + ErrorText(error);
+        Result = error is null ? "" : Tr.T("Niet gelukt: ") + ErrorText(error);
     }
 
     public bool CanDial => SipOn && !Connected && !CallActive;
@@ -74,28 +75,28 @@ public sealed partial class VoipLineVm(string id, string name) : ObservableObjec
         string who = call.Remote + (call.RemoteName.Length > 0 ? $" ({call.RemoteName})" : "");
         CallText = call.State switch
         {
-            "gaat over" when call.Incoming => $"Inkomend gesprek van {who}",
-            "gaat over" => $"Gaat over bij {who}…",
-            "belt" => $"Bellen naar {who}…",
-            "in gesprek" => $"In gesprek met {who}" + (call.AnsweredUtc is DateTime a ? $" · {StudioHub.Time((DateTime.UtcNow - a).TotalSeconds)}" : "") +
+            "gaat over" when call.Incoming => Tr.F("Inkomend gesprek van {0}", who),
+            "gaat over" => Tr.F("Gaat over bij {0}…", who),
+            "belt" => Tr.F("Bellen naar {0}…", who),
+            "in gesprek" => Tr.F("In gesprek met {0}", who) + (call.AnsweredUtc is DateTime a ? $" · {StudioHub.Time((DateTime.UtcNow - a).TotalSeconds)}" : "") +
                             (call.Codec is { } c ? $" · {c.ToUpperInvariant()}" : ""),
-            _ => $"Gesprek met {who} afgelopen" + (call.Reason is { } r ? $": {r}" : ""),
+            _ => Tr.F("Gesprek met {0} afgelopen", who) + (call.Reason is { } r ? $": {r}" : ""),
         };
     }
 
     [RelayCommand]
     private async Task Dial()
     {
-        if (Target.Trim().Length == 0) { Result = "Vul een nummer of SIP-adres in."; return; }
+        if (Target.Trim().Length == 0) { Result = Tr.T("Vul een nummer of SIP-adres in."); return; }
         var (_, error) = await StudioHub.Current.Client.SendWithErrorAsync<object>(HttpMethod.Post, $"/api/sip/{Id}/dial", new SipDialRequest(Target.Trim()));
-        Result = error is null ? "" : "Niet gelukt: " + ErrorText(error);
+        Result = error is null ? "" : Tr.T("Niet gelukt: ") + ErrorText(error);
     }
 
     [RelayCommand]
     private async Task Answer()
     {
         var (_, error) = await StudioHub.Current.Client.SendWithErrorAsync<object>(HttpMethod.Post, $"/api/sip/{Id}/answer", null);
-        Result = error is null ? "" : "Niet gelukt: " + ErrorText(error);
+        Result = error is null ? "" : Tr.T("Niet gelukt: ") + ErrorText(error);
     }
 
     public void Update(VoipLineDto d)
@@ -121,13 +122,13 @@ public sealed partial class VoipLineVm(string id, string name) : ObservableObjec
             Recording = d.Recording;
             _updating = false;
         }
-        RecordText = d.Recording ? $"● opname {StudioHub.Time(d.RecordSeconds)}" : "";
+        RecordText = d.Recording ? Tr.F("● opname {0}", StudioHub.Time(d.RecordSeconds)) : "";
         if (!d.Connected) { Detail = ""; Quality = ""; Warning = false; return; }
         var j = d.Jitter;
         string since = d.OpenedUtc is DateTime o ? StudioHub.Time((DateTime.UtcNow - o).TotalSeconds) : "";
-        Detail = $"{d.Codec.ToUpperInvariant()} · poort {d.LocalPort} · {(d.Remote ?? "wacht tot de overkant belt")} · {since}";
-        Quality = $"in {j.Received} · uit {d.Sent} · verlies {j.LossPercent:0.##}% · jitter {j.JitterMs:0.#} ms · buffer {j.BufferMs:0} / {j.TargetMs:0} ms" +
-                  (j.Underruns > 0 ? $" · {j.Underruns}× leeg" : "") + (d.Error is { Length: > 0 } e ? $" · {e}" : "");
+        Detail = $"{d.Codec.ToUpperInvariant()} · {Tr.T("poort")} {d.LocalPort} · {(d.Remote ?? Tr.T("wacht tot de overkant belt"))} · {since}";
+        Quality = Tr.F("in {0} · uit {1} · verlies {2:0.##}% · jitter {3:0.#} ms · buffer {4:0} / {5:0} ms", j.Received, d.Sent, j.LossPercent, j.JitterMs, j.BufferMs, j.TargetMs) +
+                  (j.Underruns > 0 ? Tr.F(" · {0}× leeg", j.Underruns) : "") + (d.Error is { Length: > 0 } e ? $" · {e}" : "");
         Warning = d.State != "verbonden" || j.LossPercent > 2 || j.Underruns > 5;
     }
 
@@ -137,7 +138,7 @@ public sealed partial class VoipLineVm(string id, string name) : ObservableObjec
     private async Task Connect()
     {
         var (_, error) = await StudioHub.Current.Client.SendWithErrorAsync<object>(HttpMethod.Post, $"/api/voip/{Id}/connect", Request());
-        Result = error is null ? "" : "Niet gelukt: " + ErrorText(error);
+        Result = error is null ? "" : Tr.T("Niet gelukt: ") + ErrorText(error);
     }
 
     internal static string ErrorText(string body)
@@ -170,7 +171,7 @@ public sealed partial class VoipLineVm(string id, string name) : ObservableObjec
     private async Task RecordAsync(bool on)
     {
         var (_, error) = await StudioHub.Current.Client.SendWithErrorAsync<object>(HttpMethod.Post, $"/api/voip/{Id}/record", new SwitchRequest(on));
-        Result = error is null ? "" : "Niet gelukt: " + ErrorText(error);
+        Result = error is null ? "" : Tr.T("Niet gelukt: ") + ErrorText(error);
     }
 
     partial void OnOnAirChanged(bool value)
@@ -197,7 +198,7 @@ public sealed partial class SipAccountVm : ObservableObject
     [ObservableProperty] private string _outboundProxy = "";
     [ObservableProperty] private decimal? _localPort = 5060;
     [ObservableProperty] private string _stun = "";
-    [ObservableProperty] private string _codecs = "pcma, pcmu";
+    [ObservableProperty] private string _codecs = Tr.T("pcma, pcmu");
     [ObservableProperty] private bool _register = true;
     [ObservableProperty] private decimal? _registerSeconds = 300;
     [ObservableProperty] private decimal? _keepAliveSeconds = 25;
@@ -205,7 +206,7 @@ public sealed partial class SipAccountVm : ObservableObject
     [ObservableProperty] private string _result = "";
     [ObservableProperty] private bool _loaded;
 
-    public string PasswordHint => HasPassword ? "opgeslagen (leeg laten = bewaren)" : "nog niet ingevuld";
+    public string PasswordHint => HasPassword ? Tr.T("opgeslagen (leeg laten = bewaren)") : Tr.T("nog niet ingevuld");
     partial void OnHasPasswordChanged(bool value) => OnPropertyChanged(nameof(PasswordHint));
 
     public async Task LoadAsync()
@@ -239,9 +240,9 @@ public sealed partial class SipAccountVm : ObservableObject
     {
         var (saved, error) = await StudioHub.Current.Client.SendWithErrorAsync<SipAccountDto>(HttpMethod.Put, "/api/sip/account", Request(password));
         Password = "";
-        if (error is not null) { Result = "Niet opgeslagen: " + VoipLineVm.ErrorText(error); return; }
+        if (error is not null) { Result = Tr.T("Niet opgeslagen: ") + VoipLineVm.ErrorText(error); return; }
         if (saved is not null) Fill(saved);
-        Result = "Opgeslagen.";
+        Result = Tr.T("Opgeslagen.");
     }
 }
 
@@ -268,7 +269,7 @@ public sealed partial class StationVm : ObservableObject
     partial void OnKindChanged(string value) { OnPropertyChanged(nameof(IsSip)); OnPropertyChanged(nameof(IsRtp)); }
 
     /// <summary>What a channel's station list shows.</summary>
-    public override string ToString() => Name.Length == 0 ? "(zonder naam)" : Kind == "sip" ? $"{Name} · {Target}" : $"{Name} · vaste lijn";
+    public override string ToString() => Name.Length == 0 ? Tr.T("(zonder naam)") : Kind == "sip" ? $"{Name} · {Target}" : Tr.F("{0} · vaste lijn", Name);
 
     public static StationVm From(VoipStationDto d) => new()
     {
@@ -318,11 +319,11 @@ public sealed partial class StationBookVm : ObservableObject
     {
         var (saved, error) = await StudioHub.Current.Client.SendWithErrorAsync<List<VoipStationDto>>(HttpMethod.Put, "/api/voip/stations",
             Stations.Select(s => s.ToDto()).ToList());
-        if (error is not null) { Result = "Niet opgeslagen: " + VoipLineVm.ErrorText(error); return; }
+        if (error is not null) { Result = Tr.T("Niet opgeslagen: ") + VoipLineVm.ErrorText(error); return; }
         if (saved is not null) Fill(saved);
         var (_, signalError) = await StudioHub.Current.Client.SendWithErrorAsync<VoipSignalsDto>(HttpMethod.Put, "/api/voip/signals",
             new VoipSignalsDto(Ringing, Connected, Ended));
-        Result = signalError is null ? $"Opgeslagen: {Stations.Count} stations." : "Signalen niet opgeslagen: " + VoipLineVm.ErrorText(signalError);
+        Result = signalError is null ? Tr.F("Opgeslagen: {0} stations.", Stations.Count) : Tr.T("Signalen niet opgeslagen: ") + VoipLineVm.ErrorText(signalError);
     }
 }
 
@@ -340,7 +341,7 @@ public sealed partial class ConnectionsTool : StudioTool
         "opus = 48 kHz over internet (LUCI Live, Comrex) · g722 = 16 kHz breedband (HD-telefonie) · pcma / pcmu = G.711 (8 kHz, telefoon) · l16 = lineair 16 bit 48 kHz mono (studiokwaliteit, ruim 0,8 Mbit/s)";
     [ObservableProperty] private bool _empty = true;
     public SipAccountVm Sip { get; } = new();
-    [ObservableProperty] private string _sipState = "SIP staat uit";
+    [ObservableProperty] private string _sipState = Tr.T("SIP staat uit");
     [ObservableProperty] private bool _sipWarning;
     [ObservableProperty] private bool _showAccount;
     public StationBookVm Book { get; } = new();
@@ -371,10 +372,10 @@ public sealed partial class ConnectionsTool : StudioTool
         var sip = s.Sip;
         SipState = sip switch
         {
-            null or { Enabled: false } => "SIP staat uit",
-            { Registration: "aangemeld" } => $"Aangemeld als {sip.Account}" + (sip.RegisteredUntilUtc is DateTime u ? $" · tot {u.ToLocalTime():HH:mm}" : "") +
-                                             (sip.PublicAddress is { } p ? $" · publiek {p}" : ""),
-            { Registration: "niet aanmelden" } => $"SIP aan zonder aanmelden ({sip.Account})",
+            null or { Enabled: false } => Tr.T("SIP staat uit"),
+            { Registration: "aangemeld" } => Tr.F("Aangemeld als {0}", sip.Account) + (sip.RegisteredUntilUtc is DateTime u ? Tr.F(" · tot {0:HH:mm}", u.ToLocalTime()) : "") +
+                                             (sip.PublicAddress is { } p ? Tr.F(" · publiek {0}", p) : ""),
+            { Registration: "niet aanmelden" } => Tr.F("SIP aan zonder aanmelden ({0})", sip.Account),
             _ => $"SIP: {sip.Registration}" + (sip.Error is { } e ? $" · {e}" : ""),
         };
         SipWarning = sip is { Enabled: true } && sip.Registration is not ("aangemeld" or "niet aanmelden");

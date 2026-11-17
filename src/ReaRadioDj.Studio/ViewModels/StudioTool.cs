@@ -1,3 +1,4 @@
+using ReaRadioDj.Contracts.Localization;
 using Dock.Model.Mvvm.Controls;
 using ReaRadioDj.Contracts;
 using ReaRadioDj.Studio.Services;
@@ -16,7 +17,7 @@ public abstract class StudioTool : Tool
     protected StudioTool(string id, string title)
     {
         Id = id;
-        Title = title;
+        Title = Tr.T(title);
     }
 
     protected static StudioHub Hub => StudioHub.Current;

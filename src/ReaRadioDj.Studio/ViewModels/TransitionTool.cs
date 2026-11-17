@@ -1,3 +1,4 @@
+using ReaRadioDj.Contracts.Localization;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Globalization;
@@ -27,16 +28,16 @@ public sealed record InsertChoice(long? MediaId, string Text, double Length)
 /// </summary>
 public sealed partial class TransitionTool : StudioTool
 {
-    private static readonly CultureInfo Nl = CultureInfo.GetCultureInfo("nl-NL");
+    private static readonly CultureInfo Nl = Contracts.Localization.Tr.Culture;
 
-    public TransitionTool() : base("transition", "Overgangen")
+    public TransitionTool() : base("transition", Tr.T("Overgangen"))
     {
         _timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(50) };
         _timer.Tick += (_, _) => FollowPlayhead();
     }
 
     public ObservableCollection<TransitionChoice> Choices { get; } = [];
-    public ObservableCollection<InsertChoice> Inserts { get; } = [new(null, "geen insert", 0)];
+    public ObservableCollection<InsertChoice> Inserts { get; } = [new(null, Tr.T("geen insert"), 0)];
 
     [ObservableProperty] private TransitionChoice? _choice;
     [ObservableProperty] private InsertChoice? _insert;
@@ -55,7 +56,7 @@ public sealed partial class TransitionTool : StudioTool
     private double _previewStart, _previewLength;
 
     public bool HasState => State is not null;
-    public string StatusText => !HasState ? "" : Dirty ? "Gewijzigd, nog niet opgeslagen" : HandMade ? "Eigen overgang staat in de log" : "Automatische overgang";
+    public string StatusText => !HasState ? "" : Dirty ? Tr.T("Gewijzigd, nog niet opgeslagen") : HandMade ? Tr.T("Eigen overgang staat in de log") : Tr.T("Automatische overgang");
 
     partial void OnStateChanged(TransitionState? value) => OnPropertyChanged(nameof(HasState));
     partial void OnDirtyChanged(bool value) => OnPropertyChanged(nameof(StatusText));
@@ -103,7 +104,7 @@ public sealed partial class TransitionTool : StudioTool
         var list = new List<TransitionChoice>();
         for (int i = 0; i < up.Count; i++)
         {
-            string before = i > 0 ? Name(up[i - 1]) : s.Engine.Current is { } c ? $"{c.Label} (nu)" : "—";
+            string before = i > 0 ? Name(up[i - 1]) : s.Engine.Current is { } c ? Tr.F("{0} (nu)", c.Label) : "—";
             list.Add(new TransitionChoice(up[i].Id, $"{up[i].StartsAt:HH:mm}  {Short(before)}  →  {Short(Name(up[i]))}{(up[i].HandMadeMix ? "  ✎" : "")}",
                 up[i].HandMadeMix));
         }
@@ -116,13 +117,13 @@ public sealed partial class TransitionTool : StudioTool
         {
             State = null;
             _loaded = null;
-            Info = "Deze overgang staat niet meer in de log (al gespeeld of verwijderd).";
+            Info = Tr.T("Deze overgang staat niet meer in de log (al gespeeld of verwijderd).");
         }
     }
 
     private static string Name(LogItemDto u) => u.Type switch
     {
-        "aiBreak" => "AI-break",
+        "aiBreak" => Tr.T("AI-break"),
         "voiceTrack" => "voicetrack",
         _ => string.IsNullOrEmpty(u.Title) ? u.Label : $"{u.Artist} - {u.Title}".Trim(' ', '-'),
     };
@@ -133,7 +134,7 @@ public sealed partial class TransitionTool : StudioTool
     {
         Error = null;
         var dto = await Hub.Client.GetAsync<TransitionDto>($"/api/transition/{id}");
-        if (dto is null) { Error = "Deze overgang kan niet bewerkt worden (een van de items heeft geen audio)."; return; }
+        if (dto is null) { Error = Tr.T("Deze overgang kan niet bewerkt worden (een van de items heeft geen audio)."); return; }
         Show(dto);
     }
 
@@ -190,10 +191,10 @@ public sealed partial class TransitionTool : StudioTool
         if (State is not { } s) { Info = ""; return; }
         double vsMix = s.StartAt - s.OutMix;
         double overlap = s.OutCueOut - s.StartAt;
-        string text = string.Format(Nl, "Volgende start op {0:0.00} s ({1}), overlap {2:0.0} s", s.StartAt,
-            Math.Abs(vsMix) < 0.05 ? "op het mixpunt" : string.Format(Nl, "{0:+0.0;-0.0} s t.o.v. mixpunt", vsMix), Math.Max(0, overlap));
-        if (Math.Abs(s.From - s.InCueIn) > 0.05) text += string.Format(Nl, " · begint {0:0.0} s in het nummer", s.From);
-        if (s.InsertLabel is not null) text += string.Format(Nl, " · insert op {0:+0.0;-0.0} s", s.InsertAt - s.StartAt);
+        string text = string.Format(Nl, Tr.T("Volgende start op {0:0.00} s ({1}), overlap {2:0.0} s"), s.StartAt,
+            Math.Abs(vsMix) < 0.05 ? Tr.T("op het mixpunt") : Tr.F("{0:+0.0;-0.0} s t.o.v. mixpunt", vsMix), Math.Max(0, overlap));
+        if (Math.Abs(s.From - s.InCueIn) > 0.05) text += string.Format(Nl, Tr.T(" · begint {0:0.0} s in het nummer"), s.From);
+        if (s.InsertLabel is not null) text += string.Format(Nl, Tr.T(" · insert op {0:+0.0;-0.0} s"), s.InsertAt - s.StartAt);
         Info = text;
         OnPropertyChanged(nameof(StatusText));
     }
@@ -210,7 +211,7 @@ public sealed partial class TransitionTool : StudioTool
         if (_loaded is null || Current() is not { } body) return;
         Error = null;
         var r = await Hub.Client.SendForAsync<PreviewResult>(HttpMethod.Post, $"/api/transition/{_loaded.ItemId}/preview", body);
-        if (r is null) { Error = "Voorbeeld kon niet gemaakt worden."; return; }
+        if (r is null) { Error = Tr.T("Voorbeeld kon niet gemaakt worden."); return; }
         _previewStart = r.Start;
         _previewLength = r.Length;
         _played.Restart();
@@ -247,9 +248,9 @@ public sealed partial class TransitionTool : StudioTool
     {
         if (_loaded is null || Current() is not { } body) return;
         var d = await Hub.Client.SendForAsync<TransitionDto>(HttpMethod.Put, $"/api/transition/{_loaded.ItemId}", body);
-        if (d is null) { Error = "Opslaan mislukt: staat het item nog in de log?"; return; }
+        if (d is null) { Error = Tr.T("Opslaan mislukt: staat het item nog in de log?"); return; }
         Show(d);
-        Hub.Status = "overgang opgeslagen";
+        Hub.Status = Tr.T("overgang opgeslagen");
     }
 
     /// <summary>Puts the automatic transition in the editor as a starting point (not saved yet).</summary>
@@ -270,7 +271,7 @@ public sealed partial class TransitionTool : StudioTool
     {
         if (_loaded is null) return;
         var d = await Hub.Client.SendForAsync<TransitionDto>(HttpMethod.Delete, $"/api/transition/{_loaded.ItemId}", null);
-        if (d is not null) { Show(d); Hub.Status = "eigen overgang verwijderd"; }
+        if (d is not null) { Show(d); Hub.Status = Tr.T("eigen overgang verwijderd"); }
     }
 
     [RelayCommand]
