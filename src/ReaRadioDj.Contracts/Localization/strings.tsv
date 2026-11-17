@@ -24,6 +24,8 @@ nl	en	de	es
  BPM	 BPM	 BPM	 BPM
  Dat was het nieuws.	 That was the news.	 Das waren die Nachrichten.	 Esas fueron las noticias.
  en opgeslagen	 and saved	 und gespeichert	 y guardado
+ en {0} procent kans op regen.	 and a {0} percent chance of rain.	 und {0} Prozent Regenwahrscheinlichkeit.	 y un {0} por ciento de probabilidad de lluvia.
+ in {0}	 in {0}	 in {0}	 en {0}
  LUFS	 LUFS	 LUFS	 LUFS
  Ongedaan maken kan met Ctrl+Z.	 Undo with Ctrl+Z.	 Rückgängig mit Strg+Z.	 Se puede deshacer con Ctrl+Z.
  tel	 beat	 Schlag	 tiempo
@@ -99,7 +101,9 @@ nl	en	de	es
 + vervangende locatie	+ replacement location	+ Ersatzort	+ ubicación alternativa
 + Volume op cursor	+ Volume at cursor	+ Lautstärke am Cursor	+ Volumen en el cursor
 + Windows-stem	+ Windows voice	+ Windows-Stimme	+ Voz de Windows
+, de kans op regen is {0} procent	, the chance of rain is {0} percent	, die Regenwahrscheinlichkeit liegt bei {0} Prozent	, la probabilidad de lluvia es del {0} por ciento
 , hoofdscherm	, main screen	, Hauptbildschirm	, pantalla principal
+, kans op regen {0} procent.	, chance of rain {0} percent.	, Regenwahrscheinlichkeit {0} Prozent.	, probabilidad de lluvia {0} por ciento.
 , komma	, comma	, Komma	, coma
 , laatst {0}	, last {0}	, zuletzt {0}	, último {0}
 , response="{0}", qop=auth, nc={1}, cnonce="{2}"	, response="{0}", qop=auth, nc={1}, cnonce="{2}"	, response="{0}", qop=auth, nc={1}, cnonce="{2}"	, response="{0}", qop=auth, nc={1}, cnonce="{2}"
@@ -113,10 +117,12 @@ nl	en	de	es
 -d Ubuntu -- bash -lc ~/higgs/start.sh	-d Ubuntu -- bash -lc ~/higgs/start.sh	-d Ubuntu -- bash -lc ~/higgs/start.sh	-d Ubuntu -- bash -lc ~/higgs/start.sh
 . Een persona (venster AI-presentator) en elk nieuws- of weerblok kan ook een eigen stem kiezen.	. A persona (AI presenter window) and every news or weather block can also choose its own voice.	. Eine Persona (Fenster KI-Moderator) und jeder Nachrichten- oder Wetterblock kann auch eine eigene Stimme wählen.	. Una persona (ventana Presentador IA) y cada bloque de noticias o del tiempo también puede elegir su propia voz.
 . Eerste: {0}	. First: {0}	. Erster: {0}	. Primero: {0}
+. Er staat een wind kracht {0} uit het {1}. Vannacht koelt het af tot {2}. 	. There is a force {0} wind from the {1}. Tonight it cools down to {2}. 	. Es weht ein Wind der Stärke {0} aus {1}. Heute Nacht kühlt es ab auf {2}. 	. Sopla viento de fuerza {0} del {1}. Esta noche refresca hasta {2}. 
 . Klik om alle overlays te stoppen.	. Click to stop all overlays.	. Klicken, um alle Overlays zu stoppen.	. Haz clic para detener todos los overlays.
 . Let op: de Higgs-server is nu offline, dan wordt de reserve gebruikt	. Note: the Higgs server is offline now, so the backup is used	. Achtung: der Higgs-Server ist jetzt offline, dann wird die Reserve verwendet	. Atención: el servidor Higgs está desconectado, se usará la voz de reserva
 . Met Bank en Channel schuif je over alle {0} kanalen.	. Use Bank and Channel to move across all {0} channels.	. Mit Bank und Channel blätterst du durch alle {0} Kanäle.	. Con Bank y Channel recorres los {0} canales.
 0 = alleen als je op Inlezen drukt (anders minstens 5)	0 = only when you press Scan (otherwise at least 5)	0 = nur wenn du Einlesen drückst (sonst mindestens 5)	0 = solo al pulsar Escanear (si no, al menos 5)
+1 graad	1 degree	1 Grad	1 grado
 1 keer	1 time	1 Mal	1 vez
 1 vaste tijd	1 fixed time	1 feste Zeit	1 hora fija
 1. Applicatie registreren	1. Register an application	1. Anwendung registrieren	1. Registrar una aplicación
@@ -482,6 +488,7 @@ Bewaren lukte niet.	Saving failed.	Speichern hat nicht geklappt.	No se pudo guar
 Beweeg nu de knop, fader of het wiel op je controller…	Now move the knob, fader or wheel on your controller…	Bewege jetzt den Regler, Fader oder das Rad an deinem Controller…	Mueve ahora el botón, fader o rueda de tu controlador…
 Bewerken	Edit	Bearbeiten	Editar
 Bewerken:	Edit:	Bearbeiten:	Editar:
+bewolkt	cloudy	bewölkt	nublado
 Bezig met bijwerken…	Updating…	Wird aktualisiert…	Actualizando…
 bezig met controleren…	checking…	wird geprüft…	comprobando…
 bezig met importeren…	importing…	wird importiert…	importando…
@@ -560,6 +567,7 @@ bronwachtwoord	source password	Quellpasswort	contraseña de fuente
 Buffer	Buffer	Puffer	Búfer
 buffer too small	buffer too small	buffer too small	buffer too small
 Buffer van Windows-kaarten (ms)	Buffer of Windows cards (ms)	Puffer der Windows-Karten (ms)	Búfer de las tarjetas de Windows (ms)
+buien	showers	Schauer	chubascos
 bv. OSC 192.168.1.20:8000 /lamp/{nr} 0	e.g. OSC 192.168.1.20:8000 /lamp/{nr} 0	z. B. OSC 192.168.1.20:8000 /lamp/{nr} 0	p. ej. OSC 192.168.1.20:8000 /lamp/{nr} 0
 bv. OSC 192.168.1.20:8000 /lamp/{nr} 1	e.g. OSC 192.168.1.20:8000 /lamp/{nr} 1	z. B. OSC 192.168.1.20:8000 /lamp/{nr} 1	p. ej. OSC 192.168.1.20:8000 /lamp/{nr} 1
 campagne “{0}” opgeslagen	campaign “{0}” saved	Kampagne „{0}“ gespeichert	campaña “{0}” guardada
@@ -668,6 +676,8 @@ Dat is niet soloist.exe.	That is not soloist.exe.	Das ist nicht soloist.exe.	Eso
 dat logitem staat niet (meer) in de log	that log item is not (any longer) in the log	dieses Element steht nicht (mehr) im Ablauf	ese elemento ya no está en la pauta
 Dat stuk is nog niet uitgezonden.	That part has not been broadcast yet.	Dieser Teil wurde noch nicht gesendet.	Esa parte aún no se ha emitido.
 dat venster staat niet in het hoofdvenster	that window is not in the main window	dieses Fenster ist nicht im Hauptfenster	esa ventana no está en la ventana principal
+Dat was het nieuws.	That was the news.	Das waren die Nachrichten.	Esas fueron las noticias.
+Dat was {prev}. Het is {time} en je luistert naar {station}. Hier komt {next}!	That was {prev}. It's {time} and you're listening to {station}. Here's {next}!	Das war {prev}. Es ist {time} und du hörst {station}. Hier kommt {next}!	Eso fue {prev}. Son {time} y estás escuchando {station}. ¡Aquí llega {next}!
 data: {0}\n\n	data: {0}\n\n	data: {0}\n\n	data: {0}\n\n
 Database	Database	Datenbank	Base de datos
 Database {0}: {1}	Database {0}: {1}	Datenbank {0}: {1}	Base de datos {0}: {1}
@@ -783,6 +793,7 @@ de naam {0} staat er twee keer in	the name {0} is in it twice	der Name {0} kommt
 De nieuwe taal wordt actief als de studio opnieuw start.	The new language becomes active when the studio restarts.	Die neue Sprache wird aktiv, wenn das Studio neu startet.	El nuevo idioma se activa cuando el estudio se reinicia.
 De nummers gaan om de beurt naar deck A, B, C en D	The songs go in turn to deck A, B, C and D	Die Titel gehen abwechselnd zu Deck A, B, C und D	Las canciones van por turnos a los platos A, B, C y D
 De nummers wisselen tussen deck A en B	The songs alternate between deck A and B	Die Titel wechseln zwischen Deck A und B	Las canciones se alternan entre los platos A y B
+de ochtendfile of juist lekker thuiswerken	the morning traffic jam or a nice day working from home	der Morgenstau oder gemütlich im Homeoffice	el atasco de la mañana o un día tranquilo teletrabajando
 De officiële downloads van Spotify Soloist; een versie werkt 90 dagen	The official downloads of Spotify Soloist; a version works for 90 days	Die offiziellen Downloads von Spotify Soloist; eine Version funktioniert 90 Tage	Las descargas oficiales de Spotify Soloist; una versión funciona 90 días
 De opgeslagen Soloist-sleutel is gewist.	The saved Soloist key has been cleared.	Der gespeicherte Soloist-Schlüssel wurde gelöscht.	La clave de Soloist guardada se ha borrado.
 de opname is te kort ({0:0.0} s; minimaal {1:0} s)	the recording is too short ({0:0.0} s; at least {1:0} s)	die Aufnahme ist zu kurz ({0:0.0} s; mindestens {1:0} s)	la grabación es demasiado corta ({0:0.0} s; mínimo {1:0} s)
@@ -1118,6 +1129,7 @@ Filters ▾	Filters ▾	Filter ▾	Filtros ▾
 Firewallregel (PowerShell, als beheerder)	Firewall rule (PowerShell, as administrator)	Firewallregel (PowerShell, als Administrator)	Regla de firewall (PowerShell, como administrador)
 Flanger	Flanger	Flanger	Flanger
 Flanger: één zwaai per gekozen aantal tellen	Flanger: one sweep per chosen number of beats	Flanger: ein Durchlauf pro gewählter Anzahl Schläge	Flanger: un barrido por cada número de tiempos elegido
+flinke regen	heavy rain	starker Regen	lluvia intensa
 Flitskleur einde item	Flash colour end of item	Blinkfarbe Elementende	Color de destello al final del elemento
 fout in afhandeling: 	error while handling: 	Fehler bei der Verarbeitung: 	error al procesar: 
 fout {0}	error {0}	Fehler {0}	error {0}
@@ -1373,6 +1385,7 @@ Het item dat ON AIR is overslaan	Skip the item that is ON AIR	Das Element ON AIR
 Het kanaal in de uitzending (fader in de mixer)	The channel in the broadcast (fader in the mixer)	Der Kanal in der Sendung (Fader im Mixer)	El canal en la emisión (fader en el mezclador)
 het logitem na deze opname is al gespeeld of verwijderd	the log item after this recording has already been played or removed	das Element nach dieser Aufnahme wurde schon gespielt oder entfernt	el elemento de la pauta tras esta grabación ya se reprodujo o se eliminó
 het middagdipje en hoe je daar doorheen komt	the afternoon dip and how to get through it	das Mittagstief und wie man es übersteht	el bajón de media tarde y cómo superarlo
+Het nieuws van {0}.	The news at {0}.	Die Nachrichten um {0}.	Las noticias de {0}.
 Het nieuws van {0}. 	The news from {0}. 	Die Nachrichten von {0}. 	Las noticias de {0}. 
 het nummer of de gebruikersnaam van het account	the account's number or user name	die Nummer oder der Benutzername des Kontos	el número o nombre de usuario de la cuenta
 Het nummer wordt op de achtergrond opgezocht en lege velden (ook de hoes) worden direct gevuld; elk nummer één keer. Het afspelen wacht er niet op.	The song is looked up in the background and empty fields (including the cover) are filled at once; each song once. Playback does not wait for it.	Der Titel wird im Hintergrund nachgeschlagen und leere Felder (auch das Cover) werden sofort gefüllt; jeder Titel einmal. Die Wiedergabe wartet nicht darauf.	La canción se busca en segundo plano y los campos vacíos (también la portada) se rellenan al momento; cada canción una vez. La reproducción no espera a ello.
@@ -1399,11 +1412,13 @@ Het vorige nummer kon niet geladen worden; je neemt op zonder aanloop.	The previ
 het wachtwoord kon niet veilig worden opgeslagen	the password could not be stored securely	das Passwort konnte nicht sicher gespeichert werden	no se pudo guardar la contraseña de forma segura
 het WAV-bestand bevat geen geluid	the WAV file contains no sound	die WAV-Datei enthält keinen Ton	el archivo WAV no contiene sonido
 Het weer staat uit (Presentator → Weer en nieuws).	The weather is off (Presenter → Weather and news).	Das Wetter ist aus (Moderator → Wetter und Nachrichten).	El tiempo está desactivado (Presentador → Tiempo y noticias).
+Het weer, voor {0}.	The weather, for {0}.	Das Wetter, für {0}.	El tiempo, para {0}.
 Het weer{0}: {1} en {2}	The weather{0}: {1} and {2}	Das Wetter{0}: {1} und {2}	El tiempo{0}: {1} y {2}
 Hetzelfde muziekrapport als PDF, om te printen of mee te sturen	The same music report as PDF, to print or send along	Derselbe Musikbericht als PDF, zum Drucken oder Mitschicken	El mismo informe musical en PDF, para imprimir o enviar
 hexadecimale bytes, bijv. 90 10 7F (meerdere met komma's)	hexadecimal bytes, e.g. 90 10 7F (several with commas)	hexadezimale Bytes, z. B. 90 10 7F (mehrere mit Kommas)	bytes hexadecimales, p. ej. 90 10 7F (varios con comas)
 Hier afspelen	Play here	Hier abspielen	Reproducir aquí
 hier begint de fade-out	the fade-out starts here	hier beginnt das Ausblenden	aquí empieza el fundido de salida
+Hier is {presenter} op {station}. Daar is {next}!	This is {presenter} on {station}. Here's {next}!	Hier ist {presenter} bei {station}. Da ist {next}!	Soy {presenter} en {station}. ¡Aquí está {next}!
 Hier openen	Open here	Hier öffnen	Abrir aquí
 Hier staat niets (of het apparaat antwoordt niet).	Nothing here (or the device does not answer).	Hier ist nichts (oder das Gerät antwortet nicht).	Aquí no hay nada (o el dispositivo no responde).
 hier start het volgende item	the next item starts here	hier startet das nächste Element	aquí empieza el siguiente elemento
@@ -1470,6 +1485,7 @@ ICT Holland	ICT Holland	ICT Holland	ICT Holland
 id, name, enabled, days, hours, presenter, character, voice_id, max_words, bed_category, sort	id, name, enabled, days, hours, presenter, character, voice_id, max_words, bed_category, sort	id, name, enabled, days, hours, presenter, character, voice_id, max_words, bed_category, sort	id, name, enabled, days, hours, presenter, character, voice_id, max_words, bed_category, sort
 id, source_id, playlist, title, artist, album, isrc, label, release, duration, cover_url, link, added, media_id	id, source_id, playlist, title, artist, album, isrc, label, release, duration, cover_url, link, added, media_id	id, source_id, playlist, title, artist, album, isrc, label, release, duration, cover_url, link, added, media_id	id, source_id, playlist, title, artist, album, isrc, label, release, duration, cover_url, link, added, media_id
 id, started, ended, source, type, media_id, path, artist, title, category, planned, played, ai, note, presenter	id, started, ended, source, type, media_id, path, artist, title, category, planned, played, ai, note, presenter	id, started, ended, source, type, media_id, path, artist, title, category, planned, played, ai, note, presenter	id, started, ended, source, type, media_id, path, artist, title, category, planned, played, ai, note, presenter
+ijzel	freezing rain	Glatteis	lluvia helada
 import mislukt	import failed	Import fehlgeschlagen	falló la importación
 import: {0:HH}:00	import: {0:HH}:00	Import: {0:HH}:00	importación: {0:HH}:00
 Importeren	Import	Importieren	Importar
@@ -1494,6 +1510,7 @@ In standby 2	In standby 2	In Standby 2	En standby 2
 In te trekken met 'Mijn stem verwijderen'.	Can be withdrawn with 'Remove my voice'.	Widerrufbar mit 'Meine Stimme entfernen'.	Se puede retirar con 'Eliminar mi voz'.
 In wachtrij	In queue	In Warteschlange	En cola
 in {0}	in {0}	in {0}	en {0}
+In {0} is het nu {1} en {2}. Vandaag wordt het maximaal {3}	In {0} it is now {1} and {2}. Today it will reach a maximum of {3}	In {0} ist es jetzt {1} und {2}. Heute wird es höchstens {3}	En {0} ahora hace {1} y está {2}. Hoy la máxima será de {3}
 in {0} · uit {1} · verlies {2:0.##}% · jitter {3:0.#} ms · buffer {4:0} / {5:0} ms	in {0} · out {1} · loss {2:0.##}% · jitter {3:0.#} ms · buffer {4:0} / {5:0} ms	ein {0} · aus {1} · Verlust {2:0.##}% · Jitter {3:0.#} ms · Puffer {4:0} / {5:0} ms	entrada {0} · salida {1} · pérdida {2:0.##}% · jitter {3:0.#} ms · búfer {4:0} / {5:0} ms
 indeling '{0}' niet te laden	layout '{0}' cannot be loaded	Layout '{0}' kann nicht geladen werden	no se puede cargar el diseño '{0}'
 indeling '{0}' opgeslagen	layout '{0}' saved	Layout '{0}' gespeichert	diseño '{0}' guardado
@@ -1569,7 +1586,10 @@ Je eigen inschatting, te gebruiken in zoeken (energie:4-5) en straks in de plann
 Je eigen stem en de opname zijn verwijderd; je toestemming is ingetrokken.	Your own voice and the recording have been removed; your consent has been withdrawn.	Deine eigene Stimme und die Aufnahme wurden entfernt; deine Zustimmung ist zurückgezogen.	Se han eliminado tu voz propia y la grabación; tu consentimiento queda retirado.
 Je hebt de nieuwste versie ({0}; nieuwste uitgave {1}).	You have the latest version ({0}; latest release {1}).	Du hast die neueste Version ({0}; neueste Veröffentlichung {1}).	Tienes la versión más reciente ({0}; última versión publicada {1}).
 Je hebt geen eigen stem vastgelegd.	You have not recorded your own voice.	Du hast keine eigene Stimme aufgenommen.	No has grabado tu propia voz.
+Je hoorde {prev}. Blijf lekker hangen, want nu komt {next}, hier op {station}.	You heard {prev}. Stay tuned, because here comes {next}, on {station}.	Du hörtest {prev}. Bleib dran, denn jetzt kommt {next}, hier bei {station}.	Has escuchado {prev}. No te vayas, que ahora viene {next}, aquí en {station}.
 Je hoort alles op de PFL-uitgang; er gaat niets naar de uitzending. De opname loopt via de engine, los van de microfoonknop.	You hear everything on the PFL output; nothing goes to the broadcast. The recording runs via the engine, separately from the microphone button.	Du hörst alles am PFL-Ausgang; nichts geht auf Sendung. Die Aufnahme läuft über die Engine, unabhängig von der Mikrofontaste.	Oyes todo por la salida PFL; nada va a la emisión. La grabación pasa por el motor, aparte del botón del micrófono.
+Je luistert naar {station}, het is {time}. We gaan verder met {next}.	You're listening to {station}, it's {time}. We continue with {next}.	Du hörst {station}, es ist {time}. Weiter geht es mit {next}.	Estás escuchando {station}, son {time}. Seguimos con {next}.
+Je luistert naar {station}. Het is {time}. Blijf erbij!	You're listening to {station}. It's {time}. Stay with us!	Du hörst {station}. Es ist {time}. Bleib dran!	Estás escuchando {station}. Son {time}. ¡Quédate con nosotros!
 je naam, zoals je op de radio heet	your name, as you are called on the radio	dein Name, wie du im Radio heißt	tu nombre, como te llaman en la radio
 Je ziet de stijl meteen. Lettergrootte, schaal en aanraakmodus staan onder Instellingen › Uiterlijk.	You see the style at once. Font size, scale and touch mode are under Settings › Appearance.	Du siehst den Stil sofort. Schriftgröße, Skalierung und Touch-Modus stehen unter Einstellungen › Aussehen.	Ves el estilo al instante. El tamaño de letra, la escala y el modo táctil están en Ajustes › Apariencia.
 JINGLE	JINGLE	JINGLE	JINGLE
@@ -1932,6 +1952,7 @@ minuut	minute	Minute	minuto
 mislukt (jingle in de plaats)	failed (jingle instead)	fehlgeschlagen (Jingle stattdessen)	falló (jingle en su lugar)
 Mislukt.	Failed.	Fehlgeschlagen.	Falló.
 Mislukt: 	Failed: 	Fehlgeschlagen: 	Falló: 
+mistig	foggy	neblig	con niebla
 Mix nu over naar B	Mix over to B now	Jetzt zu B überblenden	Mezclar ahora hacia B
 Mix over	Mix over	Überblenden	Mezclar
 mix over	mix in	Mix in	mezcla en
@@ -1948,6 +1969,8 @@ Mixpunt: het einde zakt onder (dB)	Mix point: the end drops below (dB)	Mixpunkt:
 Mixt van deck {0} naar het volgende nummer…	Mixing from deck {0} to the next song…	Mixt von Deck {0} zum nächsten Titel…	Mezclando del plato {0} a la siguiente canción…
 Model	Model	Modell	Modelo
 Modellen opnieuw ophalen	Fetch models again	Modelle neu abrufen	Volver a obtener modelos
+Morgen {0} met {1} tot {2}	Tomorrow {0} with {1} to {2}	Morgen {0} mit {1} bis {2}	Mañana {0} con {1} a {2}
+motregen	drizzle	Nieselregen	llovizna
 ms	ms	ms	ms
 MusicBrainz (Spotify doet mee zodra de Spotify-sleutels zijn ingevuld)	MusicBrainz (Spotify joins in as soon as the Spotify keys are filled in)	MusicBrainz (Spotify macht mit, sobald die Spotify-Schlüssel eingetragen sind)	MusicBrainz (Spotify se suma en cuanto se rellenen las claves de Spotify)
 MusicBrainz, en Spotify als aanvulling	MusicBrainz, and Spotify as a supplement	MusicBrainz, und Spotify als Ergänzung	MusicBrainz, y Spotify como complemento
@@ -2155,6 +2178,9 @@ Noodcategorie is leeg of niet gevonden; er wordt een willekeurig nummer uit de b
 nooit	never	nie	nunca
 Nooit gespeeld	Never played	Nie gespielt	Nunca sonado
 nooit gespeeld	never played	nie gespielt	nunca sonado
+noorden	north	Norden	norte
+noordoosten	northeast	Nordosten	noreste
+noordwesten	northwest	Nordwesten	noroeste
 Normale uitgang (uitzending, of PFL)	Normal output (broadcast, or PFL)	Normaler Ausgang (Sendung oder PFL)	Salida normal (emisión o PFL)
 note {0}	note {0}	note {0}	note {0}
 notitie (mag leeg)	note (may be empty)	Notiz (darf leer sein)	nota (puede quedar vacía)
@@ -2233,7 +2259,9 @@ Ontbreekt nog	Still missing	Fehlt noch	Aún falta
 Ontbrekende exporteren…	Export missing…	Fehlende exportieren…	Exportar las que faltan…
 Ontbrekende nummers exporteren	Export missing songs	Fehlende Titel exportieren	Exportar canciones que faltan
 Ontwikkeltest van Spotify Soloist. Het geluid gaat van Soloist rechtstreeks naar Windows (standaard geluidskaart), niet via de engine, de DJ-tafel, de stream of een opname: Spotify staat uitzenden en mixen niet toe.	Development test of Spotify Soloist. The sound goes from Soloist straight to Windows (default sound card), not via the engine, the DJ table, the stream or a recording: Spotify does not allow broadcasting and mixing.	Entwicklungstest von Spotify Soloist. Der Ton geht von Soloist direkt an Windows (Standard-Soundkarte), nicht über die Engine, den DJ-Tisch, den Stream oder eine Aufnahme: Spotify erlaubt Senden und Mixen nicht.	Prueba de desarrollo de Spotify Soloist. El sonido va de Soloist directamente a Windows (tarjeta de sonido predeterminada), no por el motor, la mesa DJ, el stream ni una grabación: Spotify no permite emitir ni mezclar.
+onweer	thunderstorms	Gewitter	tormentas
 Ook overnemen bij stilte op de zender van de hoofdstudio	Also take over on silence on the main studio's broadcast	Auch bei Stille auf dem Sender des Hauptstudios übernehmen	Tomar el control también ante silencio en la emisión del estudio principal
+oosten	east	Osten	este
 Op afstand	Remote	Aus der Ferne	A distancia
 OP DE LUCHT	ON THE AIR	AUF SENDUNG	AL AIRE
 op de lucht; de hoofdstudio antwoordt niet	on air; the main studio does not answer	auf Sendung; das Hauptstudio antwortet nicht	al aire; el estudio principal no responde
@@ -2499,6 +2527,7 @@ regel '{0}' opgeslagen, log opnieuw gepland	rule '{0}' saved, log planned again	
 Regels	Rules	Regeln	Reglas
 Regels kijken naar wat er net voor gepland staat. Overslaan laat die plek in de klok weg; uitstellen probeert hem na het volgende item nog één keer. Een nieuw uur begint schoon.	Rules look at what is planned just before. Skip leaves that spot in the clock out; postpone tries it once more after the next item. A new hour starts clean.	Regeln schauen auf das, was direkt davor geplant ist. Überspringen lässt diese Stelle in der Uhr weg; Aufschieben versucht sie nach dem nächsten Element noch einmal. Eine neue Stunde beginnt sauber.	Las reglas miran lo que está planificado justo antes. Saltar omite ese lugar del reloj; aplazar lo intenta una vez más tras el siguiente elemento. Una hora nueva empieza limpia.
 Regels opslaan	Save rules	Regeln speichern	Guardar reglas
+regen	rain	Regen	lluvia
 Regiekamer	Control room	Regieraum	Sala de control
 Regiekamer (rustig donker, standaard)	Control room (calm dark, default)	Regieraum (ruhig dunkel, Standard)	Sala de control (oscuro tranquilo, predeterminado)
 regionaal eerst	regional first	regional zuerst	regional primero
@@ -2643,6 +2672,8 @@ Sluit de controller aan; hij verschijnt dan in de lijst	Connect the controller; 
 Sluiten	Close	Schließen	Cerrar
 Sluiten zonder iets te veranderen; de inrichthulp staat altijd onder Studio › Inrichthulp	Close without changing anything; the setup assistant is always under Studio › Setup assistant	Schließen, ohne etwas zu ändern; der Einrichtungsassistent steht immer unter Studio › Einrichtungsassistent	Cerrar sin cambiar nada; el asistente de configuración está siempre en Estudio › Asistente de configuración
 Sluiter	Closer	Schlusselement	Cierre
+sneeuw	snow	Schnee	nieve
+sneeuwbuien	snow showers	Schneeschauer	chubascos de nieve
 Snel uit	Quick out	Schnell aus	Salida rápida
 snelheid	speed	Geschwindigkeit	velocidad
 Sneltoets niet overal te gebruiken (al in gebruik door een ander programma?): {0}	Hotkey cannot be used everywhere (already in use by another program?): {0}	Tastenkürzel nicht überall nutzbar (schon von einem anderen Programm belegt?): {0}	El atajo no se puede usar en todas partes (¿ya lo usa otro programa?): {0}
@@ -2713,6 +2744,7 @@ Spraakopname lukte niet (BASS-fout {0}).	Voice recording failed (BASS error {0})
 Spraakopname lukte niet: 	Voice recording failed: 	Sprachaufnahme fehlgeschlagen: 	La grabación de voz falló: 
 Spraakopname lukte niet: {0}	Voice recording failed: {0}	Sprachaufnahme fehlgeschlagen: {0}	La grabación de voz falló: {0}
 Spreadsheet (CSV)…	Spreadsheet (CSV)…	Tabelle (CSV)…	Hoja de cálculo (CSV)…
+spreekt	speaks	spricht	habla
 Spreekt de weerberichten in, tenzij een weerblok zelf een stem kiest (venster Nieuws)	Records the weather reports, unless a weather block chooses a voice itself (News window)	Spricht die Wetterberichte ein, außer ein Wetterblock wählt selbst eine Stimme (Fenster Nachrichten)	Locuta los partes del tiempo, salvo que un bloque del tiempo elija su propia voz (ventana Noticias)
 Staat een bestand niet op zijn pad (share weg, andere stationsletter, andere pc), dan zoekt de engine hetzelfde bestand onder de vervangende map. Bijvoorbeeld Y:\\Muziek → \\\\nas\\muziek. 'Definitief omzetten' past de paden in de bibliotheek blijvend aan.	If a file is not on its path (share gone, other drive letter, other PC), the engine looks for the same file under the replacement folder. For example Y:\\Music → \\\\nas\\music. 'Convert permanently' adjusts the paths in the library for good.	Liegt eine Datei nicht auf ihrem Pfad (Freigabe weg, anderer Laufwerksbuchstabe, anderer PC), sucht die Engine dieselbe Datei im Ersatzordner. Zum Beispiel Y:\\Musik → \\\\nas\\musik. 'Endgültig umwandeln' passt die Pfade in der Bibliothek dauerhaft an.	Si un archivo no está en su ruta (recurso compartido caído, otra letra de unidad, otro PC), el motor busca el mismo archivo en la carpeta de sustitución. Por ejemplo Y:\\Musica → \\\\nas\\musica. 'Convertir definitivamente' ajusta las rutas de la biblioteca para siempre.
 Staat groot in de aan-de-luchtbalk zolang dit item speelt	Shown large in the on-air bar while this item plays	Steht groß in der Sendeleiste, solange dieses Element läuft	Se muestra en grande en la barra de emisión mientras suena este elemento
@@ -2844,6 +2876,7 @@ Systeemlog van de engine	System log of the engine	Systemprotokoll der Engine	Reg
 t/m	to	bis	hasta
 Taal	Language	Sprache	Idioma
 Taal ingesteld.	Language set.	Sprache eingestellt.	Idioma configurado.
+Taal op de zender: de presentator, het nieuws en het weer spreken deze taal. Kies een stem die deze taal spreekt.	On-air language: the presenter, the news and the weather speak this language. Choose a voice that speaks this language.	Sprache auf Sendung: Moderator, Nachrichten und Wetter sprechen diese Sprache. Wähle eine Stimme, die diese Sprache spricht.	Idioma en antena: el presentador, las noticias y el tiempo hablan este idioma. Elige una voz que hable este idioma.
 Taal · Language · Sprache · Idioma	Taal · Language · Sprache · Idioma	Taal · Language · Sprache · Idioma	Taal · Language · Sprache · Idioma
 Taalmodel	Language model	Sprachmodell	Modelo de lenguaje
 Tags	Tags	Tags	Etiquetas
@@ -3257,6 +3290,7 @@ Werkt ook als een ander programma vooraan staat (bijv. de browser of de mail)	Al
 Werkwijze	Method	Arbeitsweise	Método
 Werkwijze mengtafel: kanalen met een eigen uitgang gaan op vol naar de tafel	Mixing desk mode: channels with their own output go to the desk at full level	Arbeitsweise Mischpult: Kanäle mit eigenem Ausgang gehen voll ans Pult	Modo mesa de mezclas: los canales con salida propia van a la mesa a pleno nivel
 Werkwijze software: de engine mengt, de faders werken weer	Software mode: the engine mixes, the faders work again	Arbeitsweise Software: die Engine mischt, die Fader funktionieren wieder	Modo software: el motor mezcla, los faders vuelven a funcionar
+westen	west	Westen	oeste
 westeurope	westeurope	westeurope	westeurope
 Whisper-model	Whisper model	Whisper-Modell	Modelo Whisper
 Wie is aangemeld in deze studio. Klik om je (als iemand anders) aan te melden; Ctrl+L vergrendelt.	Who is signed in at this studio. Click to sign in (as someone else); Ctrl+L locks.	Wer in diesem Studio angemeldet ist. Klicke, um dich (als jemand anderes) anzumelden; Strg+L sperrt.	Quién ha iniciado sesión en este estudio. Haz clic para iniciar sesión (como otra persona); Ctrl+L bloquea.
@@ -3267,6 +3301,7 @@ Willekeurig (rotatie)	Random (rotation)	Zufällig (Rotation)	Aleatorio (rotació
 willekeurig uit de bibliotheek	random from the library	zufällig aus der Bibliothek	aleatorio de la biblioteca
 Windows-stem	Windows voice	Windows-Stimme	Voz de Windows
 Wissel tussen golfvorm (met cuepunten) en compact, voor alle spelers	Switch between waveform (with cue points) and compact, for all players	Zwischen Wellenform (mit Cuepunkten) und kompakt wechseln, für alle Player	Cambiar entre forma de onda (con puntos de cue) y compacto, para todos los reproductores
+wisselvallig	changeable	wechselhaft	variable
 Wissen	Clear	Löschen	Borrar
 Woorden	Words	Wörter	Palabras
 woorden	words	Wörter	palabras
@@ -3330,9 +3365,14 @@ Zonder jouw toestemming wordt je stem niet vastgelegd.	Without your consent your
 Zonder sleutel en zonder adres: maak een sleutel of geef een adres.	Without key and without address: make a key or give an address.	Ohne Schlüssel und ohne Adresse: erstelle einen Schlüssel oder gib eine Adresse an.	Sin clave y sin dirección: crea una clave o indica una dirección.
 Zonder sleutel: herkend aan het adres.	Without key: recognised by its address.	Ohne Schlüssel: an der Adresse erkannt.	Sin clave: reconocido por la dirección.
 Zonder toestemming wordt een gekloonde stem niet gebruikt. Nooit stemmen imiteren van mensen die daar geen ja op hebben gezegd.	Without consent a cloned voice is not used. Never imitate the voices of people who have not said yes to it.	Ohne Zustimmung wird eine geklonte Stimme nicht genutzt. Nie Stimmen von Menschen nachahmen, die dazu nicht ja gesagt haben.	Sin consentimiento no se usa una voz clonada. Nunca imites voces de personas que no hayan dicho que sí.
+zonnig	sunny	sonnig	soleado
 Zonsondergang (warm rood en oranje)	Sunset (warm red and orange)	Sonnenuntergang (warmes Rot und Orange)	Atardecer (rojo y naranja cálidos)
 Zou nu overgeslagen worden.\n	Would be skipped now.\n	Würde jetzt übersprungen.\n	Se saltaría ahora.\n
 Zoveel milliseconden houdt de jitterbuffer vast voordat hij speelt; meer = stabieler, maar later	The jitter buffer holds this many milliseconds before it plays; more = more stable, but later	So viele Millisekunden hält der Jitterpuffer fest, bevor er spielt; mehr = stabiler, aber später	El búfer de jitter retiene estos milisegundos antes de reproducir; más = más estable, pero con más retraso
+zuiden	south	Süden	sur
+zuidoosten	southeast	Südosten	sureste
+zuidwesten	southwest	Südwesten	suroeste
+zware buien	heavy showers	starke Schauer	chubascos fuertes
 {0:+0.0;-0.0} s t.o.v. mixpunt	{0:+0.0;-0.0} s vs. mix point	{0:+0.0;-0.0} s ggü. Mixpunkt	{0:+0.0;-0.0} s respecto al punto de mezcla
 {0:0.0} / {1:0.0} GB · {2:0}% belast · {3:0} °C · driver {4}	{0:0.0} / {1:0.0} GB · {2:0}% load · {3:0} °C · driver {4}	{0:0.0} / {1:0.0} GB · {2:0}% Last · {3:0} °C · Treiber {4}	{0:0.0} / {1:0.0} GB · {2:0}% de carga · {3:0} °C · controlador {4}
 {0:0.0} s · {1} · {2} · piek {3:0} dBFS	{0:0.0} s · {1} · {2} · peak {3:0} dBFS	{0:0.0} s · {1} · {2} · Spitze {3:0} dBFS	{0:0.0} s · {1} · {2} · pico {3:0} dBFS
@@ -3455,6 +3495,7 @@ Zoveel milliseconden houdt de jitterbuffer vast voordat hij speelt; meer = stabi
 {0} · op afstand	{0} · remote	{0} · aus der Ferne	{0} · en remoto
 {0} · uitgang {1}	{0} · output {1}	{0} · Ausgang {1}	{0} · salida {1}
 {0} · vaste lijn	{0} · fixed line	{0} · feste Leitung	{0} · línea fija
+{0}, meldt {1}.	{0}, reports {1}.	{0}, meldet {1}.	{0}, informa {1}.
 {0}, uitgang {1}	{0}, output {1}	{0}, Ausgang {1}	{0}, salida {1}
 {0}: '{1}' mislukt ({2})	{0}: '{1}' failed ({2})	{0}: '{1}' fehlgeschlagen ({2})	{0}: '{1}' falló ({2})
 {0}: ASIO-fout {1}	{0}: ASIO error {1}	{0}: ASIO-Fehler {1}	{0}: error ASIO {1}
@@ -3493,6 +3534,8 @@ Zoveel milliseconden houdt de jitterbuffer vast voordat hij speelt; meer = stabi
 {0}: “{1}” niet gevonden; het standaardapparaat van Windows wordt gebruikt	{0}: “{1}” not found; the Windows default device is used	{0}: „{1}“ nicht gefunden; das Windows-Standardgerät wird verwendet	{0}: “{1}” no encontrado; se usa el dispositivo predeterminado de Windows
 {0}{1} gevonden	{0}{1} found	{0}{1} gefunden	{0}{1} encontrados
 {0}× uitgezonden, laatst {1:d-M-yyyy HH:mm}	{0}× broadcast, last {1:d-M-yyyy HH:mm}	{0}× gesendet, zuletzt {1:d-M-yyyy HH:mm}	{0}× emitido, último {1:d-M-yyyy HH:mm}
+{station}, het is {time}. Na {prev} gaan we door met {next}.	{station}, it's {time}. After {prev} we carry on with {next}.	{station}, es ist {time}. Nach {prev} geht es weiter mit {next}.	{station}, son {time}. Después de {prev} seguimos con {next}.
+{titel} van {artiest}	{titel} by {artiest}	{titel} von {artiest}	{titel} de {artiest}
 | streep	| bar	| Strich	| barra
 één adres per regel, bijv. de thema-feed of agenda van de eigen website	one address per line, e.g. the theme feed or calendar of your own website	eine Adresse pro Zeile, z. B. der Themen-Feed oder Kalender der eigenen Website	una dirección por línea, p. ej. el feed de temas o la agenda de tu propia web
 één feed-adres per regel, bijv. de RSS van de eigen nieuwsredactie	one feed address per line, e.g. the RSS of your own newsroom	eine Feed-Adresse pro Zeile, z. B. der RSS der eigenen Nachrichtenredaktion	una dirección de feed por línea, p. ej. el RSS de tu propia redacción

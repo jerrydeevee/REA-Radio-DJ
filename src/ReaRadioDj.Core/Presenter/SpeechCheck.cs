@@ -24,7 +24,7 @@ public sealed partial class SpeechCheck(HttpClient http, SpeechCheckOptions opti
         audio.Headers.ContentType = new MediaTypeHeaderValue("audio/wav");
         form.Add(audio, "file", Path.GetFileName(wavPath));
         form.Add(new StringContent(options.Model), "model");
-        form.Add(new StringContent(options.Language), "language");
+        form.Add(new StringContent(string.IsNullOrWhiteSpace(options.Language) ? OnAir.Code : options.Language), "language");
         form.Add(new StringContent("json"), "response_format");
 
         using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);

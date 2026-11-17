@@ -89,6 +89,10 @@ public sealed partial class PresenterTool : StudioTool
     // settings
     [ObservableProperty] private bool _enabled = true;
     [ObservableProperty] private string _presenterName = "";
+
+    /// <summary>The languages the presenter can speak on air, each in its own name.</summary>
+    public IReadOnlyList<string> OnAirLanguages { get; } = [.. Tr.Languages.Select(l => l.Name)];
+    [ObservableProperty] private int _onAirLanguageIndex;
     [ObservableProperty] private string _persona = "";
     [ObservableProperty] private decimal? _maxWords = 45;
     [ObservableProperty] private string _llmBaseUrl = "";
@@ -487,6 +491,7 @@ public sealed partial class PresenterTool : StudioTool
         if (await Hub.Client.GetAsync<PresenterSettingsDto>("/api/presenter/settings") is not { } d) return;
         Enabled = d.Enabled;
         PresenterName = d.PresenterName;
+        OnAirLanguageIndex = Math.Max(0, Array.FindIndex(Tr.Languages, l => l.Code == Tr.Normalize(d.Language)));
         Persona = d.Persona;
         MaxWords = d.MaxWords;
         LlmBaseUrl = d.LlmBaseUrl;
@@ -525,7 +530,7 @@ public sealed partial class PresenterTool : StudioTool
     private async Task Save()
     {
         var d = new PresenterSettingsDto(Enabled, PresenterName, Persona, (int)(MaxWords ?? 45), LlmBaseUrl, LlmModel ?? "", LlmApiKey,
-            (double)(Temperature ?? 0.8m), RequireApproval, PostProcess, Bed?.Id);
+            (double)(Temperature ?? 0.8m), RequireApproval, PostProcess, Bed?.Id, Tr.Languages[Math.Clamp(OnAirLanguageIndex, 0, Tr.Languages.Length - 1)].Code);
         if (await Hub.Client.SendForAsync<PresenterSettingsDto>(HttpMethod.Put, "/api/presenter/settings", d) is { } saved)
         {
             LlmApiKey = saved.LlmApiKey;

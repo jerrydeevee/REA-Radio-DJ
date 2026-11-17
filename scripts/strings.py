@@ -27,7 +27,7 @@ spotify voip sip rtp asio midi bass mackie ember livewire wav mp3 ogg flac opus 
 ATTR = re.compile(r'\s(?:Content|Text|Header|ToolTip\.Tip|Watermark|PlaceholderText|Title|EmptyText)="([^"]*)"')
 ELEMENT = re.compile(r"<(TextBlock|Run|ToolTip\.Tip|SelectableTextBlock)(?:\s[^>]*)?>([^<]+)</\1>")
 # A C# string literal (regular or verbatim) as the first argument of Tr.T / Tr.F.
-CALL = re.compile(r'(?:\bTr\.[TF]\(|\bTr\.In\([^,()]*,|(?<![\w.])L\()\s*(@?)"((?:[^"\\]|\\.|"")*)"')
+CALL = re.compile(r'(?:\bTr\.[TF]\(|\bTr\.In\([^,()]*,|\bOnAir\.(?:Say|Line)\(|(?<![\w.])L\()\s*(@?)"((?:[^"\\]|\\.|"")*)"')
 WEB = re.compile(r'(?:data-tr="([^"]*)"|\btr\(\s*"((?:[^"\\]|\\.)*)"|\btr\(\s*\'((?:[^\'\\]|\\.)*)\')')
 
 
@@ -118,7 +118,7 @@ ENGINE_SKIP = re.compile(r'(==|!=|\bcase\b|\bis\s|Equals\(|StartsWith\(|EndsWith
                          r'Log\w*\(|Debug\.\w+\(|Trace\.\w+\(|Get\w*\(|\[\s*|nameof\(|"\s*=>\s*|Header\w*\(|Environment\.\w+\()\s*$')
 TECHNICAL = re.compile(r'BASS_|\b(SELECT|INSERT|UPDATE|DELETE|CREATE|ALTER|PRAGMA)\s|https?://|^[\w.]+\(.*\)$|^/|\\|^[\w-]+:\w|^\w+=')
 # AI prompts (their language is the presenter's own setting) and the engine's tray menu are not studio texts.
-SKIP_FILES = {"ScriptWriters.cs", "NewsWriter.cs", "VoiceProfiles.cs", "TrayIcon.cs"}
+SKIP_FILES = {"ScriptWriters.cs", "NewsWriter.cs", "VoiceProfiles.cs", "TrayIcon.cs", "OnAir.cs"}
 
 
 def cs_literals(line: str):

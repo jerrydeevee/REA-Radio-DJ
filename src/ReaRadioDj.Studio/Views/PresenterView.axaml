@@ -95,7 +95,12 @@
           <CheckBox Content="AI-presentator aan" IsChecked="{Binding Enabled}" />
           <Grid ColumnDefinitions="110,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto">
             <TextBlock Grid.Row="0" Text="Naam" VerticalAlignment="Center" />
-            <TextBox Grid.Row="0" Grid.Column="1" Text="{Binding PresenterName}" Margin="0,0,0,4" />
+            <DockPanel Grid.Row="0" Grid.Column="1" Margin="0,0,0,4">
+              <ComboBox DockPanel.Dock="Right" ItemsSource="{Binding OnAirLanguages}" SelectedIndex="{Binding OnAirLanguageIndex}" Width="140" Margin="4,0,0,0"
+                        ToolTip.Tip="Taal op de zender: de presentator, het nieuws en het weer spreken deze taal. Kies een stem die deze taal spreekt." />
+              <TextBlock DockPanel.Dock="Right" Classes="muted" Text="spreekt" VerticalAlignment="Center" Margin="8,0,0,0" />
+              <TextBox Text="{Binding PresenterName}" />
+            </DockPanel>
 
             <TextBlock Grid.Row="1" Text="Taalmodel" VerticalAlignment="Center" />
             <DockPanel Grid.Row="1" Grid.Column="1" Margin="0,0,0,4">

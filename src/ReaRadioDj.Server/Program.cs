@@ -29,6 +29,8 @@ var builder = WebApplication.CreateBuilder(new WebApplicationOptions
     ContentRootPath = AppContext.BaseDirectory,
 });
 var options = builder.Configuration.GetSection("ReaRadioDj").Get<ReaRadioDjOptions>() ?? new ReaRadioDjOptions();
+// What the AI presenter says itself follows Presenter.Language, also after a change in the studio.
+ReaRadioDj.Core.Presenter.OnAir.Use(options.Presenter);
 
 // Relative folders are relative to the working directory (the folder you start REA-Radio-DJ from).
 if (args.Contains("--demo"))
@@ -178,7 +180,7 @@ builder.Services.AddSingleton(sp =>
     http.Timeout = Timeout.InfiniteTimeSpan; // per-call timeouts come from the options
     return new HiggsSpeechEngine(http, options.Presenter.Tts, sp.GetRequiredService<VoiceClips>());
 });
-builder.Services.AddSingleton(_ => new SapiSpeechEngine(options.Presenter.Tts, options.Presenter.Language));
+builder.Services.AddSingleton(_ => new SapiSpeechEngine(options.Presenter.Tts, ""));
 builder.Services.AddSingleton(sp => new ElevenLabsSpeechEngine(sp.GetRequiredService<IHttpClientFactory>().CreateClient("cloudvoice"), options.Presenter.Tts));
 builder.Services.AddSingleton(sp => new AzureSpeechEngine(sp.GetRequiredService<IHttpClientFactory>().CreateClient("cloudvoice"), options.Presenter.Tts));
 builder.Services.AddSingleton(sp => new SpeechCheck(sp.GetRequiredService<IHttpClientFactory>().CreateClient("check"), options.Presenter.Check));

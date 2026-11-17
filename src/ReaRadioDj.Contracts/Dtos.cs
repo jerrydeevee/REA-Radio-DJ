@@ -635,7 +635,8 @@ public sealed record AirStatsIdleDto(long MediaId, string Artist, string Title, 
 
 /// <summary>AI presenter settings changed in the studio. ApiKey comes back masked; sending the mask keeps the stored key.</summary>
 public sealed record PresenterSettingsDto(bool Enabled, string PresenterName, string Persona, int MaxWords, string LlmBaseUrl,
-    string LlmModel, string LlmApiKey, double Temperature, bool RequireApproval, bool PostProcess, long? BedCategoryId = null);
+    string LlmModel, string LlmApiKey, double Temperature, bool RequireApproval, bool PostProcess, long? BedCategoryId = null,
+    string Language = "nl");
 
 /// <summary>A presenter for part of the day or week. Empty fields use the general presenter settings.</summary>
 public sealed record PersonaDto(long Id, string Name, bool Enabled, int Days, string Hours, string PresenterName, string Character,

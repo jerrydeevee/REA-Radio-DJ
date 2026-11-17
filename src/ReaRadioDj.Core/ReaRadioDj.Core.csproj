@@ -13,6 +13,10 @@
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="9.0.0" />
   </ItemGroup>
   <ItemGroup>
+    <!-- Translations (strings.tsv) for what the AI presenter says on air. -->
+    <ProjectReference Include="..\ReaRadioDj.Contracts\ReaRadioDj.Contracts.csproj" />
+  </ItemGroup>
+  <ItemGroup>
     <InternalsVisibleTo Include="ReaRadioDj.Tests" />
   </ItemGroup>
 </Project>

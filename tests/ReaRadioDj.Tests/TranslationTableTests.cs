@@ -5,13 +5,13 @@ using ReaRadioDj.Contracts.Localization;
 namespace ReaRadioDj.Tests;
 
 /// <summary>
-/// Guards the translation table: every fixed text the code asks for (Tr.T, Tr.F, Tr.In and the web pages' tr()) must be
+/// Guards the translation table: every fixed text the code asks for (Tr.T, Tr.F, Tr.In, OnAir.Say/Line and the web pages' tr()) must be
 /// in strings.tsv with a translation in every language. When this fails, run  python scripts/strings.py  and fill in
 /// the new rows.
 /// </summary>
 public sealed partial class TranslationTableTests
 {
-    [GeneratedRegex("""(?:\bTr\.[TF]\(|\bTr\.In\([^,()]*,|(?<![\w.])L\()\s*"((?:[^"\\]|\\.)*)"(?!\s*\+)""")]
+    [GeneratedRegex("""(?:\bTr\.[TF]\(|\bTr\.In\([^,()]*,|\bOnAir\.(?:Say|Line)\(|(?<![\w.])L\()\s*"((?:[^"\\]|\\.)*)"(?!\s*\+)""")]
     private static partial Regex CsCall();
 
     [GeneratedRegex(@"\btr\(\s*""((?:[^""\\]|\\.)*)""|\btr\(\s*'((?:[^'\\]|\\.)*)'|data-tr=""([^""]*)""")]
@@ -43,7 +43,7 @@ public sealed partial class TranslationTableTests
         {
             if (file.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}") || file.Contains($"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}")) continue;
             var code = File.ReadAllText(file);
-            if (!code.Contains("Tr.") && !code.Contains("L(\"")) continue;
+            if (!code.Contains("Tr.") && !code.Contains("OnAir.") && !code.Contains("L(\"")) continue;
             foreach (Match m in CsCall().Matches(code))
                 yield return (Unescape(m.Groups[1].Value), Path.GetRelativePath(src, file));
         }
