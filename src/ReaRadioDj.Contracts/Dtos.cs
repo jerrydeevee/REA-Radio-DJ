@@ -194,7 +194,8 @@ public sealed record MediaDto(long Id, string Path, string Kind, long? CategoryI
 {
     /// <summary>True when the quality check found something (te zacht, clipping, stilte, dubbel, ...).</summary>
     public bool HasIssues => Issues is { Count: > 0 };
-    public string IssueText => Issues is { Count: > 0 } ? string.Join(" · ", Issues) : "";
+    /// <summary>The problems in the studio's language (the engine writes them in Dutch).</summary>
+    public string IssueText => Issues is { Count: > 0 } ? string.Join(" · ", Issues.Select(Localization.Tr.E)) : "";
     /// <summary>True when the item may be scheduled now (<see cref="Block"/> says why not).</summary>
     public bool Allowed => Block is null;
     public string DisplayName => string.IsNullOrWhiteSpace(Artist) ? Title : $"{Artist} - {Title}";

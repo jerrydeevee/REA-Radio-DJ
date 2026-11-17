@@ -72,7 +72,7 @@ public sealed partial class WishlistTool : StudioTool
         {
             var r = await Hub.Client.SendForAsync<WishImportResultDto>(HttpMethod.Post, "/api/wishlist/import", new WishImportRequest(Link));
             if (r is null) { Status = Tr.T("geen antwoord van de engine"); return; }
-            if (!r.Ok) { Status = r.Error ?? Tr.T("import mislukt"); return; }
+            if (!r.Ok) { Status = r.Error is { } error ? Tr.E(error) : Tr.T("import mislukt"); return; }
             Link = "";
             await ReloadAsync();
             Playlist = r.Playlist;

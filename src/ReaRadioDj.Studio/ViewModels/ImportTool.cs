@@ -102,7 +102,7 @@ public sealed partial class ImportTool : StudioTool
         string hours = r.Hours.Count == 0 ? Tr.T("geen uren") : r.Hours.Count == 1 ? r.Hours[0] : Tr.F("{0} t/m {1} ({2} uur)", r.Hours[0], r.Hours[^1], r.Hours.Count);
         Summary = (r.Applied ? Tr.T("Geïmporteerd: ") : Tr.T("Gecontroleerd: ")) + Tr.F("{0} van {1} regels gevonden in de bibliotheek · {2}", r.Matched, r.Lines, hours)
             + (r.Applied ? "" : Tr.T("\nNog niets opgeslagen: kies Importeren."));
-        Problem = r.Error;
+        Problem = Tr.E(r.Error);
         if (r.Applied)
         {
             Hub.Status = Tr.F("log geïmporteerd: {0} uur", r.Hours.Count);

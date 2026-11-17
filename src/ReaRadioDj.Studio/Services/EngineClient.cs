@@ -121,7 +121,7 @@ public sealed class EngineClient : IDisposable
                 string text;
                 try { text = raw.StartsWith('"') ? JsonSerializer.Deserialize<string>(raw) ?? "" : raw; }
                 catch (JsonException) { text = raw.Trim('"'); }
-                return (default, text.Length > 0 ? text : Tr.F("Niet gelukt ({0}).", (int)response.StatusCode));
+                return (default, text.Length > 0 ? Tr.E(text) : Tr.F("Niet gelukt ({0}).", (int)response.StatusCode));
             }
             return (await response.Content.ReadFromJsonAsync<T>(Wire.Json), null);
         }
@@ -134,7 +134,8 @@ public sealed class EngineClient : IDisposable
         try
         {
             using var response = await _http.PostAsJsonAsync("/api/command", new { text }, Wire.Json);
-            return await response.Content.ReadFromJsonAsync<CommandResultDto>(Wire.Json) ?? new CommandResultDto(false, $"{(int)response.StatusCode}");
+            var result = await response.Content.ReadFromJsonAsync<CommandResultDto>(Wire.Json) ?? new CommandResultDto(false, $"{(int)response.StatusCode}");
+            return result with { Text = Tr.E(result.Text) };
         }
         catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or JsonException) { return new CommandResultDto(false, ex.Message); }
     }
@@ -160,7 +161,7 @@ public sealed class EngineClient : IDisposable
             using var content = new ByteArrayContent(data);
             content.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("application/octet-stream");
             using var response = await _http.PostAsync(path, content);
-            if (!response.IsSuccessStatusCode) return (default, (await response.Content.ReadAsStringAsync()).Trim('"'));
+            if (!response.IsSuccessStatusCode) return (default, Tr.E((await response.Content.ReadAsStringAsync()).Trim('"')));
             return (await response.Content.ReadFromJsonAsync<T>(Wire.Json), null);
         }
         catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or JsonException) { return (default, ex.Message); }

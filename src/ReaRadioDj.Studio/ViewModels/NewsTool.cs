@@ -301,7 +301,7 @@ public sealed partial class NewsTool : StudioTool
         CheckText = (r.Ok ? Tr.T("Nu zou spelen:\n") : Tr.T("Zou nu overgeslagen worden.\n")) + string.Join("\n", r.Parts.Select(p => "• " + p));
         CheckProblem = r.Problem;
         Script = r.Script;
-        Note = r.Note;
+        Note = r.Note is null ? null : Tr.E(r.Note);
     }
 
     [RelayCommand]

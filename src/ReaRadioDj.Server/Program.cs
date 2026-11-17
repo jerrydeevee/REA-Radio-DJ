@@ -260,6 +260,9 @@ app.UseStaticFiles(new StaticFileOptions { OnPrepareResponse = c => c.Context.Re
 var json = new JsonSerializerOptions(JsonSerializerDefaults.Web);
 json.Converters.Add(new JsonStringEnumConverter(JsonNamingPolicy.CamelCase));
 
+// The translations for the web pages (Dutch text → the language), open like the pages themselves; see wwwroot/tr.js.
+app.MapGet("/tr/{lang}.json", (string lang) => Results.Json(ReaRadioDj.Contracts.Localization.Tr.Table(ReaRadioDj.Contracts.Localization.Tr.Normalize(lang))));
+
 var api = app.MapGroup("/api");
 // The public certificate of the station's own CA: install it once on a phone or tablet and https needs no warning.
 api.MapGet("/system/ca.crt", () => ReaRadioDj.Core.LocalCertificates.CaCertificate(options.DataFolder) is { } der

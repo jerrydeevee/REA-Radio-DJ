@@ -4,6 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#111418">
+  <script src="/tr.js"></script>
   <title>Voicetrack op afstand</title>
   <style>
     :root {
@@ -164,15 +165,15 @@ async function act(method, url, body, type) {
   }
   return res;
 }
-const problem = async (res) => String(await res.json().catch(() => null) ?? `niet gelukt (${res.status})`).replace(/^"|"$/g, "");
+const problem = async (res) => trE(String(await res.json().catch(() => null) ?? tr("niet gelukt ({0})", res.status)).replace(/^"|"$/g, ""));
 
 async function signIn() {
   const me = await fetch("/api/users/me").then((r) => r.ok ? r.json() : null).catch(() => null);
   const users = !me || me.active;
   $("lUser").hidden = !users;
   $("lKeyBox").hidden = users;
-  $("lHint").textContent = users ? "Vanaf dit apparaat vraagt de engine om een gebruiker van de studio."
-    : "Vanaf dit apparaat vraagt de engine om het bedieningswachtwoord (Instellingen › Op afstand).";
+  $("lHint").textContent = users ? tr("Vanaf dit apparaat vraagt de engine om een gebruiker van de studio.")
+    : tr("Vanaf dit apparaat vraagt de engine om het bedieningswachtwoord (Instellingen › Op afstand).");
   return new Promise((resolve) => {
     const d = $("login");
     $("lErr").textContent = "";
@@ -183,13 +184,13 @@ async function signIn() {
         store.set("rea-key", $("lKey").value);
         $("lKey").value = "";
         d.close();
-        $("whoami").textContent = "met het bedieningswachtwoord";
+        $("whoami").textContent = tr("met het bedieningswachtwoord");
         resolve(true);
         return;
       }
       const res = await fetch("/api/users/login", { method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name: $("lName").value.trim(), pin: $("lPin").value }) });
-      if (!res.ok) { $("lErr").textContent = (await res.json().catch(() => null)) || "Aanmelden lukt niet."; return; }
+      if (!res.ok) { $("lErr").textContent = trE(await res.json().catch(() => null)) || tr("Aanmelden lukt niet."); return; }
       const s = await res.json();
       store.set("rea-session", s.token);
       $("lPin").value = "";
@@ -222,18 +223,18 @@ async function loadLog() {
   items.forEach((item, i) => {
     if (i > 0 && item.type !== "voiceTrack" && items[i - 1].type !== "voiceTrack") {
       const li = el("li", "slot" + (chosen?.id === item.id ? " chosen" : ""));
-      const b = el("button", null, `🎙 Hier inspreken: tussen ${items[i - 1].label} en ${item.label}`);
+      const b = el("button", null, tr("🎙 Hier inspreken: tussen {0} en {1}", items[i - 1].label, item.label));
       b.onclick = () => choose(item);
       li.append(b);
       ol.append(li);
     }
     const li = el("li", "item" + (item.type === "voiceTrack" ? " vt" : ""));
     const what = el("div", "what", item.label);
-    if (item.category || item.origin) what.append(el("small", null, [item.category, item.origin].filter(Boolean).join(" · ")));
+    if (item.category || item.origin) what.append(el("small", null, [item.category, trE(item.origin)].filter(Boolean).join(" · ")));
     li.append(el("span", "at", item.at != null ? hhmm(new Date(item.at).toISOString()) : ""), what, el("span", "len", fmt(item.length)));
     ol.append(li);
   });
-  if (!items.length) ol.append(el("li", "hint", "De log is leeg."));
+  if (!items.length) ol.append(el("li", "hint", tr("De log is leeg.")));
 }
 
 // ---- audio: one context, the songs decoded in memory, the microphone through a script processor
@@ -276,20 +277,20 @@ async function choose(item) {
   chosen = item;
   $("recorder").hidden = false;
   $("bStart").disabled = true;
-  $("step").textContent = "Nummers laden…";
+  $("step").textContent = tr("Nummers laden…");
   say("");
   loadLog();
   try {
     await ensureAudio();
   } catch (e) {
     $("step").textContent = "";
-    say("De microfoon is niet beschikbaar: " + (e.message || e), "err");
+    say(tr("De microfoon is niet beschikbaar: ") + (e.message || e), "err");
     return;
   }
   const res = await act("POST", `/api/voicetrack/remote/slot/${item.id}`);
   if (!res.ok) { $("step").textContent = ""; say(await problem(res), "err"); return; }
   slot = await res.json();
-  $("prevName").textContent = slot.previous?.label ?? "(niets)";
+  $("prevName").textContent = slot.previous?.label ?? tr("(niets)");
   $("nextName").textContent = slot.next.label;
   [prevBuf, nextBuf] = await Promise.all([
     slot.previous?.audio ? fetchAudio("previous").catch(() => null) : null,
@@ -297,8 +298,8 @@ async function choose(item) {
   ]);
   if (chosen !== item) return;
   $("bStart").disabled = false;
-  $("step").textContent = "Klaar: druk Start.";
-  if (slot.previous?.audio && !prevBuf) say("Het vorige nummer kon niet geladen worden; je neemt op zonder aanloop.", "err");
+  $("step").textContent = tr("Klaar: druk Start.");
+  if (slot.previous?.audio && !prevBuf) say(tr("Het vorige nummer kon niet geladen worden; je neemt op zonder aanloop."), "err");
 }
 
 function play(buffer, from) {
@@ -322,7 +323,7 @@ function start() {
   if (outro > 0) play(prevBuf, p.mixPoint - outro);
   state = "outro";
   buttons();
-  $("step").textContent = outro > 0 ? "Outro van het vorige nummer: praat eroverheen, druk Volgende." : "Je bent aan het woord: druk Volgende waar het volgende nummer begint.";
+  $("step").textContent = outro > 0 ? tr("Outro van het vorige nummer: praat eroverheen, druk Volgende.") : tr("Je bent aan het woord: druk Volgende waar het volgende nummer begint.");
   timer = setInterval(tick, 100);
 }
 
@@ -333,7 +334,7 @@ function next() {
   play(nextBuf, slot.next.cueIn);
   state = "intro";
   buttons();
-  $("step").textContent = "Het volgende nummer loopt: praat eventueel over het intro, druk Stop.";
+  $("step").textContent = tr("Het volgende nummer loopt: praat eventueel over het intro, druk Stop.");
 }
 
 function stop() {
@@ -348,13 +349,13 @@ function stop() {
   take = { samples, rate: ctx.sampleRate, outro, nextAt };
   state = "take";
   buttons();
-  $("step").textContent = `Opname van ${fmt(length / ctx.sampleRate)}. Luister terug, neem opnieuw op of zet hem in de log.`;
+  $("step").textContent = tr("Opname van {0}. Luister terug, neem opnieuw op of zet hem in de log.", fmt(length / ctx.sampleRate));
 }
 
 function tick() {
   const t = ctx.currentTime - recStart;
   $("clock").textContent = `${Math.floor(t / 60)}:${(t % 60).toFixed(1).padStart(4, "0")}`;
-  if (t >= MaxSeconds) { stop(); say("Na drie minuten stopt de opname vanzelf.", "err"); }
+  if (t >= MaxSeconds) { stop(); say(tr("Na drie minuten stopt de opname vanzelf."), "err"); }
 }
 
 function listen() {
@@ -390,19 +391,19 @@ function wav(samples, rate) {
 async function place() {
   if (!take || !slot) return;
   $("bPlace").disabled = true;
-  say("Versturen…");
+  say(tr("Versturen…"));
   const q = new URLSearchParams({ outro: take.outro.toFixed(3) });
   if (take.nextAt != null) q.set("next", take.nextAt.toFixed(3));
   const res = await act("POST", `/api/voicetrack/remote/${slot.beforeId}?${q}`, wav(take.samples, take.rate), "audio/wav");
   $("bPlace").disabled = false;
   if (!res.ok) { say(await problem(res), "err"); return; }
   const placed = await res.json();
-  say(`Staat in de log: voicetrack van ${fmt(placed.length)} vóór ${slot.next.label}.`, "ok");
+  say(tr("Staat in de log: voicetrack van {0} vóór {1}.", fmt(placed.length), slot.next.label), "ok");
   discardTake();
   chosen = null;
   slot = null;
   $("bStart").disabled = true;
-  $("step").textContent = "Kies een volgende plek in de log.";
+  $("step").textContent = tr("Kies een volgende plek in de log.");
   loadLog();
 }
 
@@ -418,7 +419,7 @@ $("bStart").onclick = start;
 $("bNext").onclick = next;
 $("bStop").onclick = stop;
 $("bListen").onclick = listen;
-$("bAgain").onclick = () => { discardTake(); $("step").textContent = "Klaar: druk Start."; say(""); };
+$("bAgain").onclick = () => { discardTake(); $("step").textContent = tr("Klaar: druk Start."); say(""); };
 $("bPlace").onclick = place;
 document.addEventListener("keydown", (e) => {
   if (e.target.closest("input, select, dialog")) return;

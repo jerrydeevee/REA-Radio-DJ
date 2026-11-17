@@ -46,7 +46,7 @@ public sealed partial class MediaDetailVm : ObservableObject
         [new(0, Tr.T("niet gezet")), new(1, "1 rustig"), new(2, "2"), new(3, "3 midden"), new(4, "4"), new(5, "5 knallen")];
 
     /// <summary>What the quality check found, one line each (empty = nothing).</summary>
-    public IReadOnlyList<string> Issues => Media.Issues ?? [];
+    public IReadOnlyList<string> Issues => [.. (Media.Issues ?? []).Select(Tr.E)];
     public bool HasIssues => Media.HasIssues;
     [ObservableProperty] private string _saveText = "";
     /// <summary>What the presenter says with this item; shown large in the on-air bar while it plays.</summary>

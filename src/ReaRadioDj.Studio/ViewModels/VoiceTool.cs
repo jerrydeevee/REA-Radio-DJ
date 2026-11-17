@@ -342,7 +342,7 @@ public sealed partial class VoiceTool : StudioTool
             await SaveServices();
             var r = await Hub.Client.SendForAsync<CheckTestDto>(HttpMethod.Post, "/api/voice/check-test", new CheckTestRequest(TestText));
             CheckResult = r is null ? Tr.T("geen antwoord")
-                : r.Ok ? Tr.F("score {0:0.00} ({1}) · gehoord: \"{2}\"", r.Score, r.Voice, r.Heard) : $"✕ {r.Error}";
+                : r.Ok ? Tr.F("score {0:0.00} ({1}) · gehoord: \"{2}\"", r.Score, r.Voice, r.Heard) : "✕ " + Tr.E(r.Error);
         }
         finally { Busy = false; }
     }
@@ -422,7 +422,7 @@ public sealed partial class VoiceTool : StudioTool
             if (r is null) { LastResult = Tr.T("geen antwoord van de engine"); return; }
             LastResult = r.Ok
                 ? Tr.F("✓ {0} · {1:0.0} s audio in {2:0.0} s ({3:0.0}× realtime) · speelt op PFL", r.Engine == "higgs" ? "Higgs" : "Windows", r.AudioSeconds, r.RenderSeconds, r.RenderSeconds > 0 ? r.AudioSeconds / r.RenderSeconds : 0)
-                : $"✕ {r.Error}";
+                : "✕ " + Tr.E(r.Error);
             Results.Insert(0, $"{DateTime.Now:HH:mm:ss}  {Name}  {LastResult}");
             while (Results.Count > 30) Results.RemoveAt(Results.Count - 1);
         }

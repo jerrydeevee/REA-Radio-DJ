@@ -33,7 +33,7 @@ public sealed partial class StripCard(string id) : ObservableObject
     public void Update(StripDto s)
     {
         _updating = true;
-        Name = s.Name;
+        Name = Tr.E(s.Name);
         Bus = s.Bus;
         // Do not fight the operator while the fader is being moved.
         if (DateTime.Now - _touched > TimeSpan.FromSeconds(1)) { Volume = Math.Round(s.Volume * 100); Muted = s.Muted; }

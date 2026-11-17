@@ -44,7 +44,10 @@ public sealed partial class StudioHub : ObservableObject
     [ObservableProperty] private StateDto? _state;
     [ObservableProperty] private bool _connected;
     [ObservableProperty] private string _connectionText = "verbinden…";
-    [ObservableProperty] private string _status = "";
+    private string _status = "";
+
+    /// <summary>The status line. Texts from the engine are Dutch; they are shown in the studio's language.</summary>
+    public string Status { get => _status; set => SetProperty(ref _status, Tr.E(value)); }
     /// <summary>The item selected in the library.</summary>
     [ObservableProperty] private MediaDto? _selectedMedia;
 

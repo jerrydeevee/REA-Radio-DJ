@@ -85,7 +85,7 @@ public sealed partial class OutputChannelVm(string id) : ObservableObject
 
     public void Update(StripDto s, bool micOpen)
     {
-        Name = s.Name;
+        Name = Tr.E(s.Name);
         Left = s.LevelLeft;
         Right = s.LevelRight;
         Peak = Db(Math.Max(s.LevelLeft, s.LevelRight));
@@ -99,6 +99,6 @@ public sealed partial class OutputChannelVm(string id) : ObservableObject
         Signal = sound ? SignalBrush : OffBrush;
         Route = s.Bus == "preview" ? Tr.T("PFL-uitgang") : s.Source is not null ? Tr.T("ingang") : Tr.T("zender");
         string duck = s.Duck < 0.99 ? Tr.F(" · gedimd tot {0:0}%", s.Duck * 100) : "";
-        Tip = $"{s.Name}: fader {s.Volume * 100:0}%{(s.Muted ? " · gedempt" : "")}{(s.OnAir ? "" : " · niet naar de zender")}{duck}";
+        Tip = $"{Name}: fader {s.Volume * 100:0}%{(s.Muted ? Tr.T(" · gedempt") : "")}{(s.OnAir ? "" : Tr.T(" · niet naar de zender"))}{duck}";
     }
 }

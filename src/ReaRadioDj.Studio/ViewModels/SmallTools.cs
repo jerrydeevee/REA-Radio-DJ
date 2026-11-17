@@ -233,7 +233,7 @@ public sealed partial class StreamTool : StudioTool
             Targets.Add(new StreamTargetRow
             {
                 Name = t.Name, Server = t.Server, Password = t.Password, Bitrate = t.Bitrate, Enabled = t.Enabled,
-                StateText = st is null || !t.Enabled ? "uit" : st.Connected ? Tr.F("verbonden · {0} MB", st.BytesSent / 1024 / 1024) : st.Error ?? Tr.T("niet verbonden"),
+                StateText = st is null || !t.Enabled ? "uit" : st.Connected ? Tr.F("verbonden · {0} MB", st.BytesSent / 1024 / 1024) : st.Error is { } error ? Tr.E(error) : Tr.T("niet verbonden"),
                 Connected = st?.Connected == true,
             });
         }
@@ -314,7 +314,7 @@ public sealed partial class MessagesTool : StudioTool
     {
         var list = await Hub.Client.GetAsync<List<MessageDto>>($"/api/messages?since={_last}");
         if (list is null) return;
-        foreach (var m in list) { Messages.Insert(0, m); _last = Math.Max(_last, m.Id); }
+        foreach (var m in list) { Messages.Insert(0, m with { Text = Tr.E(m.Text) }); _last = Math.Max(_last, m.Id); }
         while (Messages.Count > 300) Messages.RemoveAt(Messages.Count - 1);
     }
 

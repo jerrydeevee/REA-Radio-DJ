@@ -6,6 +6,7 @@
   <meta name="theme-color" content="#111418">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
+  <script src="/tr.js"></script>
   <title>REA-Radio-DJ op afstand</title>
   <style>
     :root {
@@ -194,7 +195,7 @@ async function act(method, url, body) {
     if (await signIn()) return act(method, url, body);
     return res;
   }
-  if (!res.ok) flash(await res.text().catch(() => "") || `Niet gelukt (${res.status})`);
+  if (!res.ok) flash(trE((await res.text().catch(() => "")).replace(/^"|"$/g, "")) || tr("Niet gelukt ({0})", res.status));
   return res;
 }
 
@@ -204,8 +205,8 @@ async function signIn() {
   const users = !me || me.active;
   $("lUser").hidden = !users;
   $("lKeyBox").hidden = users;
-  $("lHint").textContent = users ? "Vanaf dit apparaat vraagt de engine om een gebruiker van de studio."
-    : "Vanaf dit apparaat vraagt de engine om het bedieningswachtwoord (Instellingen › Op afstand).";
+  $("lHint").textContent = users ? tr("Vanaf dit apparaat vraagt de engine om een gebruiker van de studio.")
+    : tr("Vanaf dit apparaat vraagt de engine om het bedieningswachtwoord (Instellingen › Op afstand).");
   return new Promise((resolve) => {
     const d = $("login");
     $("lErr").textContent = "";
@@ -223,7 +224,7 @@ async function signIn() {
       }
       const res = await fetch("/api/users/login", { method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name: $("lName").value.trim(), pin: $("lPin").value }) });
-      if (!res.ok) { $("lErr").textContent = (await res.json().catch(() => null)) || "Aanmelden lukt niet."; return; }
+      if (!res.ok) { $("lErr").textContent = trE(await res.json().catch(() => null)) || tr("Aanmelden lukt niet."); return; }
       const s = await res.json();
       store.set("rea-session", s.token);
       $("lPin").value = "";
@@ -235,14 +236,16 @@ async function signIn() {
   });
 }
 
-function showWho(name) { $("whoami").textContent = name ? `Aangemeld ${name.startsWith("met ") ? name : `als ${name}`}.` : ""; }
+function showWho(name) {
+  $("whoami").textContent = !name ? "" : name === "met het bedieningswachtwoord" ? tr("Aangemeld met het bedieningswachtwoord.") : tr("Aangemeld als {0}.", name);
+}
 
 let flashTimer;
 function flash(text) {
   const t = String(text).replace(/^"|"$/g, "");
   $("lost").textContent = t; $("lost").classList.add("show");
   clearTimeout(flashTimer);
-  flashTimer = setTimeout(() => { $("lost").classList.remove("show"); $("lost").textContent = "Geen verbinding met de engine; opnieuw proberen…"; }, 4000);
+  flashTimer = setTimeout(() => { $("lost").classList.remove("show"); $("lost").textContent = tr("Geen verbinding met de engine; opnieuw proberen…"); }, 4000);
 }
 
 // ---- watching
@@ -250,7 +253,7 @@ let state = null, lastList = "";
 function render(s) {
   state = s;
   $("station").textContent = s.station || "REA-Radio-DJ";
-  document.title = `${s.station || "REA-Radio-DJ"} · op afstand`;
+  document.title = tr("{0} · op afstand", s.station || "REA-Radio-DJ");
   $("clock").textContent = new Date(s.time).toLocaleTimeString("nl-NL", { hour: "2-digit", minute: "2-digit" });
   const e = s.engine, cur = e.current;
   $("air").textContent = cur ? "ON AIR" : "OFF AIR";
@@ -279,20 +282,20 @@ function render(s) {
       li.append(w, el("span", "len", fmt(i.length)));
       return li;
     }));
-    if (!s.upcoming.length) $("upcoming").append(el("li", "hint", "Niets gepland."));
+    if (!s.upcoming.length) $("upcoming").append(el("li", "hint", tr("Niets gepland.")));
   }
 
   const chips = [
     [e.autoPlay ? "Automatisch" : "Live-assist", e.autoPlay],
-    [`Microfoon ${s.mixer.mic.open ? "open" : "dicht"}`, s.mixer.mic.open ? "bad" : false],
-    [s.stream.enabled ? (s.stream.connected ? "Stream live" : "Stream valt weg") : "Stream uit", s.stream.enabled ? (s.stream.connected ? true : "bad") : false],
+    [s.mixer.mic.open ? tr("Microfoon open") : tr("Microfoon dicht"), s.mixer.mic.open ? "bad" : false],
+    [s.stream.enabled ? (s.stream.connected ? tr("Stream live") : tr("Stream valt weg")) : tr("Stream uit"), s.stream.enabled ? (s.stream.connected ? true : "bad") : false],
     [s.dj && s.dj.onAir ? "DJ op de lucht" : null, true],
-    [s.sip && s.sip.enabled ? (s.sip.registration === "registered" ? "SIP aangemeld" : `SIP: ${s.sip.registration}`) : null, s.sip && s.sip.registration === "registered" ? true : "bad"],
-    [`Bibliotheek ${s.library.songs} nummers`, false],
+    [s.sip && s.sip.enabled ? (s.sip.registration === "registered" ? tr("SIP aangemeld") : `SIP: ${s.sip.registration}`) : null, s.sip && s.sip.registration === "registered" ? true : "bad"],
+    [tr("Bibliotheek {0} nummers", s.library.songs), false],
   ];
   $("chips").replaceChildren(...chips.filter(([t]) => t).map(([t, k]) => el("span", `chip${k === true ? " on" : k === "bad" ? " bad" : ""}`, t)));
 
-  $("bAuto").textContent = e.autoPlay ? "⏸ Naar live-assist" : "▶ Automatisch";
+  $("bAuto").textContent = e.autoPlay ? tr("⏸ Naar live-assist") : tr("▶ Automatisch");
   $("bMic").classList.toggle("live", s.mixer.mic.open);
   $("bMic").disabled = !s.mixer.mic.available;
   if (s.lastMessageId !== lastMessage) loadMessages();
@@ -308,7 +311,7 @@ async function loadMessages() {
     messages = [...list.reverse(), ...messages].slice(0, 12);
     $("messages").replaceChildren(...messages.map((m) => {
       const d = el("div", `msg ${String(m.level).toLowerCase()}`);
-      d.append(el("time", null, hhmm(m.time).slice(0, 5)), document.createTextNode(m.text));
+      d.append(el("time", null, hhmm(m.time).slice(0, 5)), document.createTextNode(trE(m.text)));
       return d;
     }));
   } catch { }
@@ -367,7 +370,7 @@ $("bSkip").onclick = () => act("POST", "/api/transport/skip");
 $("bAuto").onclick = () => act("POST", "/api/transport/autoplay", { on: !(state && state.engine.autoPlay) });
 $("bMic").onclick = () => act("POST", "/api/mixer/mic/toggle");
 $("bCartsStop").onclick = () => act("POST", "/api/carts/stop");
-$("bStop").onclick = () => { if (confirm("De uitzending echt stoppen?")) act("POST", "/api/transport/stop"); };
+$("bStop").onclick = () => { if (confirm(tr("De uitzending echt stoppen?"))) act("POST", "/api/transport/stop"); };
 
 // Keep the screen on while watching (where the browser allows it).
 async function keepAwake() { try { await navigator.wakeLock?.request("screen"); } catch { } }

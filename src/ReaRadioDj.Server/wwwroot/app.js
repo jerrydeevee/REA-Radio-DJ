@@ -16,7 +16,7 @@ const el = (tag, cls, text) => {
   if (text != null) e.textContent = text;
   return e;
 };
-const typeLabel = { song: "Muziek", jingle: "Jingle", aiBreak: "AI-break" };
+const typeLabel = { song: tr("Muziek"), jingle: "Jingle", aiBreak: tr("AI-break") };
 const typeClass = { song: "Song", jingle: "Jingle", aiBreak: "AiBreak" };
 const postJson = (url, body) => fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
 
@@ -31,7 +31,7 @@ function renderNow(engine) {
   const cur = engine.current;
   $("onair").textContent = cur ? "ON AIR" : "OFF AIR";
   $("onair").classList.toggle("live", !!cur);
-  $("btnPlay").textContent = engine.autoPlay ? "⏸ Naar live-assist" : "▶ Automatisch";
+  $("btnPlay").textContent = engine.autoPlay ? tr("⏸ Naar live-assist") : tr("▶ Automatisch");
   $("btnPlay").classList.toggle("primary", !engine.autoPlay);
   $("vuL").style.width = `${Math.min(100, engine.levelLeft * 100)}%`;
   $("vuR").style.width = `${Math.min(100, engine.levelRight * 100)}%`;
@@ -39,7 +39,7 @@ function renderNow(engine) {
   if (!cur) {
     $("nowType").textContent = "—";
     $("nowType").className = "badge";
-    $("nowTitle").textContent = engine.autoPlay ? "Wachten op materiaal…" : "Live-assist: start het volgende item";
+    $("nowTitle").textContent = engine.autoPlay ? tr("Wachten op materiaal…") : tr("Live-assist: start het volgende item");
     $("nowArtist").textContent = "";
     $("nowScript").hidden = true;
     $("progFill").style.width = "0";
@@ -50,7 +50,7 @@ function renderNow(engine) {
   const isBreak = cur.type === "aiBreak";
   $("nowType").textContent = typeLabel[cur.type] ?? cur.type;
   $("nowType").className = `badge ${typeClass[cur.type] ?? ""}`;
-  $("nowTitle").textContent = isBreak ? "AI-presentator" : cur.title || cur.label;
+  $("nowTitle").textContent = isBreak ? tr("AI-presentator") : cur.title || cur.label;
   $("nowArtist").textContent = isBreak ? cur.artist : cur.artist;
   $("nowScript").hidden = !isBreak || !cur.script;
   $("nowScript").textContent = cur.script ? `“${cur.script}”` : "";
@@ -69,8 +69,8 @@ function renderItem(i, withActions) {
   const main = el("div", "main");
   if (i.type === "aiBreak") {
     const t = el("div", "t");
-    t.append(document.createTextNode("AI-presentator "));
-    t.append(el("span", `state ${i.breakState}`, i.breakState === "ready" ? `klaar · ${i.voice} · ${i.scriptSource}` : i.breakState));
+    t.append(document.createTextNode(tr("AI-presentator") + " "));
+    t.append(el("span", `state ${i.breakState}`, i.breakState === "ready" ? tr("klaar · {0} · {1}", i.voice, i.scriptSource) : i.breakState));
     main.append(t);
     if (i.script) main.append(el("div", "s", i.script));
   } else {
@@ -101,16 +101,16 @@ function renderList(id, items, withActions) {
 function renderStream(s) {
   $("streamDot").className = `dot ${s.connected ? "on" : s.error ? "err" : ""}`;
   $("streamText").textContent = s.connected
-    ? `live naar ${s.server} · ${(s.bytesSent / 1024 / 1024).toFixed(1)} MB`
-    : s.error ?? `uit (${s.server})`;
+    ? tr("live naar {0} · {1} MB", s.server, (s.bytesSent / 1024 / 1024).toFixed(1))
+    : s.error ? trE(s.error) : tr("uit ({0})", s.server);
 }
 
 let lastLog = "";
 function render(state) {
   lastState = state;
   $("btnMic").classList.toggle("live", state.mixer.mic.open);
-  $("btnMic").title = `Microfoon: ${state.mixer.mic.status}`;
-  $("clockName").textContent = state.clock ? `klok: ${state.clock}` : "geen klok";
+  $("btnMic").title = tr("Microfoon: {0}", trE(state.mixer.mic.status));
+  $("clockName").textContent = state.clock ? tr("klok: {0}", state.clock) : tr("geen klok");
   $("station").textContent = state.station;
   document.title = `${state.station} · Studio`;
   $("clock").textContent = new Date(state.time).toLocaleTimeString("nl-NL");
@@ -122,7 +122,7 @@ function render(state) {
     lastLog = logKey;
     renderList("upcoming", state.upcoming, true);
     renderList("history", state.history, false);
-    $("logCount").textContent = `${state.upcoming.length} items`;
+    $("logCount").textContent = tr("{0} items", state.upcoming.length);
   }
   $("libStatus").textContent = state.library.status;
   renderStream(state.stream);
@@ -134,7 +134,7 @@ async function loadLibrary() {
   const items = await res.json();
   $("library").replaceChildren(...items.map((s) => {
     const li = el("li");
-    li.append(el("span", `badge ${s.kind === "jingle" ? "Jingle" : "Song"}`, s.kind === "jingle" ? "Jingle" : s.category || "Muziek"));
+    li.append(el("span", `badge ${s.kind === "jingle" ? "Jingle" : "Song"}`, s.kind === "jingle" ? "Jingle" : s.category || tr("Muziek")));
     const main = el("div", "main");
     main.append(el("div", "t", s.title), el("div", "a", `${s.artist || ""} · ${fmt(s.cues.cueOut - s.cues.cueIn)}${s.lufs != null ? ` · ${s.lufs} LUFS` : ""}`));
     li.append(main);

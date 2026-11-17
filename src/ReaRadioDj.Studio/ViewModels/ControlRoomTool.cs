@@ -84,7 +84,7 @@ public sealed partial class ControlRoomTool : StudioTool
 
         Headlines.Clear();
         foreach (var h in r.Headlines.Take(12)) Headlines.Add(h);
-        NewsNote = r.NewsProblems.Count > 0 ? string.Join(" · ", r.NewsProblems)
+        NewsNote = r.NewsProblems.Count > 0 ? string.Join(" · ", r.NewsProblems.Select(Tr.E))
             : r.NewsAt is DateTime na ? Tr.F("Bijgewerkt {0}", na.ToLocalTime().ToString("HH:mm", Nl)) : "";
     }
 
@@ -92,7 +92,7 @@ public sealed partial class ControlRoomTool : StudioTool
     {
         var list = await Hub.Client.GetAsync<List<MessageDto>>($"/api/messages?since={_lastMessage}");
         if (list is null) return;
-        foreach (var m in list) { Messages.Insert(0, m); _lastMessage = Math.Max(_lastMessage, m.Id); }
+        foreach (var m in list) { Messages.Insert(0, m with { Text = Tr.E(m.Text) }); _lastMessage = Math.Max(_lastMessage, m.Id); }
         while (Messages.Count > 8) Messages.RemoveAt(Messages.Count - 1);
     }
 

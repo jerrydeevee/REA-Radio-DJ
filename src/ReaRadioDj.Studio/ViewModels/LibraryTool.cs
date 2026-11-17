@@ -488,7 +488,7 @@ public sealed partial class LibraryTool : StudioTool
 
     protected override void OnState(StateDto s)
     {
-        Status = Tr.F("{0} nummers · {1} jingles · {2}", s.Library.Songs, s.Library.Jingles, s.Library.Status);
+        Status = Tr.F("{0} nummers · {1} jingles · {2}", s.Library.Songs, s.Library.Jingles, Tr.E(s.Library.Status));
         if (Detail is { } d) d.Playhead = s.Pfl.MediaId == d.Id && s.Pfl.State is "playing" or "paused" ? s.Pfl.Position : -1;
         PflActive = s.Pfl.State is "playing" or "paused";
         PflPlayingNow = s.Pfl.State == "playing";

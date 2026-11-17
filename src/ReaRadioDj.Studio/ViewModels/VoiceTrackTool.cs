@@ -124,7 +124,7 @@ public sealed partial class VoiceTrackTool : StudioTool
         Step = d.Step;
         Elapsed = $"{(int)(d.Elapsed / 60)}:{d.Elapsed % 60:00.0}";
         Take = d.Take;
-        Error = d.Error;
+        Error = d.Error is null ? null : Tr.E(d.Error);
     }
 
     private async Task Send(string path, object? body = null) =>

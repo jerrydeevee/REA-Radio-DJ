@@ -414,7 +414,7 @@ public sealed partial class SettingsTool : StudioTool
             now.Add(r.SpeechFile is { } sf
                 ? $"spraak: {Path.GetFileName(sf)}{(r.SpeechRecording ? " (neemt nu op)" : "")}, {r.SpeechTakes} keer"
                 : Tr.T("spraak: wacht op de microfoon"));
-        RecStatus = (r.Error.Length > 0 ? r.Error + "  " : "") + Tr.F("Map: {0}", r.FolderInUse) + (now.Count > 0 ? "  ·  " + string.Join("  ·  ", now) : "");
+        RecStatus = (r.Error.Length > 0 ? Tr.E(r.Error) + "  " : "") + Tr.F("Map: {0}", r.FolderInUse) + (now.Count > 0 ? "  ·  " + string.Join("  ·  ", now) : "");
     }
 
     [RelayCommand]
@@ -864,7 +864,7 @@ public sealed partial class SettingsTool : StudioTool
             if (SpotifyChanged && !await SaveSpotifyAsync()) return;
             var r = await Hub.Client.SendForAsync<SpotifyTestDto>(HttpMethod.Post, "/api/spotify/test", null);
             if (r is null) SpotifyResult(false, Tr.T("De engine gaf geen antwoord."));
-            else SpotifyResult(r.Ok, r.Message);
+            else SpotifyResult(r.Ok, Tr.E(r.Message));
         }
         finally { SpotifyBusy = false; }
     }
@@ -950,7 +950,7 @@ public sealed partial class SettingsTool : StudioTool
             if (AcoustIdKey.Trim().Length > 0 && !await SaveAcoustIdAsync()) return;
             var r = await Hub.Client.SendForAsync<AcoustIdTestDto>(HttpMethod.Post, "/api/acoustid/test", null);
             if (r is null) AcoustIdResult(false, Tr.T("De engine gaf geen antwoord."));
-            else AcoustIdResult(r.Ok, r.Message);
+            else AcoustIdResult(r.Ok, Tr.E(r.Message));
         }
         finally { AcoustIdBusy = false; }
     }

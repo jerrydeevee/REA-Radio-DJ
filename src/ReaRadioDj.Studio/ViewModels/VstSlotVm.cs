@@ -44,7 +44,7 @@ public sealed partial class VstSlotVm : ObservableObject
             ? Plugins.FirstOrDefault()
             : Plugins.FirstOrDefault(p => string.Equals(p.Path, s.Path, StringComparison.OrdinalIgnoreCase)) ?? AddUnlisted(s);
         On = s.On;
-        Error = s.Error ?? "";
+        Error = Tr.E(s.Error);
         Params.Clear();
         foreach (var p in s.Params ?? []) Params.Add(new VstParamVm(this, p));
         _loading = false;

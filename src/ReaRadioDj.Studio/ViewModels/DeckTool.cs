@@ -164,7 +164,7 @@ public sealed partial class DeckVm(int index) : ObservableObject
         Artist = u.Artist ?? "";
         Type = u.Category ?? u.Type;
         Counter = StudioHub.Time(u.Length);
-        Sub = u.Origin;
+        Sub = Tr.E(u.Origin);
         Left = 100;
         EndState = "normal";
         Flash = false;

@@ -80,7 +80,7 @@ public sealed partial class VoipLineVm(string id, string name) : ObservableObjec
             "belt" => Tr.F("Bellen naar {0}…", who),
             "in gesprek" => Tr.F("In gesprek met {0}", who) + (call.AnsweredUtc is DateTime a ? $" · {StudioHub.Time((DateTime.UtcNow - a).TotalSeconds)}" : "") +
                             (call.Codec is { } c ? $" · {c.ToUpperInvariant()}" : ""),
-            _ => Tr.F("Gesprek met {0} afgelopen", who) + (call.Reason is { } r ? $": {r}" : ""),
+            _ => Tr.F("Gesprek met {0} afgelopen", who) + (call.Reason is { } r ? ": " + Tr.E(r) : ""),
         };
     }
 
@@ -112,7 +112,7 @@ public sealed partial class VoipLineVm(string id, string name) : ObservableObjec
             JitterMs = (decimal)d.Settings.JitterMs;
         }
         Connected = d.Connected;
-        State = d.State;
+        State = Tr.E(d.State);
         Level = Math.Clamp(d.Level, 0, 1);
         if (DateTime.Now - _touched > TimeSpan.FromSeconds(1))
         {
@@ -128,7 +128,7 @@ public sealed partial class VoipLineVm(string id, string name) : ObservableObjec
         string since = d.OpenedUtc is DateTime o ? StudioHub.Time((DateTime.UtcNow - o).TotalSeconds) : "";
         Detail = $"{d.Codec.ToUpperInvariant()} · {Tr.T("poort")} {d.LocalPort} · {(d.Remote ?? Tr.T("wacht tot de overkant belt"))} · {since}";
         Quality = Tr.F("in {0} · uit {1} · verlies {2:0.##}% · jitter {3:0.#} ms · buffer {4:0} / {5:0} ms", j.Received, d.Sent, j.LossPercent, j.JitterMs, j.BufferMs, j.TargetMs) +
-                  (j.Underruns > 0 ? Tr.F(" · {0}× leeg", j.Underruns) : "") + (d.Error is { Length: > 0 } e ? $" · {e}" : "");
+                  (j.Underruns > 0 ? Tr.F(" · {0}× leeg", j.Underruns) : "") + (d.Error is { Length: > 0 } e ? " · " + Tr.E(e) : "");
         Warning = d.State != "verbonden" || j.LossPercent > 2 || j.Underruns > 5;
     }
 

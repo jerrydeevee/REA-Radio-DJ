@@ -49,14 +49,14 @@ public sealed partial class CentralVm : ObservableObject
     {
         var st = await StudioHub.Current.Client.GetAsync<CentralStatusDto>("/api/central");
         if (st is null) return;
-        State = st.State;
+        State = Tr.E(st.State);
         var lines = new List<string>();
         if (st.Mode == "studio")
         {
             if (st.Result is { } r) lines.Add(r);
             if (st.Fetching > 0) lines.Add(Tr.F("Nog {0} bestanden op te halen", st.Fetching) + (st.Fetched is { } f ? $" ({f})" : ""));
             else if (st.Fetched is { } f) lines.Add(f);
-            if (st.Error is { } e) lines.Add(Tr.T("Fout: ") + e);
+            if (st.Error is { } e) lines.Add(Tr.T("Fout: ") + Tr.E(e));
         }
         Detail = string.Join(Environment.NewLine, lines);
     }

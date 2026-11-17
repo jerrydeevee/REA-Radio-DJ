@@ -74,8 +74,8 @@ public sealed partial class ExplorerTool : StudioTool
         if (l.Error is not null && l.Entries.Count == 0 && !string.IsNullOrEmpty(path) && path != Path)
         {
             // A saved folder that is gone: fall back to the drives instead of an empty window.
-            if (string.IsNullOrEmpty(Path)) { await OpenAsync(""); Status = l.Error; }
-            else Status = l.Error;
+            if (string.IsNullOrEmpty(Path)) { await OpenAsync(""); Status = Tr.E(l.Error); }
+            else Status = Tr.E(l.Error);
             return;
         }
         Path = l.Path;
@@ -84,7 +84,7 @@ public sealed partial class ExplorerTool : StudioTool
         Filter = "";
         ApplyFilter();
         int files = _all.Count(e => !e.IsFolder);
-        Status = l.Error ?? (l.Path.Length == 0 ? Tr.F("{0} schijven", _all.Count) : Tr.F("{0} mappen, {1} audiobestanden", _all.Count - files, files));
+        Status = l.Error is { } error ? Tr.E(error) : (l.Path.Length == 0 ? Tr.F("{0} schijven", _all.Count) : Tr.F("{0} mappen, {1} audiobestanden", _all.Count - files, files));
         if (Hub.Settings.ExplorerPath != l.Path) { Hub.Settings.ExplorerPath = l.Path; Hub.Settings.Save(); }
         OnPropertyChanged(nameof(CanGoUp));
         OnPropertyChanged(nameof(IsFavourite));

@@ -111,8 +111,8 @@ public sealed partial class LogTool : StudioTool
         Detail = u.Type == "aiBreak" ? u.Script
             : u.Type == "container" ? Tr.T("klapt open als hij aan de beurt is")
             : string.Join(" · ", new[] { u.Artist, u.Category }.Where(x => !string.IsNullOrWhiteSpace(x))),
-        Origin = (u.UseHook ? u.Origin + Tr.T(" · hook") : u.Origin) + (u.HandMadeMix ? Tr.T(" · eigen overgang") : ""),
-        Error = u.Error,
+        Origin = Tr.E(u.Origin) + (u.UseHook ? Tr.T(" · hook") : "") + (u.HandMadeMix ? Tr.T(" · eigen overgang") : ""),
+        Error = u.Error is null ? null : Tr.E(u.Error),
         MediaId = u.MediaId,
         Children = ChildLines(u.Children),
         Length = StudioHub.Time(u.Length),

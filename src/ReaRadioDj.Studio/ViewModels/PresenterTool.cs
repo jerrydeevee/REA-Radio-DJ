@@ -40,7 +40,7 @@ public sealed partial class BreakVm : ObservableObject
         Waiting = nowWaiting;
         State = d.BreakState ?? "";
         Script = d.Script ?? "";
-        Error = d.Error;
+        Error = d.Error is null ? null : Tr.E(d.Error);
         string? extra = d.Extra switch
         {
             "weather" => "weer", "news" => "nieuws", "note" => "bericht",
@@ -281,7 +281,7 @@ public sealed partial class PresenterTool : StudioTool
             var r = await Hub.Client.SendForAsync<CreativeTryDto>(HttpMethod.Post, "/api/presenter/creative/try",
                 new CreativeTryRequest(TrialTone.Key, string.IsNullOrWhiteSpace(TrialTheme) ? null : TrialTheme.Trim(), speak, speak));
             CreativeTrial = r is null ? Tr.T("geen antwoord")
-                : r.Error is { } e ? Tr.T("Mislukt: ") + e
+                : r.Error is { } e ? Tr.T("Mislukt: ") + Tr.E(e)
                 : Tr.F("Thema: {0} ({1}) · toon: {2}\n\n{3}\n\n— {4}, {5} woorden, {6:0.0} s", r.Theme, r.ThemeSource, r.Tone, r.Script, r.Source, r.Words, r.Seconds)
                   + (r.Voice is null ? "" : " · " + Tr.F("stem: {0}", r.Voice) + (r.Length is double l ? ", " + Tr.F("{0:0.0} s, speelt op PFL", l) : ""));
         }
@@ -518,7 +518,7 @@ public sealed partial class PresenterTool : StudioTool
         foreach (var m in r.Models) Models.Add(m);
         if (!string.IsNullOrEmpty(keep) && !Models.Contains(keep)) Models.Insert(0, keep);
         LlmModel = keep is { Length: > 0 } ? keep : Models.FirstOrDefault();
-        LlmStatus = r.Ok ? Tr.F("verbonden · {0} modellen", r.Models.Count) : r.Error ?? Tr.T("niet bereikbaar");
+        LlmStatus = r.Ok ? Tr.F("verbonden · {0} modellen", r.Models.Count) : r.Error is { } error ? Tr.E(error) : Tr.T("niet bereikbaar");
     }
 
     [RelayCommand]
