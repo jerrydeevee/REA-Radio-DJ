@@ -131,8 +131,10 @@ public sealed class SapiSpeechEngine(TtsOptions options, string language) : ISpe
             var named = voices.FirstOrDefault(v => v.Name.Contains(wanted, StringComparison.OrdinalIgnoreCase));
             if (named is not null) return named.Name;
         }
+        // empty = the on-air language, so a language changed in the studio picks a matching Windows voice at once
+        var lang = string.IsNullOrWhiteSpace(language) ? OnAir.Code : language;
         var byLanguage = voices.FirstOrDefault(v =>
-            v.Culture.TwoLetterISOLanguageName.Equals(language, StringComparison.OrdinalIgnoreCase));
+            v.Culture.TwoLetterISOLanguageName.Equals(lang.Length > 2 ? lang[..2] : lang, StringComparison.OrdinalIgnoreCase));
         return byLanguage?.Name;
     }
 

@@ -1,3 +1,4 @@
+using ReaRadioDj.Contracts.Localization;
 using Avalonia;
 using Avalonia.Media;
 using Avalonia.Markup.Xaml.Styling;
@@ -13,23 +14,23 @@ public static class Appearance
 {
     public static readonly (string Key, string Name)[] Themes =
     [
-        ("regiekamer", "Regiekamer (rustig donker, standaard)"), ("daglicht", "Daglicht (licht, voor overdag)"),
-        ("dark", "Studio donker"), ("night", "Nacht (gedimd, voor een donkere studio)"),
-        ("light", "Licht (klassiek)"), ("contrast", "Hoog contrast"),
-        ("ocean", "Oceaan (diep blauw met turkoois)"), ("forest", "Bos (donkergroen)"), ("sunset", "Zonsondergang (warm rood en oranje)"),
-        ("graphite", "Grafiet (neutraal grijs, zonder kleur)"), ("neon", "Neon (paars en roze, voor de avond)"),
+        ("regiekamer", Tr.T("Regiekamer (rustig donker, standaard)")), ("daglicht", Tr.T("Daglicht (licht, voor overdag)")),
+        ("dark", Tr.T("Studio donker")), ("night", Tr.T("Nacht (gedimd, voor een donkere studio)")),
+        ("light", Tr.T("Licht (klassiek)")), ("contrast", Tr.T("Hoog contrast")),
+        ("ocean", Tr.T("Oceaan (diep blauw met turkoois)")), ("forest", Tr.T("Bos (donkergroen)")), ("sunset", Tr.T("Zonsondergang (warm rood en oranje)")),
+        ("graphite", Tr.T("Grafiet (neutraal grijs, zonder kleur)")), ("neon", Tr.T("Neon (paars en roze, voor de avond)")),
     ];
 
     public static readonly (string Key, string Name)[] Corners =
-        [("square", "Recht"), ("normal", "Normaal"), ("round", "Rond"), ("pill", "Extra rond (pilvormige knoppen)")];
+        [("square", "Recht"), ("normal", "Normaal"), ("round", "Rond"), ("pill", Tr.T("Extra rond (pilvormige knoppen)"))];
 
     public static readonly (string Key, string Name)[] ButtonStyles =
-        [("flat", "Vlak"), ("raised", "Reliëf (met verloop en diepte)"), ("outline", "Omlijnd (alleen een rand)")];
+        [("flat", "Vlak"), ("raised", Tr.T("Reliëf (met verloop en diepte)")), ("outline", Tr.T("Omlijnd (alleen een rand)"))];
 
     public static readonly (string Key, string Name)[] WaveStyles =
     [
-        ("classic", "Klassiek"), ("gradient", "Verloop met spiegeling"), ("bars", "Staafjes"),
-        ("neon", "Neon-gloed"), ("energy", "Energie (kleur loopt op met het volume)"),
+        ("classic", "Klassiek"), ("gradient", Tr.T("Verloop met spiegeling")), ("bars", "Staafjes"),
+        ("neon", Tr.T("Neon-gloed")), ("energy", Tr.T("Energie (kleur loopt op met het volume)")),
     ];
 
     /// <summary>How waveforms are drawn (one of <see cref="WaveStyles"/>).</summary>
@@ -87,7 +88,7 @@ public static class Appearance
 
     // ---- colour per kind of item: one brush per kind, whose colour changes in place, so every row follows at once
     public static readonly (string Key, string Name)[] ItemKinds =
-        [("song", "Muziek"), ("jingle", "Jingles"), ("voice", "AI-presentator en stem"), ("other", "Overig")];
+        [("song", Tr.T("Muziek")), ("jingle", Tr.T("Jingles")), ("voice", Tr.T("AI-presentator en stem")), ("other", "Overig")];
 
     public static readonly Dictionary<string, string> DefaultTypeColors = new()
     {
@@ -127,8 +128,8 @@ public static class Appearance
     /// <summary>The colours to choose from (name, colour).</summary>
     public static readonly (string Name, string Hex)[] KindColors =
     [
-        ("Blauw", "#3FA7FF"), ("Geel", "#F0B429"), ("Paars", "#A78BFA"), ("Grijs", "#8B95A5"), ("Groen", "#3FB950"),
-        ("Rood", "#E5484D"), ("Oranje", "#F27A2E"), ("Roze", "#F472B6"), ("Cyaan", "#22D3EE"), ("Wit", "#E6EAF0"),
+        (Tr.T("Blauw"), "#3FA7FF"), (Tr.T("Geel"), "#F0B429"), (Tr.T("Paars"), "#A78BFA"), (Tr.T("Grijs"), "#8B95A5"), (Tr.T("Groen"), "#3FB950"),
+        (Tr.T("Rood"), "#E5484D"), ("Oranje", "#F27A2E"), ("Roze", "#F472B6"), ("Cyaan", "#22D3EE"), ("Wit", "#E6EAF0"),
     ];
 
     private static readonly Dictionary<string, SolidColorBrush> KindBrushes =
@@ -138,7 +139,7 @@ public static class Appearance
     public static IBrush KindBrush(string? type) => KindBrushes[type switch
     {
         "song" or "music" => "song",
-        "jingle" => "jingle",
+        "jingle" => Tr.T("jingle"),
         "aiBreak" or "ai-break" or "voice" or "voicetrack" or "ai" => "voice",
         _ => "other",
     }];
@@ -158,7 +159,7 @@ public static class Appearance
         }
 
         // Touch mode: an extra style sheet after all others, so its sizes win.
-        _touch ??= new StyleInclude(new Uri("avares://REA-Radio-DJ-Studio/")) { Source = new Uri("avares://REA-Radio-DJ-Studio/TouchStyles.axaml") };
+        _touch ??= new StyleInclude(new Uri(Tr.T("avares://REA-Radio-DJ-Studio/"))) { Source = new Uri(Tr.T("avares://REA-Radio-DJ-Studio/TouchStyles.axaml")) };
         if (s.Touch && !app.Styles.Contains(_touch)) app.Styles.Add(_touch);
         else if (!s.Touch) app.Styles.Remove(_touch);
         var colors = Palettes[theme];

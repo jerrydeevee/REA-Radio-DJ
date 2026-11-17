@@ -1,3 +1,4 @@
+using ReaRadioDj.Contracts.Localization;
 using System.ComponentModel;
 using Avalonia;
 using Avalonia.Controls;
@@ -23,8 +24,8 @@ public sealed class RoleGate : Panel
         var text = new TextBlock
         {
             Text = rank >= 2
-                ? "Dit venster is alleen voor een beheerder.\nMeld je aan als beheerder via Studio › Aanmelden."
-                : "Dit venster is alleen voor een technicus of beheerder.\nMeld je aan via Studio › Aanmelden.",
+                ? Tr.T("Dit venster is alleen voor een beheerder.\nMeld je aan als beheerder via Studio › Aanmelden.")
+                : Tr.T("Dit venster is alleen voor een technicus of beheerder.\nMeld je aan via Studio › Aanmelden."),
             TextWrapping = TextWrapping.Wrap,
             TextAlignment = TextAlignment.Center,
             FontSize = 15,

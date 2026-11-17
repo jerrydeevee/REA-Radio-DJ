@@ -1,0 +1,125 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:ReaRadioDj.Studio.ViewModels"
+             x:Class="ReaRadioDj.Studio.Views.RecordingsView"
+             x:DataType="vm:RecordingsTool">
+  <!-- The emergency recorder and the scheduled recordings. -->
+  <ScrollViewer>
+    <StackPanel Margin="10" Spacing="8" MaxWidth="900" HorizontalAlignment="Left">
+      <TextBlock Text="Noodopname" FontWeight="SemiBold" FontSize="15" />
+      <StackPanel Spacing="6">
+        <Button Content="{Binding EmergencyButton}" Command="{Binding EmergencyCommand}" MinWidth="200" MinHeight="44" FontSize="16" FontWeight="Bold"
+                Background="#B71C1C" Foreground="White" />
+        <TextBlock Text="{Binding EmergencyText}" TextWrapping="Wrap" />
+      </StackPanel>
+      <TextBlock Classes="muted" TextWrapping="Wrap"
+                 Text="Ook met het commando RECORD TOGGLE, dus op een sneltoets, een eigen knop of een knop op de hardware." />
+
+      <TextBlock Text="Geplande opnames" FontWeight="SemiBold" FontSize="15" Margin="0,12,0,0" />
+      <TextBlock Classes="muted" TextWrapping="Wrap"
+                 Text="Neem op vaste tijden een ingang of een internetstream op, bijvoorbeeld elke werkdag om 12:00 het regionale nieuws. De opname komt bij de jingles, categorie Opnamen. Met Vorige vervangen krijgt elke nieuwe opname dezelfde naam: het item in de bibliotheek, de klokken en de cartwall heeft dan altijd de nieuwste." />
+
+      <ItemsControl ItemsSource="{Binding Items}">
+        <ItemsControl.ItemTemplate>
+          <DataTemplate x:DataType="vm:ScheduledRecordingVm">
+            <Border BorderBrush="#40808080" BorderThickness="1" CornerRadius="4" Padding="8" Margin="0,0,0,6">
+              <StackPanel Spacing="4">
+                <WrapPanel ItemSpacing="8" LineSpacing="4">
+                  <CheckBox IsChecked="{Binding Enabled}" Content="Aan" />
+                  <TextBox Text="{Binding Name}" Width="220" Watermark="naam, bijv. Regionaal nieuws" />
+                  <TextBlock Text="om" VerticalAlignment="Center" />
+                  <TextBox Text="{Binding Start}" Width="70" Watermark="12:00" FontFamily="Consolas" />
+                  <NumericUpDown Value="{Binding Minutes}" Minimum="1" Maximum="180" Increment="1" FormatString="0" Width="110" />
+                  <TextBlock Text="minuten" VerticalAlignment="Center" />
+                </WrapPanel>
+                <ItemsControl ItemsSource="{Binding Days}">
+                  <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="vm:DayChoice">
+                      <CheckBox Content="{Binding Name}" IsChecked="{Binding On}" MinWidth="44" />
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+                <WrapPanel ItemSpacing="8" LineSpacing="4">
+                  <TextBlock Text="Bron" VerticalAlignment="Center" />
+                  <ComboBox ItemsSource="{Binding Sources}" SelectedItem="{Binding Source}" Width="220" />
+                  <TextBox Text="{Binding StreamUrl}" IsVisible="{Binding IsStream}" Width="340" Watermark="https://stream.voorbeeld.nl/nieuws.mp3" />
+                  <TextBox Text="{Binding Artist}" Width="200" Watermark="artiest of programma (mag leeg)" />
+                  <CheckBox IsChecked="{Binding Replace}" Content="Vorige vervangen" />
+                </WrapPanel>
+                <WrapPanel ItemSpacing="8" LineSpacing="4">
+                  <Button Classes="small" Content="{Binding StartStopText}" Command="{Binding StartStopCommand}" />
+                  <Button Classes="small" Content="Verwijderen" Command="{Binding RemoveCommand}" />
+                  <TextBlock Classes="muted" Text="{Binding StatusText}" TextWrapping="Wrap" VerticalAlignment="Center" />
+                </WrapPanel>
+              </StackPanel>
+            </Border>
+          </DataTemplate>
+        </ItemsControl.ItemTemplate>
+      </ItemsControl>
+
+      <StackPanel Orientation="Horizontal" Spacing="8">
+        <Button Classes="bar" Content="Nieuwe opname" Command="{Binding AddCommand}" />
+        <Button Classes="bar" Content="Opslaan" Command="{Binding SaveCommand}" />
+        <Button Classes="bar" Content="Ververs" Command="{Binding LoadCommand}" />
+      </StackPanel>
+      <TextBlock Text="{Binding Status}" TextWrapping="Wrap" />
+      <TextBlock Classes="muted" Text="{Binding Folder, Converter={StaticResource Tr}, ConverterParameter='Werkmap van de opnames: {0}'}" TextWrapping="Wrap" />
+
+      <TextBlock Text="Uitzending gemist en podcast" FontWeight="SemiBold" FontSize="15" Margin="0,16,0,0" />
+      <TextBlock Classes="muted" TextWrapping="Wrap"
+                 Text="Na elke uitzending van een programma knipt de engine die uit de uitzendopname. De nieuwste afleveringen blijven staan, met een podcastfeed (RSS) erbij. Luisteraars kunnen die feed in een podcast-app zetten, of je zet de afleveringen met de kopieermap op je website." />
+      <TextBlock Foreground="{DynamicResource WarnBrush}" TextWrapping="Wrap" IsVisible="{Binding ProgramRecordingOff}"
+                 Text="De uitzendopname staat uit. Zet hem aan in Instellingen › Opnemen, anders is er niets om te knippen." />
+      <TextBlock Classes="muted" TextWrapping="Wrap"
+                 Text="Let op de rechten: muziek in een podcast of op aanvraag valt meestal niet onder de licentie voor uitzenden. Vraag dat na bij Buma/Stemra en Sena, of publiceer alleen programma's met gesproken woord." />
+      <ItemsControl ItemsSource="{Binding Podcasts}">
+        <ItemsControl.ItemTemplate>
+          <DataTemplate x:DataType="vm:PodcastVm">
+            <Border BorderBrush="#40808080" BorderThickness="1" CornerRadius="4" Padding="8" Margin="0,0,0,6">
+              <StackPanel Spacing="4">
+                <WrapPanel ItemSpacing="8" LineSpacing="4">
+                  <CheckBox IsChecked="{Binding Enabled}" Content="Aan" />
+                  <TextBox Text="{Binding Name}" Width="220" Watermark="naam van het programma" />
+                  <TextBlock Text="van" VerticalAlignment="Center" />
+                  <TextBox Text="{Binding Start}" Width="70" FontFamily="Consolas" Watermark="07:00" />
+                  <TextBlock Text="tot" VerticalAlignment="Center" />
+                  <TextBox Text="{Binding End}" Width="70" FontFamily="Consolas" Watermark="09:00" />
+                  <TextBlock Text="bewaar" VerticalAlignment="Center" />
+                  <NumericUpDown Value="{Binding Keep}" Minimum="1" Maximum="500" Increment="1" FormatString="0" Width="100" />
+                  <TextBlock Text="afleveringen" VerticalAlignment="Center" />
+                </WrapPanel>
+                <ItemsControl ItemsSource="{Binding Days}">
+                  <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="vm:DayChoice">
+                      <CheckBox Content="{Binding Name}" IsChecked="{Binding On}" MinWidth="44" />
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+                <TextBox Text="{Binding Description}" Watermark="omschrijving voor de podcast-app" />
+                <WrapPanel ItemSpacing="8" LineSpacing="4">
+                  <TextBox Text="{Binding Author}" Width="200" Watermark="maker (leeg = de zender)" />
+                  <TextBox Text="{Binding CopyFolder}" Width="300" Watermark="kopieermap, bijv. \\webserver\podcast\ochtendshow" />
+                  <TextBox Text="{Binding PublicUrl}" Width="300" Watermark="webadres van die map, bijv. https://zender.nl/podcast/ochtendshow/" />
+                </WrapPanel>
+                <WrapPanel ItemSpacing="8" LineSpacing="4">
+                  <Button Classes="small" Content="Laatste uitzending nu publiceren" Command="{Binding PublishCommand}" />
+                  <Button Classes="small" Content="Verwijderen" Command="{Binding RemoveCommand}" />
+                  <SelectableTextBlock Classes="muted" Text="{Binding FeedUrl}" IsVisible="{Binding HasFeed}" VerticalAlignment="Center" />
+                </WrapPanel>
+                <TextBlock Classes="muted" Text="{Binding StatusText}" TextWrapping="Wrap" />
+              </StackPanel>
+            </Border>
+          </DataTemplate>
+        </ItemsControl.ItemTemplate>
+      </ItemsControl>
+      <StackPanel Orientation="Horizontal" Spacing="8">
+        <Button Classes="bar" Content="Nieuw programma" Command="{Binding AddPodcastCommand}" />
+        <Button Classes="bar" Content="Opslaan" Command="{Binding SavePodcastsCommand}" />
+      </StackPanel>
+      <TextBlock Text="{Binding PodcastStatus}" TextWrapping="Wrap" />
+      <TextBlock Classes="muted" Text="{Binding PodcastFolder, Converter={StaticResource Tr}, ConverterParameter='Afleveringen staan in: {0}'}" TextWrapping="Wrap" />
+    </StackPanel>
+  </ScrollViewer>
+</UserControl>

@@ -1,3 +1,4 @@
+using ReaRadioDj.Contracts.Localization;
 using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -26,7 +27,7 @@ public sealed partial class AutomixTool : StudioTool
     [ObservableProperty] private bool _on;
     [ObservableProperty] private string _transition = "beat";
     [ObservableProperty] private string _beatsText = "16 tellen";
-    [ObservableProperty] private string _stateText = "Automix staat uit";
+    [ObservableProperty] private string _stateText = Tr.T("Automix staat uit");
     [ObservableProperty] private double _progress;
     [ObservableProperty] private bool _mixing;
     [ObservableProperty] private bool _empty = true;
@@ -49,7 +50,7 @@ public sealed partial class AutomixTool : StudioTool
     private async Task MixNow()
     {
         if (!await Hub.Client.PostAsync("/api/dj/automix", new DjAutomixRequest(MixNow: true)))
-            Hub.Status = "Nu mixen kan niet: er moet een nummer spelen en een volgend nummer klaarstaan";
+            Hub.Status = Tr.T("Nu mixen kan niet: er moet een nummer spelen en een volgend nummer klaarstaan");
     }
 
     [RelayCommand]
@@ -72,18 +73,18 @@ public sealed partial class AutomixTool : StudioTool
         _beats = a.Beats;
         FourDecks = a.Decks == 4;
         Faders = a.Faders;
-        BeatsText = a.Transition == "cut" ? "op de tel" : $"{a.Beats:0} tellen";
+        BeatsText = a.Transition == "cut" ? Tr.T("op de tel") : Tr.F("{0:0} tellen", a.Beats);
         Mixing = a.State == "mixen";
         Progress = a.Progress * 100;
         StateText = a.State switch
         {
-            "uit" => $"Automix staat uit: zet hem aan en de lijst speelt zichzelf op deck {(a.Decks == 4 ? "A t/m D" : "A en B")}",
-            "leeg" => "De lijst is leeg: sleep nummers uit de bibliotheek hierheen",
-            "klaar" => "Klaar om te starten",
-            "mixen" => $"Mixt van deck {a.OutDeck} naar het volgende nummer…",
-            _ => a.SecondsToMix is double t ? $"Deck {a.OutDeck} speelt · volgende mix over {TimeSpan.FromSeconds(t):m\\:ss}" : $"Deck {a.OutDeck} speelt · laatste nummer",
+            "uit" => Tr.F("Automix staat uit: zet hem aan en de lijst speelt zichzelf op deck {0}", a.Decks == 4 ? Tr.T("A t/m D") : Tr.T("A en B")),
+            "leeg" => Tr.T("De lijst is leeg: sleep nummers uit de bibliotheek hierheen"),
+            "klaar" => Tr.T("Klaar om te starten"),
+            "mixen" => Tr.F("Mixt van deck {0} naar het volgende nummer…", a.OutDeck),
+            _ => a.SecondsToMix is double t ? Tr.F("Deck {0} speelt · volgende mix over {1:m\\:ss}", a.OutDeck, TimeSpan.FromSeconds(t)) : Tr.F("Deck {0} speelt · laatste nummer", a.OutDeck),
         };
-        CountText = a.Queue.Count == 0 ? "" : $"{a.Queue.Count} nummers · {TimeSpan.FromSeconds(a.Queue.Sum(q => q.Duration)):h\\:mm\\:ss}";
+        CountText = a.Queue.Count == 0 ? "" : Tr.F("{0} nummers · {1:h\\:mm\\:ss}", a.Queue.Count, TimeSpan.FromSeconds(a.Queue.Sum(q => q.Duration)));
         var sig = string.Join("|", a.Queue.Select(q => q.Id));
         if (sig == _signature) return;
         _signature = sig;

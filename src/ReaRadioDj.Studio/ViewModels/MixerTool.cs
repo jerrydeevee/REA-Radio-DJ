@@ -1,3 +1,4 @@
+using ReaRadioDj.Contracts.Localization;
 using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -26,13 +27,13 @@ public sealed partial class StripCard(string id) : ObservableObject
     private DateTime _touched;
     private bool _updating;
 
-    public string BusText => Bus == "preview" ? "PFL-uitgang" : "zender";
+    public string BusText => Bus == "preview" ? Tr.T("PFL-uitgang") : Tr.T("zender");
     partial void OnBusChanged(string value) => OnPropertyChanged(nameof(BusText));
 
     public void Update(StripDto s)
     {
         _updating = true;
-        Name = s.Name;
+        Name = Tr.E(s.Name);
         Bus = s.Bus;
         // Do not fight the operator while the fader is being moved.
         if (DateTime.Now - _touched > TimeSpan.FromSeconds(1)) { Volume = Math.Round(s.Volume * 100); Muted = s.Muted; }
@@ -41,10 +42,10 @@ public sealed partial class StripCard(string id) : ObservableObject
         IsInput = s.Source is not null;
         if (DateTime.Now - _touched > TimeSpan.FromSeconds(1)) { OnAir = s.OnAir; EffectOn = s.EffectOn; }
         HasEffect = s.Effect.Length > 0;
-        EffectTip = HasEffect ? $"Effect {Effects.NameOf(s.Effect)} aan of uit (kies het effect met het tandwiel)" : "";
+        EffectTip = HasEffect ? Tr.F("Effect {0} aan of uit (kies het effect met het tandwiel)", Effects.NameOf(s.Effect)) : "";
         if (DateTime.Now - _touched > TimeSpan.FromSeconds(1)) Recording = s.Recording;
         RecordText = s.Recording ? TimeSpan.FromSeconds(Math.Floor(s.RecordSeconds)).ToString(s.RecordSeconds >= 3600 ? @"h\:mm\:ss" : @"m\:ss") : "";
-        Duck = !s.OnAir ? "" : s.Duck < 0.99 ? $"gedimd {s.Duck * 100:0}%" : "";
+        Duck = !s.OnAir ? "" : s.Duck < 0.99 ? Tr.F("gedimd {0:0}%", s.Duck * 100) : "";
         _updating = false;
     }
 
@@ -113,7 +114,7 @@ public sealed partial class MixerTool : StudioTool
     [ObservableProperty] private string _vstStatus = "";
     [ObservableProperty] private bool _scanning;
     [ObservableProperty] private OutputChoiceDto? _newInputSource;
-    [ObservableProperty] private string _newInputName = "Lijn-in";
+    [ObservableProperty] private string _newInputName = Tr.T("Lijn-in");
     [ObservableProperty] private string _channelStatus = "";
 
     /// <summary>Channel whose strip opens at start ("--show mixer:in1").</summary>
@@ -147,22 +148,22 @@ public sealed partial class MixerTool : StudioTool
     private async Task LoadVstAsync(bool scan)
     {
         var r = await Hub.Client.GetAsync<VstPluginsDto>(scan ? "/api/vst/plugins?scan=true" : "/api/vst/plugins");
-        if (r is null) { VstStatus = "Plug-ins ophalen mislukt."; return; }
+        if (r is null) { VstStatus = Tr.T("Plug-ins ophalen mislukt."); return; }
         VstPlugins.Clear();
-        VstPlugins.Add(new VstPluginDto("", "Geen plug-in", "", 0, null));
+        VstPlugins.Add(new VstPluginDto("", Tr.T("Geen plug-in"), "", 0, null));
         foreach (var p in r.Plugins.Where(p => p.Error is null)) VstPlugins.Add(p);
         int bad = r.Plugins.Count(p => p.Error is not null);
         string folders = string.Join("; ", r.Folders);
         VstStatus = r.Scanned is null
-            ? $"Nog niet gezocht. Mappen: {folders}"
-            : $"{VstPlugins.Count - 1} plug-in(s) gevonden op {r.Scanned:dd-MM HH:mm}" + (bad > 0 ? $", {bad} bestand(en) overgeslagen" : "") + $". Mappen: {folders}";
+            ? Tr.F("Nog niet gezocht. Mappen: {0}", folders)
+            : Tr.F("{0} plug-in(s) gevonden op {1:dd-MM HH:mm}", VstPlugins.Count - 1, r.Scanned) + (bad > 0 ? Tr.F(", {0} bestand(en) overgeslagen", bad) : "") + $". Mappen: {folders}";
     }
 
     [RelayCommand]
     private async Task ScanVst()
     {
         Scanning = true;
-        VstStatus = "Zoeken naar VST-plug-ins…";
+        VstStatus = Tr.T("Zoeken naar VST-plug-ins…");
         try
         {
             await LoadVstAsync(scan: true);
@@ -177,7 +178,7 @@ public sealed partial class MixerTool : StudioTool
     {
         if (NewInputSource is null) return;
         var r = await Hub.Client.SendForAsync<ChannelsDto>(HttpMethod.Post, "/api/inputs", new InputRequest(NewInputName, NewInputSource.Id));
-        ChannelStatus = r is null ? "Ingang toevoegen mislukt (zie berichten)." : $"{NewInputName} staat in de mixer; zet hem met ZENDER op de uitzending.";
+        ChannelStatus = r is null ? Tr.T("Ingang toevoegen mislukt (zie berichten).") : Tr.F("{0} staat in de mixer; zet hem met ZENDER op de uitzending.", NewInputName);
     }
 
     [RelayCommand]
@@ -188,7 +189,7 @@ public sealed partial class MixerTool : StudioTool
         {
             if (Strips.FirstOrDefault(s => s.Id == e.Id) is { } card) Strips.Remove(card);
             Editor = null;
-            ChannelStatus = $"{e.Name} is verwijderd.";
+            ChannelStatus = Tr.F("{0} is verwijderd.", e.Name);
         }
     }
 
@@ -212,10 +213,10 @@ public sealed partial class MixerTool : StudioTool
         var r = await Hub.Client.GetAsync<RoutingDto>("/api/routing");
         if (outs is null || ins is null || r is null) return;
         Outputs.Clear();
-        Outputs.Add(new DeviceDto(-1, "Standaard geluidskaart", true, false));
+        Outputs.Add(new DeviceDto(-1, Tr.T("Standaard geluidskaart"), true, false));
         foreach (var d in outs) Outputs.Add(d);
         Inputs.Clear();
-        Inputs.Add(new DeviceDto(-1, "Standaard invoer", true, false));
+        Inputs.Add(new DeviceDto(-1, Tr.T("Standaard invoer"), true, false));
         foreach (var d in ins) Inputs.Add(d with { Index = d.Index });
         OutputDevice = Outputs.FirstOrDefault(d => d.Index == r.OutputDevice);
         PreviewDevice = Outputs.FirstOrDefault(d => d.Index == r.PreviewDevice);
@@ -234,7 +235,7 @@ public sealed partial class MixerTool : StudioTool
     {
         var r = new RoutingDto(OutputDevice?.Index ?? -1, PreviewDevice?.Index ?? -1, MicEnabled, MicDevice?.Index ?? -1, MicDuck / 100, OverlayDuck / 100,
             Math.Max(0, MicChannel));
-        if (await Hub.Client.PutAsync("/api/routing", r)) Hub.Status = "routing opgeslagen";
+        if (await Hub.Client.PutAsync("/api/routing", r)) Hub.Status = Tr.T("routing opgeslagen");
     }
 }
 
@@ -288,7 +289,7 @@ public sealed partial class ChannelEditor : ObservableObject
     public bool HasEffect => !string.IsNullOrEmpty(Effect?.Id);
     private static readonly HashSet<string> Derived = [nameof(PanText), nameof(HasMix), nameof(HasEffect)];
 
-    public string PanText => Math.Abs(Pan) < 0.02 ? "midden" : Pan < 0 ? $"links {-Pan * 100:0}%" : $"rechts {Pan * 100:0}%";
+    public string PanText => Math.Abs(Pan) < 0.02 ? "midden" : Pan < 0 ? Tr.F("links {0:0}%", -Pan * 100) : Tr.F("rechts {0:0}%", Pan * 100);
 
     protected override void OnPropertyChanged(System.ComponentModel.PropertyChangedEventArgs e)
     {
@@ -329,7 +330,7 @@ public sealed partial class ChannelEditor : ObservableObject
         var dto = new ChannelSettingsDto(Math.Round(GainDb, 1), Math.Round(Pan, 2), Math.Round(EqLowDb, 1), Math.Round(EqMidDb, 1), Math.Round(EqHighDb, 1),
             CompressorOn, Math.Round(CompressorThresholdDb), Math.Round(CompressorRatio, 1), AgcOn, OnAir,
             Effect?.Id ?? "", EffectOn && HasEffect, Math.Round(EffectMix) / 100);
-        _owner.ChannelStatus = await StudioHub.Current.Client.PutAsync($"/api/channels/{Id}", dto) ? "" : "Instelling niet gelukt (zie berichten).";
+        _owner.ChannelStatus = await StudioHub.Current.Client.PutAsync($"/api/channels/{Id}", dto) ? "" : Tr.T("Instelling niet gelukt (zie berichten).");
     }
 }
 

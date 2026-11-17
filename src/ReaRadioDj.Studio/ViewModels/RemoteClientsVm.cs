@@ -1,3 +1,4 @@
+using ReaRadioDj.Contracts.Localization;
 using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -28,8 +29,8 @@ public sealed partial class RemoteClientRowVm : ObservableObject
     public ObservableCollection<GroupChoiceVm> Groups { get; } = [];
 
     public bool ShowNewKey => NewKey.Length > 0;
-    public string KeyText => NewKey.Length > 0 ? "Nieuwe sleutel (kopieer hem nu; hij is later niet meer te zien):"
-        : HasKey ? "Heeft een sleutel." : Addresses.Trim().Length > 0 ? "Zonder sleutel: herkend aan het adres." : "Zonder sleutel en zonder adres: maak een sleutel of geef een adres.";
+    public string KeyText => NewKey.Length > 0 ? Tr.T("Nieuwe sleutel (kopieer hem nu; hij is later niet meer te zien):")
+        : HasKey ? Tr.T("Heeft een sleutel.") : Addresses.Trim().Length > 0 ? Tr.T("Zonder sleutel: herkend aan het adres.") : Tr.T("Zonder sleutel en zonder adres: maak een sleutel of geef een adres.");
 
     partial void OnAddressesChanged(string value) => OnPropertyChanged(nameof(KeyText));
 
@@ -59,11 +60,11 @@ public sealed partial class RemoteClientsVm : ObservableObject
         {
             var r = await Hub.Client.GetAsync<RemoteClientsDto>("/api/remote-clients");
             Loaded = r is not null;
-            if (r is null) { Status = "De engine kent afstandsbedieners met eigen rechten nog niet (werk hem bij), of je bent geen beheerder."; return; }
+            if (r is null) { Status = Tr.T("De engine kent afstandsbedieners met eigen rechten nog niet (werk hem bij), of je bent geen beheerder."); return; }
             Show(r);
             Status = "";
         }
-        catch (Exception ex) { Loaded = false; Status = $"Lijst niet geladen: {ex.Message}"; }
+        catch (Exception ex) { Loaded = false; Status = Tr.F("Lijst niet geladen: {0}", ex.Message); }
     }
 
     private void Show(RemoteClientsDto r, IReadOnlyDictionary<string, string>? keep = null)
@@ -82,16 +83,16 @@ public sealed partial class RemoteClientsVm : ObservableObject
     [RelayCommand]
     private void Add()
     {
-        var row = new RemoteClientRowVm { Owner = this, Id = Guid.NewGuid().ToString("N")[..12], Name = "Nieuwe afstandsbediening" };
+        var row = new RemoteClientRowVm { Owner = this, Id = Guid.NewGuid().ToString("N")[..12], Name = Tr.T("Nieuwe afstandsbediening") };
         foreach (var g in _groups) row.Groups.Add(new GroupChoiceVm(g, g is "Uitzending" or "Cartwall"));
         Clients.Add(row);
-        Status = "Nieuw: geef een naam en kies wat hij mag; daarna Opslaan en een sleutel maken.";
+        Status = Tr.T("Nieuw: geef een naam en kies wat hij mag; daarna Opslaan en een sleutel maken.");
     }
 
     public void RemoveRow(RemoteClientRowVm row)
     {
         Clients.Remove(row);
-        Status = $"{row.Name} weg na Opslaan.";
+        Status = Tr.F("{0} weg na Opslaan.", row.Name);
     }
 
     [RelayCommand]
@@ -99,9 +100,9 @@ public sealed partial class RemoteClientsVm : ObservableObject
     {
         var keep = Clients.Where(c => c.NewKey.Length > 0).ToDictionary(c => c.Id, c => c.NewKey);
         var (r, error) = await Hub.Client.SendWithErrorAsync<RemoteClientsDto>(HttpMethod.Put, "/api/remote-clients", Clients.Select(c => c.ToDto()).ToList());
-        if (r is null) { Status = $"Niet opgeslagen: {error}"; return; }
+        if (r is null) { Status = Tr.F("Niet opgeslagen: {0}", error); return; }
         Show(r, keep);
-        Status = "Opgeslagen; geldt meteen.";
+        Status = Tr.T("Opgeslagen; geldt meteen.");
     }
 
     public async Task MakeKeyFor(RemoteClientRowVm row)
@@ -109,17 +110,17 @@ public sealed partial class RemoteClientsVm : ObservableObject
         await Save();   // a new client must exist on the engine first
         var target = Clients.FirstOrDefault(c => c.Id == row.Id);
         var (k, error) = await Hub.Client.SendWithErrorAsync<RemoteClientKeyDto>(HttpMethod.Post, $"/api/remote-clients/{Uri.EscapeDataString(row.Id)}/key", null);
-        if (k is null || target is null) { Status = $"Geen sleutel gemaakt: {error}"; return; }
+        if (k is null || target is null) { Status = Tr.F("Geen sleutel gemaakt: {0}", error); return; }
         target.HasKey = true;
         target.NewKey = k.Key;
-        Status = $"Sleutel voor {target.Name} gemaakt. Een oude sleutel werkt niet meer.";
+        Status = Tr.F("Sleutel voor {0} gemaakt. Een oude sleutel werkt niet meer.", target.Name);
     }
 
     public async Task ClearKeyFor(RemoteClientRowVm row)
     {
         var (r, error) = await Hub.Client.SendWithErrorAsync<RemoteClientsDto>(HttpMethod.Delete, $"/api/remote-clients/{Uri.EscapeDataString(row.Id)}/key", null);
-        if (r is null) { Status = $"Niet gelukt: {error}"; return; }
+        if (r is null) { Status = Tr.F("Niet gelukt: {0}", error); return; }
         Show(r);
-        Status = $"Sleutel van {row.Name} verwijderd; hij werkt nu alleen nog vanaf zijn adres.";
+        Status = Tr.F("Sleutel van {0} verwijderd; hij werkt nu alleen nog vanaf zijn adres.", row.Name);
     }
 }

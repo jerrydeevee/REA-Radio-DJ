@@ -1,3 +1,4 @@
+using ReaRadioDj.Contracts.Localization;
 using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -37,13 +38,13 @@ public sealed partial class UsersPanelVm : ObservableObject
     [ObservableProperty] [NotifyPropertyChangedFor(nameof(IntroText))] private bool _enforced = true;
 
     public bool IsExisting => EditId != 0;
-    public string EditTitle => EditId == 0 ? "Nieuwe gebruiker" : "Gebruiker wijzigen";
+    public string EditTitle => EditId == 0 ? Tr.T("Nieuwe gebruiker") : Tr.T("Gebruiker wijzigen");
 
     public string IntroText => !Active
-        ? "Er zijn nog geen gebruikers: iedereen kan alles. Maak eerst een beheerder aan; vanaf dan meldt iedereen zich aan met een eigen naam en pincode, en zijn de instellingen alleen voor beheerders."
+        ? Tr.T("Er zijn nog geen gebruikers: iedereen kan alles. Maak eerst een beheerder aan; vanaf dan meldt iedereen zich aan met een eigen naam en pincode, en zijn de instellingen alleen voor beheerders.")
         : !Enforced
-            ? "De engine draait met --users-off: aanmelden en rechten worden nu niet gecontroleerd (herstelstand)."
-            : "Presentator: alles in de uitzending (spelers, log, carts, microfoon). Technicus: ook geluid, routing, hardware, streams en planning. Beheerder: ook de instellingen, gebruikers en reservekopieën.";
+            ? Tr.T("De engine draait met --users-off: aanmelden en rechten worden nu niet gecontroleerd (herstelstand).")
+            : Tr.T("Presentator: alles in de uitzending (spelers, log, carts, microfoon). Technicus: ook geluid, routing, hardware, streams en planning. Beheerder: ook de instellingen, gebruikers en reservekopieën.");
 
     public async Task LoadAsync()
     {
@@ -57,7 +58,7 @@ public sealed partial class UsersPanelVm : ObservableObject
         LockAttempts = l.Attempts;
         LockSeconds = l.LockSeconds;
         Locked.Clear();
-        foreach (var x in l.Locked) Locked.Add(new LockedNameVm(x.Name, $"{x.Name}: geblokkeerd tot {x.Until.ToLocalTime():HH:mm:ss}"));
+        foreach (var x in l.Locked) Locked.Add(new LockedNameVm(x.Name, Tr.F("{0}: geblokkeerd tot {1:HH:mm:ss}", x.Name, x.Until.ToLocalTime())));
     }
 
     [RelayCommand]
@@ -65,9 +66,9 @@ public sealed partial class UsersPanelVm : ObservableObject
     {
         var (l, error) = await Hub.Client.SendWithErrorAsync<LoginLocksDto>(HttpMethod.Put, "/api/users/locks",
             new LoginLockSettingsDto((int)LockAttempts, (int)LockSeconds));
-        if (l is null) { LockStatus = error ?? "Niet gelukt."; return; }
+        if (l is null) { LockStatus = error ?? Tr.T("Niet gelukt."); return; }
         ApplyLocks(l);
-        LockStatus = $"Opgeslagen: blokkeren na {l.Attempts} pogingen, voor {l.LockSeconds} seconden.";
+        LockStatus = Tr.F("Opgeslagen: blokkeren na {0} pogingen, voor {1} seconden.", l.Attempts, l.LockSeconds);
     }
 
     [RelayCommand]
@@ -75,9 +76,9 @@ public sealed partial class UsersPanelVm : ObservableObject
     {
         if (string.IsNullOrEmpty(name)) return;
         var (l, error) = await Hub.Client.SendWithErrorAsync<LoginLocksDto>(HttpMethod.Delete, $"/api/users/locks/{Uri.EscapeDataString(name)}", null);
-        if (l is null) { LockStatus = error ?? "Niet gelukt."; return; }
+        if (l is null) { LockStatus = error ?? Tr.T("Niet gelukt."); return; }
         ApplyLocks(l);
-        LockStatus = $"De blokkade van {name} is opgeheven.";
+        LockStatus = Tr.F("De blokkade van {0} is opgeheven.", name);
     }
 
     private void Apply(UsersDto d)
@@ -123,11 +124,11 @@ public sealed partial class UsersPanelVm : ObservableObject
         var (d, error) = EditId == 0
             ? await Hub.Client.SendWithErrorAsync<UsersDto>(HttpMethod.Post, "/api/users", request)
             : await Hub.Client.SendWithErrorAsync<UsersDto>(HttpMethod.Put, $"/api/users/{EditId}", request);
-        if (d is null) { Status = error ?? "Niet gelukt."; return; }
+        if (d is null) { Status = error ?? Tr.T("Niet gelukt."); return; }
         var (name, pin, wasNew) = (request.Name, EditPin, EditId == 0);
         Apply(d);
         Selected = Users.FirstOrDefault(u => u.Name == name);
-        Status = pin.Length > 0 || wasNew ? $"{name} is opgeslagen." : $"{name} is opgeslagen (pincode ongewijzigd).";
+        Status = pin.Length > 0 || wasNew ? Tr.F("{0} is opgeslagen.", name) : Tr.F("{0} is opgeslagen (pincode ongewijzigd).", name);
         // The first administrator is signed in right away, so the settings stay open for them.
         if (first && d.Active && SessionVm.Current is { } session) await session.SignInAfterCreateAsync(name, pin);
         else if (SessionVm.Current is { } s) await s.RefreshAsync();
@@ -138,11 +139,11 @@ public sealed partial class UsersPanelVm : ObservableObject
     {
         if (EditId == 0) return;
         var (d, error) = await Hub.Client.SendWithErrorAsync<UsersDto>(HttpMethod.Delete, $"/api/users/{EditId}", null);
-        if (d is null) { Status = error ?? "Niet gelukt."; return; }
+        if (d is null) { Status = error ?? Tr.T("Niet gelukt."); return; }
         var name = EditName;
         Apply(d);
         New();
-        Status = $"{name} is verwijderd.";
+        Status = Tr.F("{0} is verwijderd.", name);
         if (SessionVm.Current is { } s) await s.RefreshAsync();
     }
 }

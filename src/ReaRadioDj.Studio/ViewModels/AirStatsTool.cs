@@ -1,3 +1,4 @@
+using ReaRadioDj.Contracts.Localization;
 using System.Collections.ObjectModel;
 using System.Globalization;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -23,9 +24,9 @@ public sealed partial class AirStatsTool : StudioTool
 {
     public AirStatsTool() : base("airstats", "Uitzendstatistiek") { }
 
-    public string[] PeriodNames { get; } = ["Dag", "Week", "Maand"];
+    public string[] PeriodNames { get; } = [Tr.T("Dag"), Tr.T("Week"), Tr.T("Maand")];
     public int[] IdleChoices { get; } = [30, 60, 90, 180, 365];
-    public string[] IdleNames { get; } = ["30 dagen", "60 dagen", "90 dagen", "half jaar", "jaar"];
+    public string[] IdleNames { get; } = [Tr.T("30 dagen"), Tr.T("60 dagen"), Tr.T("90 dagen"), Tr.T("half jaar"), Tr.T("jaar")];
 
     [ObservableProperty] private int _period = 2;
     [ObservableProperty] private DateTime? _day = DateTime.Today;
@@ -36,7 +37,7 @@ public sealed partial class AirStatsTool : StudioTool
     [ObservableProperty] private double _musicShare;
     [ObservableProperty] private double _speechShare;
     [ObservableProperty] private bool _hasData;
-    [ObservableProperty] private string _idleTitle = "Lang niet gedraaid";
+    [ObservableProperty] private string _idleTitle = Tr.T("Lang niet gedraaid");
 
     public ObservableCollection<AirStatsRow> TopTracks { get; } = [];
     public ObservableCollection<AirStatsRow> TopArtists { get; } = [];
@@ -92,14 +93,14 @@ public sealed partial class AirStatsTool : StudioTool
     private async Task LoadAsync()
     {
         var (f, t) = Current;
-        var nl = CultureInfo.GetCultureInfo("nl-NL");
+        var nl = Contracts.Localization.Tr.Culture;
         PeriodText = Period switch
         {
             0 => f.ToString("dddd d MMMM yyyy", nl),
-            1 => $"week {ISOWeek.GetWeekOfYear(f.ToDateTime(TimeOnly.MinValue))} · {f.ToString("d MMM", nl)} t/m {t.ToString("d MMM yyyy", nl)}",
+            1 => Tr.F("week {0} · {1} t/m {2}", ISOWeek.GetWeekOfYear(f.ToDateTime(TimeOnly.MinValue)), f.ToString("d MMM", nl), t.ToString("d MMM yyyy", nl)),
             _ => f.ToString("MMMM yyyy", nl),
         };
-        IdleTitle = $"Niet gedraaid in {IdleNames[Math.Clamp(IdleIndex, 0, IdleNames.Length - 1)]}";
+        IdleTitle = Tr.F("Niet gedraaid in {0}", IdleNames[Math.Clamp(IdleIndex, 0, IdleNames.Length - 1)]);
 
         var s = await Hub.Client.GetAsync<AirStatsDto>("/api/reports/airstats?" + Query);
         if (s is null) return;
@@ -108,23 +109,23 @@ public sealed partial class AirStatsTool : StudioTool
         HasData = s.Items > 0;
         MusicShare = total > 0 ? s.MusicSeconds / total * 100 : 0;
         SpeechShare = total > 0 ? s.SpeechSeconds / total * 100 : 0;
-        Totals = $"{s.Songs} nummers · {s.Items} regels in de as-run · {HourText(s.MusicSeconds)} muziek · {HourText(s.SpeechSeconds)} spraak · {HourText(s.JingleSeconds)} jingles";
+        Totals = Tr.F("{0} nummers · {1} regels in de as-run · {2} muziek · {3} spraak · {4} jingles", s.Songs, s.Items, HourText(s.MusicSeconds), HourText(s.SpeechSeconds), HourText(s.JingleSeconds));
         ShareText = total > 0
-            ? $"muziek {Pct(s.MusicSeconds, total)} · spraak {Pct(s.SpeechSeconds, total)} · jingles {Pct(s.JingleSeconds, total)}"
-              + (s.OtherSeconds > 0 ? $" · overig {Pct(s.OtherSeconds, total)}" : "")
-            : "nog niets uitgezonden in deze periode";
+            ? Tr.F("muziek {0} · spraak {1} · jingles {2}", Pct(s.MusicSeconds, total), Pct(s.SpeechSeconds, total), Pct(s.JingleSeconds, total))
+              + (s.OtherSeconds > 0 ? Tr.F(" · overig {0}", Pct(s.OtherSeconds, total)) : "")
+            : Tr.T("nog niets uitgezonden in deze periode");
 
         Fill(TopTracks, s.TopTracks.Select(x => (x.Name, x.Detail, (double)x.Plays, Times(x.Plays))));
         Fill(TopArtists, s.TopArtists.Select(x => (x.Name, HourText(x.Seconds), (double)x.Plays, Times(x.Plays))));
         Fill(Rotation, s.Rotation.Select(x => (x.Category,
-            $"{x.Tracks} verschillende nummers · elk gem. {(x.Tracks > 0 ? (double)x.Plays / x.Tracks : 0).ToString("0.0", nl)}×",
+            Tr.F("{0} verschillende nummers · elk gem. {1}×", x.Tracks, (x.Tracks > 0 ? (double)x.Plays / x.Tracks : 0).ToString("0.0", nl)),
             (double)x.Plays, Times(x.Plays))));
         Idle.Clear();
         int i = 0;
         foreach (var x in s.Idle)
             Idle.Add(new AirStatsRow((++i).ToString(CultureInfo.InvariantCulture), x.Title,
                 string.IsNullOrWhiteSpace(x.Category) ? x.Artist : $"{x.Artist} · {x.Category}",
-                x.LastPlayed is DateTime lp ? lp.ToString("d MMM yyyy", nl) : "nooit", 0));
+                x.LastPlayed is DateTime lp ? lp.ToString("d MMM yyyy", nl) : Tr.T("nooit"), 0));
 
         Hours.Clear();
         int max = Math.Max(1, s.SongsPerHour.DefaultIfEmpty(0).Max());
@@ -143,7 +144,7 @@ public sealed partial class AirStatsTool : StudioTool
                 list[i].Amount / max * 100));
     }
 
-    private static string Times(int n) => n == 1 ? "1 keer" : $"{n} keer";
+    private static string Times(int n) => n == 1 ? Tr.T("1 keer") : Tr.F("{0} keer", n);
     private static string Pct(double part, double total) => $"{Math.Round(part / total * 100)} %";
 
     public static string HourText(double seconds)

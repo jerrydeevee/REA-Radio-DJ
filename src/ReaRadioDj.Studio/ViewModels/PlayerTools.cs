@@ -1,3 +1,4 @@
+using ReaRadioDj.Contracts.Localization;
 using System.Collections.ObjectModel;
 using Avalonia;
 using Avalonia.Media;
@@ -28,7 +29,7 @@ public sealed partial class PlayerCard : ObservableObject
     public string Id { get; }
     private long? _titleFor;
     [ObservableProperty] private string _name = "";
-    [ObservableProperty] private string _label = "leeg";
+    [ObservableProperty] private string _label = Tr.T("leeg");
     [ObservableProperty] private string _state = "empty";
     [ObservableProperty] private string _elapsed = "";
     [ObservableProperty] private string _remaining = "";
@@ -50,10 +51,10 @@ public sealed partial class PlayerCard : ObservableObject
     [ObservableProperty] private string _endState = "normal";
     [ObservableProperty] private bool _flash;
 
-    public string StateText => State switch { "playing" => "speelt", "paused" => "pauze", "cued" => "klaar", _ => "leeg" };
+    public string StateText => State switch { "playing" => Tr.T("speelt"), "paused" => Tr.T("pauze"), "cued" => Tr.T("klaar"), _ => Tr.T("leeg") };
 
     // The state is never colour alone: a word and a sign go with it (design "Spelers").
-    [ObservableProperty] private string _stateWord = "Leeg";
+    [ObservableProperty] private string _stateWord = Tr.T("Leeg");
     [ObservableProperty] private string _stateGlyph = "–";
     [ObservableProperty] private IBrush _stateBrush = Brushes.FromHex("#6B7684");
     [ObservableProperty] private Thickness _stateBorder = new(1);
@@ -68,15 +69,15 @@ public sealed partial class PlayerCard : ObservableObject
 
     private void ShowState(bool loaded, double left)
     {
-        var (word, glyph, color) = !loaded ? ("Leeg", "–", "#6B7684")
-            : State == "playing" && left <= 10 ? ("Laatste 10 s", "!", "#F5A524")
-            : State == "playing" ? ("Speelt", "▶", "#4C8DFF")
-            : State == "paused" ? ("Pauze", "‖", "#9AA4B2")
-            : ("Klaar", "■", "#3FB950");
+        var (word, glyph, color) = !loaded ? (Tr.T("Leeg"), "–", "#6B7684")
+            : State == "playing" && left <= 10 ? (Tr.T("Laatste 10 s"), "!", "#F5A524")
+            : State == "playing" ? (Tr.T("Speelt"), "▶", "#4C8DFF")
+            : State == "paused" ? (Tr.T("Pauze"), "‖", "#9AA4B2")
+            : (Tr.T("Klaar"), "■", "#3FB950");
         StateWord = word; StateGlyph = glyph; StateBrush = Brushes.FromHex(color);
         StateBorder = new Thickness(State == "playing" ? 2 : 1);
     }
-    public string StyleButtonText => Wave ? "Compact" : "Golfvorm";
+    public string StyleButtonText => Wave ? Tr.T("Compact") : Tr.T("Golfvorm");
     partial void OnStateChanged(string value) => OnPropertyChanged(nameof(StateText));
     partial void OnWaveChanged(bool value) => OnPropertyChanged(nameof(StyleButtonText));
     partial void OnMediaIdChanged(long? value) => _ = LoadWaveAsync(value);
@@ -95,7 +96,7 @@ public sealed partial class PlayerCard : ObservableObject
         State = p.State;
         Playing = p.State == "playing";
         MediaId = p.MediaId;
-        Label = p.Label ?? "leeg — sleep een item hierheen";
+        Label = p.Label ?? Tr.T("leeg — sleep een item hierheen");
         double len = Math.Max(0.1, p.CueOut - p.CueIn);
         double left = Math.Max(0, p.CueOut - p.Position);
         bool loaded = p.Label is not null;
@@ -108,13 +109,13 @@ public sealed partial class PlayerCard : ObservableObject
         CueOut = p.CueOut;
         EndState = !Playing ? "normal" : left <= 10 ? "end" : left <= 20 ? "warn" : "normal";
         Flash = EndState == "end" && DateTime.Now.Millisecond < 500;
-        Intro = p.Intro is double i && i > p.Position && loaded ? $"intro {StudioHub.TimeTenths(i - p.Position)}" : "";
+        Intro = p.Intro is double i && i > p.Position && loaded ? Tr.F("intro {0}", StudioHub.TimeTenths(i - p.Position)) : "";
         Loaded = loaded;
         RemainingTime = !loaded ? "—" : Playing || State == "paused" ? "-" + StudioHub.Time(left) : StudioHub.Time(len);
-        if (!loaded) { Title = "Sleep een item hierheen"; Sub = ""; }
+        if (!loaded) { Title = Tr.T("Sleep een item hierheen"); Sub = ""; }
         else if (string.IsNullOrEmpty(Title) || _titleFor != p.MediaId) Title = p.Label ?? "";
         ShowState(loaded, left);
-        Stack = p.Stack.Count == 0 ? "" : $"daarna: {string.Join(", ", p.Stack.Take(3))}{(p.Stack.Count > 3 ? $" (+{p.Stack.Count - 3})" : "")}";
+        Stack = p.Stack.Count == 0 ? "" : Tr.F("daarna: {0}", string.Join(", ", p.Stack.Take(3))) + (p.Stack.Count > 3 ? $" (+{p.Stack.Count - 3})" : "");
     }
 
     /// <summary>Fetches the waveform and cue points of the loaded item (only when the waveform look is used).</summary>
@@ -147,10 +148,10 @@ public sealed partial class PlayerCard : ObservableObject
     public static IReadOnlyList<WaveMarker> MarkersFor(CueDto c)
     {
         var list = new List<WaveMarker>();
-        if (c.Intro is double intro) list.Add(new("intro", "Intro", intro, Color.Parse("#F0B429")));
+        if (c.Intro is double intro) list.Add(new("intro", Tr.T("Intro"), intro, Color.Parse("#F0B429")));
         if (c.Outro is double outro) list.Add(new("outro", "Outro", outro, Color.Parse("#FB923C")));
-        if (c.Mix > 0 && c.Mix < c.CueOut) list.Add(new("mix", "Volgende", c.Mix, Color.Parse("#E5484D")));
-        list.Add(new("cueOut", "Uit", c.CueOut, Color.Parse("#A1A1AA")));
+        if (c.Mix > 0 && c.Mix < c.CueOut) list.Add(new("mix", Tr.T("Volgende"), c.Mix, Color.Parse("#E5484D")));
+        list.Add(new("cueOut", Tr.T("Uit"), c.CueOut, Color.Parse("#A1A1AA")));
         return list;
     }
 
@@ -205,7 +206,7 @@ public sealed class StandbyTool : StudioTool
 /// <summary>Pre-listen on the PFL bus (headphones), never on air.</summary>
 public sealed class PflTool : StudioTool
 {
-    public PflTool() : base("pfl", "PFL") { }
+    public PflTool() : base("pfl", Tr.T("PFL")) { }
 
     public PlayerCard Player { get; } = new("pfl");
 

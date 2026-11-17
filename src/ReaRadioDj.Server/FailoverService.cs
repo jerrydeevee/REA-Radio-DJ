@@ -128,7 +128,7 @@ public sealed class FailoverService(PlayoutEngine engine, SilenceWatch silence, 
     {
         Flag();
         var s = _settings;
-        messages.Add("alarm", $"Reservestudio neemt de uitzending over ({why})");
+        messages.Add("alarm", $"Reservestudio neemt de uitzending over ({why})", "reservestudio");
         logger.LogWarning("Failover: taking over ({Why})", why);
         engine.SetAutoPlay(true);
         engine.Play();
@@ -140,7 +140,7 @@ public sealed class FailoverService(PlayoutEngine engine, SilenceWatch silence, 
     {
         Flag();
         var s = _settings;
-        messages.Info($"Reservestudio geeft de uitzending terug ({why})");
+        messages.Add("info", $"Reservestudio geeft de uitzending terug ({why})", "reservestudio");
         logger.LogInformation("Failover: giving back ({Why})", why);
         engine.Stop(2.0);
         if (_streamStarted) { streamer.Stop(); _streamStarted = false; }

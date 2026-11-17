@@ -1,3 +1,4 @@
+using ReaRadioDj.Contracts.Localization;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
@@ -20,7 +21,7 @@ public sealed class WaveformView : Control
     public static readonly StyledProperty<double> PlayheadProperty = AvaloniaProperty.Register<WaveformView, double>(nameof(Playhead), -1);
     public static readonly StyledProperty<double> CueInProperty = AvaloniaProperty.Register<WaveformView, double>(nameof(CueIn));
     public static readonly StyledProperty<double> CueOutProperty = AvaloniaProperty.Register<WaveformView, double>(nameof(CueOut));
-    public static readonly StyledProperty<string> EmptyTextProperty = AvaloniaProperty.Register<WaveformView, string>(nameof(EmptyText), "Kies een item in de bibliotheek en klik op Cues");
+    public static readonly StyledProperty<string> EmptyTextProperty = AvaloniaProperty.Register<WaveformView, string>(nameof(EmptyText), Tr.T("Kies een item in de bibliotheek en klik op Cues"));
     public static readonly StyledProperty<bool> ShowCursorProperty = AvaloniaProperty.Register<WaveformView, bool>(nameof(ShowCursor), true);
     /// <summary>Player mode: markers cannot be dragged and a click raises <see cref="Clicked"/> (seek).</summary>
     public static readonly StyledProperty<bool> ReadOnlyMarkersProperty = AvaloniaProperty.Register<WaveformView, bool>(nameof(ReadOnlyMarkers));
@@ -98,7 +99,7 @@ public sealed class WaveformView : Control
         var peaks = Peaks;
         if (peaks is null || peaks.Length == 0 || w < 2)
         {
-            var t = new FormattedText(EmptyText, System.Globalization.CultureInfo.CurrentCulture,
+            var t = new FormattedText(Tr.T(EmptyText), System.Globalization.CultureInfo.CurrentCulture,
                 FlowDirection.LeftToRight, Typeface.Default, 13, new SolidColorBrush(Services.Appearance.Surface.Muted));
             ctx.DrawText(t, new Point(10, h / 2 - 8));
             return;

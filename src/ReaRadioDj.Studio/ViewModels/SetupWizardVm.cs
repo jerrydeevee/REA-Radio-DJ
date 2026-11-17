@@ -1,3 +1,4 @@
+using ReaRadioDj.Contracts.Localization;
 using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -35,18 +36,18 @@ public sealed partial class SetupWizardVm : ObservableObject
     [ObservableProperty] private string _summary = "";
     [ObservableProperty] [NotifyPropertyChangedFor(nameof(CloseText))] private bool _saved;
 
-    public string CloseText => Saved ? "Sluiten" : "Overslaan";
+    public string CloseText => Saved ? Tr.T("Sluiten") : Tr.T("Overslaan");
 
     public ObservableCollection<DeviceDto> Outputs { get; } = [];
     public string[] ThemeNames { get; } = Appearance.Themes.Select(t => t.Name).ToArray();
 
-    public string StepText => $"Stap {Step + 1} van {Steps}";
+    public string StepText => Tr.F("Stap {0} van {1}", Step + 1, Steps);
     public string Title => Step switch
     {
-        0 => "Welkom bij REA-Radio-DJ",
-        1 => "Waar staat je muziek?",
-        2 => "Welke geluidskaart?",
-        _ => "Klaar om te beginnen",
+        0 => Tr.T("Welkom bij REA-Radio-DJ"),
+        1 => Tr.T("Waar staat je muziek?"),
+        2 => Tr.T("Welke geluidskaart?"),
+        _ => Tr.T("Klaar om te beginnen"),
     };
     public bool IsStation => Step == 0;
     public bool IsFolders => Step == 1;
@@ -91,7 +92,7 @@ public sealed partial class SetupWizardVm : ObservableObject
             var outs = await Hub.Client.GetAsync<List<DeviceDto>>("/api/devices");
             if (_settings is null || _routing is null || outs is null)
             {
-                Status = "De engine geeft zijn instellingen niet: is hij gestart en verbonden?";
+                Status = Tr.T("De engine geeft zijn instellingen niet: is hij gestart en verbonden?");
                 return;
             }
             StationName = _settings.StationName;
@@ -100,7 +101,7 @@ public sealed partial class SetupWizardVm : ObservableObject
             StartAutomation = _settings.StartAutomation;
             ThemeIndex = Math.Max(0, Array.FindIndex(Appearance.Themes, t => t.Key == Hub.Settings.Theme));
             Outputs.Clear();
-            Outputs.Add(new DeviceDto(-1, "Standaard geluidskaart van Windows", true, false));
+            Outputs.Add(new DeviceDto(-1, Tr.T("Standaard geluidskaart van Windows"), true, false));
             foreach (var d in outs) Outputs.Add(d);
             OutputDevice = Outputs.FirstOrDefault(d => d.Index == _routing.OutputDevice) ?? Outputs[0];
             PreviewDevice = Outputs.FirstOrDefault(d => d.Index == _routing.PreviewDevice) ?? Outputs[0];
@@ -114,17 +115,17 @@ public sealed partial class SetupWizardVm : ObservableObject
         var folders = await Hub.Client.GetAsync<List<LibraryFolderDto>>("/api/library/folders");
         int extra = folders?.Count(f => !f.Fixed) ?? 0;
         FolderInfo = extra == 0
-            ? "Meer mappen of een netwerkshare (\\\\server\\muziek) voeg je later toe in de Bibliotheek onder \"Mappen en shares\"."
-            : $"Er staan al {extra} andere {(extra == 1 ? "map" : "mappen")} in de bibliotheek; die blijven staan.";
+            ? Tr.T("Meer mappen of een netwerkshare (\\\\server\\muziek) voeg je later toe in de Bibliotheek onder \"Mappen en shares\".")
+            : (extra == 1 ? Tr.T("Er staat al 1 andere map in de bibliotheek; die blijft staan.") : Tr.F("Er staan al {0} andere mappen in de bibliotheek; die blijven staan.", extra));
     }
 
     private string MakeSummary()
     {
-        string name = StationName.Trim().Length > 0 ? StationName.Trim() : "(geen naam)";
+        string name = StationName.Trim().Length > 0 ? StationName.Trim() : Tr.T("(geen naam)");
         return $"Station: {name}\n" +
                $"Muziek: {Show(MusicFolder)}\n" +
                $"Jingles: {Show(JingleFolder)}\n" +
-               $"Uitzending: {OutputDevice?.Name ?? "standaard"}\n" +
+               Tr.F("Uitzending: {0}", OutputDevice?.Name ?? Tr.T("standaard")) + "\n" +
                $"Voorluisteren: {PreviewDevice?.Name ?? "standaard"}";
         static string Show(string f) => f.Trim().Length > 0 ? f.Trim() : "(standaard)";
     }
@@ -134,8 +135,8 @@ public sealed partial class SetupWizardVm : ObservableObject
     [RelayCommand]
     private void Next()
     {
-        if (Step == 0 && StationName.Trim().Length == 0) { Status = "Geef het station een naam."; return; }
-        if (Step == 1 && MusicFolder.Trim().Length == 0) { Status = "Kies een map voor de muziek."; return; }
+        if (Step == 0 && StationName.Trim().Length == 0) { Status = Tr.T("Geef het station een naam."); return; }
+        if (Step == 1 && MusicFolder.Trim().Length == 0) { Status = Tr.T("Kies een map voor de muziek."); return; }
         Status = "";
         if (Step < Steps - 1) Step++;
     }
@@ -146,8 +147,8 @@ public sealed partial class SetupWizardVm : ObservableObject
     {
         var (_, error) = await Hub.Client.SendWithErrorAsync<object>(HttpMethod.Post, "/api/outputs/test", new OutputRouteRequest(target));
         Status = error is null
-            ? "Testtoon gestuurd naar de kaart die nu in de engine staat; een nieuwe keuze geldt na Klaar."
-            : "Testtoon niet gelukt: " + error;
+            ? Tr.T("Testtoon gestuurd naar de kaart die nu in de engine staat; een nieuwe keuze geldt na Klaar.")
+            : Tr.T("Testtoon niet gelukt: ") + error;
     }
 
     /// <summary>Closes without changing anything; it does not open by itself again.</summary>
@@ -161,7 +162,7 @@ public sealed partial class SetupWizardVm : ObservableObject
     [RelayCommand]
     private async Task Finish()
     {
-        if (_settings is null || _routing is null) { Status = "Nog geen verbinding met de engine."; return; }
+        if (_settings is null || _routing is null) { Status = Tr.T("Nog geen verbinding met de engine."); return; }
         Busy = true;
         try
         {
@@ -169,7 +170,7 @@ public sealed partial class SetupWizardVm : ObservableObject
             var routing = _routing with { OutputDevice = OutputDevice?.Index ?? -1, PreviewDevice = PreviewDevice?.Index ?? -1 };
             if (routing != _routing && !await Hub.Client.PutAsync("/api/routing", routing))
             {
-                Status = "De geluidskaarten konden niet worden opgeslagen.";
+                Status = Tr.T("De geluidskaarten konden niet worden opgeslagen.");
                 return;
             }
             // Passwords are never sent to the studio; empty here keeps the stored ones.
@@ -179,12 +180,12 @@ public sealed partial class SetupWizardVm : ObservableObject
                 StartAutomation = StartAutomation, StreamPassword = "", ControlPassword = "", ClearControlPassword = false,
             };
             var (saved, error) = await Hub.Client.SendWithErrorAsync<SettingsSavedDto>(HttpMethod.Put, "/api/settings", settings);
-            if (saved is null) { Status = "Opslaan niet gelukt: " + (error ?? "geen antwoord van de engine"); return; }
+            if (saved is null) { Status = Tr.T("Opslaan niet gelukt: ") + (error ?? Tr.T("geen antwoord van de engine")); return; }
             MarkDone();
             if (saved.NeedsRestart.Count == 0) { IsOpen = false; return; }
             // Something only takes effect after a restart: say so here instead of closing silently.
             Saved = true;
-            Status = $"Opgeslagen. Dit werkt na een herstart van de engine: {string.Join(", ", saved.NeedsRestart)}.";
+            Status = Tr.F("Opgeslagen. Dit werkt na een herstart van de engine: {0}.", string.Join(", ", saved.NeedsRestart));
         }
         finally { Busy = false; }
     }

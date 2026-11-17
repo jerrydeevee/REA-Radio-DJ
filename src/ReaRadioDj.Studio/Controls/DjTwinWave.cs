@@ -1,3 +1,4 @@
+using ReaRadioDj.Contracts.Localization;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
@@ -78,7 +79,7 @@ public sealed class DjTwinWave : Control
             var deck = decks[i];
             double top = i * laneH, centre = top + laneH / 2, half = laneH / 2 - 6;
             if (i > 0) ctx.DrawLine(new Pen(new SolidColorBrush(Services.Appearance.Surface.Grid), 1), new Point(0, top), new Point(w, top));
-            if (!deck.Loaded) { Text(ctx, $"{deck.Id}  leeg", label, 12, new Point(8, top + 4), Services.Appearance.Surface.Faint); continue; }
+            if (!deck.Loaded) { Text(ctx, Tr.F("{0}  leeg", deck.Id), label, 12, new Point(8, top + 4), Services.Appearance.Surface.Faint); continue; }
 
             double pos = deck.PositionNow(now), rate = deck.Rate <= 0 ? 1 : deck.Rate;
             double X(double fileSec) => mid + (fileSec - pos) / rate * pxPerSec;
@@ -131,7 +132,7 @@ public sealed class DjTwinWave : Control
             }
 
             Text(ctx, deck.Id, label, 13, new Point(8, top + 4), deck.Color);
-            Text(ctx, deck.BpmText + " BPM", label, 11, new Point(26, top + 6), Services.Appearance.Surface.Text);
+            Text(ctx, deck.BpmText + Tr.T(" BPM"), label, 11, new Point(26, top + 6), Services.Appearance.Surface.Text);
         }
 
         // playhead

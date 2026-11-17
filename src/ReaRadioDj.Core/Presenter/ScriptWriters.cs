@@ -29,7 +29,7 @@ public interface ITextWriter
     Task<string> CompleteAsync(string system, string user, int maxTokens, CancellationToken ct, int minSeconds = 0);
 }
 
-/// <summary>Offline fallback: fills in a Dutch template. Always works, needs nothing.</summary>
+/// <summary>Offline fallback: fills in a template in the on-air language. Always works, needs nothing.</summary>
 public sealed class TemplateScriptWriter(Random? random = null) : IScriptWriter
 {
     private readonly Random _random = random ?? Random.Shared;
@@ -37,24 +37,24 @@ public sealed class TemplateScriptWriter(Random? random = null) : IScriptWriter
 
     private static readonly string[] WithBoth =
     [
-        "Dat was {prev}. Het is {time} en je luistert naar {station}. Hier komt {next}!",
-        "Je hoorde {prev}. Blijf lekker hangen, want nu komt {next}, hier op {station}.",
-        "{station}, het is {time}. Na {prev} gaan we door met {next}.",
+        OnAir.Line("Dat was {prev}. Het is {time} en je luistert naar {station}. Hier komt {next}!"),
+        OnAir.Line("Je hoorde {prev}. Blijf lekker hangen, want nu komt {next}, hier op {station}."),
+        OnAir.Line("{station}, het is {time}. Na {prev} gaan we door met {next}."),
     ];
     private static readonly string[] OnlyNext =
     [
-        "Je luistert naar {station}, het is {time}. We gaan verder met {next}.",
-        "Hier is {presenter} op {station}. Daar is {next}!",
+        OnAir.Line("Je luistert naar {station}, het is {time}. We gaan verder met {next}."),
+        OnAir.Line("Hier is {presenter} op {station}. Daar is {next}!"),
     ];
     private static readonly string[] Nothing =
     [
-        "Je luistert naar {station}. Het is {time}. Blijf erbij!",
+        OnAir.Line("Je luistert naar {station}. Het is {time}. Blijf erbij!"),
     ];
 
     public Task<string> WriteAsync(BreakContext c, CancellationToken ct)
     {
         var set = c.Previous is not null && c.Next is not null ? WithBoth : c.Next is not null ? OnlyNext : Nothing;
-        var text = set[_random.Next(set.Length)]
+        var text = OnAir.Say(set[_random.Next(set.Length)])
             .Replace("{prev}", Describe(c.Previous))
             .Replace("{next}", Describe(c.Next))
             .Replace("{station}", c.StationName)
@@ -70,32 +70,10 @@ public sealed class TemplateScriptWriter(Random? random = null) : IScriptWriter
     }
 
     internal static string Describe(MediaItem? m) => m is null ? "" :
-        string.IsNullOrWhiteSpace(m.Artist) ? m.Title : $"{m.Title} van {m.Artist}";
+        string.IsNullOrWhiteSpace(m.Artist) ? m.Title : OnAir.Say("{titel} van {artiest}").Replace("{titel}", m.Title).Replace("{artiest}", m.Artist);
 
-    /// <summary>"kwart over drie", "tien voor half vijf" ... rounded to five minutes, the way Dutch radio says it.</summary>
-    internal static string SpokenTime(DateTime t)
-    {
-        string[] hours = ["twaalf", "een", "twee", "drie", "vier", "vijf", "zes", "zeven", "acht", "negen", "tien", "elf"];
-        int minute = (int)Math.Round(t.Minute / 5.0) * 5;
-        int hour = t.Hour;
-        if (minute == 60) { minute = 0; hour++; }
-        string H(int h) => hours[((h % 12) + 12) % 12];
-        return minute switch
-        {
-            0 => $"{H(hour)} uur",
-            5 => $"vijf over {H(hour)}",
-            10 => $"tien over {H(hour)}",
-            15 => $"kwart over {H(hour)}",
-            20 => $"tien voor half {H(hour + 1)}",
-            25 => $"vijf voor half {H(hour + 1)}",
-            30 => $"half {H(hour + 1)}",
-            35 => $"vijf over half {H(hour + 1)}",
-            40 => $"tien over half {H(hour + 1)}",
-            45 => $"kwart voor {H(hour + 1)}",
-            50 => $"tien voor {H(hour + 1)}",
-            _ => $"vijf voor {H(hour + 1)}",
-        };
-    }
+    /// <summary>"kwart over drie", "tien voor half vijf" ... rounded to five minutes, in the on-air language.</summary>
+    internal static string SpokenTime(DateTime t) => OnAir.SpokenTime(t);
 }
 
 /// <summary>Any OpenAI-compatible /v1/chat/completions endpoint: Ollama, LM Studio, vLLM, OpenAI ...</summary>
@@ -185,7 +163,7 @@ public sealed class OpenAiScriptWriter(HttpClient http, PresenterOptions options
         var system = $"""
             {(string.IsNullOrWhiteSpace(c.Character) ? options.Persona : c.Character)}
             Je heet {c.PresenterName} en presenteert op {c.StationName}.
-            Je schrijft ALLEEN de tekst die je hardop zegt tussen twee nummers, in correct en natuurlijk Nederlands,
+            Je schrijft ALLEEN de tekst die je hardop zegt tussen twee nummers, {OnAir.WriteIn("correct en natuurlijk")},
             zoals een ervaren presentator het live zou zeggen.
 
             Regels:
@@ -193,12 +171,11 @@ public sealed class OpenAiScriptWriter(HttpClient http, PresenterOptions options
             - Noem titels en artiesten precies zoals ze gegeven worden; vertaal of verbuig ze niet. Wat tussen [ ] staat
               zegt welk deel de titel en welk deel de artiest is; dat zeg je niet hardop.
             - Verzin geen feiten over artiesten, nummers, het weer of het nieuws.
-            - Geen aanhalingstekens, opsommingen, regieaanwijzingen, emoji of Engelse zinnen.
-            - Wissel af: begin niet altijd met "Dat was" of "Hier is".
+            - Geen aanhalingstekens, opsommingen, regieaanwijzingen, emoji of {OnAir.NoOtherLanguage}.
+            - Wissel af: begin niet steeds op dezelfde manier (zoals "Dat was" of "Hier is").
 
             Voorbeelden van de toon (andere nummers):
-            Dat was Zomeravond van De Kustband. Het is kwart over vier, je luistert naar {c.StationName}. Nu Lisa Mol met Nooit Meer Alleen!
-            Op {c.StationName} is het tien voor half negen. Na Regen in Mei van Tom Brink zet ik er eentje op om lekker mee te zingen: Licht Aan van De Fietsers.
+            {OnAir.Examples(c.StationName)}
             """;
         string previous = Song(c.Previous), next = Song(c.Next);
         var user = $"""
@@ -233,7 +210,7 @@ public sealed class OpenAiScriptWriter(HttpClient http, PresenterOptions options
             Je heet {c.PresenterName} en presenteert op {c.StationName}, een lokale radiozender.
             Je bent een creatieve presentator: tussen twee nummers praat je even over een onderwerp, op een persoonlijke manier,
             alsof je het tegen één luisteraar thuis of in de auto hebt. Je schrijft ALLEEN de tekst die je hardop zegt,
-            in correct en natuurlijk Nederlands.
+            {OnAir.WriteIn("correct en natuurlijk")}.
 
             Toon van deze keer: {CreativeTones.Name(idea.Tone)}.
             {CreativeTones.Instruction(idea.Tone)}
@@ -246,12 +223,12 @@ public sealed class OpenAiScriptWriter(HttpClient http, PresenterOptions options
             - Maak er iets eigens van: een observatie, een herkenbaar moment of een vraag aan de luisteraars.
             - Eindig met een natuurlijke overgang naar het volgende nummer; noem titel en artiest precies zoals gegeven
               (wat tussen [ ] staat zegt welk deel de titel en welk de artiest is; dat zeg je niet hardop).
-            - Geen aanhalingstekens, opsommingen, regieaanwijzingen, emoji of Engelse zinnen.
-            - Begin niet met "Dat was" en niet met het onderwerp als kop.
+            - Geen aanhalingstekens, opsommingen, regieaanwijzingen, emoji of {OnAir.NoOtherLanguage}.
+            - Begin niet met "Dat was" (of iets dergelijks) en niet met het onderwerp als kop.
             """;
         string previous = Song(c.Previous), next = Song(c.Next);
         var user = $"""
-            Het is {TemplateScriptWriter.SpokenTime(c.Time)} op een {c.Time.ToString("dddd", new System.Globalization.CultureInfo("nl-NL"))}.
+            Het is {TemplateScriptWriter.SpokenTime(c.Time)} op een {c.Time.ToString("dddd", OnAir.Culture)}.
             Net gedraaid: {(previous.Length > 0 ? previous : "(niets)")}.
             Hierna: {(next.Length > 0 ? next : "(nog niet bekend)")}.
             Onderwerp: {idea.Theme}

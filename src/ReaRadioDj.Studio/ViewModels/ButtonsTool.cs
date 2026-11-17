@@ -1,3 +1,4 @@
+using ReaRadioDj.Contracts.Localization;
 using System.Collections.ObjectModel;
 using Avalonia.Media;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -46,7 +47,7 @@ public sealed partial class ButtonsTool : StudioTool
 {
     private bool _loading;
 
-    public ButtonsTool() : base("buttons", "Eigen knoppen") { }
+    public ButtonsTool() : base("buttons", Tr.T("Eigen knoppen")) { }
 
     public ObservableCollection<CustomButtonVm> Buttons { get; } = [];
     public ObservableCollection<CommandInfoDto> Commands { get; } = [];
@@ -95,7 +96,7 @@ public sealed partial class ButtonsTool : StudioTool
         var syntax = value.Syntax;
         int cut = syntax.IndexOfAny(['<', '[', '|']);
         Selected.Command = (cut < 0 ? syntax : syntax[..cut]).Trim() + (cut < 0 ? "" : " ");
-        if (string.IsNullOrWhiteSpace(Selected.Label) || Selected.Label == "Nieuwe knop") Selected.Label = value.Description;
+        if (string.IsNullOrWhiteSpace(Selected.Label) || Selected.Label == Tr.T("Nieuwe knop")) Selected.Label = value.Description;
     }
 
     [RelayCommand]
@@ -103,7 +104,7 @@ public sealed partial class ButtonsTool : StudioTool
     {
         if (b is null) return;
         if (Editing) { Selected = b; return; }
-        if (string.IsNullOrWhiteSpace(b.Command)) { b.Failed = true; b.Result = "geen commando"; return; }
+        if (string.IsNullOrWhiteSpace(b.Command)) { b.Failed = true; b.Result = Tr.T("geen commando"); return; }
         var r = await Hub.Client.RunCommandAsync(b.Command.Trim());
         b.Failed = !r.Ok;
         b.Result = r.Ok ? "✓" : r.Text;
@@ -116,7 +117,7 @@ public sealed partial class ButtonsTool : StudioTool
     [RelayCommand]
     private void Add()
     {
-        var b = new CustomButtonVm(this, new CustomButton { Label = "Nieuwe knop", Command = "", Color = Appearance.KindColors[0].Hex });
+        var b = new CustomButtonVm(this, new CustomButton { Label = Tr.T("Nieuwe knop"), Command = "", Color = Appearance.KindColors[0].Hex });
         Buttons.Add(b);
         Editing = true;
         Selected = b;

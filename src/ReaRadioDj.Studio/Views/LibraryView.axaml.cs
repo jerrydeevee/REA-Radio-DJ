@@ -1,3 +1,4 @@
+using ReaRadioDj.Contracts.Localization;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
@@ -86,7 +87,7 @@ public partial class LibraryView : UserControl
         BrowseFolder.Click += async (_, _) =>
         {
             if (DataContext is not LibraryTool t || TopLevel.GetTopLevel(this)?.StorageProvider is not { } sp) return;
-            var picked = await sp.OpenFolderPickerAsync(new Avalonia.Platform.Storage.FolderPickerOpenOptions { Title = "Map voor de bibliotheek", AllowMultiple = false });
+            var picked = await sp.OpenFolderPickerAsync(new Avalonia.Platform.Storage.FolderPickerOpenOptions { Title = Tr.T("Map voor de bibliotheek"), AllowMultiple = false });
             if (picked.Count > 0 && picked[0].TryGetLocalPath() is { } path) t.NewFolderPath = path;
         };
         // Esc empties the search box; arrow down jumps from the search box into the list.
@@ -125,7 +126,7 @@ public partial class LibraryView : UserControl
         if ((sender as Control)?.DataContext is not MediaDetailVm detail || TopLevel.GetTopLevel(this)?.StorageProvider is not { } sp) return;
         var picked = await sp.OpenFilePickerAsync(new Avalonia.Platform.Storage.FilePickerOpenOptions
         {
-            Title = "Hoes kiezen", AllowMultiple = false,
+            Title = Tr.T("Hoes kiezen"), AllowMultiple = false,
             FileTypeFilter = [new("Afbeeldingen") { Patterns = ["*.jpg", "*.jpeg", "*.png", "*.gif", "*.webp"] }],
         });
         if (picked.Count == 0) return;

@@ -76,6 +76,8 @@ public sealed class CommandBus(
         new("VOIP STATUS", "Wat de VoIP-kanalen doen en of SIP is aangemeld", "Verbindingen"),
         new("STREAM START|STOP", "Icecast-uitzending starten of stoppen", "Stream"),
         new("SCAN", "Bibliotheek opnieuw inlezen", "Bibliotheek"),
+        new("RECORD ON|OFF|TOGGLE", "Noodopname: alles wat binnenkomt opnemen (microfoon, ingangen, VoIP), elk kanaal apart", "Opnemen"),
+        new("RECORD START|STOP <naam>", "Een geplande opname nu starten of stoppen", "Opnemen"),
         new("OSC <host:poort> </adres> [argumenten]", "OSC-bericht uitsturen, bijv. OSC 192.168.1.20:8000 /licht/onair 1 (tekst met spaties tussen \"aanhalingstekens\")", "Uitsturen"),
         new("HTTP <webadres>", "Webadres aanroepen (GET), bijv. voor een lamp, RDS-encoder of website", "Uitsturen"),
         new("MESSAGE <tekst>", "Melding in de studio", "Meldingen"),
@@ -207,6 +209,7 @@ public sealed class CommandBus(
             case "STREAM" when Arg(1) == "START": streamer.Start(engine.MixerHandle); return CommandResult.Done();
             case "STREAM" when Arg(1) == "STOP": streamer.Stop(); return CommandResult.Done();
             case "SCAN": _ = library.ScanAsync(); return CommandResult.Done("inlezen gestart");
+            case "RECORD": return Record(Arg(1), Rest(2));
 
             case "OSC" when w.Count >= 3:
                 return SendOsc(Words(raw).Skip(1).ToList());
@@ -424,6 +427,25 @@ public sealed class CommandBus(
     {
         int space = raw.IndexOf(' ');
         return space < 0 ? "" : raw[(space + 1)..].Trim().Trim('"');
+    }
+
+    private CommandResult Record(string action, string name)
+    {
+        var rec = services.GetRequiredService<ScheduledRecordingService>();
+        string? error;
+        switch (action)
+        {
+            case "ON": error = rec.StartEmergency(); break;
+            case "OFF": rec.StopEmergency(); return CommandResult.Done("noodopname gestopt");
+            case "TOGGLE" or "": error = rec.ToggleEmergency(); break;
+            case "START" or "STOP" when name.Length > 0:
+                var item = rec.List().FirstOrDefault(i => string.Equals(i.Name, name, StringComparison.OrdinalIgnoreCase));
+                if (item is null) return CommandResult.Fail($"geen geplande opname '{name}'");
+                error = action == "START" ? rec.StartNow(item.Id) : rec.StopNow(item.Id);
+                break;
+            default: return CommandResult.Fail("RECORD ON|OFF|TOGGLE of RECORD START|STOP <naam>");
+        }
+        return error is null ? CommandResult.Done(rec.Emergency().Recording ? "noodopname loopt" : "ok") : CommandResult.Fail(error);
     }
 
     private static List<string> Split(string? text) =>

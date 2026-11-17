@@ -11,7 +11,8 @@ namespace ReaRadioDj.Server;
 
 /// <summary>AI presenter settings made in the studio; stored in the database and winning over appsettings.json.</summary>
 public sealed record PresenterSettings(bool Enabled, string PresenterName, string Persona, int MaxWords, string LlmBaseUrl,
-    string LlmModel, string LlmApiKey, double Temperature, bool RequireApproval, bool PostProcess, long? BedCategoryId = null)
+    string LlmModel, string LlmApiKey, double Temperature, bool RequireApproval, bool PostProcess, long? BedCategoryId = null,
+    string? Language = null)
 {
     public const string Key = "presenter";
     public const string Mask = "••••••";
@@ -20,7 +21,7 @@ public sealed record PresenterSettings(bool Enabled, string PresenterName, strin
     {
         var p = o.Presenter;
         return new(p.Enabled, p.PresenterName, p.Persona, p.MaxWords, p.Llm.BaseUrl, p.Llm.Model, p.Llm.ApiKey, p.Llm.Temperature,
-            p.RequireApproval, p.PostProcess, p.BedCategoryId);
+            p.RequireApproval, p.PostProcess, p.BedCategoryId, p.Language);
     }
 
     public void ApplyTo(ReaRadioDjOptions o)
@@ -37,6 +38,8 @@ public sealed record PresenterSettings(bool Enabled, string PresenterName, strin
         p.RequireApproval = RequireApproval;
         p.PostProcess = PostProcess;
         p.BedCategoryId = BedCategoryId is > 0 ? BedCategoryId : null;
+        // older saved settings have no language: keep what appsettings.json says
+        if (!string.IsNullOrWhiteSpace(Language)) p.Language = Contracts.Localization.Tr.Normalize(Language);
     }
 
     public static void Load(StationDb db, ReaRadioDjOptions o)
@@ -49,7 +52,8 @@ public sealed record PresenterSettings(bool Enabled, string PresenterName, strin
     public void Save(StationDb db) => db.SetSetting(Key, JsonSerializer.Serialize(this, JsonSerializerOptions.Web));
 
     public PresenterSettingsDto Dto() => new(Enabled, PresenterName, Persona, MaxWords, LlmBaseUrl, LlmModel,
-        LlmApiKey.Length > 0 ? Mask : "", Temperature, RequireApproval, PostProcess, BedCategoryId);
+        LlmApiKey.Length > 0 ? Mask : "", Temperature, RequireApproval, PostProcess, BedCategoryId,
+        Contracts.Localization.Tr.Normalize(Language));
 }
 
 /// <summary>Weather, news and outro settings made in the studio.</summary>
@@ -200,7 +204,7 @@ public static class PresenterApi
             var old = PresenterSettings.From(options);
             var s = new PresenterSettings(d.Enabled, d.PresenterName, d.Persona, d.MaxWords, d.LlmBaseUrl, d.LlmModel,
                 d.LlmApiKey == PresenterSettings.Mask ? old.LlmApiKey : d.LlmApiKey, d.Temperature, d.RequireApproval, d.PostProcess,
-                d.BedCategoryId);
+                d.BedCategoryId, d.Language);
             s.ApplyTo(options);
             PresenterSettings.From(options).Save(db);
             messages.Info("AI-presentator: instellingen opgeslagen");

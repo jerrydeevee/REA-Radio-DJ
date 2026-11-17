@@ -98,13 +98,13 @@ public sealed class AutoBackupService(StationDb db, ReaRadioDjOptions options, M
         if (await RunNowAsync(ct) is null)
         {
             if (_failedSlot != slot)
-                messages.Warning($"De dagelijkse reservekopie is niet gelukt: {LastError} REA-Radio-DJ probeert het elke tien minuten opnieuw. "
-                    + "Kijk of de map bereikbaar is (Instellingen › Systeem).");
+                messages.Add("waarschuwing", $"De dagelijkse reservekopie is niet gelukt: {LastError} REA-Radio-DJ probeert het elke tien minuten opnieuw. "
+                    + "Kijk of de map bereikbaar is (Instellingen › Systeem).", "reservekopie");
             _failedSlot = slot;
         }
         else if (_failedSlot == slot)
         {
-            messages.Info("De dagelijkse reservekopie is alsnog gelukt.");
+            messages.Add("info", "De dagelijkse reservekopie is alsnog gelukt.", "reservekopie");
             _failedSlot = DateTime.MinValue;
         }
     }

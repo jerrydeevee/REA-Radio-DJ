@@ -1,3 +1,4 @@
+using ReaRadioDj.Contracts.Localization;
 using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -12,14 +13,14 @@ public sealed partial class MetaRow(MetaProposalDto p) : ObservableObject
     [ObservableProperty] private bool _chosen = true;
     public string Adds => string.Join(" · ", new[]
     {
-        P.NewArtist is null ? null : $"artiest: {P.NewArtist}",
-        P.NewTitle is null ? null : $"titel: {P.NewTitle}",
-        P.Album is null ? null : $"album: {P.Album}",
-        P.Year is null ? null : $"jaar: {P.Year}",
+        P.NewArtist is null ? null : Tr.F("artiest: {0}", P.NewArtist),
+        P.NewTitle is null ? null : Tr.F("titel: {0}", P.NewTitle),
+        P.Album is null ? null : Tr.F("album: {0}", P.Album),
+        P.Year is null ? null : Tr.F("jaar: {0}", P.Year),
         P.Isrc is null ? null : $"ISRC: {P.Isrc}",
-        P.Label is null ? null : $"label: {P.Label}",
-        P.Genre is null ? null : $"genre: {P.Genre}",
-        P.Composer is null ? null : $"componist/auteur: {P.Composer}",
+        P.Label is null ? null : Tr.F("label: {0}", P.Label),
+        P.Genre is null ? null : Tr.F("genre: {0}", P.Genre),
+        P.Composer is null ? null : Tr.F("componist/auteur: {0}", P.Composer),
         P.CoverUrl is null ? null : "hoes",
     }.Where(x => x is not null));
     public string From => $"{P.Source}: {P.Found}";
@@ -67,8 +68,8 @@ public sealed partial class SourcesTool : StudioTool
         PathFrom = value.PathFrom;
         PathTo = value.PathTo;
         Busy = value.Busy;
-        LastResult = value.Busy ? "bezig met inlezen…"
-            : value.LastSync is DateTime t ? $"Laatst ingelezen {t:ddd d MMM HH:mm}:\n{value.LastResult}" : "Nog niet ingelezen.";
+        LastResult = value.Busy ? Tr.T("bezig met inlezen…")
+            : value.LastSync is DateTime t ? Tr.F("Laatst ingelezen {0:ddd d MMM HH:mm}:\n{1}", t, value.LastResult) : Tr.T("Nog niet ingelezen.");
         TestLines.Clear();
         Problem = null;
     }
@@ -99,12 +100,12 @@ public sealed partial class SourcesTool : StudioTool
         Name = "Muziekdatabase";
         Enabled = true;
         Connection = "";
-        Query = "SELECT bestand AS path, artiest AS artist, titel AS title, categorie AS category FROM nummers";
+        Query = Tr.T("SELECT bestand AS path, artiest AS artist, titel AS title, categorie AS category FROM nummers");
         Kind = 0;
         SyncMinutes = 0;
         PathFrom = "";
         PathTo = "";
-        LastResult = "Nog niet ingelezen.";
+        LastResult = Tr.T("Nog niet ingelezen.");
         TestLines.Clear();
         Problem = null;
     }
@@ -113,9 +114,9 @@ public sealed partial class SourcesTool : StudioTool
     private async Task Save()
     {
         var saved = await Hub.Client.SendForAsync<DbSourceDto>(HttpMethod.Post, "/api/sources", Current());
-        if (saved is null) { Problem = "Opslaan mislukt."; return; }
+        if (saved is null) { Problem = Tr.T("Opslaan mislukt."); return; }
         await LoadAsync(saved.Id);
-        Hub.Status = $"databron “{saved.Name}” opgeslagen";
+        Hub.Status = Tr.F("databron “{0}” opgeslagen", saved.Name);
     }
 
     [RelayCommand]
@@ -132,12 +133,12 @@ public sealed partial class SourcesTool : StudioTool
     {
         TestLines.Clear();
         Problem = null;
-        LastResult = "bezig met testen…";
+        LastResult = Tr.T("bezig met testen…");
         var r = await Hub.Client.SendForAsync<DbTestDto>(HttpMethod.Post, "/api/sources/test", Current());
-        if (r is null) { LastResult = ""; Problem = "Test mislukt: engine niet bereikbaar?"; return; }
-        LastResult = r.Columns.Count == 0 ? "" : "Kolommen: " + string.Join(", ", r.Columns)
+        if (r is null) { LastResult = ""; Problem = Tr.T("Test mislukt: engine niet bereikbaar?"); return; }
+        LastResult = r.Columns.Count == 0 ? "" : Tr.T("Kolommen: ") + string.Join(", ", r.Columns)
             + (r.Used.Count > 0 ? "\nGebruikt: " + string.Join(", ", r.Used) : "")
-            + (r.Sample.Count > 0 ? $"\nEerste {r.Sample.Count} rijen:" : "");
+            + (r.Sample.Count > 0 ? Tr.F("\nEerste {0} rijen:", r.Sample.Count) : "");
         foreach (var l in r.Sample) TestLines.Add(l);
         Problem = r.Problem;
     }
@@ -147,9 +148,9 @@ public sealed partial class SourcesTool : StudioTool
     {
         if (Id <= 0) await Save();
         if (Id <= 0) return;
-        if (!await Hub.Client.PostAsync($"/api/sources/{Id}/sync")) { Problem = "Al bezig, of de bron is niet opgeslagen."; return; }
+        if (!await Hub.Client.PostAsync($"/api/sources/{Id}/sync")) { Problem = Tr.T("Al bezig, of de bron is niet opgeslagen."); return; }
         Busy = true;
-        LastResult = "bezig met inlezen…";
+        LastResult = Tr.T("bezig met inlezen…");
         // Follow the sync until it is done.
         for (int i = 0; i < 3600 && Busy; i++)
         {
@@ -157,7 +158,7 @@ public sealed partial class SourcesTool : StudioTool
             if (await Hub.Client.GetAsync<List<DbSourceDto>>("/api/sources") is { } list && list.FirstOrDefault(s => s.Id == Id) is { } s && !s.Busy)
             {
                 await LoadAsync(Id);
-                Hub.Status = $"databron “{s.Name}” ingelezen";
+                Hub.Status = Tr.F("databron “{0}” ingelezen", s.Name);
             }
         }
     }
@@ -192,15 +193,15 @@ public sealed partial class SourcesTool : StudioTool
     {
         if (await Hub.Client.GetAsync<MetaStatusDto>("/api/metadata/status") is not { } s) return;
         MetaRunning = s.Running;
-        SpotifyNote = (s.Spotify ? "MusicBrainz, en Spotify als aanvulling" : "MusicBrainz (Spotify doet mee zodra de Spotify-sleutels zijn ingevuld)")
-            + (s.AcoustId ? "; niet gevonden nummers worden op geluid herkend (AcoustID)." : "; herkennen op geluid kan met een AcoustID-sleutel (Instellingen → AcoustID).");
+        SpotifyNote = (s.Spotify ? Tr.T("MusicBrainz, en Spotify als aanvulling") : Tr.T("MusicBrainz (Spotify doet mee zodra de Spotify-sleutels zijn ingevuld)"))
+            + (s.AcoustId ? Tr.T("; niet gevonden nummers worden op geluid herkend (AcoustID).") : Tr.T("; herkennen op geluid kan met een AcoustID-sleutel (Instellingen → AcoustID)."));
         _metaAutoLoading = true;
         MetaAuto = s.AutoOnPlay;
         _metaAutoLoading = false;
-        MetaAutoNote = s.AutoDone > 0 ? $"Sinds de start {s.AutoDone} nummers aangevuld bij eerste keer draaien; laatste: {s.AutoLast}" : "";
+        MetaAutoNote = s.AutoDone > 0 ? Tr.F("Sinds de start {0} nummers aangevuld bij eerste keer draaien; laatste: {1}", s.AutoDone, s.AutoLast) : "";
         MetaStatus = s.Running
-            ? $"Bezig: {s.Done} van {s.Total} · {s.Current}"
-            : s.Total > 0 ? $"Klaar: {s.Total} nummers bekeken · {s.Proposals.Count} met aanvullingen · {s.NothingNew} al compleet · {s.NotFound} niet gevonden" : "";
+            ? Tr.F("Bezig: {0} van {1} · {2}", s.Done, s.Total, s.Current)
+            : s.Total > 0 ? Tr.F("Klaar: {0} nummers bekeken · {1} met aanvullingen · {2} al compleet · {3} niet gevonden", s.Total, s.Proposals.Count, s.NothingNew, s.NotFound) : "";
         // Keep the ticks the user set; add new proposals, drop the ones that are gone.
         var ids = s.Proposals.Select(p => p.MediaId).ToHashSet();
         foreach (var gone in Proposals.Where(r => !ids.Contains(r.P.MediaId)).ToList()) Proposals.Remove(gone);
@@ -223,7 +224,7 @@ public sealed partial class SourcesTool : StudioTool
         var ids = Proposals.Where(r => r.Chosen).Select(r => r.P.MediaId).ToList();
         if (ids.Count == 0) return;
         await Hub.Client.PostAsync("/api/metadata/apply", new IdListDto(ids));
-        Hub.Status = $"{ids.Count} nummers aangevuld";
+        Hub.Status = Tr.F("{0} nummers aangevuld", ids.Count);
         await RefreshMetaAsync();
     }
 

@@ -1,3 +1,4 @@
+using ReaRadioDj.Contracts.Localization;
 using Avalonia.Controls;
 using ReaRadioDj.Studio.ViewModels;
 
@@ -13,7 +14,7 @@ public partial class AirStatsView : UserControl
         SizeChanged += (_, e) => Lists.Columns = e.NewSize.Width >= 720 ? 2 : 1;
         Export.Click += async (_, _) =>
         {
-            if (DataContext is AirStatsTool t) await FileSave.FromEngineAsync(this, "Uitzendstatistiek opslaan", t.CsvFileName, t.CsvUrl);
+            if (DataContext is AirStatsTool t) await FileSave.FromEngineAsync(this, Tr.T("Uitzendstatistiek opslaan"), t.CsvFileName, t.CsvUrl);
         };
     }
 }

@@ -105,7 +105,7 @@ public static partial class NewsWriter
     {
         var system = $"""
             Je bent nieuwslezer bij {station}, een lokale radiozender. Je schrijft ALLEEN de tekst die je hardop voorleest,
-            in correct, zakelijk en goed uitspreekbaar Nederlands, zoals een radionieuwsdienst.
+            {OnAir.WriteIn("correct, zakelijk en goed uitspreekbaar")}, zoals een radionieuwsdienst.
 
             Regels:
             - Gebruik uitsluitend de feiten uit de berichten hieronder. Verzin niets: geen namen, getallen, plaatsen,
@@ -134,7 +134,7 @@ public static partial class NewsWriter
     {
         var system = $"""
             Je bent weerpresentator bij {station}, een lokale radiozender. Je schrijft ALLEEN de tekst die je hardop zegt,
-            in vlot, correct en goed uitspreekbaar Nederlands.
+            {OnAir.WriteIn("vlot, correct en goed uitspreekbaar")}.
 
             Regels:
             - Gebruik uitsluitend de gegevens hieronder; verzin geen andere getallen, waarschuwingen of plaatsen.
@@ -144,7 +144,7 @@ public static partial class NewsWriter
             - Begin niet met een begroeting en sluit niet af; de opening en afsluiting worden er zelf omheen gezet.
             """;
         var user = $"""
-            Het is {at:HH:mm} op {at.ToString("dddd d MMMM", Dutch)}.
+            Het is {at:HH:mm} op {at.ToString("dddd d MMMM", OnAir.Culture)}.
             {f.Facts}
 
             Schrijf het weerbericht.
@@ -158,20 +158,20 @@ public static partial class NewsWriter
     public static string PlainNews(IReadOnlyList<FeedItem> items, bool attribution) => string.Join(" ", items.Select(i =>
     {
         var t = i.Title.TrimEnd('.', '!', '?', ':', ';').Trim();
-        return attribution && i.Source.Length > 0 ? $"{t}, meldt {SourceName(i.Source)}." : t + ".";
+        return attribution && i.Source.Length > 0 ? OnAir.Say("{0}, meldt {1}.", t, SourceName(i.Source)) : t + ".";
     }));
 
     public static string PlainWeather(WeatherForecast f) =>
-        $"In {f.Place} is het nu {Degrees(f.Now)} en {f.SkyNow}. Vandaag wordt het maximaal {Degrees(f.TodayMax)}" +
-        (f.RainToday >= 0 ? $", de kans op regen is {f.RainToday} procent" : "") +
-        $". Er staat een wind kracht {f.Beaufort} uit het {f.WindFrom}. Vannacht koelt het af tot {Degrees(f.TonightMin)}. " +
-        $"Morgen {f.SkyTomorrow} met {Degrees(f.TomorrowMin)} tot {Degrees(f.TomorrowMax)}" +
-        (f.RainTomorrow >= 0 ? $" en {f.RainTomorrow} procent kans op regen." : ".");
+        OnAir.Say("In {0} is het nu {1} en {2}. Vandaag wordt het maximaal {3}", f.Place, OnAir.Degrees(f.Now), OnAir.Say(f.SkyNow), OnAir.Degrees(f.TodayMax)) +
+        (f.RainToday >= 0 ? OnAir.Say(", de kans op regen is {0} procent", f.RainToday) : "") +
+        OnAir.Say(". Er staat een wind kracht {0} uit het {1}. Vannacht koelt het af tot {2}. ", f.Beaufort, OnAir.Say(f.WindFrom), OnAir.Degrees(f.TonightMin)) +
+        OnAir.Say("Morgen {0} met {1} tot {2}", OnAir.Say(f.SkyTomorrow), OnAir.Degrees(f.TomorrowMin), OnAir.Degrees(f.TomorrowMax)) +
+        (f.RainTomorrow >= 0 ? OnAir.Say(" en {0} procent kans op regen.", f.RainTomorrow) : ".");
 
     /// <summary>The words around a bulletin, so they are always the same and never left out by the model.</summary>
     public static string Wrap(string kind, DateTime at, string body, string station) => kind == "weer"
-        ? $"Het weer, voor {station}. {body.Trim()}"
-        : $"Het nieuws van {SpokenHour(at)}. {body.Trim()} Dat was het nieuws.";
+        ? OnAir.Say("Het weer, voor {0}.", station) + " " + body.Trim()
+        : OnAir.Say("Het nieuws van {0}.", SpokenHour(at)) + " " + body.Trim() + " " + OnAir.Say("Dat was het nieuws.");
 
     // ------------------------------------------------------------------ writing a bulletin
 
@@ -271,17 +271,17 @@ public static partial class NewsWriter
     /// <summary>Wind direction in degrees as Dutch radio says it ("zuidwesten").</summary>
     public static string WindFrom(double degrees)
     {
-        string[] names = ["noorden", "noordoosten", "oosten", "zuidoosten", "zuiden", "zuidwesten", "westen", "noordwesten"];
+        string[] names = [OnAir.Line("noorden"), OnAir.Line("noordoosten"), OnAir.Line("oosten"), OnAir.Line("zuidoosten"),
+            OnAir.Line("zuiden"), OnAir.Line("zuidwesten"), OnAir.Line("westen"), OnAir.Line("noordwesten")];
         return names[(int)Math.Round(((degrees % 360) + 360) % 360 / 45.0) % 8];
     }
 
     // ------------------------------------------------------------------ helpers
 
-    private static readonly CultureInfo Dutch = new("nl-NL");
-
     /// <summary>The time as said on the radio: "10 uur", "half elf", "kwart over tien", "kwart voor elf", otherwise "22:12".</summary>
     internal static string SpokenHour(DateTime at)
     {
+        if (OnAir.Code != "nl") return at.Minute is 0 or 15 or 30 or 45 ? OnAir.SpokenTime(at) : at.ToString("H:mm", CultureInfo.InvariantCulture);
         string Clock(int hour) => HourWords[(hour % 12 + 11) % 12];
         return at.Minute switch
         {
@@ -295,7 +295,6 @@ public static partial class NewsWriter
 
     private static readonly string[] HourWords = ["een", "twee", "drie", "vier", "vijf", "zes", "zeven", "acht", "negen", "tien", "elf", "twaalf"];
 
-    private static string Degrees(int t) => t switch { 1 => "1 graad", -1 => "min 1 graad", < 0 => $"min {-t} graden", _ => $"{t} graden" };
 
     /// <summary>"NOS Nieuws - Algemeen" → "de NOS"; other feed names as they are.</summary>
     internal static string SourceName(string source)

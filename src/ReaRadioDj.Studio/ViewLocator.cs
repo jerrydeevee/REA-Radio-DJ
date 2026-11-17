@@ -1,3 +1,4 @@
+using ReaRadioDj.Contracts.Localization;
 using Avalonia.Controls;
 using Avalonia.Controls.Templates;
 using ReaRadioDj.Studio.ViewModels;
@@ -13,7 +14,7 @@ public sealed class ViewLocator : IDataTemplate
         var name = data.GetType().FullName!.Replace(".ViewModels.", ".Views.").Replace("Tool", "View");
         var type = Type.GetType(name);
         // scaled per window, not around the docking area (see ScaledContent)
-        Control view = type is null ? new TextBlock { Text = $"Geen weergave voor {name}" } : (Control)Activator.CreateInstance(type)!;
+        Control view = type is null ? new TextBlock { Text = Tr.F("Geen weergave voor {0}", name) } : (Control)Activator.CreateInstance(type)!;
         // A window that needs a role gets a cover for users without it.
         int rank = Services.StudioHub.RequiredRank((data as StudioTool)?.Id);
         if (rank > 0) view = new Controls.RoleGate(view, rank);

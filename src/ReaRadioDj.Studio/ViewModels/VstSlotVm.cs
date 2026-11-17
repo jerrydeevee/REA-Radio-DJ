@@ -1,3 +1,4 @@
+using ReaRadioDj.Contracts.Localization;
 using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -34,7 +35,7 @@ public sealed partial class VstSlotVm : ObservableObject
     public bool HasPlugin => !string.IsNullOrEmpty(Plugin?.Path);
     public bool HasError => Error.Length > 0;
     public bool HasParams => Params.Count > 0;
-    public string ParamsText => ShowParams ? $"Parameters verbergen ({Params.Count})" : $"Parameters ({Params.Count})";
+    public string ParamsText => ShowParams ? Tr.F("Parameters verbergen ({0})", Params.Count) : $"Parameters ({Params.Count})";
 
     private void Load(VstSlotDto s)
     {
@@ -43,7 +44,7 @@ public sealed partial class VstSlotVm : ObservableObject
             ? Plugins.FirstOrDefault()
             : Plugins.FirstOrDefault(p => string.Equals(p.Path, s.Path, StringComparison.OrdinalIgnoreCase)) ?? AddUnlisted(s);
         On = s.On;
-        Error = s.Error ?? "";
+        Error = Tr.E(s.Error);
         Params.Clear();
         foreach (var p in s.Params ?? []) Params.Add(new VstParamVm(this, p));
         _loading = false;
@@ -83,7 +84,7 @@ public sealed partial class VstSlotVm : ObservableObject
     {
         var r = await StudioHub.Current.Client.SendForAsync<VstSlotDto>(HttpMethod.Put, $"/api/channels/{_channel}/vst/{Slot}",
             new VstSlotRequest(Plugin?.Path ?? "", On));
-        if (r is null) { Error = "Niet gelukt (zie berichten)"; OnPropertyChanged(nameof(HasError)); return; }
+        if (r is null) { Error = Tr.T("Niet gelukt (zie berichten)"); OnPropertyChanged(nameof(HasError)); return; }
         Load(r);
     }
 

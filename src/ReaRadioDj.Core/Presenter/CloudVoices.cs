@@ -50,7 +50,7 @@ public sealed class AzureSpeechEngine(HttpClient http, TtsOptions options) : ISp
     public async Task SynthesizeAsync(string text, string wavPath, VoiceProfile? profile, CancellationToken ct)
     {
         if (!Configured) throw new InvalidOperationException("Azure: geen sleutel of regio ingesteld");
-        string voice = string.IsNullOrWhiteSpace(profile?.SapiVoice) ? "nl-NL-FennaNeural" : profile.SapiVoice.Trim();
+        string voice = string.IsNullOrWhiteSpace(profile?.SapiVoice) ? OnAir.DefaultCloudVoice : profile.SapiVoice.Trim();
         using var request = new HttpRequestMessage(HttpMethod.Post,
             $"https://{options.AzureRegion.Trim()}.tts.speech.microsoft.com/cognitiveservices/v1")
         {

@@ -1,3 +1,4 @@
+using ReaRadioDj.Contracts.Localization;
 using Dock.Avalonia.Controls;
 using Dock.Model.Controls;
 using Dock.Model.Core;
@@ -16,47 +17,49 @@ public sealed class DockFactory : Factory
     /// <summary>Every window the studio has: id, menu name, constructor.</summary>
     public static readonly IReadOnlyList<(string Id, string Name, Func<StudioTool> Create)> Windows =
     [
-        ("decks", "Live-decks (A · B · C)", () => new DeckTool()),
-        ("dj", "DJ-mengtafel", () => new DjTool()),
-        ("log", "Programmalog", () => new LogTool()),
-        ("standby", "Standby-spelers", () => new StandbyTool()),
-        ("pfl", "PFL", () => new PflTool()),
-        ("cart1", "Cartwall 1", () => new CartwallTool { Id = "cart1", Title = "Cartwall 1" }),
-        ("cart2", "Cartwall 2", () => new CartwallTool { Id = "cart2", Title = "Cartwall 2" }),
-        ("sampler", "Sampler (DJ)", () => new CartwallTool { Id = "sampler", Title = "Sampler (DJ)" }),
-        ("automix", "Automix (DJ)", () => new AutomixTool()),
-        ("djmidi", "DJ-controller", () => new DjMidiTool()),
-        ("soloist", "Soloist (ontwikkeltest)", () => new SoloistTool()),
-        ("library", "Bibliotheek", () => new LibraryTool()),
-        ("clipboard", "Klembord", () => new ClipboardTool()),
-        ("aircut", "Uit de uitzending knippen", () => new AirCutTool()),
-        ("cues", "Cue-editor", () => new CueEditorTool()),
-        ("mixer", "Mixer en routing", () => new MixerTool()),
-        ("output", "Uitsturing", () => new OutputTool()),
-        ("planner", "Planner", () => new PlannerTool()),
-        ("asrun", "As-run", () => new AsRunTool()),
-        ("airstats", "Uitzendstatistiek", () => new AirStatsTool()),
-        ("connections", "Verbindingen", () => new ConnectionsTool()),
-        ("wishlist", "Wensenlijst (Spotify)", () => new WishlistTool()),
-        ("clock", "Tijd", () => new ClockTool()),
-        ("presenter", "AI-presentator", () => new PresenterTool()),
-        ("overlays", "Overlays", () => new OverlaysTool()),
-        ("stream", "Stream", () => new StreamTool()),
-        ("messages", "Berichten", () => new MessagesTool()),
-        ("control", "Bediening en sneltoetsen", () => new ControlTool()),
-        ("voice", "Stemmen", () => new VoiceTool()),
-        ("voicetrack", "Voicetracking", () => new VoiceTrackTool()),
-        ("transition", "Overgangen", () => new TransitionTool()),
-        ("news", "Nieuws", () => new NewsTool()),
-        ("ads", "Reclame", () => new AdsTool()),
-        ("import", "Log-import", () => new ImportTool()),
-        ("sources", "Databronnen", () => new SourcesTool()),
-        ("hardware", "Hardware", () => new HardwareTool()),
-        ("buttons", "Eigen knoppen", () => new ButtonsTool()),
-        ("item", "Itemgegevens", () => new ItemTool()),
-        ("explorer", "Verkenner", () => new ExplorerTool()),
-        ("regie", "Regiekamer", () => new ControlRoomTool()),
-        ("settings", "Instellingen", () => new SettingsTool()),
+        ("decks", Tr.T("Live-decks (A · B · C)"), () => new DeckTool()),
+        ("dj", Tr.T("DJ-mengtafel"), () => new DjTool()),
+        ("log", Tr.T("Programmalog"), () => new LogTool()),
+        ("standby", Tr.T("Standby-spelers"), () => new StandbyTool()),
+        ("pfl", Tr.T("PFL"), () => new PflTool()),
+        ("cart1", Tr.T("Cartwall 1"), () => new CartwallTool { Id = "cart1", Title = Tr.T("Cartwall 1") }),
+        ("cart2", Tr.T("Cartwall 2"), () => new CartwallTool { Id = "cart2", Title = Tr.T("Cartwall 2") }),
+        ("sampler", Tr.T("Sampler (DJ)"), () => new CartwallTool { Id = "sampler", Title = Tr.T("Sampler (DJ)") }),
+        ("automix", Tr.T("Automix (DJ)"), () => new AutomixTool()),
+        ("djmidi", Tr.T("DJ-controller"), () => new DjMidiTool()),
+        ("soloist", Tr.T("Soloist (ontwikkeltest)"), () => new SoloistTool()),
+        ("library", Tr.T("Bibliotheek"), () => new LibraryTool()),
+        ("clipboard", Tr.T("Klembord"), () => new ClipboardTool()),
+        ("aircut", Tr.T("Uit de uitzending knippen"), () => new AirCutTool()),
+        ("recordings", Tr.T("Opnames"), () => new RecordingsTool()),
+        ("cues", Tr.T("Cue-editor"), () => new CueEditorTool()),
+        ("mixer", Tr.T("Mixer en routing"), () => new MixerTool()),
+        ("output", Tr.T("Uitsturing"), () => new OutputTool()),
+        ("planner", Tr.T("Planner"), () => new PlannerTool()),
+        ("asrun", Tr.T("As-run"), () => new AsRunTool()),
+        ("airstats", Tr.T("Uitzendstatistiek"), () => new AirStatsTool()),
+        ("connections", Tr.T("Verbindingen"), () => new ConnectionsTool()),
+        ("wishlist", Tr.T("Wensenlijst (Spotify)"), () => new WishlistTool()),
+        ("clock", Tr.T("Tijd"), () => new ClockTool()),
+        ("presenter", Tr.T("AI-presentator"), () => new PresenterTool()),
+        ("overlays", Tr.T("Overlays"), () => new OverlaysTool()),
+        ("stream", Tr.T("Stream"), () => new StreamTool()),
+        ("messages", Tr.T("Berichten"), () => new MessagesTool()),
+        ("control", Tr.T("Bediening en sneltoetsen"), () => new ControlTool()),
+        ("voice", Tr.T("Stemmen"), () => new VoiceTool()),
+        ("voicetrack", Tr.T("Voicetracking"), () => new VoiceTrackTool()),
+        ("transition", Tr.T("Overgangen"), () => new TransitionTool()),
+        ("news", Tr.T("Nieuws"), () => new NewsTool()),
+        ("ads", Tr.T("Reclame"), () => new AdsTool()),
+        ("placeholders", Tr.T("Plaatshouders"), () => new PlaceholdersTool()),
+        ("import", Tr.T("Log-import"), () => new ImportTool()),
+        ("sources", Tr.T("Databronnen"), () => new SourcesTool()),
+        ("hardware", Tr.T("Hardware"), () => new HardwareTool()),
+        ("buttons", Tr.T("Eigen knoppen"), () => new ButtonsTool()),
+        ("item", Tr.T("Itemgegevens"), () => new ItemTool()),
+        ("explorer", Tr.T("Verkenner"), () => new ExplorerTool()),
+        ("regie", Tr.T("Regiekamer"), () => new ControlRoomTool()),
+        ("settings", Tr.T("Instellingen"), () => new SettingsTool()),
     ];
 
     /// <summary>
@@ -64,14 +67,14 @@ public sealed class DockFactory : Factory
     /// </summary>
     public static readonly IReadOnlyList<(string Name, string[] Ids)> Groups =
     [
-        ("Uitzending", ["regie", "decks", "log", "standby", "pfl", "cart1", "cart2", "overlays", "clock", "item"]),
-        ("Bibliotheek en productie", ["library", "clipboard", "explorer", "cues", "transition", "voicetrack", "aircut"]),
-        ("Planning", ["planner", "ads", "news", "import", "sources", "wishlist"]),
-        ("AI-presentator en stemmen", ["presenter", "voice"]),
-        ("DJ", ["dj", "sampler", "automix", "djmidi", "soloist"]),
-        ("Geluid, verbindingen en hardware", ["mixer", "output", "connections", "stream", "hardware", "buttons", "control"]),
-        ("Overzichten", ["asrun", "airstats", "messages"]),
-        ("Beheer", ["settings"]),
+        (Tr.T("Uitzending"), ["regie", "decks", "log", "standby", "pfl", "cart1", "cart2", "overlays", "clock", "item"]),
+        (Tr.T("Bibliotheek en productie"), ["library", "clipboard", "explorer", "cues", "transition", "voicetrack", "aircut", "recordings"]),
+        (Tr.T("Planning"), ["planner", "ads", "placeholders", "news", "import", "sources", "wishlist"]),
+        (Tr.T("AI-presentator en stemmen"), ["presenter", "voice"]),
+        (Tr.T("DJ"), ["dj", "sampler", "automix", "djmidi", "soloist"]),
+        (Tr.T("Geluid, verbindingen en hardware"), ["mixer", "output", "connections", "stream", "hardware", "buttons", "control"]),
+        (Tr.T("Overzichten"), ["asrun", "airstats", "messages"]),
+        (Tr.T("Beheer"), ["settings"]),
     ];
 
     /// <summary>The menu groups with their windows; every window appears exactly once.</summary>
@@ -86,7 +89,7 @@ public sealed class DockFactory : Factory
             if (items.Count > 0) groups.Add((name, items));
         }
         var rest = Windows.Where(w => used.Add(w.Id)).Select(w => (w.Id, w.Name)).ToList();
-        if (rest.Count > 0) groups.Add(("Overig", rest));
+        if (rest.Count > 0) groups.Add((Tr.T("Overig"), rest));
         return groups;
     }
 

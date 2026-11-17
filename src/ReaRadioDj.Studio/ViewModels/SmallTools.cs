@@ -1,3 +1,4 @@
+using ReaRadioDj.Contracts.Localization;
 using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -12,18 +13,18 @@ namespace ReaRadioDj.Studio.ViewModels;
 /// </summary>
 public sealed partial class ClockTool : StudioTool
 {
-    public static readonly string[] StyleNames = ["Studioklok", "Analoog", "Digitaal", "Analoog + digitaal", "LED-segmenten", "Uurklok (tot het hele uur)"];
+    public static readonly string[] StyleNames = [Tr.T("Studioklok"), Tr.T("Analoog"), Tr.T("Digitaal"), Tr.T("Analoog + digitaal"), Tr.T("LED-segmenten"), Tr.T("Uurklok (tot het hele uur)")];
     private static readonly string[] StyleKeys = ["studio", "analog", "digital", "combi", "led", "hour"];
-    public static readonly string[] SizeNames = ["Klein", "Normaal", "Groot", "Extra groot"];
+    public static readonly string[] SizeNames = [Tr.T("Klein"), Tr.T("Normaal"), Tr.T("Groot"), Tr.T("Extra groot")];
     private static readonly double[] CounterFonts = [22, 34, 52, 76];
-    public static readonly string[] FlashNames = ["Rood", "Oranje", "Wit", "Blauw"];
+    public static readonly string[] FlashNames = [Tr.T("Rood"), Tr.T("Oranje"), Tr.T("Wit"), Tr.T("Blauw")];
     private static readonly string[] FlashColors = ["#E5484D", "#F0B429", "#FFFFFF", "#3FA7FF"];
 
     private readonly Avalonia.Threading.DispatcherTimer _blink;
     private double _secondsLeft = 999;
     private bool _loaded;
 
-    public ClockTool() : base("clock", "Tijd")
+    public ClockTool() : base("clock", Tr.T("Tijd"))
     {
         _blink = new Avalonia.Threading.DispatcherTimer(TimeSpan.FromMilliseconds(250), Avalonia.Threading.DispatcherPriority.Render, (_, _) => Blink());
     }
@@ -113,8 +114,8 @@ public sealed partial class ClockTool : StudioTool
     protected override void OnState(StateDto s)
     {
         Now = s.Time;
-        Date = s.Time.ToString("dddd d MMMM yyyy", new System.Globalization.CultureInfo("nl-NL"));
-        ClockName = s.Clock is null ? "geen klok in het weekgrid" : $"klok: {s.Clock}";
+        Date = s.Time.ToString("dddd d MMMM yyyy", Contracts.Localization.Tr.Culture);
+        ClockName = s.Clock is null ? Tr.T("geen klok in het weekgrid") : Tr.F("klok: {0}", s.Clock);
         ToNext = s.Engine.Current is null ? "—" : StudioHub.TimeTenths(s.Engine.SecondsToNext);
 
         if (s.Engine.Current is { } c)
@@ -133,16 +134,16 @@ public sealed partial class ClockTool : StudioTool
         else
         {
             _secondsLeft = 999;
-            NowLabel = "niets ON AIR"; ItemRemaining = "—"; ItemElapsed = ""; ItemLeft = -1; ItemSecondsLeft = 999;
+            NowLabel = Tr.T("niets ON AIR"); ItemRemaining = "—"; ItemElapsed = ""; ItemLeft = -1; ItemSecondsLeft = 999;
             EndState = "normal"; HasIntro = false; IntroText = "";
         }
 
         if (s.Events.FirstOrDefault() is { } e)
         {
-            NextEvent = $"{e.Name} om {e.At:HH:mm:ss} ({e.Timing switch { "hard" => "hard", "soft" => "zacht", _ => "overlay" }})";
+            NextEvent = Tr.F("{0} om {1:HH:mm:ss} ({2})", e.Name, e.At, e.Timing switch { "hard" => Tr.T("hard"), "soft" => Tr.T("zacht"), _ => Tr.T("overlay") });
             ToEvent = StudioHub.Time((e.At - s.Time).TotalSeconds);
         }
-        else { NextEvent = "geen vaste tijden"; ToEvent = "—"; }
+        else { NextEvent = Tr.T("geen vaste tijden"); ToEvent = "—"; }
         var list = s.Events.Select(x => $"{x.At:HH:mm:ss}  {x.Name}{(x.Prepared ? "  ✓ klaar" : "")}").ToList();
         if (!list.SequenceEqual(Events)) { Events.Clear(); foreach (var l in list) Events.Add(l); }
     }
@@ -169,7 +170,7 @@ public sealed partial class OverlaysTool : StudioTool
 
 public sealed partial class StreamTool : StudioTool
 {
-    public StreamTool() : base("stream", "Stream") { }
+    public StreamTool() : base("stream", Tr.T("Stream")) { }
 
     [ObservableProperty] private string _state = "";
     [ObservableProperty] private bool _connected;
@@ -177,8 +178,8 @@ public sealed partial class StreamTool : StudioTool
     protected override void OnState(StateDto s)
     {
         Connected = s.Stream.Connected;
-        State = s.Stream.Connected ? $"live naar {s.Stream.Server} · {s.Stream.BytesSent / 1024.0 / 1024.0:0.0} MB verzonden"
-            : s.Stream.Error is { } e ? $"fout: {e}" : $"uit ({s.Stream.Server})";
+        State = s.Stream.Connected ? Tr.F("live naar {0} · {1:0.0} MB verzonden", s.Stream.Server, s.Stream.BytesSent / 1024.0 / 1024.0)
+            : s.Stream.Error is { } e ? Tr.F("fout: {0}", e) : Tr.F("uit ({0})", s.Stream.Server);
     }
 
     [RelayCommand] private Task Start() => Hub.Client.PostAsync("/api/stream/start");
@@ -194,7 +195,7 @@ public sealed partial class StreamTool : StudioTool
 
     public List<KindChoice> TitleKinds { get; } =
     [
-        new("song", "muziek"), new("jingle", "jingles"), new("voice", "gesproken"), new("ai-break", "AI-presentator"), new("ad", "reclame"),
+        new("song", "muziek"), new("jingle", "jingles"), new("voice", "gesproken"), new("ai-break", Tr.T("AI-presentator")), new("ad", "reclame"),
     ];
     [ObservableProperty] private string _titleFormat = "";
     [ObservableProperty] private string _titleOther = "";
@@ -232,7 +233,7 @@ public sealed partial class StreamTool : StudioTool
             Targets.Add(new StreamTargetRow
             {
                 Name = t.Name, Server = t.Server, Password = t.Password, Bitrate = t.Bitrate, Enabled = t.Enabled,
-                StateText = st is null || !t.Enabled ? "uit" : st.Connected ? $"verbonden · {st.BytesSent / 1024 / 1024} MB" : st.Error ?? "niet verbonden",
+                StateText = st is null || !t.Enabled ? "uit" : st.Connected ? Tr.F("verbonden · {0} MB", st.BytesSent / 1024 / 1024) : st.Error is { } error ? Tr.E(error) : Tr.T("niet verbonden"),
                 Connected = st?.Connected == true,
             });
         }
@@ -246,8 +247,8 @@ public sealed partial class StreamTool : StudioTool
     {
         var body = Targets.Select(t => new TargetWire(t.Name, t.Server, t.Password, t.Bitrate, t.Enabled, "", "")).ToList();
         var v = await Hub.Client.SendForAsync<TargetView>(HttpMethod.Put, "/api/stream/targets", body);
-        if (v is null) { TargetStatus = "Opslaan mislukt."; return; }
-        TargetStatus = $"{v.Targets.Count} extra servers bewaard; aangezette servers starten als de stream loopt.";
+        if (v is null) { TargetStatus = Tr.T("Opslaan mislukt."); return; }
+        TargetStatus = Tr.F("{0} extra servers bewaard; aangezette servers starten als de stream loopt.", v.Targets.Count);
         await Task.Delay(1500);
         await LoadTargetsAsync();
     }
@@ -267,7 +268,7 @@ public sealed partial class StreamTool : StudioTool
         LogFormat = d.LogFormat.Replace(Tab, TabText);   // a tab shows as \t, so it can be typed
         LogKeepDays = d.LogKeepDays;
         foreach (var k in TitleKinds) k.IsOn = d.TitleKinds.Contains(k.Key);
-        TitleLogText = (d.LastTitle is { } t ? $"Nu: {t}" : "Nog geen titel verstuurd.") + (d.TodayFile is { } f ? $"  ·  log van vandaag: {f}" : "");
+        TitleLogText = (d.LastTitle is { } t ? Tr.F("Nu: {0}", t) : Tr.T("Nog geen titel verstuurd.")) + (d.TodayFile is { } f ? Tr.F("  ·  log van vandaag: {0}", f) : "");
     }
 
     private TitleLogDto Current() => new(TitleFormat, TitleKinds.Where(k => k.IsOn).Select(k => k.Key).ToList(), TitleOther, TitleFile, TitleUrl,
@@ -279,9 +280,9 @@ public sealed partial class StreamTool : StudioTool
     private async Task SaveTitleLog()
     {
         var (d, error) = await Hub.Client.SendWithErrorAsync<TitleLogDto>(HttpMethod.Put, "/api/title-log", Current());
-        if (d is null) { TitleLogText = error ?? "Niet gelukt."; return; }
+        if (d is null) { TitleLogText = error ?? Tr.T("Niet gelukt."); return; }
         Show(d);
-        TitleLogText = "Bewaard. " + TitleLogText;
+        TitleLogText = Tr.T("Bewaard. ") + TitleLogText;
     }
 
     [RelayCommand]
@@ -289,9 +290,9 @@ public sealed partial class StreamTool : StudioTool
     {
         await SaveTitleLog();
         var r = await Hub.Client.SendForAsync<TitleLogTestDto>(HttpMethod.Post, "/api/title-log/test", null);
-        if (r is null) { TitleLogText = "Test niet gelukt."; return; }
+        if (r is null) { TitleLogText = Tr.T("Test niet gelukt."); return; }
         TitleLogText = $"Titel: \"{r.Title}\"  ·  logregel: \"{r.LogLine.Replace(Tab, "  ")}\""
-            + (r.UrlOk is bool ok ? ok ? "  ·  webadres antwoordde" : "  ·  webadres gaf een fout" : "");
+            + (r.UrlOk is bool ok ? ok ? Tr.T("  ·  webadres antwoordde") : Tr.T("  ·  webadres gaf een fout") : "");
     }
 }
 
@@ -313,7 +314,7 @@ public sealed partial class MessagesTool : StudioTool
     {
         var list = await Hub.Client.GetAsync<List<MessageDto>>($"/api/messages?since={_last}");
         if (list is null) return;
-        foreach (var m in list) { Messages.Insert(0, m); _last = Math.Max(_last, m.Id); }
+        foreach (var m in list) { Messages.Insert(0, m with { Text = Tr.E(m.Text) }); _last = Math.Max(_last, m.Id); }
         while (Messages.Count > 300) Messages.RemoveAt(Messages.Count - 1);
     }
 
@@ -344,7 +345,7 @@ public sealed partial class AsRunTool : StudioTool
         var list = Presenter is null or AllPresenters ? _dayEntries : _dayEntries.Where(e => e.Presenter == Presenter).ToList();
         Entries.Clear();
         foreach (var e in list.AsEnumerable().Reverse()) Entries.Add(e);
-        Summary = $"{list.Count} regels · {list.Count(e => e.Type == "song")} nummers · {list.Count(e => e.Ai)} AI-breaks";
+        Summary = Tr.F("{0} regels · {1} nummers · {2} AI-breaks", list.Count, list.Count(e => e.Type == "song"), list.Count(e => e.Ai));
     }
 
     private string DayText => (Day ?? DateTime.Today).ToString("yyyy-MM-dd");
@@ -392,9 +393,9 @@ public sealed partial class AsRunTool : StudioTool
         var r = await Hub.Client.GetAsync<MusicReportSummaryDto>($"/api/reports/music?from={FromText}&to={ToText}");
         if (r is null) return;
         var t = TimeSpan.FromSeconds(r.Seconds);
-        ReportSummary = $"{r.Tracks} nummers · {(int)t.TotalHours}:{t.Minutes:00} uur muziek"
-            + (r.WithoutIsrc > 0 ? $" · {r.WithoutIsrc} zonder ISRC" : "")
-            + (r.WithoutComposer > 0 ? $" · {r.WithoutComposer} zonder componist" : "");
+        ReportSummary = Tr.F("{0} nummers · {1}:{2:00} uur muziek", r.Tracks, (int)t.TotalHours, t.Minutes)
+            + (r.WithoutIsrc > 0 ? Tr.F(" · {0} zonder ISRC", r.WithoutIsrc) : "")
+            + (r.WithoutComposer > 0 ? Tr.F(" · {0} zonder componist", r.WithoutComposer) : "");
     }
 }
 

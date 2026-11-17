@@ -1,3 +1,4 @@
+using ReaRadioDj.Contracts.Localization;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
@@ -95,7 +96,7 @@ public sealed class TransitionCanvas : Control
         ctx.FillRectangle(Back, new Rect(Bounds.Size));
         if (State is not { } s)
         {
-            Label(ctx, "Kies een overgang", 8, 8, Text);
+            Label(ctx, Tr.T("Kies een overgang"), 8, 8, Text);
             return;
         }
         // seconds grid
@@ -126,7 +127,7 @@ public sealed class TransitionCanvas : Control
             ctx.FillRectangle(InsertFill, r, 3);
             Label(ctx, s.InsertLabel, r.X + 4, r.Y + 2, Brushes.Black);
         }
-        else Label(ctx, "geen insert", 6, insLane.Top + insLane.Height / 2 - 7, Dim);
+        else Label(ctx, Tr.T("geen insert"), 6, insLane.Top + insLane.Height / 2 - 7, Dim);
 
         double sx = X(s.StartAt);
         ctx.DrawLine(StartPen, new Point(sx, 14), new Point(sx, Bounds.Height));

@@ -37,8 +37,8 @@
       </Border>
       <Panel Grid.Row="1" Margin="0,3">
         <TextBlock Classes="muted hide-narrow" TextTrimming="CharacterEllipsis"
-                   Text="{Binding CursorText, StringFormat='Cursor {0} · sleep de markers · scrollwiel = zoom, Shift+scroll = schuiven, dubbelklik = volledig'}" />
-        <TextBlock Classes="muted narrow-only" Text="{Binding CursorText, StringFormat='Cursor {0}'}"
+                   Text="{Binding CursorText, Converter={StaticResource Tr}, ConverterParameter='Cursor {0} · sleep de markers · scrollwiel = zoom, Shift+scroll = schuiven, dubbelklik = volledig'}" />
+        <TextBlock Classes="muted narrow-only" Text="{Binding CursorText, Converter={StaticResource Tr}, ConverterParameter='Cursor {0}'}"
                    ToolTip.Tip="Sleep de markers · scrollwiel = zoom, Shift+scroll = schuiven, dubbelklik = volledig" />
       </Panel>
       <ScrollViewer x:Name="RowsScroll" Grid.Row="2" MaxHeight="420">

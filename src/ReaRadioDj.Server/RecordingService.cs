@@ -57,13 +57,20 @@ public sealed class RecordingService(AirRecorder recorder, MediaLibrary library,
     private void MicToLibrary(string file) => AddToLibrary(file, "Microfoonopname");
 
     /// <summary>Makes the library folder for recordings and adds it to the library once; null or the reason it failed.</summary>
-    private string? EnsureLibraryFolder()
+    public string? EnsureLibraryFolder()
     {
-        Directory.CreateDirectory(LibraryFolder);
-        if (library.Folders().Any(f => string.Equals(f.Path.TrimEnd('\\'), LibraryFolder.TrimEnd('\\'), StringComparison.OrdinalIgnoreCase))) return null;
-        var (_, error) = library.AddFolder(LibraryFolder, MediaKind.Jingle, "Opnamen", watch: true, writeTags: false);
-        return error is null ? null : $"Opnamenmap niet in de bibliotheek: {error}";
+        // Two recordings that end together must not both add the folder.
+        lock (_folderGate)
+        {
+            Directory.CreateDirectory(LibraryFolder);
+            bool Known() => library.Folders().Any(f => string.Equals(f.Path.TrimEnd('\\'), LibraryFolder.TrimEnd('\\'), StringComparison.OrdinalIgnoreCase));
+            if (Known()) return null;
+            var (_, error) = library.AddFolder(LibraryFolder, MediaKind.Jingle, "Opnamen", watch: true, writeTags: false);
+            return error is null || Known() ? null : $"Opnamenmap niet in de bibliotheek: {error}";
+        }
     }
+
+    private readonly object _folderGate = new();
 
     /// <summary>Moves a finished recording into the library folder (jingles, category Opnamen) and scans it in.</summary>
     public void AddToLibrary(string file, string what)

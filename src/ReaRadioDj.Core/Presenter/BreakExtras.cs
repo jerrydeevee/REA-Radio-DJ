@@ -135,33 +135,34 @@ public sealed class BreakExtras(HttpClient http, PresenterOptions options, NoteS
     {
         var (temp, _, sky, bft, max, rain) = ParseWeather(root);
         string where = string.IsNullOrWhiteSpace(place) ? "" : $" in {place}";
+        string spokenWhere = string.IsNullOrWhiteSpace(place) ? "" : OnAir.Say(" in {0}", place);
         string fact = $"Weer{where} nu: {temp} graden, {sky}, wind kracht {bft}; vandaag maximaal {max} graden" +
             (rain >= 0 ? $", kans op regen {rain} procent." : ".");
-        string spoken = $"Het weer{where}: {sky} en {Degrees(temp)}" + (max != temp ? $", vandaag tot {Degrees(max)}." : ".");
+        string spoken = OnAir.Say("Het weer{0}: {1} en {2}", spokenWhere, OnAir.Say(sky), OnAir.Degrees(temp))
+            + (max != temp ? OnAir.Say(", vandaag tot {0}.", OnAir.Degrees(max)) : ".");
         return new BreakExtra("weather", fact, spoken);
     }
 
-    private static string Degrees(int t) => t switch { 1 => "1 graad", -1 => "min 1 graad", < 0 => $"min {-t} graden", _ => $"{t} graden" };
 
     /// <summary>WMO weather code in plain Dutch.</summary>
     internal static string WeatherText(int code) => code switch
     {
-        0 => "zonnig",
-        1 => "overwegend zonnig",
-        2 => "half bewolkt",
-        3 => "bewolkt",
-        45 or 48 => "mistig",
-        51 or 53 or 55 => "motregen",
-        56 or 57 => "ijzel",
-        61 or 63 => "regen",
-        65 => "flinke regen",
-        66 or 67 => "ijzel",
-        71 or 73 or 75 or 77 => "sneeuw",
-        80 or 81 => "buien",
-        82 => "zware buien",
-        85 or 86 => "sneeuwbuien",
-        95 or 96 or 99 => "onweer",
-        _ => "wisselvallig",
+        0 => OnAir.Line("zonnig"),
+        1 => OnAir.Line("overwegend zonnig"),
+        2 => OnAir.Line("half bewolkt"),
+        3 => OnAir.Line("bewolkt"),
+        45 or 48 => OnAir.Line("mistig"),
+        51 or 53 or 55 => OnAir.Line("motregen"),
+        56 or 57 => OnAir.Line("ijzel"),
+        61 or 63 => OnAir.Line("regen"),
+        65 => OnAir.Line("flinke regen"),
+        66 or 67 => OnAir.Line("ijzel"),
+        71 or 73 or 75 or 77 => OnAir.Line("sneeuw"),
+        80 or 81 => OnAir.Line("buien"),
+        82 => OnAir.Line("zware buien"),
+        85 or 86 => OnAir.Line("sneeuwbuien"),
+        95 or 96 or 99 => OnAir.Line("onweer"),
+        _ => OnAir.Line("wisselvallig"),
     };
 
     internal static int Beaufort(double ms)

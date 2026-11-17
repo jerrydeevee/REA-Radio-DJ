@@ -1,3 +1,4 @@
+using ReaRadioDj.Contracts.Localization;
 using System.Collections.ObjectModel;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -12,7 +13,7 @@ namespace ReaRadioDj.Studio.ViewModels;
 /// </summary>
 public sealed partial class VoiceTool : StudioTool
 {
-    public static readonly string[] EngineNames = ["Higgs TTS 3 (GPU)", "Windows-spraak", "ElevenLabs (online)", "Azure (online)"];
+    public static readonly string[] EngineNames = ["Higgs TTS 3 (GPU)", Tr.T("Windows-spraak"), Tr.T("ElevenLabs (online)"), "Azure (online)"];
     private static readonly string[] EngineKeys = ["higgs", "sapi", "elevenlabs", "azure"];
     /// <summary>Quick tags for Higgs; the text field accepts any tag the server understands.</summary>
     public static readonly string[] QuickTags =
@@ -29,7 +30,7 @@ public sealed partial class VoiceTool : StudioTool
     {
         _poll = new DispatcherTimer(TimeSpan.FromSeconds(3), DispatcherPriority.Background, async (_, _) => await RefreshStatusAsync());
         _recClock = new DispatcherTimer(TimeSpan.FromMilliseconds(200), DispatcherPriority.Background, (_, _) =>
-            OwnStatus = $"● Opname loopt · {(DateTime.Now - _recStarted).TotalSeconds:0.0} s (lees de tekst rustig voor en druk dan Stop)");
+            OwnStatus = Tr.F("● Opname loopt · {0:0.0} s (lees de tekst rustig voor en druk dan Stop)", (DateTime.Now - _recStarted).TotalSeconds));
         _recClock.Stop();   // this constructor starts the timer; it only runs while recording
     }
 
@@ -52,7 +53,7 @@ public sealed partial class VoiceTool : StudioTool
     {
         var (_, error) = await Hub.Client.SendWithErrorAsync<VoiceRolesDto>(HttpMethod.Put, "/api/voice/roles",
             new VoiceRolesDto(null, NewsVoice?.Id, WeatherVoice?.Id));
-        Hub.Status = error is not null ? $"stemrol niet opgeslagen: {error}"
+        Hub.Status = error is not null ? Tr.F("stemrol niet opgeslagen: {0}", error)
             : $"nieuws: {(NewsVoice?.Id is null ? "presentatorstem" : NewsVoice.Name)} · weer: {(WeatherVoice?.Id is null ? "presentatorstem" : WeatherVoice.Name)}";
         if (error is not null) await ReloadAsync();
     }
@@ -71,7 +72,7 @@ public sealed partial class VoiceTool : StudioTool
         void Fill(ObservableCollection<Choice> target, string role)
         {
             target.Clear();
-            target.Add(new Choice(null, "(dezelfde stem als de presentator)"));
+            target.Add(new Choice(null, Tr.T("(dezelfde stem als de presentator)")));
             foreach (var p in list.Where(p => Allows(p, role))) target.Add(new Choice(p.Id, p.Name ?? ""));
         }
     }
@@ -84,12 +85,12 @@ public sealed partial class VoiceTool : StudioTool
     public ObservableCollection<string> ServerLog { get; } = [];
 
     // status
-    [ObservableProperty] private string _gpuName = "geen NVIDIA-GPU gevonden";
+    [ObservableProperty] private string _gpuName = Tr.T("geen NVIDIA-GPU gevonden");
     [ObservableProperty] private string _gpuDetail = "";
     [ObservableProperty] private double _gpuMemory;
     [ObservableProperty] private double _gpuLoad;
     [ObservableProperty] private bool _serverOnline;
-    [ObservableProperty] private string _serverText = "Higgs-server: controleren…";
+    [ObservableProperty] private string _serverText = Tr.T("Higgs-server: controleren…");
     [ObservableProperty] private string _serverDetail = "";
     [ObservableProperty] private bool _serverManaged;
     [ObservableProperty] private bool _serverRunning;
@@ -121,7 +122,7 @@ public sealed partial class VoiceTool : StudioTool
     [ObservableProperty] private string _clipResult = "";
     public bool IsOwned => Owner.Length > 0;
     public string OwnerNote => IsOwned
-        ? $"Dit is de eigen stem van {Owner}. Alleen {Owner} kan de opname en de toestemming wijzigen of intrekken (onder 'Mijn eigen stem')."
+        ? Tr.F("Dit is de eigen stem van {0}. Alleen {1} kan de opname en de toestemming wijzigen of intrekken (onder 'Mijn eigen stem').", Owner, Owner)
         : "";
     partial void OnOwnerChanged(string value) { OnPropertyChanged(nameof(IsOwned)); OnPropertyChanged(nameof(OwnerNote)); }
 
@@ -149,7 +150,7 @@ public sealed partial class VoiceTool : StudioTool
     [ObservableProperty] private string _checkResult = "";
 
     // test console
-    [ObservableProperty] private string _testText = "Goedemiddag! Je luistert naar REA-Radio-DJ. Straks hoor je meer muziek, maar eerst het weer: zonnig en zeventien graden.";
+    [ObservableProperty] private string _testText = Tr.T("Goedemiddag! Je luistert naar REA-Radio-DJ. Straks hoor je meer muziek, maar eerst het weer: zonnig en zeventien graden.");
     [ObservableProperty] private bool _busy;
     [ObservableProperty] private string _lastResult = "";
 
@@ -157,11 +158,11 @@ public sealed partial class VoiceTool : StudioTool
     public bool IsSapi => Engine == 1;
     public bool IsCloud => Engine >= 2;
     public string CloudVoiceHint => Engine == 2
-        ? "stem-ID uit je ElevenLabs-account (Voices → ID)"
-        : "naam van de Azure-stem, bijv. nl-NL-FennaNeural, nl-NL-ColetteNeural of nl-NL-MaartenNeural";
+        ? Tr.T("stem-ID uit je ElevenLabs-account (Voices → ID)")
+        : Tr.T("naam van de Azure-stem, bijv. nl-NL-FennaNeural, nl-NL-ColetteNeural of nl-NL-MaartenNeural");
     public bool IsClone => IsHiggs && !string.IsNullOrWhiteSpace(ReferenceAudio);
     public string TemperatureText => $"{Temperature:0.00}";
-    public string ServerButtonText => ServerRunning ? "Server stoppen" : "Server starten";
+    public string ServerButtonText => ServerRunning ? Tr.T("Server stoppen") : Tr.T("Server starten");
 
     partial void OnEngineChanged(int value)
     {
@@ -195,7 +196,7 @@ public sealed partial class VoiceTool : StudioTool
     private void FillFallbacks(long selfId)
     {
         FallbackChoices.Clear();
-        FallbackChoices.Add(new Choice(null, "(geen: alleen Windows-spraak als laatste redmiddel)"));
+        FallbackChoices.Add(new Choice(null, Tr.T("(geen: alleen Windows-spraak als laatste redmiddel)")));
         foreach (var p in Profiles.Where(p => p.Id != selfId)) FallbackChoices.Add(new Choice(p.Id, p.Name ?? ""));
     }
 
@@ -222,17 +223,17 @@ public sealed partial class VoiceTool : StudioTool
         _settingPresenter = true;
         PresenterVoice = PresenterProfiles.FirstOrDefault(p => p.IsDefault) ?? PresenterProfiles.FirstOrDefault();
         _settingPresenter = false;
-        PresenterVoiceNote = PresenterVoice is { } d ? Describe(d) : "Nog geen stem: voeg de standaardstemmen toe.";
+        PresenterVoiceNote = PresenterVoice is { } d ? Describe(d) : Tr.T("Nog geen stem: voeg de standaardstemmen toe.");
     }
 
     private string Describe(VoiceProfileDto p)
     {
         var engine = p.Engine switch { "higgs" => "Higgs (GPU)", "sapi" => "Windows-spraak", "elevenlabs" => "ElevenLabs", "azure" => "Azure", _ => p.Engine };
         var backup = Profiles.FirstOrDefault(x => x.Id == p.FallbackId)?.Name;
-        var text = $"De automatisering spreekt AI-breaks in met {p.Name} ({engine})";
-        if (backup is not null) text += $"; lukt dat niet, dan met {backup}";
-        if (p.Engine == "higgs" && !ServerOnline) text += ". Let op: de Higgs-server is nu offline, dan wordt de reserve gebruikt";
-        return text + ". Een persona (venster AI-presentator) en elk nieuws- of weerblok kan ook een eigen stem kiezen.";
+        var text = Tr.F("De automatisering spreekt AI-breaks in met {0} ({1})", p.Name, engine);
+        if (backup is not null) text += Tr.F("; lukt dat niet, dan met {0}", backup);
+        if (p.Engine == "higgs" && !ServerOnline) text += Tr.T(". Let op: de Higgs-server is nu offline, dan wordt de reserve gebruikt");
+        return text + Tr.T(". Een persona (venster AI-presentator) en elk nieuws- of weerblok kan ook een eigen stem kiezen.");
     }
 
     partial void OnPresenterVoiceChanged(VoiceProfileDto? value)
@@ -243,7 +244,7 @@ public sealed partial class VoiceTool : StudioTool
 
     private async Task SetPresenterAsync(VoiceProfileDto p)
     {
-        if (await Hub.Client.PostAsync($"/api/voice/profiles/{p.Id}/default")) Hub.Status = $"'{p.Name}' is nu de presentatorstem";
+        if (await Hub.Client.PostAsync($"/api/voice/profiles/{p.Id}/default")) Hub.Status = Tr.F("'{0}' is nu de presentatorstem", p.Name);
         await ReloadAsync();
     }
 
@@ -251,7 +252,7 @@ public sealed partial class VoiceTool : StudioTool
     private async Task AddPresets()
     {
         var r = await Hub.Client.SendForAsync<PresetsAddedDto>(HttpMethod.Post, "/api/voice/profiles/presets", null);
-        Hub.Status = r is null ? "standaardstemmen toevoegen mislukt" : r.Added == 0 ? "de standaardstemmen staan er al" : $"{r.Added} standaardstemmen toegevoegd";
+        Hub.Status = r is null ? Tr.T("standaardstemmen toevoegen mislukt") : r.Added == 0 ? Tr.T("de standaardstemmen staan er al") : Tr.F("{0} standaardstemmen toegevoegd", r.Added);
         await ReloadAsync();
     }
 
@@ -264,16 +265,16 @@ public sealed partial class VoiceTool : StudioTool
             GpuName = g.Name;
             GpuMemory = g.MemoryTotalMb > 0 ? g.MemoryUsedMb / g.MemoryTotalMb * 100 : 0;
             GpuLoad = g.UtilizationPercent;
-            GpuDetail = $"{g.MemoryUsedMb / 1024:0.0} / {g.MemoryTotalMb / 1024:0.0} GB · {g.UtilizationPercent:0}% belast · {g.TemperatureC:0} °C · driver {g.Driver}";
+            GpuDetail = Tr.F("{0:0.0} / {1:0.0} GB · {2:0}% belast · {3:0} °C · driver {4}", g.MemoryUsedMb / 1024, g.MemoryTotalMb / 1024, g.UtilizationPercent, g.TemperatureC, g.Driver);
         }
         ServerOnline = s.ServerOnline;
-        ServerText = s.ServerOnline ? $"Higgs-server online · {s.LatencyMs:0} ms" : "Higgs-server offline";
+        ServerText = s.ServerOnline ? Tr.F("Higgs-server online · {0:0} ms", s.LatencyMs) : Tr.T("Higgs-server offline");
         ServerDetail = s.ServerOnline
             ? $"{s.BaseUrl} · {(s.Models.Count > 0 ? string.Join(", ", s.Models) : s.Model)}"
             : $"{s.BaseUrl} · {s.ServerError}{(s.FallbackToSapi ? " · reserve: Windows-spraak" : "")}";
         ServerManaged = s.ServerManaged;
         ServerRunning = s.ServerRunning;
-        ActiveVoice = s.DefaultVoice is null ? "geen stemprofiel" : $"Presentatorstem: {s.DefaultVoice} ({(s.Engine == "higgs" ? "Higgs" : "Windows")})";
+        ActiveVoice = s.DefaultVoice is null ? Tr.T("geen stemprofiel") : $"Presentatorstem: {s.DefaultVoice} ({(s.Engine == "higgs" ? "Higgs" : "Windows")})";
         if (SapiVoices.Count == 0) foreach (var v in s.SapiVoices) SapiVoices.Add(v);
         if (ShowLog)
         {
@@ -293,7 +294,7 @@ public sealed partial class VoiceTool : StudioTool
     {
         Selected = null;
         Owner = ""; SetUses(null);
-        Name = "Online stem (Azure)"; Engine = 3; CloudVoice = "nl-NL-FennaNeural"; ProfileTags = ""; ReferenceAudio = ""; ReferenceText = "";
+        Name = Tr.T("Online stem (Azure)"); Engine = 3; CloudVoice = "nl-NL-FennaNeural"; ProfileTags = ""; ReferenceAudio = ""; ReferenceText = "";
         Consent = false; ConsentNote = "";
         FillFallbacks(0);
         Fallback = FallbackChoices.FirstOrDefault();
@@ -325,7 +326,7 @@ public sealed partial class VoiceTool : StudioTool
         {
             ElevenLabsKey = saved.ElevenLabsKey;
             AzureKey = saved.AzureKey;
-            Hub.Status = "online stemmen en controle opgeslagen";
+            Hub.Status = Tr.T("online stemmen en controle opgeslagen");
         }
     }
 
@@ -335,13 +336,13 @@ public sealed partial class VoiceTool : StudioTool
     {
         if (Busy) return;
         Busy = true;
-        CheckResult = "inspreken en terugluisteren…";
+        CheckResult = Tr.T("inspreken en terugluisteren…");
         try
         {
             await SaveServices();
             var r = await Hub.Client.SendForAsync<CheckTestDto>(HttpMethod.Post, "/api/voice/check-test", new CheckTestRequest(TestText));
-            CheckResult = r is null ? "geen antwoord"
-                : r.Ok ? $"score {r.Score:0.00} ({r.Voice}) · gehoord: \"{r.Heard}\"" : $"✕ {r.Error}";
+            CheckResult = r is null ? Tr.T("geen antwoord")
+                : r.Ok ? Tr.F("score {0:0.00} ({1}) · gehoord: \"{2}\"", r.Score, r.Voice, r.Heard) : "✕ " + Tr.E(r.Error);
         }
         finally { Busy = false; }
     }
@@ -351,7 +352,7 @@ public sealed partial class VoiceTool : StudioTool
     {
         Selected = null;
         Owner = ""; SetUses(null);
-        Name = "Nieuwe Higgs-stem"; Engine = 0; ReferenceAudio = ""; ReferenceText = ""; ProfileTags = "<|emotion:enthusiasm|>";
+        Name = Tr.T("Nieuwe Higgs-stem"); Engine = 0; ReferenceAudio = ""; ReferenceText = ""; ProfileTags = "<|emotion:enthusiasm|>";
         Temperature = 0.8; Consent = false; ConsentNote = "";
     }
 
@@ -360,7 +361,7 @@ public sealed partial class VoiceTool : StudioTool
     {
         Selected = null;
         Owner = ""; SetUses(null);
-        Name = "Windows-stem"; Engine = 1; ProfileTags = ""; ReferenceAudio = ""; ReferenceText = ""; Consent = false; ConsentNote = "";
+        Name = Tr.T("Windows-stem"); Engine = 1; ProfileTags = ""; ReferenceAudio = ""; ReferenceText = ""; Consent = false; ConsentNote = "";
         SapiVoice = SapiVoices.FirstOrDefault(v => v.Contains("nl-", StringComparison.OrdinalIgnoreCase)) ?? SapiVoices.FirstOrDefault();
     }
 
@@ -384,11 +385,11 @@ public sealed partial class VoiceTool : StudioTool
     [RelayCommand]
     private async Task Save()
     {
-        if (IsClone && !Consent) { Hub.Status = "gekloonde stem: vink eerst aan dat er schriftelijke toestemming is"; return; }
+        if (IsClone && !Consent) { Hub.Status = Tr.T("gekloonde stem: vink eerst aan dat er schriftelijke toestemming is"); return; }
         var dto = Current(Selected?.Id ?? 0, Selected?.IsDefault ?? Profiles.Count == 0);
         bool ok = Selected is { } s ? await Hub.Client.PutAsync($"/api/voice/profiles/{s.Id}", dto) : await Hub.Client.PostAsync("/api/voice/profiles", dto);
         if (!ok) return;
-        Hub.Status = $"stem '{Name}' opgeslagen";
+        Hub.Status = Tr.F("stem '{0}' opgeslagen", Name);
         var keepName = Name;
         await ReloadAsync();
         Selected = Profiles.FirstOrDefault(p => p.Name == keepName) ?? Selected;
@@ -398,7 +399,7 @@ public sealed partial class VoiceTool : StudioTool
     private async Task MakeDefault()
     {
         if (Selected is not { } s) return;
-        if (await Hub.Client.PostAsync($"/api/voice/profiles/{s.Id}/default")) { Hub.Status = $"'{s.Name}' is nu de presentatorstem"; await ReloadAsync(); }
+        if (await Hub.Client.PostAsync($"/api/voice/profiles/{s.Id}/default")) { Hub.Status = Tr.F("'{0}' is nu de presentatorstem", s.Name); await ReloadAsync(); }
     }
 
     [RelayCommand]
@@ -412,16 +413,16 @@ public sealed partial class VoiceTool : StudioTool
     {
         if (Busy) return;
         Busy = true;
-        LastResult = IsHiggs ? "bezig met renderen op de GPU…" : "bezig…";
+        LastResult = IsHiggs ? Tr.T("bezig met renderen op de GPU…") : Tr.T("bezig…");
         try
         {
             // Test what is in the editor: unsaved tags are sent along.
             var r = await Hub.Client.SendForAsync<VoiceTestResultDto>(HttpMethod.Post, "/api/voice/test",
                 new VoiceTestRequest(TestText, Selected?.Id, ProfileTags, true));
-            if (r is null) { LastResult = "geen antwoord van de engine"; return; }
+            if (r is null) { LastResult = Tr.T("geen antwoord van de engine"); return; }
             LastResult = r.Ok
-                ? $"✓ {(r.Engine == "higgs" ? "Higgs" : "Windows")} · {r.AudioSeconds:0.0} s audio in {r.RenderSeconds:0.0} s ({(r.RenderSeconds > 0 ? r.AudioSeconds / r.RenderSeconds : 0):0.0}× realtime) · speelt op PFL"
-                : $"✕ {r.Error}";
+                ? Tr.F("✓ {0} · {1:0.0} s audio in {2:0.0} s ({3:0.0}× realtime) · speelt op PFL", r.Engine == "higgs" ? "Higgs" : "Windows", r.AudioSeconds, r.RenderSeconds, r.RenderSeconds > 0 ? r.AudioSeconds / r.RenderSeconds : 0)
+                : "✕ " + Tr.E(r.Error);
             Results.Insert(0, $"{DateTime.Now:HH:mm:ss}  {Name}  {LastResult}");
             while (Results.Count > 30) Results.RemoveAt(Results.Count - 1);
         }
@@ -447,13 +448,13 @@ public sealed partial class VoiceTool : StudioTool
     /// <summary>Sends a chosen WAV file to the engine as the recording of the voice in the editor.</summary>
     public async Task UploadClipAsync(byte[] wav)
     {
-        if (Selected is not { } s) { ClipResult = "Sla de stem eerst op en kies daarna de opname."; return; }
+        if (Selected is not { } s) { ClipResult = Tr.T("Sla de stem eerst op en kies daarna de opname."); return; }
         var (r, error) = await Hub.Client.PostBytesAsync<VoiceClipDto>($"/api/voice/profiles/{s.Id}/clip", wav);
         if (error is not null || r is null) { ClipResult = $"✕ {error ?? "geen antwoord"}"; return; }
         var keep = s.Id;
         await ReloadAsync();
         Selected = Profiles.FirstOrDefault(p => p.Id == keep);
-        ClipResult = $"✓ Opname opgeslagen ({r.Seconds:0.0} s, piek {r.PeakDb:0} dB). Vul de letterlijke tekst in, geef toestemming en sla op.";
+        ClipResult = Tr.F("✓ Opname opgeslagen ({0:0.0} s, piek {1:0} dB). Vul de letterlijke tekst in, geef toestemming en sla op.", r.Seconds, r.PeakDb);
     }
 
     // ---------------------------------------------------------------- my own voice (a presenter)
@@ -480,13 +481,13 @@ public sealed partial class VoiceTool : StudioTool
     /// <summary>Without users at the station the presenter types a name; with users it is the signed-in name.</summary>
     public bool OwnNeedsName => !Hub.UsersActive;
     public bool HasOwnVoice => OwnProfile is not null;
-    public string OwnRecordText => OwnRecording ? "■ Stop" : "● Opnemen";
-    public string OwnRemoveText => OwnConfirmRemove ? "Zeker weten? Klik nogmaals" : "Mijn stem verwijderen";
-    public string OwnWhoText => OwnSignInNeeded ? "Meld je eerst aan (rechtsboven); je eigen stem wordt aan jouw naam gekoppeld."
-        : OwnWho.Length > 0 ? $"Eigen stem van {OwnWho}" : "Vul je naam in zoals je op de radio heet en druk Ophalen.";
+    public string OwnRecordText => OwnRecording ? Tr.T("■ Stop") : "● Opnemen";
+    public string OwnRemoveText => OwnConfirmRemove ? Tr.T("Zeker weten? Klik nogmaals") : Tr.T("Mijn stem verwijderen");
+    public string OwnWhoText => OwnSignInNeeded ? Tr.T("Meld je eerst aan (rechtsboven); je eigen stem wordt aan jouw naam gekoppeld.")
+        : OwnWho.Length > 0 ? Tr.F("Eigen stem van {0}", OwnWho) : Tr.T("Vul je naam in zoals je op de radio heet en druk Ophalen.");
     public string OwnVoiceText => OwnProfile is { } p
         ? $"Vastgelegd: {p.Name} ({p.Summary}). {p.ConsentNote}"
-        : "Er is nog geen eigen stem vastgelegd.";
+        : Tr.T("Er is nog geen eigen stem vastgelegd.");
 
     partial void OnOwnRecordingChanged(bool value) => OnPropertyChanged(nameof(OwnRecordText));
     partial void OnOwnConfirmRemoveChanged(bool value) => OnPropertyChanged(nameof(OwnRemoveText));
@@ -531,7 +532,7 @@ public sealed partial class VoiceTool : StudioTool
         }
         OwnHasTake = d.Take is not null;
         OwnTake = d.Take is not { } t ? ""
-            : t.Problem is null ? $"✓ Opname van {t.Seconds:0.0} s, piek {t.PeakDb:0} dB. Beluister hem op PFL en leg hem vast."
+            : t.Problem is null ? Tr.F("✓ Opname van {0:0.0} s, piek {1:0} dB. Beluister hem op PFL en leg hem vast.", t.Seconds, t.PeakDb)
             : $"✕ {t.Problem}";
     }
 
@@ -566,7 +567,7 @@ public sealed partial class VoiceTool : StudioTool
     {
         var (d, error) = await Hub.Client.SendWithErrorAsync<OwnVoiceDto>(HttpMethod.Post, "/api/voice/mine/take/play" + OwnerQuery, null);
         ApplyOwn(d, error);
-        if (error is null) OwnStatus = "De opname speelt op PFL (niet ON AIR).";
+        if (error is null) OwnStatus = Tr.T("De opname speelt op PFL (niet ON AIR).");
     }
 
     [RelayCommand]
@@ -580,7 +581,7 @@ public sealed partial class VoiceTool : StudioTool
     private async Task OwnSave()
     {
         OwnConfirmRemove = false;
-        if (!OwnConsent) { OwnStatus = "✕ Vink eerst aan dat je toestemming geeft."; return; }
+        if (!OwnConsent) { OwnStatus = Tr.T("✕ Vink eerst aan dat je toestemming geeft."); return; }
         var uses = string.Join(",", new[] { OwnPresenter ? "presenter" : null, OwnNews ? "news" : null, OwnWeather ? "weather" : null }.Where(x => x is not null));
         var (d, error) = await Hub.Client.SendWithErrorAsync<OwnVoiceDto>(HttpMethod.Post, "/api/voice/mine",
             new OwnVoiceSaveRequest(OwnName.Trim(), OwnText, true, uses));
@@ -588,7 +589,7 @@ public sealed partial class VoiceTool : StudioTool
         ApplyOwn(d, error);
         if (error is not null) return;
         OwnConsent = false;
-        OwnStatus = "✓ Je stem is vastgelegd. Probeer hem uit met de proefopname onderaan.";
+        OwnStatus = Tr.T("✓ Je stem is vastgelegd. Probeer hem uit met de proefopname onderaan.");
         await ReloadAsync();
         if (Profiles.FirstOrDefault(p => p.Id == d?.Profile?.Id) is { } mine) Selected = mine;
     }
@@ -603,7 +604,7 @@ public sealed partial class VoiceTool : StudioTool
         if (error is not null) return;
         _ownLoadedFor = null;
         OwnText = d?.ReadText ?? "";
-        OwnStatus = "Je eigen stem en de opname zijn verwijderd; je toestemming is ingetrokken.";
+        OwnStatus = Tr.T("Je eigen stem en de opname zijn verwijderd; je toestemming is ingetrokken.");
         await ReloadAsync();
     }
 }

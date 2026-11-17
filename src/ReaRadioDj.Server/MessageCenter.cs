@@ -18,14 +18,23 @@ public sealed class MessageCenter(ILogger<MessageCenter> logger)
     public void Warning(string text) => Add("waarschuwing", text);
     public void Error(string text) => Add("fout", text);
 
-    public void Add(string level, string text)
+    /// <summary>
+    /// Every message as it comes in, with its topic for outside notification ("stilte", "reservestudio", "reservekopie",
+    /// "plaatshouder" …; null = only for the studio). Called outside the lock; a slow handler must hand off its work.
+    /// </summary>
+    public event Action<StudioMessage, string?>? Raised;
+
+    public void Add(string level, string text, string? topic = null)
     {
+        StudioMessage message;
         lock (_gate)
         {
-            _messages.AddLast(new StudioMessage(++_next, DateTime.Now, level, text));
+            _messages.AddLast(message = new StudioMessage(++_next, DateTime.Now, level, text));
             while (_messages.Count > Size) _messages.RemoveFirst();
         }
         logger.LogInformation("[{Level}] {Text}", level, text);
+        try { Raised?.Invoke(message, topic); }
+        catch (Exception ex) { logger.LogWarning(ex, "Message handler failed"); }
     }
 
     public IReadOnlyList<StudioMessage> Since(long id)

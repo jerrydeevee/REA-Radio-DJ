@@ -1,3 +1,4 @@
+using ReaRadioDj.Contracts.Localization;
 using System.Collections.ObjectModel;
 using Avalonia.Media;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -9,8 +10,8 @@ namespace ReaRadioDj.Studio.ViewModels;
 
 public sealed partial class RuleRow : ObservableObject
 {
-    public static readonly string[] Kinds = ["Categorie", "Vast item", "AI-presentator", "Afspeellijst"];
-    public static readonly string[] Modes = ["Willekeurig (rotatie)", "Op volgorde", "Alleen hook"];
+    public static readonly string[] Kinds = [Tr.T("Categorie"), Tr.T("Vast item"), Tr.T("AI-presentator"), Tr.T("Afspeellijst")];
+    public static readonly string[] Modes = [Tr.T("Willekeurig (rotatie)"), Tr.T("Op volgorde"), Tr.T("Alleen hook")];
 
     [ObservableProperty] private int _kind;
     [ObservableProperty] private CategoryDto? _category;
@@ -51,13 +52,15 @@ public sealed partial class GridCellVm(int day, int hour) : ObservableObject
 /// </summary>
 public sealed partial class PlannerTool : StudioTool
 {
-    public static readonly string[] DayNames = ["ma", "di", "wo", "do", "vr", "za", "zo"];
-    public static readonly string[] Timings = ["Hard (onderbreekt)", "Zacht (na het huidige item)", "Overlay (eroverheen)"];
-    public static readonly string[] Actions = ["Vast item", "Uit categorie", "AI-presentator", "Commando uitvoeren", "Herinnering tonen", "Alarm geven"];
+    /// <summary>Monday to Sunday, short, in the chosen language (ma … zo, Mon … Sun).</summary>
+    public static readonly string[] DayNames = [.. Enumerable.Range(1, 7).Select(d =>
+        Contracts.Localization.Tr.Culture.DateTimeFormat.GetAbbreviatedDayName((DayOfWeek)(d % 7)).TrimEnd('.'))];
+    public static readonly string[] Timings = [Tr.T("Hard (onderbreekt)"), Tr.T("Zacht (na het huidige item)"), Tr.T("Overlay (eroverheen)")];
+    public static readonly string[] Actions = [Tr.T("Vast item"), Tr.T("Uit categorie"), Tr.T("AI-presentator"), Tr.T("Commando uitvoeren"), Tr.T("Herinnering tonen"), Tr.T("Alarm geven")];
     private static readonly string[] ActionKeys = ["playMedia", "playCategory", "aiBreak", "command", "reminder", "alert"];
-    public static readonly string[] RuleKindNames = ["Maximaal N op rij", "Niet direct na"];
-    public static readonly string[] RuleActionNames = ["Overslaan", "Uitstellen (na het volgende item)"];
-    public static readonly string[] WatchModeNames = ["Neemt het programma over", "Speelt eroverheen (muziek dimt)"];
+    public static readonly string[] RuleKindNames = [Tr.T("Maximaal N op rij"), Tr.T("Niet direct na")];
+    public static readonly string[] RuleActionNames = [Tr.T("Overslaan"), Tr.T("Uitstellen (na het volgende item)")];
+    public static readonly string[] WatchModeNames = [Tr.T("Neemt het programma over"), Tr.T("Speelt eroverheen (muziek dimt)")];
 
     public PlannerTool() : base("planner", "Planner")
     {
@@ -98,7 +101,7 @@ public sealed partial class PlannerTool : StudioTool
                 Category = Categories.FirstOrDefault(c => c.Id == r.CategoryId),
                 Mode = r.Mode switch { "sequential" => 1, "hook" => 2, _ => 0 },
                 MediaId = r.MediaId,
-                MediaLabel = r.MediaId is long id ? $"item {id}" : "",
+                MediaLabel = r.MediaId is long id ? Tr.F("item {0}", id) : "",
                 Note = r.Note,
             });
     }
@@ -125,8 +128,8 @@ public sealed partial class PlannerTool : StudioTool
     public bool EventIsAudio => EventAction <= 2;
     public bool EventIsText => EventAction >= 3;
     public string EventTextHint => EventAction == 3
-        ? "Commando's, een per regel (bijv. AUTO OFF, CART 1 5, MIC ON). Zie Extra > Commando's."
-        : "Tekst die in de studio verschijnt";
+        ? Tr.T("Commando's, een per regel (bijv. AUTO OFF, CART 1 5, MIC ON). Zie Extra > Commando's.")
+        : Tr.T("Tekst die in de studio verschijnt");
     partial void OnEventActionChanged(int value)
     {
         OnPropertyChanged(nameof(EventIsAudio));
@@ -148,7 +151,7 @@ public sealed partial class PlannerTool : StudioTool
         EventText = e.Text ?? "";
         EventCategory = Categories.FirstOrDefault(c => c.Id == e.CategoryId);
         EventMediaId = e.MediaId;
-        EventMediaLabel = e.MediaId is long id ? $"item {id}" : "";
+        EventMediaLabel = e.MediaId is long id ? Tr.F("item {0}", id) : "";
         foreach (var d in EventDays) d.On = (e.Days & (1 << d.Index)) != 0;
     }
 
@@ -207,7 +210,7 @@ public sealed partial class PlannerTool : StudioTool
     }
 
     // clocks
-    [RelayCommand] private void NewClock() { SelectedClock = null; ClockName = "Nieuwe klok"; ClockColor = "#A78BFA"; Rules.Clear(); }
+    [RelayCommand] private void NewClock() { SelectedClock = null; ClockName = Tr.T("Nieuwe klok"); ClockColor = "#A78BFA"; Rules.Clear(); }
     [RelayCommand] private void AddRule() => Rules.Add(new RuleRow { Category = Categories.FirstOrDefault(c => c.Kind == "song") });
     [RelayCommand] private void AddJingleRule() => Rules.Add(new RuleRow { Category = Categories.FirstOrDefault(c => c.Kind == "jingle") });
     [RelayCommand] private void AddAiRule() => Rules.Add(new RuleRow { Kind = 2 });
@@ -234,14 +237,14 @@ public sealed partial class PlannerTool : StudioTool
     private async Task CheckPlaylist(RuleRow? r)
     {
         if (r is null) return;
-        if (string.IsNullOrWhiteSpace(r.Source)) { r.SourceInfo = "Geef het pad van een afspeellijst (.m3u, .m3u8, .pls of .xspf)."; return; }
+        if (string.IsNullOrWhiteSpace(r.Source)) { r.SourceInfo = Tr.T("Geef het pad van een afspeellijst (.m3u, .m3u8, .pls of .xspf)."); return; }
         var c = await Hub.Client.GetAsync<PlaylistCheckDto>("/api/planner/playlist?path=" + Uri.EscapeDataString(r.Source.Trim().Trim('"')));
-        r.SourceInfo = c is null ? "De engine kon de afspeellijst niet nakijken (werk hem bij)."
+        r.SourceInfo = c is null ? Tr.T("De engine kon de afspeellijst niet nakijken (werk hem bij).")
             : c.Problem is { } p ? p
-            : $"{c.Entries} bestanden, waarvan {c.InLibrary} in de bibliotheek"
-              + (c.InLibrary < c.Entries ? " (de rest wordt overgeslagen: voeg die map toe aan de bibliotheek)" : "")
-              + (c.Skipped > 0 ? $"; {c.Skipped} webadressen of onbruikbare regels overgeslagen" : "")
-              + (c.First is { } f ? $". Eerste: {f}" : ".");
+            : Tr.F("{0} bestanden, waarvan {1} in de bibliotheek", c.Entries, c.InLibrary)
+              + (c.InLibrary < c.Entries ? Tr.T(" (de rest wordt overgeslagen: voeg die map toe aan de bibliotheek)") : "")
+              + (c.Skipped > 0 ? Tr.F("; {0} webadressen of onbruikbare regels overgeslagen", c.Skipped) : "")
+              + (c.First is { } f ? Tr.F(". Eerste: {0}", f) : ".");
     }
 
     [RelayCommand]
@@ -258,7 +261,7 @@ public sealed partial class PlannerTool : StudioTool
     {
         var dto = new ClockDto(SelectedClock?.Id ?? 0, ClockName, ClockColor, Rules.Select(r => r.ToDto()).ToList());
         bool ok = SelectedClock is { } c ? await Hub.Client.PutAsync($"/api/planner/clocks/{c.Id}", dto) : await Hub.Client.PostAsync("/api/planner/clocks", dto);
-        if (ok) { Hub.Status = $"klok '{ClockName}' opgeslagen"; await ReloadAsync(); if (SelectedClock is null) SelectedClock = Clocks.FirstOrDefault(x => x.Name == ClockName); }
+        if (ok) { Hub.Status = Tr.F("klok '{0}' opgeslagen", ClockName); await ReloadAsync(); if (SelectedClock is null) SelectedClock = Clocks.FirstOrDefault(x => x.Name == ClockName); }
     }
 
     [RelayCommand]
@@ -286,7 +289,7 @@ public sealed partial class PlannerTool : StudioTool
     private void NewEvent()
     {
         SelectedEvent = null;
-        EventName = "Nieuws"; EventEnabled = true; EventHours = "*"; EventMinute = 0; EventSecond = 0; EventTiming = 0; EventAction = 1;
+        EventName = Tr.T("Nieuws"); EventEnabled = true; EventHours = "*"; EventMinute = 0; EventSecond = 0; EventTiming = 0; EventAction = 1;
         EventCategory = Categories.FirstOrDefault(c => c.Name.Contains("nieuws", StringComparison.OrdinalIgnoreCase)) ?? Categories.FirstOrDefault();
         EventMediaId = null; EventMediaLabel = ""; EventText = "";
         foreach (var d in EventDays) d.On = true;
@@ -309,7 +312,7 @@ public sealed partial class PlannerTool : StudioTool
             EventTiming switch { 1 => "soft", 2 => "overlay", _ => "hard" }, ActionKeys[Math.Clamp(EventAction, 0, ActionKeys.Length - 1)],
             EventCategory?.Id, EventMediaId, Text: EventText);
         bool ok = SelectedEvent is { } e ? await Hub.Client.PutAsync($"/api/planner/events/{e.Id}", dto) : await Hub.Client.PostAsync("/api/planner/events", dto);
-        if (ok) { Hub.Status = $"vaste tijd '{EventName}' opgeslagen"; await ReloadAsync(); }
+        if (ok) { Hub.Status = Tr.F("vaste tijd '{0}' opgeslagen", EventName); await ReloadAsync(); }
     }
 
     [RelayCommand]
@@ -351,7 +354,7 @@ public sealed partial class PlannerTool : StudioTool
     private void NewScriptRule()
     {
         SelectedScriptRule = null;
-        RuleName = "Niet te veel van een categorie"; RuleEnabled = true; RuleKind = 0; RuleFrom = null;
+        RuleName = Tr.T("Niet te veel van een categorie"); RuleEnabled = true; RuleKind = 0; RuleFrom = null;
         RuleTo = Categories.FirstOrDefault(c => c.Kind == "song"); RuleCount = 2; RuleAction = 1;
     }
 
@@ -361,7 +364,7 @@ public sealed partial class PlannerTool : StudioTool
         var dto = new ScriptRuleDto(SelectedScriptRule?.Id ?? 0, RuleName, RuleEnabled, RuleKind == 1 ? "notAfter" : "maxInRow",
             RuleKind == 1 ? RuleFrom?.Id : null, RuleTo?.Id, (int)RuleCount, RuleAction == 1 ? "defer" : "suppress");
         bool ok = SelectedScriptRule is { } r ? await Hub.Client.PutAsync($"/api/planner/rules/{r.Id}", dto) : await Hub.Client.PostAsync("/api/planner/rules", dto);
-        if (ok) { Hub.Status = $"regel '{RuleName}' opgeslagen, log opnieuw gepland"; await ReloadAsync(); }
+        if (ok) { Hub.Status = Tr.F("regel '{0}' opgeslagen, log opnieuw gepland", RuleName); await ReloadAsync(); }
     }
 
     [RelayCommand]
@@ -404,8 +407,8 @@ public sealed partial class PlannerTool : StudioTool
         var dto = new StreamWatchDto(SelectedWatch?.Id ?? 0, WatchName, WatchEnabled, WatchUrl.Trim(), days, WatchHours,
             WatchMode == 1 ? "overlay" : "takeover", (int)WatchCheck);
         bool ok = SelectedWatch is { } w ? await Hub.Client.PutAsync($"/api/planner/watches/{w.Id}", dto) : await Hub.Client.PostAsync("/api/planner/watches", dto);
-        if (ok) { Hub.Status = $"stream '{WatchName}' opgeslagen"; await ReloadAsync(); }
-        else Hub.Status = "opslaan mislukt: controleer de URL (http:// of https://)";
+        if (ok) { Hub.Status = Tr.F("stream '{0}' opgeslagen", WatchName); await ReloadAsync(); }
+        else Hub.Status = Tr.T("opslaan mislukt: controleer de URL (http:// of https://)");
     }
 
     [RelayCommand]
@@ -417,7 +420,7 @@ public sealed partial class PlannerTool : StudioTool
     [RelayCommand]
     private async Task StopLiveWatch()
     {
-        if (await Hub.Client.PostAsync("/api/watches/stop")) { Hub.Status = "externe stream OFF AIR gehaald"; await ReloadAsync(); }
+        if (await Hub.Client.PostAsync("/api/watches/stop")) { Hub.Status = Tr.T("externe stream OFF AIR gehaald"); await ReloadAsync(); }
     }
 }
 

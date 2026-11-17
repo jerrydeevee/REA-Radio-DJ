@@ -1,6 +1,7 @@
 <Application xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:local="using:ReaRadioDj.Studio"
+             xmlns:svc="using:ReaRadioDj.Studio.Services"
              xmlns:dock="using:Dock.Avalonia.Themes.Fluent"
              x:Class="ReaRadioDj.Studio.App"
              RequestedThemeVariant="Dark">
@@ -8,6 +9,8 @@
     <local:ViewLocator />
   </Application.DataTemplates>
   <Application.Resources>
+    <!-- translated StringFormat: Converter={StaticResource Tr}, ConverterParameter='gespeeld {0}' -->
+    <svc:TrFormat x:Key="Tr" />
     <SolidColorBrush x:Key="OnAirBrush" Color="#E5484D" />
     <SolidColorBrush x:Key="AccentBrush" Color="#4C8DFF" />
     <SolidColorBrush x:Key="PrimaryBrush" Color="#2563EB" />

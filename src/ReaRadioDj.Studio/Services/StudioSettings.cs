@@ -21,6 +21,9 @@ public sealed class StudioSettings
     public string? LatestTag { get; set; }
     public string? LatestUrl { get; set; }
     /// <summary>Colour style: regiekamer, daglicht, dark, night, light, contrast … (see Appearance).</summary>
+    /// <summary>The language of this studio (nl, en, de, es); active after a restart of the studio.</summary>
+    public string Language { get; set; } = "nl";
+
     public string Theme { get; set; } = "regiekamer";
     /// <summary>Corner shape: square, normal or round.</summary>
     public string Corners { get; set; } = "normal";

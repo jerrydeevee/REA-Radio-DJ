@@ -3,6 +3,17 @@
 ## 1.2.0 (in ontwikkeling)
 
 ### Nieuw
+- **Geplande opnames** van een ingang of internetstream (bijv. elke werkdag om 12:00 het regionale nieuws), direct in
+  de bibliotheek; met *Vorige vervangen* blijft het hetzelfde item met steeds de nieuwste opname. Venster *Opnames*.
+- **Noodopname**: één knop of `RECORD TOGGLE` neemt alles op wat binnenkomt, elk kanaal apart; stille kanalen vallen weg.
+- **Uitzending gemist en podcast**: per programma na elke uitzending een aflevering uit de uitzendopname, met een
+  RSS-feed op `/podcast/<id>/feed.xml` en een kopieermap voor de website.
+- **Plaatshouders**: een item (bijv. een reclamespot) alvast inplannen terwijl het geluid nog moet komen, met een
+  waarschuwing een dag vooraf en een alarm als het te laat is. Databaseschema 26.
+- **Meldingen per mail** (SMTP) bij stilte, overname door de reservestudio, een mislukte reservekopie en meer, met
+  een grens per onderwerp; het wachtwoord wordt versleuteld bewaard.
+- **Database-controle vóór een upgrade**: controle en kopie vooraf; een beschadigde database blijft onaangeroerd, met
+  een duidelijke melding (venster, `data\DATABASE-PROBLEEM.txt`). Ook los: `REA-Radio-DJ.exe --check-db`.
 - **Alleen het praten opnemen**: een opname van de microfoon of een ingangskanaal die alleen loopt als het kanaal
   open is en er geluid is (drempel en nalooptijd), één MP3 per uur.
 - **Bewaking van de geluidskaart**: zet Windows of een ander programma de kaart van de zender zachter of dempt het hem,

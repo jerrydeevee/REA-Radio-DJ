@@ -1,3 +1,4 @@
+using ReaRadioDj.Contracts.Localization;
 using System.Collections.ObjectModel;
 using Avalonia.Media;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -15,7 +16,7 @@ public sealed partial class DjHotCueVm(int index, DjDeckVm deck) : ObservableObj
     public DjDeckVm Deck { get; } = deck;
     public string Number => (Index + 1).ToString();
     [ObservableProperty] private bool _filled;
-    [ObservableProperty] private string _time = "leeg";
+    [ObservableProperty] private string _time = Tr.T("leeg");
 }
 
 /// <summary>
@@ -47,10 +48,10 @@ public sealed partial class DjDeckVm : ObservableObject
 
     [ObservableProperty] private bool _loaded;
     [ObservableProperty] private bool _playing;
-    [ObservableProperty] private string _title = "Leeg";
-    [ObservableProperty] private string _artist = "sleep een nummer uit de bibliotheek hierheen";
+    [ObservableProperty] private string _title = Tr.T("Leeg");
+    [ObservableProperty] private string _artist = Tr.T("sleep een nummer uit de bibliotheek hierheen");
     /// <summary>The state as a word: Leeg, Klaar, Speelt, In loop.</summary>
-    [ObservableProperty] private string _stateText = "Leeg";
+    [ObservableProperty] private string _stateText = Tr.T("Leeg");
     [ObservableProperty] private string _bpmText = "---";
     [ObservableProperty] private string _tempoText = "+0,0 %";
     [ObservableProperty] private string _elapsed = "0:00";
@@ -179,7 +180,7 @@ public sealed partial class DjDeckVm : ObservableObject
     [RelayCommand]
     private async Task Sync()
     {
-        if (!await Post("sync")) Hub.Status = $"Deck {Id}: geen ander spelend deck met een tempo om te volgen";
+        if (!await Post("sync")) Hub.Status = Tr.F("Deck {0}: geen ander spelend deck met een tempo om te volgen", Id);
     }
 
     public void Update(DjDeckDto d)
@@ -189,15 +190,15 @@ public sealed partial class DjDeckVm : ObservableObject
         {
             Loaded = d.Loaded;
             Playing = d.Playing;
-            Title = d.Loaded ? (d.Title.Length > 0 ? d.Title : "(zonder titel)") : "Leeg";
-            Artist = d.Loaded ? d.Artist : "sleep een nummer uit de bibliotheek hierheen";
-            StateText = !d.Loaded ? "Leeg" : d.LoopActive && d.Playing ? "In loop" : d.Playing ? "Speelt" : d.Position >= d.Duration - 0.1 ? "Afgelopen" : "Klaar";
+            Title = d.Loaded ? (d.Title.Length > 0 ? d.Title : Tr.T("(zonder titel)")) : Tr.T("Leeg");
+            Artist = d.Loaded ? d.Artist : Tr.T("sleep een nummer uit de bibliotheek hierheen");
+            StateText = !d.Loaded ? Tr.T("Leeg") : d.LoopActive && d.Playing ? Tr.T("In loop") : d.Playing ? Tr.T("Speelt") : d.Position >= d.Duration - 0.1 ? Tr.T("Afgelopen") : Tr.T("Klaar");
             double bpm = d.Bpm * (1 + d.Tempo / 100);
             Bpm = d.Analysing ? 0 : d.Bpm;
             FirstBeat = d.FirstBeat;
             Rate = 1 + d.Tempo / 100;
             PositionAt = DateTime.UtcNow;
-            BpmText = d.Analysing ? "meten…" : d.Bpm > 0 ? bpm.ToString("0.0") : "---";
+            BpmText = d.Analysing ? Tr.T("meten…") : d.Bpm > 0 ? bpm.ToString("0.0") : "---";
             TempoText = d.Tempo.ToString("+0.0;-0.0") + " %";
             Position = d.Position;
             Duration = d.Duration;
@@ -218,16 +219,16 @@ public sealed partial class DjDeckVm : ObservableObject
             StemText = !d.Loaded ? "" : d.Stems switch
             {
                 "ready" when d.StemsPlaying => "klaar",
-                "ready" => "klaar (bij de eerste knop of pauze)",
-                "working" => $"maken… {d.StemProgress * 100:0} %",
-                "waiting" => "in de wachtrij",
+                "ready" => Tr.T("klaar (bij de eerste knop of pauze)"),
+                "working" => Tr.F("maken… {0:0} %", d.StemProgress * 100),
+                "waiting" => Tr.T("in de wachtrij"),
                 "failed" => "mislukt",
-                _ => "geen model",
+                _ => Tr.T("geen model"),
             };
             FxType = d.FxType;
             FxOn = d.FxOn;
             _fxBeats = d.FxBeats;
-            FxBeatsText = BeatsText(d.FxBeats) + (d.FxType == "reverb" ? " (ruimte)" : " tel");
+            FxBeatsText = BeatsText(d.FxBeats) + (d.FxType == "reverb" ? Tr.T(" (ruimte)") : Tr.T(" tel"));
             if (Free("fxmix")) FxMix = d.FxMix * 100;
             LoopBeats = d.LoopBeats >= 1 ? d.LoopBeats.ToString("0.##") : $"1/{1 / d.LoopBeats:0}";
             LevelLeft = d.LevelLeft * 100;
@@ -242,7 +243,7 @@ public sealed partial class DjDeckVm : ObservableObject
             for (int i = 0; i < HotCues.Count && i < d.HotCues.Count; i++)
             {
                 HotCues[i].Filled = d.HotCues[i] is not null;
-                HotCues[i].Time = d.HotCues[i] is double at ? StudioHub.Time(at) : "leeg";
+                HotCues[i].Time = d.HotCues[i] is double at ? StudioHub.Time(at) : Tr.T("leeg");
             }
             var markers = new List<WaveMarker> { new("cue", "cue", d.CuePoint, Color.Parse("#E6EAF0")) };
             for (int i = 0; i < d.HotCues.Count; i++)
@@ -317,7 +318,7 @@ public sealed partial class DjTool : StudioTool
     partial void OnFollowingChanged(bool value) => OnPropertyChanged(nameof(CanFollow));
     partial void OnOnAirChanged(bool value) => OnPropertyChanged(nameof(CanFollow));
     partial void OnAvailableChanged(bool value) => OnPropertyChanged(nameof(CanFollow));
-    [ObservableProperty] private string _onAirText = "DJ-tafel is OFF AIR: je hoort de decks alleen op PFL";
+    [ObservableProperty] private string _onAirText = Tr.T("DJ-tafel is OFF AIR: je hoort de decks alleen op PFL");
     [ObservableProperty] private bool _quantize;
     /// <summary>The DJ is on air while the automation runs on unheard underneath.</summary>
     [ObservableProperty] private bool _shadow;
@@ -328,7 +329,7 @@ public sealed partial class DjTool : StudioTool
     [RelayCommand]
     private async Task GiveBack()
     {
-        if (await Hub.Client.PostAsync("/api/dj/mixer", new DjMixerRequest(OnAir: false))) Hub.Status = "Teruggegeven aan de automatisering";
+        if (await Hub.Client.PostAsync("/api/dj/mixer", new DjMixerRequest(OnAir: false))) Hub.Status = Tr.T("Teruggegeven aan de automatisering");
     }
     [ObservableProperty] private bool _limiter = true;
     /// <summary>Headphones: 0 = cue (decks with PFL) .. 100 = master mix of the desk.</summary>
@@ -358,14 +359,14 @@ public sealed partial class DjTool : StudioTool
     [RelayCommand] private void SetDecks(string? count) => FourDecks = count == "4";
 
     [ObservableProperty] private bool _recording;
-    [ObservableProperty] private string _recordText = "● Mix opnemen";
+    [ObservableProperty] private string _recordText = Tr.T("● Mix opnemen");
 
     /// <summary>Starts or stops recording the mix; a finished mix lands in the library under Opnamen.</summary>
     [RelayCommand]
     private async Task ToggleRecord()
     {
         if (!await Hub.Client.PostAsync("/api/dj/mixer", new DjMixerRequest(Record: !Recording)))
-            Hub.Status = "Opnemen van de mix lukte niet; kijk bij Meldingen";
+            Hub.Status = Tr.T("Opnemen van de mix lukte niet; kijk bij Meldingen");
     }
     [RelayCommand] private void CenterCrossfader() => Crossfader = 50;
 
@@ -373,7 +374,7 @@ public sealed partial class DjTool : StudioTool
     [RelayCommand]
     private async Task Follow()
     {
-        if (!await Hub.Client.PostAsync("/api/dj/follow")) Hub.Status = "Deck A kan de automatisering niet volgen: haal eerst het nummer van deck A, en de tafel mag niet ON AIR zijn";
+        if (!await Hub.Client.PostAsync("/api/dj/follow")) Hub.Status = Tr.T("Deck A kan de automatisering niet volgen: haal eerst het nummer van deck A, en de tafel mag niet ON AIR zijn");
     }
 
     protected override void OnState(StateDto s)
@@ -385,12 +386,12 @@ public sealed partial class DjTool : StudioTool
         {
             OnAir = dj.OnAir;
             Following = dj.Following;
-            OnAirText = dj.OnAir ? "DJ-tafel is ON AIR: wat je mixt gaat de zender op"
-                : dj.Following ? "Deck A volgt de automatisering. Kies DJ ON AIR om naadloos over te nemen; de automatisering stopt dan."
-                : "DJ-tafel is OFF AIR: je hoort de decks alleen op PFL";
+            OnAirText = dj.OnAir ? Tr.T("DJ-tafel is ON AIR: wat je mixt gaat de zender op")
+                : dj.Following ? Tr.T("Deck A volgt de automatisering. Kies DJ ON AIR om naadloos over te nemen; de automatisering stopt dan.")
+                : Tr.T("DJ-tafel is OFF AIR: je hoort de decks alleen op PFL");
             Sharp = dj.Curve == "sharp";
             Recording = dj.Recording is not null;
-            RecordText = dj.Recording is null ? "● Mix opnemen" : $"■ Stop opname {TimeSpan.FromSeconds(dj.RecordingSeconds):h\\:mm\\:ss}";
+            RecordText = dj.Recording is null ? Tr.T("● Mix opnemen") : Tr.F("■ Stop opname {0:h\\:mm\\:ss}", TimeSpan.FromSeconds(dj.RecordingSeconds));
             if ((DateTime.UtcNow - _crossTouched).TotalMilliseconds > 500) Crossfader = dj.Crossfader * 100;
             if ((DateTime.UtcNow - _cueMixTouched).TotalMilliseconds > 500) CueMix = dj.CueMix * 100;
             Quantize = dj.Quantize;
@@ -398,9 +399,9 @@ public sealed partial class DjTool : StudioTool
             var now = s.Engine.Current;
             Shadow = dj.OnAir;
             ShadowText = now is null
-                ? "Automatisering staat stil. Teruggeven start hem weer."
-                : $"Automatisering loopt onhoorbaar mee: {now.Label}  ·  nog {TimeSpan.FromSeconds(Math.Max(0, now.To - now.Position)):m\\:ss}";
-            ShadowNext = s.Upcoming.FirstOrDefault() is { } next ? $"Daarna: {next.Label}" : "";
+                ? Tr.T("Automatisering staat stil. Teruggeven start hem weer.")
+                : Tr.F("Automatisering loopt onhoorbaar mee: {0}  ·  nog {1:m\\:ss}", now.Label, TimeSpan.FromSeconds(Math.Max(0, now.To - now.Position)));
+            ShadowNext = s.Upcoming.FirstOrDefault() is { } next ? Tr.F("Daarna: {0}", next.Label) : "";
         }
         finally { _fromEngine = false; }
         foreach (var d in dj.Decks)

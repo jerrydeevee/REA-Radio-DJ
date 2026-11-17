@@ -124,13 +124,13 @@ public static partial class RecordingCutter
     }
 
     /// <summary>Writes title, artist and a comment with the time it went on air into the new file.</summary>
-    public static void Tag(string path, string title, string artist, DateTime from)
+    public static void Tag(string path, string title, string artist, DateTime from, string? comment = null)
     {
         using var f = TagLib.File.Create(path);
         f.Tag.Title = title;
         f.Tag.Performers = artist.Length > 0 ? [artist] : [];
         f.Tag.Year = (uint)from.Year;
-        f.Tag.Comment = $"Uit de uitzending van {from:dd-MM-yyyy HH:mm:ss}";
+        f.Tag.Comment = comment ?? $"Uit de uitzending van {from:dd-MM-yyyy HH:mm:ss}";
         f.Save();
     }
 

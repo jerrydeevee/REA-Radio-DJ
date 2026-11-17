@@ -1,3 +1,4 @@
+using ReaRadioDj.Contracts.Localization;
 using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -11,12 +12,12 @@ public sealed partial class DjMidiRow(DjMidiControlDto control) : ObservableObje
     public DjMidiControlDto Control { get; } = control;
     public string Name => Control.Name;
     public bool CanInvert => Control.Kind != "button";
-    public string KindText => Control.Kind switch { "absolute" => "fader/knop", "relative" => "wiel", _ => "knop" };
+    public string KindText => Control.Kind switch { "absolute" => Tr.T("fader/knop"), "relative" => "wiel", _ => "knop" };
     [ObservableProperty] private string _trigger = "—";
     [ObservableProperty] private bool _learned;
     [ObservableProperty] private bool _invert;
     [ObservableProperty] private bool _learning;
-    [ObservableProperty] private string _learnText = "Leren";
+    [ObservableProperty] private string _learnText = Tr.T("Leren");
 }
 
 public sealed record DjMidiDeviceChoice(long Id, string Name)
@@ -25,23 +26,23 @@ public sealed record DjMidiDeviceChoice(long Id, string Name)
 }
 
 /// <summary>
-/// A MIDI DJ controller on the DJ desk: pick a function, press "Leren" and move the control; save the result as a
+/// A MIDI DJ controller on the DJ desk: pick a function, press Tr.T("Leren") and move the control; save the result as a
 /// preset to use it again with the same type of controller.
 /// </summary>
 public sealed partial class DjMidiTool : StudioTool
 {
-    private static readonly string[] Groups = ["Mengpaneel", "Deck A", "Deck B", "Deck C", "Deck D"];
+    private static readonly string[] Groups = [Tr.T("Mengpaneel"), Tr.T("Deck A"), Tr.T("Deck B"), Tr.T("Deck C"), "Deck D"];
     private DjMidiDto? _data;
     private bool _busy;
 
-    public DjMidiTool() : base("djmidi", "DJ-controller") { }
+    public DjMidiTool() : base("djmidi", Tr.T("DJ-controller")) { }
 
     public ObservableCollection<DjMidiRow> Rows { get; } = [];
     public ObservableCollection<DjMidiDeviceChoice> Devices { get; } = [];
     public ObservableCollection<string> Presets { get; } = [];
     public ObservableCollection<string> Ports { get; } = [];
 
-    [ObservableProperty] private string _group = "Deck A";
+    [ObservableProperty] private string _group = Tr.T("Deck A");
     [ObservableProperty] private DjMidiDeviceChoice? _device;
     [ObservableProperty] private string? _preset;
     [ObservableProperty] private string _presetName = "";
@@ -89,7 +90,7 @@ public sealed partial class DjMidiTool : StudioTool
         {
             long? keep = Device?.Id;
             Devices.Clear();
-            foreach (var dev in d.Devices) Devices.Add(new DjMidiDeviceChoice(dev.Id, dev.Enabled ? dev.Name : dev.Name + " (uit)"));
+            foreach (var dev in d.Devices) Devices.Add(new DjMidiDeviceChoice(dev.Id, dev.Enabled ? dev.Name : dev.Name + Tr.T(" (uit)")));
             Device = Devices.FirstOrDefault(x => x.Id == keep) ?? Devices.FirstOrDefault();
         }
         NoDevice = Devices.Count == 0;
@@ -101,8 +102,8 @@ public sealed partial class DjMidiTool : StudioTool
         }
         LearningAny = d.Learning is not null;
         Status = d.LearnResult;
-        LastSignal = d.LastSignal.Length == 0 ? "Nog geen signaal ontvangen" : "Laatste signaal: " + d.LastSignal;
-        CountText = $"{d.Bindings.Count} van {d.Controls.Count} functies gekoppeld";
+        LastSignal = d.LastSignal.Length == 0 ? Tr.T("Nog geen signaal ontvangen") : Tr.T("Laatste signaal: ") + d.LastSignal;
+        CountText = Tr.F("{0} van {1} functies gekoppeld", d.Bindings.Count, d.Controls.Count);
         if (rebuild || Rows.Count == 0) ShowRows();
     }
 
@@ -117,7 +118,7 @@ public sealed partial class DjMidiTool : StudioTool
             Rows.Add(new DjMidiRow(c)
             {
                 Trigger = b?.Trigger ?? "—", Learned = b is not null, Invert = b?.Invert ?? false,
-                Learning = learning, LearnText = learning ? "Wacht…" : "Leren",
+                Learning = learning, LearnText = learning ? Tr.T("Wacht…") : Tr.T("Leren"),
             });
         }
     }
@@ -150,11 +151,11 @@ public sealed partial class DjMidiTool : StudioTool
     private Task SavePreset()
     {
         var name = PresetName.Trim();
-        if (name.Length == 0) { Hub.Status = "Geef de voorinstelling een naam, bijv. het merk en type van je controller"; return Task.CompletedTask; }
+        if (name.Length == 0) { Hub.Status = Tr.T("Geef de voorinstelling een naam, bijv. het merk en type van je controller"); return Task.CompletedTask; }
         return Send(async () =>
         {
             var d = await Hub.Client.SendForAsync<DjMidiDto>(HttpMethod.Post, "/api/dj/midi/presets", new DjMidiPresetRequest(name));
-            if (d is not null) { Preset = name; PresetName = ""; Hub.Status = $"Voorinstelling “{name}” bewaard"; }
+            if (d is not null) { Preset = name; PresetName = ""; Hub.Status = Tr.F("Voorinstelling “{0}” bewaard", name); }
             return d;
         });
     }
@@ -162,11 +163,11 @@ public sealed partial class DjMidiTool : StudioTool
     [RelayCommand]
     private Task ApplyPreset()
     {
-        if (Preset is not { } name || Device is not { } dev) { Hub.Status = "Kies een voorinstelling en de controller"; return Task.CompletedTask; }
+        if (Preset is not { } name || Device is not { } dev) { Hub.Status = Tr.T("Kies een voorinstelling en de controller"); return Task.CompletedTask; }
         return Send(async () =>
         {
             var d = await Hub.Client.SendForAsync<DjMidiDto>(HttpMethod.Post, $"/api/dj/midi/presets/{Uri.EscapeDataString(name)}/apply?deviceId={dev.Id}", null);
-            if (d is not null) Hub.Status = $"Voorinstelling “{name}” staat op {dev.Name}";
+            if (d is not null) Hub.Status = Tr.F("Voorinstelling “{0}” staat op {1}", name, dev.Name);
             return d;
         });
     }
@@ -179,9 +180,9 @@ public sealed partial class DjMidiTool : StudioTool
     [RelayCommand]
     private async Task AddController()
     {
-        if (Port is not { } port) { Hub.Status = "Sluit de controller aan; hij verschijnt dan in de lijst"; await LoadPortsAsync(); return; }
+        if (Port is not { } port) { Hub.Status = Tr.T("Sluit de controller aan; hij verschijnt dan in de lijst"); await LoadPortsAsync(); return; }
         var dto = new HwDeviceDto(0, port, true, "midi", port, 9600, "", false, "");
-        if (await Hub.Client.PostAsync("/api/hardware/devices", dto)) Hub.Status = $"Controller “{port}” toegevoegd";
+        if (await Hub.Client.PostAsync("/api/hardware/devices", dto)) Hub.Status = Tr.F("Controller “{0}” toegevoegd", port);
         await LoadAsync();
     }
 }

@@ -1,3 +1,4 @@
+using ReaRadioDj.Contracts.Localization;
 using System.Globalization;
 using Avalonia.Data.Converters;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -22,10 +23,10 @@ public static class LibraryColumns
 {
     public static readonly IReadOnlyList<(string Key, string Label)> All =
     [
-        ("artist", "Artiest"), ("category", "Categorie"), ("album", "Album"), ("year", "Jaar"), ("genre", "Genre"),
-        ("bpm", "BPM"), ("key", "Toonsoort"), ("lufs", "LUFS"), ("replaygain", "ReplayGain"), ("plays", "Keer gespeeld"),
-        ("lastplayed", "Laatst gespeeld"), ("added", "Toegevoegd"), ("language", "Taal"), ("mood", "Stemming"),
-        ("rating", "Waardering"), ("energy", "Energie"), ("bitrate", "Bitrate"),
+        ("artist", Tr.T("Artiest")), ("category", Tr.T("Categorie")), ("album", Tr.T("Album")), ("year", Tr.T("Jaar")), ("genre", Tr.T("Genre")),
+        ("bpm", Tr.T("BPM")), ("key", "Toonsoort"), ("lufs", "LUFS"), ("replaygain", "ReplayGain"), ("plays", Tr.T("Keer gespeeld")),
+        ("lastplayed", Tr.T("Laatst gespeeld")), ("added", Tr.T("Toegevoegd")), ("language", Tr.T("Taal")), ("mood", Tr.T("Stemming")),
+        ("rating", Tr.T("Waardering")), ("energy", Tr.T("Energie")), ("bitrate", "Bitrate"),
     ];
 
     public static readonly string[] Default = ["artist", "category", "year", "bpm", "key"];
@@ -33,7 +34,7 @@ public static class LibraryColumns
     /// <summary>The fields shown now, in order.</summary>
     public static IReadOnlyList<string> Current { get; set; } = Default;
 
-    private static readonly CultureInfo Nl = CultureInfo.GetCultureInfo("nl-NL");
+    private static readonly CultureInfo Nl = Contracts.Localization.Tr.Culture;
 
     /// <summary>The text of one field for one item; empty when the item has no value for it.</summary>
     public static string Field(MediaDto m, string key) => key switch
@@ -47,14 +48,14 @@ public static class LibraryColumns
         "key" => m.Camelot is { } c ? $"{c} {m.Key}" : "",
         "lufs" => m.Lufs is double l ? string.Format(Nl, "{0:0.0} LUFS", l) : "",
         "replaygain" => m.ReplayGain is double rg ? string.Format(Nl, "RG {0:+0.0;-0.0} dB", rg) : "",
-        "plays" => m.PlayCount > 0 ? $"{m.PlayCount}×" : "nooit gespeeld",
-        "lastplayed" => m.LastPlayed is DateTime lp ? $"laatst {lp:d-M HH:mm}" : "",
-        "added" => m.Added is DateTime a ? $"sinds {a:d-M-yyyy}" : "",
+        "plays" => m.PlayCount > 0 ? $"{m.PlayCount}×" : Tr.T("nooit gespeeld"),
+        "lastplayed" => m.LastPlayed is DateTime lp ? Tr.F("laatst {0:d-M HH:mm}", lp) : "",
+        "added" => m.Added is DateTime a ? Tr.F("sinds {0:d-M-yyyy}", a) : "",
         "language" => m.Language,
         "mood" => m.Mood,
         "rating" => m.Rating is int r and > 0 ? new string('★', Math.Clamp(r, 1, 5)) : "",
-        "energy" => m.EnergyLevel is int e and > 0 ? $"energie {e}" : "",
-        "bitrate" => m.Bitrate is int k ? $"{k} kbps" : "",
+        "energy" => m.EnergyLevel is int e and > 0 ? Tr.F("energie {0}", e) : "",
+        "bitrate" => m.Bitrate is int k ? Tr.F("{0} kbps", k) : "",
         _ => "",
     };
 

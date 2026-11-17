@@ -1,3 +1,4 @@
+using ReaRadioDj.Contracts.Localization;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -55,12 +56,12 @@ public sealed partial class FailoverVm : ObservableObject
         if (st is null) return;
         IsBackup = st.Role == "reserve";
         HasAir = st.HasAir;
-        State = st.Role == "uit" ? "Uit: deze engine let niet op een andere studio." : char.ToUpper(st.State[0]) + st.State[1..];
+        State = st.Role == "uit" ? Tr.T("Uit: deze engine let niet op een andere studio.") : Tr.E(char.ToUpper(st.State[0]) + st.State[1..]);
         PartnerText = st.Role == "uit" ? "" : st.Partner is { } p
             ? $"{p.Station} ({p.Role}) · {(p.Healthy ? "gezond" : "storing")} · {(p.Playing ? "speelt" : "speelt niet")}{(p.Silent ? " · stil" : "")}{(p.HasAir ? " · heeft de uitzending overgenomen" : "")}"
-              + (st.LastAnswerUtc is DateTime t ? $" · laatste antwoord {t.ToLocalTime():HH:mm:ss}" : "")
-              + (st.Error is { } warning ? Environment.NewLine + warning : "")
-            : $"Geen antwoord van {st.PartnerUrl}" + (st.Error is { } e ? $": {e}" : "");
+              + (st.LastAnswerUtc is DateTime t ? Tr.F(" · laatste antwoord {0:HH:mm:ss}", t.ToLocalTime()) : "")
+              + (st.Error is { } warning ? Environment.NewLine + Tr.E(warning) : "")
+            : Tr.F("Geen antwoord van {0}", st.PartnerUrl) + (st.Error is { } e ? ": " + Tr.E(e) : "");
     }
 
     public FailoverSettingsDto Request() => new(Role, Partner.Trim(), (int)(IntervalSeconds ?? 2), (int)(LostSeconds ?? 10), TakeOverOnSilence,
@@ -71,7 +72,7 @@ public sealed partial class FailoverVm : ObservableObject
     {
         if (!Loaded) return null;
         var (saved, error) = await StudioHub.Current.Client.SendWithErrorAsync<FailoverSettingsDto>(HttpMethod.Put, "/api/failover/settings", Request());
-        if (error is not null) return Result = "Reservestudio niet opgeslagen: " + VoipLineVm.ErrorText(error);
+        if (error is not null) return Result = Tr.T("Reservestudio niet opgeslagen: ") + VoipLineVm.ErrorText(error);
         if (saved is not null) Fill(saved);
         Result = "";
         await RefreshAsync();
@@ -82,7 +83,7 @@ public sealed partial class FailoverVm : ObservableObject
     private async Task TakeOver()
     {
         var (_, error) = await StudioHub.Current.Client.SendWithErrorAsync<object>(HttpMethod.Post, "/api/failover/takeover", null);
-        Result = error is null ? "" : "Niet gelukt: " + VoipLineVm.ErrorText(error);
+        Result = error is null ? "" : Tr.T("Niet gelukt: ") + VoipLineVm.ErrorText(error);
         await RefreshAsync();
     }
 
@@ -90,7 +91,7 @@ public sealed partial class FailoverVm : ObservableObject
     private async Task GiveBack()
     {
         var (_, error) = await StudioHub.Current.Client.SendWithErrorAsync<object>(HttpMethod.Post, "/api/failover/giveback", null);
-        Result = error is null ? "" : "Niet gelukt: " + VoipLineVm.ErrorText(error);
+        Result = error is null ? "" : Tr.T("Niet gelukt: ") + VoipLineVm.ErrorText(error);
         await RefreshAsync();
     }
 }

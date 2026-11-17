@@ -44,7 +44,7 @@
               <TextBlock Text="{Binding Title}" FontSize="17" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
               <TextBlock Classes="muted" Text="{Binding Artist}" TextTrimming="CharacterEllipsis" />
               <TextBlock Classes="muted" FontSize="12" Text="{Binding Album}" TextTrimming="CharacterEllipsis" />
-              <TextBlock Classes="muted" FontSize="12" Text="{Binding Context, StringFormat='uit: {0}'}" IsVisible="{Binding Context, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" TextTrimming="CharacterEllipsis" />
+              <TextBlock Classes="muted" FontSize="12" Text="{Binding Context, Converter={StaticResource Tr}, ConverterParameter='uit: {0}'}" IsVisible="{Binding Context, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" TextTrimming="CharacterEllipsis" />
               <TextBlock Classes="mono" FontSize="12" Text="{Binding TimeText}" />
             </StackPanel>
           </DockPanel>

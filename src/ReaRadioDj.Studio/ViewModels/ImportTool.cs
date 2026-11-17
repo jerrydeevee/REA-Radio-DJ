@@ -1,3 +1,4 @@
+using ReaRadioDj.Contracts.Localization;
 using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -25,7 +26,7 @@ public sealed record ImportedHourRow(ImportedHourDto Hour)
 {
     public string When => DateTime.TryParse(Hour.Date, out var d)
         ? $"{d:ddd d MMM} {Hour.Hour:00}:00" : $"{Hour.Date} {Hour.Hour:00}:00";
-    public string Detail => $"{Hour.Items} items · {Hour.Source}";
+    public string Detail => Tr.F("{0} items · {1}", Hour.Items, Hour.Source);
 }
 
 /// <summary>
@@ -40,14 +41,14 @@ public sealed partial class ImportTool : StudioTool
         Fields = [_time, _file, _mediaId, _artist, _title];
     }
 
-    public static readonly string[] LayoutNames = ["Gescheiden door een teken", "Vaste kolombreedte"];
-    public static readonly string[] SeparatorNames = ["; puntkomma", ", komma", "tab", "| streep"];
+    public static readonly string[] LayoutNames = [Tr.T("Gescheiden door een teken"), Tr.T("Vaste kolombreedte")];
+    public static readonly string[] SeparatorNames = [Tr.T("; puntkomma"), Tr.T(", komma"), "tab", Tr.T("| streep")];
     private static readonly string[] SeparatorValues = [";", ",", "\\t", "|"];
     public IReadOnlyList<string> Layouts => LayoutNames;
     public IReadOnlyList<string> Separators => SeparatorNames;
     public IReadOnlyList<int> HoursOfDay { get; } = Enumerable.Range(0, 24).ToList();
 
-    private readonly ImportField _time = new("Tijd"), _file = new("Bestand"), _mediaId = new("Nummer"), _artist = new("Artiest"), _title = new("Titel");
+    private readonly ImportField _time = new(Tr.T("Tijd")), _file = new(Tr.T("Bestand")), _mediaId = new(Tr.T("Nummer")), _artist = new(Tr.T("Artiest")), _title = new(Tr.T("Titel"));
     public IReadOnlyList<ImportField> Fields { get; }
 
     public ObservableCollection<ImportProfileDto> Profiles { get; } = [];
@@ -60,7 +61,7 @@ public sealed partial class ImportTool : StudioTool
     [ObservableProperty] private DateTime? _date = DateTime.Today.AddDays(1);
     [ObservableProperty] private int _startHour;
     [ObservableProperty] private string? _fileName;
-    [ObservableProperty] private string _summary = "Kies een profiel en een logbestand.";
+    [ObservableProperty] private string _summary = Tr.T("Kies een profiel en een logbestand.");
     [ObservableProperty] private string? _problem;
     private string? _text;
 
@@ -90,21 +91,21 @@ public sealed partial class ImportTool : StudioTool
     private async Task Run(bool apply)
     {
         Problem = null;
-        if (UseProfile is null) { Problem = "Kies eerst een importprofiel (tab Profielen)."; return; }
-        if (_text is null) { Problem = "Kies eerst een logbestand."; return; }
-        Summary = apply ? "bezig met importeren…" : "bezig met controleren…";
+        if (UseProfile is null) { Problem = Tr.T("Kies eerst een importprofiel (tab Profielen)."); return; }
+        if (_text is null) { Problem = Tr.T("Kies eerst een logbestand."); return; }
+        Summary = apply ? Tr.T("bezig met importeren…") : Tr.T("bezig met controleren…");
         var request = new ImportRequestDto(UseProfile.Id, _text, $"{Date ?? DateTime.Today:yyyy-MM-dd}", StartHour, FileName);
         var r = await Hub.Client.SendForAsync<ImportResultDto>(HttpMethod.Post, apply ? "/api/import/apply" : "/api/import/preview", request);
-        if (r is null) { Summary = ""; Problem = "Lezen mislukt: engine niet bereikbaar of profiel ongeldig?"; return; }
+        if (r is null) { Summary = ""; Problem = Tr.T("Lezen mislukt: engine niet bereikbaar of profiel ongeldig?"); return; }
         Lines.Clear();
         foreach (var l in r.Items) Lines.Add(l);
-        string hours = r.Hours.Count == 0 ? "geen uren" : r.Hours.Count == 1 ? r.Hours[0] : $"{r.Hours[0]} t/m {r.Hours[^1]} ({r.Hours.Count} uur)";
-        Summary = (r.Applied ? "Geïmporteerd: " : "Gecontroleerd: ") + $"{r.Matched} van {r.Lines} regels gevonden in de bibliotheek · {hours}"
-            + (r.Applied ? "" : "\nNog niets opgeslagen: kies Importeren.");
-        Problem = r.Error;
+        string hours = r.Hours.Count == 0 ? Tr.T("geen uren") : r.Hours.Count == 1 ? r.Hours[0] : Tr.F("{0} t/m {1} ({2} uur)", r.Hours[0], r.Hours[^1], r.Hours.Count);
+        Summary = (r.Applied ? Tr.T("Geïmporteerd: ") : Tr.T("Gecontroleerd: ")) + Tr.F("{0} van {1} regels gevonden in de bibliotheek · {2}", r.Matched, r.Lines, hours)
+            + (r.Applied ? "" : Tr.T("\nNog niets opgeslagen: kies Importeren."));
+        Problem = Tr.E(r.Error);
         if (r.Applied)
         {
-            Hub.Status = $"log geïmporteerd: {r.Hours.Count} uur";
+            Hub.Status = Tr.F("log geïmporteerd: {0} uur", r.Hours.Count);
             await LoadHoursAsync();
         }
     }
@@ -175,7 +176,7 @@ public sealed partial class ImportTool : StudioTool
     {
         Selected = null;
         Id = 0;
-        Name = "Nieuw profiel";
+        Name = Tr.T("Nieuw profiel");
         Layout = 0;
         OnLayoutChanged(0);
         Separator = 0;
@@ -192,10 +193,10 @@ public sealed partial class ImportTool : StudioTool
     private async Task SaveProfile()
     {
         var saved = await Hub.Client.SendForAsync<ImportProfileDto>(HttpMethod.Post, "/api/import/profiles", CurrentProfile());
-        if (saved is null) { ProfileProblem = "Opslaan mislukt: geef aan waar het bestand, het nummer, of artiest en titel staan."; return; }
+        if (saved is null) { ProfileProblem = Tr.T("Opslaan mislukt: geef aan waar het bestand, het nummer, of artiest en titel staan."); return; }
         ProfileProblem = null;
         await LoadProfilesAsync(saved.Id);
-        Hub.Status = $"importprofiel “{saved.Name}” opgeslagen";
+        Hub.Status = Tr.F("importprofiel “{0}” opgeslagen", saved.Name);
     }
 
     [RelayCommand]

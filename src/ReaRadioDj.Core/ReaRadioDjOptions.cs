@@ -4,6 +4,8 @@ namespace ReaRadioDj.Core;
 public sealed class ReaRadioDjOptions
 {
     public string StationName { get; set; } = "REA-Radio-DJ";
+    /// <summary>Language of the engine's own tray menu (nl, en, de, es); empty = the language of Windows. The presenter's on-air language is Presenter.Language.</summary>
+    public string Language { get; set; } = "";
     public string MusicFolder { get; set; } = "media/music";
     public string JingleFolder { get; set; } = "media/jingles";
     /// <summary>Watch the music and jingle folders: new, changed and removed files are processed without a button.</summary>
@@ -186,6 +188,7 @@ public sealed class PresenterOptions
 {
     public bool Enabled { get; set; } = true;
     public string PresenterName { get; set; } = "Sam";
+    /// <summary>The language the presenter speaks on air: nl, en, de or es (set in the studio under AI presenter).</summary>
     public string Language { get; set; } = "nl";
     /// <summary>Extra persona instruction for the language model.</summary>
     public string Persona { get; set; } = "Je bent een vriendelijke, energieke radiopresentator. Je praat kort en natuurlijk.";
@@ -243,7 +246,8 @@ public sealed class SpeechCheckOptions
     public bool Enabled { get; set; } = false;
     public string BaseUrl { get; set; } = "http://localhost:8002";
     public string Model { get; set; } = "small";
-    public string Language { get; set; } = "nl";
+    /// <summary>Language Whisper listens for; empty = the presenter's on-air language.</summary>
+    public string Language { get; set; } = "";
     /// <summary>Lowest acceptable match (0..1) between script and what was heard.</summary>
     public double MinScore { get; set; } = 0.75;
     /// <summary>Renders again this many times when the match is too low.</summary>

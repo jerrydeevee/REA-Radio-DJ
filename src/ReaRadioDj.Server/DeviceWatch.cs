@@ -148,13 +148,13 @@ public sealed class DeviceWatch(AudioRouter router, StationDb db, MessageCenter 
             if (uses.Length == 0) uses = "een uitgang";
             if (action == AsioWatchAction.Lost)
             {
-                messages.Warning($"De ASIO-kaart {name} speelt niet meer: {uses} is stil. REA-Radio-DJ probeert hem elke {AsioWatchdog.RetryEvery.TotalSeconds:0} seconden opnieuw te starten. "
-                    + "Komt hij niet terug, kijk dan of de kaart is aangesloten en niet door een ander programma wordt gebruikt, of kies de Windows-kaart (Instellingen › Geluid) en start de engine opnieuw.");
+                messages.Add("waarschuwing", $"De ASIO-kaart {name} speelt niet meer: {uses} is stil. REA-Radio-DJ probeert hem elke {AsioWatchdog.RetryEvery.TotalSeconds:0} seconden opnieuw te starten. "
+                    + "Komt hij niet terug, kijk dan of de kaart is aangesloten en niet door een ander programma wordt gebruikt, of kies de Windows-kaart (Instellingen › Geluid) en start de engine opnieuw.", "geluidskaart");
                 logger.LogError("ASIO device {Device} ({Name}) stopped and did not start again", device, name);
             }
             else
             {
-                messages.Warning($"De ASIO-kaart {name} stond even stil en speelt weer ({uses}).");
+                messages.Add("info", $"De ASIO-kaart {name} stond even stil en speelt weer ({uses}).", "geluidskaart");
                 logger.LogWarning("ASIO device {Device} ({Name}) stopped and runs again", device, name);
             }
         }

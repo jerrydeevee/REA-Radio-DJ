@@ -1,3 +1,4 @@
+using ReaRadioDj.Contracts.Localization;
 using System.Diagnostics;
 using System.IO.Compression;
 using System.Runtime.InteropServices;
@@ -13,7 +14,7 @@ public sealed class SoloistSettings
 {
     /// <summary>Own path of soloist.exe; empty = the Soloist folder of REA-Radio-DJ (see <see cref="SoloistLauncher.FindExe"/>).</summary>
     public string ExePath { get; set; } = "";
-    public string DeviceName { get; set; } = "REA ontwikkeltest";
+    public string DeviceName { get; set; } = Tr.T("REA ontwikkeltest");
     public int Port { get; set; } = 9090;
     /// <summary>The API key, encrypted with DPAPI for the current Windows user (base64). Empty = use SOLOIST_API_KEY.</summary>
     public string ApiKeyProtected { get; set; } = "";
@@ -82,7 +83,7 @@ public static class SoloistLauncher
     /// </summary>
     public static string? InstallZip(string zipPath)
     {
-        if (!File.Exists(zipPath)) return "Dat bestand bestaat niet.";
+        if (!File.Exists(zipPath)) return Tr.T("Dat bestand bestaat niet.");
         bool wasRunning = Running;
         Stop();
         string target = ManagedFolder, staging = target + ".nieuw";
@@ -94,11 +95,11 @@ public static class SoloistLauncher
             using (var zip = System.IO.Compression.ZipFile.OpenRead(zipPath))
             {
                 if (!zip.Entries.Any(e => string.Equals(e.Name, "soloist.exe", StringComparison.OrdinalIgnoreCase)))
-                    return "In deze zip zit geen soloist.exe: kies de Windows-versie (soloist_release_windows_x86_64.zip).";
+                    return Tr.T("In deze zip zit geen soloist.exe: kies de Windows-versie (soloist_release_windows_x86_64.zip).");
                 foreach (var entry in zip.Entries)
                 {
                     string dest = Path.GetFullPath(Path.Combine(staging, entry.FullName));
-                    if (!dest.StartsWith(root, StringComparison.OrdinalIgnoreCase)) return "Deze zip bevat ongeldige paden.";
+                    if (!dest.StartsWith(root, StringComparison.OrdinalIgnoreCase)) return Tr.T("Deze zip bevat ongeldige paden.");
                     if (entry.FullName.EndsWith('/') || entry.FullName.EndsWith('\\')) { Directory.CreateDirectory(dest); continue; }
                     Directory.CreateDirectory(Path.GetDirectoryName(dest)!);
                     entry.ExtractToFile(dest, overwrite: true);
@@ -110,9 +111,9 @@ public static class SoloistLauncher
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidDataException)
         {
             try { if (Directory.Exists(staging)) Directory.Delete(staging, true); } catch (IOException) { } catch (UnauthorizedAccessException) { }
-            return "Installeren mislukt: " + ex.Message;
+            return Tr.T("Installeren mislukt: ") + ex.Message;
         }
-        LastMessage = "Soloist is geïnstalleerd in de map van REA-Radio-DJ.";
+        LastMessage = Tr.T("Soloist is geïnstalleerd in de map van REA-Radio-DJ.");
         WriteLog("--- geïnstalleerd uit " + Path.GetFileName(zipPath), "");
         Changed?.Invoke();
         return wasRunning ? "restart" : null;
@@ -147,10 +148,10 @@ public static class SoloistLauncher
     }
 
     public static string KeySource(SoloistSettings s) =>
-        s.ApiKeyProtected.Length > 0 && Unprotect(s.ApiKeyProtected).Length > 0 ? "opgeslagen (versleuteld voor jouw Windows-account)"
-        : s.ApiKeyProtected.Length > 0 ? "opgeslagen, maar niet te lezen onder dit Windows-account: vul hem opnieuw in"
-        : !string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("SOLOIST_API_KEY")) ? "uit de omgevingsvariabele SOLOIST_API_KEY"
-        : "nog geen sleutel";
+        s.ApiKeyProtected.Length > 0 && Unprotect(s.ApiKeyProtected).Length > 0 ? Tr.T("opgeslagen (versleuteld voor jouw Windows-account)")
+        : s.ApiKeyProtected.Length > 0 ? Tr.T("opgeslagen, maar niet te lezen onder dit Windows-account: vul hem opnieuw in")
+        : !string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("SOLOIST_API_KEY")) ? Tr.T("uit de omgevingsvariabele SOLOIST_API_KEY")
+        : Tr.T("nog geen sleutel");
 
     // ---------------------------------------------------------------- starting and stopping
 
@@ -161,13 +162,13 @@ public static class SoloistLauncher
         {
             if (_process is { HasExited: false }) return null;
             if (FindExe(s) is not { } exe)
-                return s.ExePath.Trim().Length > 0 ? "Op het eigen pad staat geen soloist.exe."
-                    : "Soloist is nog niet geïnstalleerd: download de Windows-zip en kies Installeren uit zip.";
-            if (!string.Equals(Path.GetFileName(exe), "soloist.exe", StringComparison.OrdinalIgnoreCase)) return "Dat is niet soloist.exe.";
-            if (s.Port is < 1024 or > 65535) return "Kies een poort tussen 1024 en 65535.";
+                return s.ExePath.Trim().Length > 0 ? Tr.T("Op het eigen pad staat geen soloist.exe.")
+                    : Tr.T("Soloist is nog niet geïnstalleerd: download de Windows-zip en kies Installeren uit zip.");
+            if (!string.Equals(Path.GetFileName(exe), "soloist.exe", StringComparison.OrdinalIgnoreCase)) return Tr.T("Dat is niet soloist.exe.");
+            if (s.Port is < 1024 or > 65535) return Tr.T("Kies een poort tussen 1024 en 65535.");
             string key = ApiKey(s);
-            if (key.Length == 0) return "Vul je Soloist-API-sleutel in (of zet hem in SOLOIST_API_KEY).";
-            string name = string.IsNullOrWhiteSpace(s.DeviceName) ? "REA ontwikkeltest" : s.DeviceName.Trim();
+            if (key.Length == 0) return Tr.T("Vul je Soloist-API-sleutel in (of zet hem in SOLOIST_API_KEY).");
+            string name = string.IsNullOrWhiteSpace(s.DeviceName) ? Tr.T("REA ontwikkeltest") : s.DeviceName.Trim();
 
             var info = new ProcessStartInfo(exe)
             {
@@ -193,11 +194,11 @@ public static class SoloistLauncher
                 p.BeginErrorReadLine();
                 _process = p;
                 WriteLog($"--- gestart: {name} op {s.Address}", key);
-                LastMessage = $"Soloist draait (\"{name}\" op {s.Address}).";
+                LastMessage = Tr.F("Soloist draait (\"{0}\" op {1}).", name, s.Address);
             }
             catch (Exception ex) when (ex is System.ComponentModel.Win32Exception or InvalidOperationException or IOException)
             {
-                return "Soloist starten mislukt: " + ex.Message;
+                return Tr.T("Soloist starten mislukt: ") + ex.Message;
             }
         }
         Changed?.Invoke();
@@ -220,7 +221,7 @@ public static class SoloistLauncher
         }
         catch (Exception ex) when (ex is InvalidOperationException or System.ComponentModel.Win32Exception) { }
         finally { p.Dispose(); }
-        LastMessage = "Soloist gestopt.";
+        LastMessage = Tr.T("Soloist gestopt.");
         WriteLog("--- gestopt door de studio", "");
         Changed?.Invoke();
     }
@@ -233,9 +234,9 @@ public static class SoloistLauncher
         // Exit code 10: this Soloist build is past its 90 days.
         LastMessage = code switch
         {
-            0 => "Soloist is gestopt.",
-            10 => "Deze Soloist-versie is verlopen (90 dagen): download een nieuwe.",
-            _ => $"Soloist is gestopt (code {code}); zie soloist.log.",
+            0 => Tr.T("Soloist is gestopt."),
+            10 => Tr.T("Deze Soloist-versie is verlopen (90 dagen): download een nieuwe."),
+            _ => Tr.F("Soloist is gestopt (code {0}); zie soloist.log.", code),
         };
         WriteLog($"--- gestopt, code {code}", "");
         Changed?.Invoke();

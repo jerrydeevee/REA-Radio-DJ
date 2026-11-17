@@ -1,3 +1,4 @@
+using ReaRadioDj.Contracts.Localization;
 using Avalonia.Controls;
 using Avalonia.Platform.Storage;
 using System.Text;
@@ -16,7 +17,7 @@ public partial class ImportView : UserControl
             if (DataContext is not ImportTool t || TopLevel.GetTopLevel(this)?.StorageProvider is not { } storage) return;
             var files = await storage.OpenFilePickerAsync(new FilePickerOpenOptions
             {
-                Title = "Logbestand van de muziekplanner",
+                Title = Tr.T("Logbestand van de muziekplanner"),
                 AllowMultiple = false,
                 FileTypeFilter = [new FilePickerFileType("Logbestanden") { Patterns = ["*.txt", "*.csv", "*.log", "*.lst", "*.tsv"] }, FilePickerFileTypes.All],
             });
@@ -27,7 +28,7 @@ public partial class ImportView : UserControl
             t.SetFile(files[0].Name, Decode(memory.ToArray()));
         };
         Export.Click += async (_, _) =>
-            await FileSave.FromEngineAsync(this, "Bibliotheek exporteren", ImportTool.ExportFileName, ImportTool.ExportUrl);
+            await FileSave.FromEngineAsync(this, Tr.T("Bibliotheek exporteren"), ImportTool.ExportFileName, ImportTool.ExportUrl);
     }
 
     /// <summary>Plain text of a file from a scheduler: UTF-8 when it is valid UTF-8, otherwise Windows Latin.</summary>

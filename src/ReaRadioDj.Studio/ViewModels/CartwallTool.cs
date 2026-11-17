@@ -1,3 +1,4 @@
+using ReaRadioDj.Contracts.Localization;
 using System.Collections.ObjectModel;
 using Avalonia.Media;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -55,7 +56,7 @@ public sealed partial class CartwallTool : StudioTool
     /// <summary>0 and 1 = the cartwalls; 2 = the DJ sampler (plays through the DJ desk).</summary>
     public int Wall => Id switch { "cart2" => 1, "sampler" => 2, _ => 0 };
     public bool IsSampler => Wall == 2;
-    public string StopText => IsSampler ? "Pads stop" : "Alles stop (F10)";
+    public string StopText => IsSampler ? Tr.T("Pads stop") : Tr.T("Alles stop (F10)");
     public ObservableCollection<CartButton> Buttons { get; } = [];
     public IReadOnlyList<string> ColorChoices => Colors;
     [ObservableProperty] private int _page;
@@ -131,7 +132,7 @@ public sealed partial class CartwallTool : StudioTool
             }
         }
         var others = active.Keys.Where(k => k / 16 != Page).Select(k => $"p{k / 16 + 1}:{k % 16 + 1}").ToList();
-        PlayingText = active.Count == 0 ? "" : others.Count == 0 ? $"{active.Count} speelt" : $"{active.Count} speelt (ook {string.Join(", ", others)})";
+        PlayingText = active.Count == 0 ? "" : others.Count == 0 ? Tr.F("{0} speelt", active.Count) : Tr.F("{0} speelt (ook {1})", active.Count, string.Join(", ", others));
     }
 
     public Task Press(CartButton b) => Hub.Client.PostAsync($"/api/carts/{Wall}/{Page * 16 + b.Slot}/press");

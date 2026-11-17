@@ -1,3 +1,4 @@
+using ReaRadioDj.Contracts.Localization;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.Platform.Storage;
@@ -24,7 +25,7 @@ public partial class PlannerView : UserControl
         if ((sender as Control)?.DataContext is not RuleRow row || TopLevel.GetTopLevel(this)?.StorageProvider is not { } storage) return;
         var files = await storage.OpenFilePickerAsync(new FilePickerOpenOptions
         {
-            Title = "Afspeellijst voor deze plek in de klok",
+            Title = Tr.T("Afspeellijst voor deze plek in de klok"),
             AllowMultiple = false,
             FileTypeFilter = [new FilePickerFileType("Afspeellijsten") { Patterns = ["*.m3u", "*.m3u8", "*.pls", "*.xspf"] }, FilePickerFileTypes.All],
         });

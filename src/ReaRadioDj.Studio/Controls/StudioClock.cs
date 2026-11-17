@@ -1,3 +1,4 @@
+using ReaRadioDj.Contracts.Localization;
 using System.Globalization;
 using Avalonia;
 using Avalonia.Controls;
@@ -37,7 +38,7 @@ public sealed class StudioClock : Control
     private static readonly IBrush Green = new SolidColorBrush(Color.Parse("#3DBD7D"));
     private static readonly IBrush Amber = new SolidColorBrush(Color.Parse("#F0B429"));
     private static readonly IBrush Red = new SolidColorBrush(Color.Parse("#E5484D"));
-    private static readonly Typeface Mono = new(new FontFamily("Consolas, Cascadia Mono, monospace"), FontStyle.Normal, FontWeight.Bold);
+    private static readonly Typeface Mono = new(new FontFamily(Tr.T("Consolas, Cascadia Mono, monospace")), FontStyle.Normal, FontWeight.Bold);
 
     private readonly DispatcherTimer _timer;
     private DateTime _received = DateTime.Now;
@@ -176,7 +177,7 @@ public sealed class StudioClock : Control
         }
     }
 
-    private static readonly CultureInfo Dutch = new("nl-NL");
+    private static readonly CultureInfo Dutch = Contracts.Localization.Tr.Culture;
 
     private void RenderCombi(DrawingContext g, Size size, DateTime now)
     {
@@ -297,7 +298,7 @@ public sealed class StudioClock : Control
         var main = Fit(now.ToString("HH:mm", CultureInfo.InvariantCulture), r * 0.95, r * 0.34, Text);
         g.DrawText(main, new Point(c.X - main.Width / 2, c.Y - main.Height * 0.78));
         string left = $"{toHour / 60:00}:{toHour % 60:00}";
-        var sub = Fit("nog " + left + " tot het uur", r * 1.0, r * 0.13, fill);
+        var sub = Fit(Tr.F("nog {0} tot het uur", left), r * 1.0, r * 0.13, fill);
         g.DrawText(sub, new Point(c.X - sub.Width / 2, c.Y + main.Height * 0.32));
     }
 

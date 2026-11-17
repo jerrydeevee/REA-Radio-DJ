@@ -1,3 +1,4 @@
+using ReaRadioDj.Contracts.Localization;
 using System.Collections.ObjectModel;
 using System.Globalization;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -17,8 +18,8 @@ public sealed class ExplorerEntry(FileEntryDto e)
     public string Icon => Dto.IsFolder ? "📁" : "♪";
     public string Info => Dto.IsFolder ? "" :
         (Dto.Size >= 1 << 20 ? $"{(Dto.Size / 1048576.0).ToString("0.0", Nl)} MB" : $"{Math.Max(1, Dto.Size / 1024)} kB")
-        + (InLibrary ? " · bibliotheek" : "");
-    private static readonly CultureInfo Nl = CultureInfo.GetCultureInfo("nl-NL");
+        + (InLibrary ? Tr.T(" · bibliotheek") : "");
+    private static readonly CultureInfo Nl = Contracts.Localization.Tr.Culture;
 }
 
 /// <summary>A shortcut on the left of the Verkenner: a library folder, a saved favourite or the list of drives.</summary>
@@ -45,7 +46,7 @@ public sealed partial class ExplorerTool : StudioTool
     public bool HasFile => Selected is { IsFolder: false };
     public bool CanGoUp => Parent is not null;
     public bool IsFavourite => Places.Any(p => p.Favourite && SamePath(p.Path, Path));
-    public string Heading => Path.Length == 0 ? "Deze computer" : Path;
+    public string Heading => Path.Length == 0 ? Tr.T("Deze computer") : Path;
 
     protected override void OnFirstShow()
     {
@@ -56,7 +57,7 @@ public sealed partial class ExplorerTool : StudioTool
     private async Task LoadPlacesAsync()
     {
         Places.Clear();
-        Places.Add(new ExplorerPlace("Deze computer", "", false));
+        Places.Add(new ExplorerPlace(Tr.T("Deze computer"), "", false));
         foreach (var f in Hub.Settings.ExplorerFavorites) Places.Add(new ExplorerPlace("★ " + Last(f), f, true));
         var folders = await Hub.Client.GetAsync<List<LibraryFolderDto>>("/api/library/folders") ?? [];
         foreach (var f in folders.Where(f => f.Enabled))
@@ -69,12 +70,12 @@ public sealed partial class ExplorerTool : StudioTool
         Busy = true;
         var l = await Hub.Client.GetAsync<FolderDto>("/api/files?path=" + Uri.EscapeDataString(path ?? ""));
         Busy = false;
-        if (l is null) { Status = "De engine geeft geen antwoord."; return; }
+        if (l is null) { Status = Tr.T("De engine geeft geen antwoord."); return; }
         if (l.Error is not null && l.Entries.Count == 0 && !string.IsNullOrEmpty(path) && path != Path)
         {
             // A saved folder that is gone: fall back to the drives instead of an empty window.
-            if (string.IsNullOrEmpty(Path)) { await OpenAsync(""); Status = l.Error; }
-            else Status = l.Error;
+            if (string.IsNullOrEmpty(Path)) { await OpenAsync(""); Status = Tr.E(l.Error); }
+            else Status = Tr.E(l.Error);
             return;
         }
         Path = l.Path;
@@ -83,7 +84,7 @@ public sealed partial class ExplorerTool : StudioTool
         Filter = "";
         ApplyFilter();
         int files = _all.Count(e => !e.IsFolder);
-        Status = l.Error ?? (l.Path.Length == 0 ? $"{_all.Count} schijven" : $"{_all.Count - files} mappen, {files} audiobestanden");
+        Status = l.Error is { } error ? Tr.E(error) : (l.Path.Length == 0 ? Tr.F("{0} schijven", _all.Count) : Tr.F("{0} mappen, {1} audiobestanden", _all.Count - files, files));
         if (Hub.Settings.ExplorerPath != l.Path) { Hub.Settings.ExplorerPath = l.Path; Hub.Settings.Save(); }
         OnPropertyChanged(nameof(CanGoUp));
         OnPropertyChanged(nameof(IsFavourite));
@@ -124,9 +125,9 @@ public sealed partial class ExplorerTool : StudioTool
     private async Task Pfl()
     {
         if (Selected is not { IsFolder: false } e) return;
-        Status = $"{e.Name} in PFL laden…";
+        Status = Tr.F("{0} in PFL laden…", e.Name);
         var (_, err) = await Hub.Client.SendWithErrorAsync<object>(HttpMethod.Post, "/api/files/pfl", new FileRequest(e.Path, null));
-        Status = err is null ? $"{e.Name} speelt in PFL." : $"PFL lukt niet: {err}";
+        Status = err is null ? Tr.F("{0} speelt in PFL.", e.Name) : Tr.F("PFL lukt niet: {0}", err);
     }
 
     [RelayCommand]
@@ -141,11 +142,11 @@ public sealed partial class ExplorerTool : StudioTool
 
     private async Task ToLogAsync(ExplorerEntry e, int? position)
     {
-        Status = e.InLibrary ? $"{e.Name} op de log zetten…" : $"{e.Name} analyseren en op de log zetten…";
+        Status = e.InLibrary ? Tr.F("{0} op de log zetten…", e.Name) : Tr.F("{0} analyseren en op de log zetten…", e.Name);
         var (_, err) = e.Dto.MediaId is long id
             ? await Hub.Client.SendWithErrorAsync<object>(HttpMethod.Post, "/api/log/media", new AddToLogRequest(id, position))
             : await Hub.Client.SendWithErrorAsync<object>(HttpMethod.Post, "/api/files/log", new FileRequest(e.Path, position));
-        Status = err is null ? $"{e.Name} staat {(position == 0 ? "als volgende" : "achteraan")} in de log." : $"Niet gelukt: {err}";
+        Status = err is null ? (position == 0 ? Tr.F("{0} staat als volgende in de log.", e.Name) : Tr.F("{0} staat achteraan in de log.", e.Name)) : Tr.F("Niet gelukt: {0}", err);
     }
 
     private static string Last(string path)

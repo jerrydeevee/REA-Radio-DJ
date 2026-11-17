@@ -315,6 +315,46 @@
         </StackPanel></ScrollViewer>
       </TabItem>
 
+      <TabItem Header="Meldingen per mail">
+        <ScrollViewer><StackPanel Classes="page" DataContext="{Binding Mail}" x:DataType="vm:MailVm">
+          <TextBlock Classes="title" Text="Meldingen per mail" />
+          <TextBlock Classes="help" Text="Belangrijke meldingen ook buiten de studio: de engine mailt ze via je eigen mailserver (SMTP). Meldingen over hetzelfde onderwerp worden een tijdje bij elkaar gehouden, zodat een alarm dat steeds terugkomt de mailbox niet vult." />
+          <CheckBox Content="Meldingen per mail versturen" IsChecked="{Binding Enabled}" Margin="0,12,0,0" IsEnabled="{Binding Loaded}" />
+          <TextBlock Classes="field" Text="Mailserver" />
+          <TextBox Text="{Binding Host}" Watermark="smtp.voorbeeld.nl" />
+          <TextBlock Classes="field" Text="Poort" />
+          <NumericUpDown Value="{Binding Port}" Minimum="1" Maximum="65535" Increment="1" FormatString="0" />
+          <CheckBox Content="Versleuteld (STARTTLS)" IsChecked="{Binding Tls}" Margin="0,6,0,0" />
+          <TextBlock Classes="help" Text="Gebruik poort 587 met STARTTLS (of 25 zonder). Poort 465 (TLS vanaf het begin) werkt hier niet." />
+          <TextBlock Classes="field" Text="Gebruikersnaam" />
+          <TextBox Text="{Binding User}" Watermark="leeg als de server geen aanmelding vraagt" />
+          <TextBlock Classes="field" Text="Wachtwoord" />
+          <StackPanel Orientation="Horizontal" Spacing="6">
+            <TextBox Text="{Binding Password}" PasswordChar="•" Watermark="{Binding PasswordWatermark}" Width="280" />
+            <Button Content="Wissen" Command="{Binding ClearPasswordCommand}" IsVisible="{Binding HasPassword}" />
+          </StackPanel>
+          <TextBlock Classes="help" Text="Het wachtwoord wordt versleuteld bewaard voor het Windows-account van de engine en nooit teruggestuurd." />
+          <TextBlock Classes="field" Text="Afzender" />
+          <TextBox Text="{Binding From}" Watermark="studio@voorbeeld.nl" />
+          <TextBlock Classes="field" Text="Ontvangers (gescheiden door een komma)" />
+          <TextBox Text="{Binding To}" Watermark="techniek@voorbeeld.nl, eindredactie@voorbeeld.nl" />
+          <TextBlock Classes="field" Text="Mailen over" />
+          <ItemsControl ItemsSource="{Binding Topics}">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="vm:MailTopicChoice"><CheckBox Content="{Binding Name}" IsChecked="{Binding On}" /></DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+          <TextBlock Classes="field" Text="Hoogstens één mail per onderwerp per (minuten)" />
+          <NumericUpDown Value="{Binding MinutesBetween}" Minimum="1" Maximum="1440" Increment="1" FormatString="0" />
+          <StackPanel Orientation="Horizontal" Spacing="6" Margin="0,12,0,0">
+            <Button Content="Opslaan" Command="{Binding SaveCommand}" IsEnabled="{Binding Loaded}" />
+            <Button Content="Testmail sturen" Command="{Binding TestCommand}" IsEnabled="{Binding Loaded}" />
+          </StackPanel>
+          <TextBlock Classes="help" Text="{Binding Result}" />
+          <TextBlock Classes="help" Text="{Binding State}" />
+        </StackPanel></ScrollViewer>
+      </TabItem>
+
       <TabItem Header="Rotatie">
         <ScrollViewer><StackPanel Classes="page">
           <TextBlock Classes="title" Text="Rotatie" />
@@ -468,9 +508,9 @@
           <TextBlock Classes="title" Text="Engine op het netwerk" />
           <CheckBox Content="De engine is op het netwerk te bereiken (studio op een andere pc, browserstudio, remote-app)" IsChecked="{Binding WebOnNetwork}" />
           <TextBlock Classes="help" TextWrapping="Wrap" Text="Uit: alleen deze computer. Aan: andere computers en tablets in het netwerk bereiken de engine; elke handeling vraagt dan om een aanmelding of het wachtwoord hieronder. Werkt na een herstart van de engine; Windows kan dan vragen het programma door de firewall te laten (zie Systeem › Poorten)." />
-          <SelectableTextBlock Classes="help" Text="{Binding NetworkAddress, StringFormat='Remote-app op een tablet of telefoon: {0}'}" />
+          <SelectableTextBlock Classes="help" Text="{Binding NetworkAddress, Converter={StaticResource Tr}, ConverterParameter='Remote-app op een tablet of telefoon: {0}'}" />
           <TextBlock Classes="help" TextWrapping="Wrap" Text="Https gebruikt een eigen certificaat van het station. Installeer het één keer op de telefoon, dan geeft de browser geen waarschuwing meer. Android: open op de telefoon het adres hieronder, en installeer het bestand via Instellingen › Beveiliging › Meer › Versleuteling en inloggegevens › Certificaat installeren › CA-certificaat. iPhone: open het adres in Safari, en zet het daarna aan bij Instellingen › Algemeen › Info › Certificaatvertrouwen. Https gebruikt poort 8443: zet die ook open in de firewall." />
-          <SelectableTextBlock Classes="help" Text="{Binding CaAddress, StringFormat='Certificaat: {0}'}" />
+          <SelectableTextBlock Classes="help" Text="{Binding CaAddress, Converter={StaticResource Tr}, ConverterParameter='Certificaat: {0}'}" />
 
           <TextBlock Classes="title" Text="Bediening op afstand" Margin="0,24,0,4" />
           <TextBlock Classes="help" Text="De commando's waarmee andere apparaten en programma's het station bedienen (venster Bediening toont ze allemaal). Knoppen, lampjes en mengtafels stel je in bij het venster Hardware." />
@@ -777,6 +817,9 @@
         <ScrollViewer><StackPanel Classes="page">
           <TextBlock Classes="title" Text="Uiterlijk van deze studiocomputer" />
           <TextBlock Classes="help" Text="Wijzigingen zie je meteen, in alle vensters en werkbladen. Ze gelden alleen voor deze computer." />
+          <TextBlock Classes="field" Text="Taal · Language · Sprache · Idioma" />
+          <ComboBox ItemsSource="{Binding LanguageNames}" SelectedIndex="{Binding LanguageIndex}" MinWidth="320" />
+          <TextBlock Classes="help" Text="De taal van deze studio. Wordt actief als de studio opnieuw start. De taal van de AI-presentator en het nieuws stel je in bij Station." />
           <TextBlock Classes="field" Text="Stijl" />
           <ComboBox ItemsSource="{Binding ThemeNames}" SelectedIndex="{Binding ThemeIndex}" MinWidth="320" />
           <TextBlock Classes="help" Text="Studio donker is het standaardontwerp. Nacht is gedimd voor een donkere studio, Licht is voor veel daglicht, Hoog contrast voor wie het scherp wil zien." />

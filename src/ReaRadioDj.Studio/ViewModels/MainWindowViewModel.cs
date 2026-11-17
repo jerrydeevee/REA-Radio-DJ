@@ -1,3 +1,4 @@
+using ReaRadioDj.Contracts.Localization;
 using System.Collections.ObjectModel;
 using Avalonia;
 using Avalonia.Platform;
@@ -67,7 +68,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
             // --place log:library:rechts:0.67 (target "*" = the whole main window), for testing Venster plaatsen
             else if (args[i] == "--place" && args[i + 1].Split(':') is [var pw, var pt, var ps, var share])
                 Hub.Status = PlaceDockable(pw, pt == "*" ? WholeArea : pt, ps,
-                    double.Parse(share, System.Globalization.CultureInfo.InvariantCulture)) ?? $"geplaatst: {pw}";
+                    double.Parse(share, System.Globalization.CultureInfo.InvariantCulture)) ?? Tr.F("geplaatst: {0}", pw);
             else if (args[i] == "--workbench" && int.TryParse(args[i + 1], out var screen)) _startWorkbenches.Add(screen - 1);
             else if (args[i] == "--library") LibraryTool.StartSearch = args[i + 1];   // search and select the first row
         int ca = Array.IndexOf(args, "--cues");
@@ -134,7 +135,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
     private void OpenPlace()
     {
         PlaceTargets.Clear();
-        PlaceTargets.Add(new WindowEntry(WholeArea, "het hele hoofdvenster"));
+        PlaceTargets.Add(new WindowEntry(WholeArea, Tr.T("het hele hoofdvenster")));
         foreach (var w in WindowMenu)
             if (Layout is not null && _factory.FindDockable(Layout, d => d.Id == w.Id) is not null) PlaceTargets.Add(w);
         PlaceTarget ??= PlaceTargets[0];
@@ -149,11 +150,11 @@ public sealed partial class MainWindowViewModel : ObservableObject
     [RelayCommand]
     private void Place()
     {
-        if (PlaceWindow is not { } what || PlaceTarget is not { } where) { PlaceResult = "kies een venster en een plek"; return; }
+        if (PlaceWindow is not { } what || PlaceTarget is not { } where) { PlaceResult = Tr.T("kies een venster en een plek"); return; }
         var error = PlaceDockable(what.Id, where.Id, PlaceSide, PlaceSize switch { "1/4" => 0.25, "1/3" => 1 / 3.0, "2/3" => 2 / 3.0, "3/4" => 0.75, _ => 0.5 });
         if (error is not null) { PlaceResult = error; return; }
         PlaceOpen = false;
-        Hub.Status = $"{what.Name} staat nu {(PlaceSide == "als tabblad" ? "als tabblad bij" : PlaceSide + " van")} {where.Name}";
+        Hub.Status = (PlaceSide == "als tabblad" ? Tr.F("{0} staat nu als tabblad bij {1}", what.Name, where.Name) : Tr.F("{0} staat nu {1} van {2}", what.Name, Tr.T(PlaceSide), where.Name));
     }
 
     /// <summary>
@@ -162,22 +163,22 @@ public sealed partial class MainWindowViewModel : ObservableObject
     /// </summary>
     public string? PlaceDockable(string id, string targetId, string side, double share)
     {
-        if (Layout is null) return "geen indeling";
-        if (id == targetId) return "kies een ander venster als plek";
+        if (Layout is null) return Tr.T("geen indeling");
+        if (id == targetId) return Tr.T("kies een ander venster als plek");
         IDock? target;
         if (targetId == WholeArea)
         {
             target = Layout.VisibleDockables?.OfType<IDock>().FirstOrDefault();
-            if (target is null) return "het hoofdvenster is leeg";
+            if (target is null) return Tr.T("het hoofdvenster is leeg");
         }
         else
         {
-            if (_factory.FindDockable(Layout, d => d.Id == targetId) is not { Owner: IDock owner }) return "dat venster staat niet in het hoofdvenster";
+            if (_factory.FindDockable(Layout, d => d.Id == targetId) is not { Owner: IDock owner }) return Tr.T("dat venster staat niet in het hoofdvenster");
             target = owner;
         }
         var dockable = FindAnywhere(d => d.Id == id);
         if (dockable is not null && ReferenceEquals(dockable.Owner, target) && side != "als tabblad" && target.VisibleDockables?.Count == 1)
-            return "dit venster staat daar al alleen; kies een ander venster als plek";
+            return Tr.T("dit venster staat daar al alleen; kies een ander venster als plek");
         if (dockable is null) dockable = DockFactory.Create(id);
         else if (side == "als tabblad" && ReferenceEquals(dockable.Owner, target)) { _factory.SetActiveDockable(dockable); return null; }
         else _factory.RemoveDockable(dockable, true);
@@ -185,7 +186,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
 
         if (side == "als tabblad")
         {
-            if (target is not IToolDock) return "als tabblad kan alleen bij een venster, niet bij het hele hoofdvenster";
+            if (target is not IToolDock) return Tr.T("als tabblad kan alleen bij een venster, niet bij het hele hoofdvenster");
             _factory.AddDockable(target, dockable);
             _factory.SetActiveDockable(dockable);
             _factory.SetFocusedDockable(target, dockable);
@@ -199,7 +200,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
         };
         // the target may have been removed with the window (it was its last one): then use the whole main window
         if (target.Owner is null || !IsInLayout(target)) target = Layout.VisibleDockables?.OfType<IDock>().FirstOrDefault();
-        if (target is null) return "geen plek gevonden";
+        if (target is null) return Tr.T("geen plek gevonden");
         _factory.SplitToDock(target, dock, op);
         share = Math.Clamp(share, 0.1, 0.9);
         dock.Proportion = share;
@@ -218,7 +219,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
         var path = Path.Combine(StudioSettings.Folder, "dock-log.txt");
         var gate = new object();
         string? last = null;
-        try { Directory.CreateDirectory(StudioSettings.Folder); File.WriteAllText(path, $"dock-log {DateTime.Now:yyyy-MM-dd HH:mm:ss}{Environment.NewLine}"); }
+        try { Directory.CreateDirectory(StudioSettings.Folder); File.WriteAllText(path, Tr.F("dock-log {0:yyyy-MM-dd HH:mm:ss}{1}", DateTime.Now, Environment.NewLine)); }
         catch (IOException) { return; }
         Dock.Settings.DockSettings.DiagnosticsLogHandler = message =>
         {
@@ -245,11 +246,11 @@ public sealed partial class MainWindowViewModel : ObservableObject
     public ObservableCollection<string> LayoutNames { get; } = [];
 
     [ObservableProperty] private IRootDock? _layout;
-    [ObservableProperty] private string _currentLayout = "Standaard";
+    [ObservableProperty] private string _currentLayout = Tr.T("Standaard");
     [ObservableProperty] private string _newLayoutName = "";
 
     // Top bar
-    [ObservableProperty] private string _station = "REA-Radio-DJ";
+    [ObservableProperty] private string _station = Tr.T("REA-Radio-DJ");
     [ObservableProperty] private string _clock = "--:--:--";
     [ObservableProperty] private bool _onAir;
     [ObservableProperty] private bool _autoPlay;
@@ -291,7 +292,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
     private static readonly (string Key, string Layout)[] Workspaces =
     [
         ("live", AssistLayoutName), ("dj", DjLayoutName), ("auto", AutomationLayoutName),
-        ("prod", "Productie"), ("plan", "Planning"), ("report", "Rapportage"),
+        ("prod", Tr.T("Productie")), ("plan", Tr.T("Planning")), ("report", Tr.T("Rapportage")),
     ];
 
     /// <summary>The workspace a layout belongs to; a layout saved under another name counts as Live.</summary>
@@ -331,9 +332,9 @@ public sealed partial class MainWindowViewModel : ObservableObject
         _settings.Save();
     }
 
-    public bool StationDiffers => !string.Equals(Station, "REA-Radio-DJ", StringComparison.OrdinalIgnoreCase);
+    public bool StationDiffers => !string.Equals(Station, Tr.T("REA-Radio-DJ"), StringComparison.OrdinalIgnoreCase);
     partial void OnStationChanged(string value) => OnPropertyChanged(nameof(StationDiffers));
-    public string ModeText => Mode switch { "AUTO" => "AUTOMATISCH", "SEMI" => Held ? "SEMI · wacht op DJ" : "SEMI", _ => "HAND" };
+    public string ModeText => Mode switch { "AUTO" => Tr.T("AUTOMATISCH"), "SEMI" => Held ? Tr.T("SEMI · wacht op DJ") : "SEMI", _ => Tr.T("HAND") };
     [ObservableProperty] private string _mode = "AUTO";
     [ObservableProperty] private bool _held;
     public bool IsAuto => Mode == "AUTO";
@@ -397,11 +398,11 @@ public sealed partial class MainWindowViewModel : ObservableObject
 
     private async Task CheckNowAsync(bool report)
     {
-        if (report) Hub.Status = "Zoeken naar een nieuwere versie…";
+        if (report) Hub.Status = Tr.T("Zoeken naar een nieuwere versie…");
         var (release, error) = await UpdateChecker.CheckAsync();
         if (release is null)
         {
-            if (report) Hub.Status = "Zoeken naar updates lukte niet: " + error;
+            if (report) Hub.Status = Tr.T("Zoeken naar updates lukte niet: ") + error;
             return;
         }
         _settings.LastUpdateCheck = DateTime.UtcNow;
@@ -411,8 +412,8 @@ public sealed partial class MainWindowViewModel : ObservableObject
         var newer = ShowRelease(release.Tag, release.Url);
         if (report)
             Hub.Status = newer
-                ? $"Versie {release.Version} is uit (je hebt {UpdateChecker.CurrentVersion})."
-                : $"Je hebt de nieuwste versie ({UpdateChecker.CurrentVersion}; nieuwste uitgave {release.Version}).";
+                ? Tr.F("Versie {0} is uit (je hebt {1}).", release.Version, UpdateChecker.CurrentVersion)
+                : Tr.F("Je hebt de nieuwste versie ({0}; nieuwste uitgave {1}).", UpdateChecker.CurrentVersion, release.Version);
     }
 
     private bool ShowRelease(string? tag, string? url)
@@ -421,7 +422,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
         var current = ReleaseVersion.Parse(UpdateChecker.CurrentVersion);
         var newer = latest is not null && current is not null && latest > current;
         if (newer && url is not null && url.StartsWith(UpdateChecker.Repo, StringComparison.OrdinalIgnoreCase)) _updateUrl = url;
-        UpdateText = newer ? $"Nieuwe versie {latest} beschikbaar" : "";
+        UpdateText = newer ? Tr.F("Nieuwe versie {0} beschikbaar", latest) : "";
         return newer;
     }
 
@@ -471,18 +472,18 @@ public sealed partial class MainWindowViewModel : ObservableObject
     {
         Station = s.Station;
         Clock = s.Time.ToString("HH:mm:ss");
-        ClockName = s.Clock is null ? "geen klok" : $"klok: {s.Clock}";
+        ClockName = s.Clock is null ? Tr.T("geen klok") : Tr.F("klok: {0}", s.Clock);
         AutoPlay = s.Engine.AutoPlay;
         Mode = s.Engine.Mode;
         Held = s.Engine.Held;
         OnAir = s.Engine.Current is not null;
         MicOpen = s.Mixer.Mic.Open;
-        MicStatus = $"Microfoon: {s.Mixer.Mic.Status}";
+        MicStatus = Tr.F("Microfoon: {0}", s.Mixer.Mic.Status);
         LevelLeft = s.Mixer.ProgramLeft * 100;
         LufsText = s.Mixer.Lufs is double lufs ? $"{lufs:0.0} LUFS" : "– LUFS";
-        LufsTip = $"Loudness van de zender (EBU R128). Kort (3 s): {s.Mixer.Lufs?.ToString("0.0") ?? "–"} LUFS · "
-            + $"geïntegreerd: {s.Mixer.LufsIntegrated?.ToString("0.0") ?? "–"} LUFS · true peak: {s.Mixer.TruePeakDb?.ToString("0.0") ?? "–"} dBTP · "
-            + (s.Mixer.Limiter ? "begrenzer aan" : "begrenzer uit");
+        LufsTip = Tr.F("Loudness van de zender (EBU R128). Kort (3 s): {0} LUFS · ", s.Mixer.Lufs?.ToString("0.0") ?? "–")
+            + Tr.F("geïntegreerd: {0} LUFS · true peak: {1} dBTP · ", s.Mixer.LufsIntegrated?.ToString("0.0") ?? "–", s.Mixer.TruePeakDb?.ToString("0.0") ?? "–")
+            + (s.Mixer.Limiter ? Tr.T("begrenzer aan") : Tr.T("begrenzer uit"));
         LevelRight = s.Mixer.ProgramRight * 100;
         if (s.Engine.Current is { } c)
         {
@@ -490,7 +491,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
             double left = Math.Max(0, c.To - c.Position), length = Math.Max(0.1, c.To - c.From);
             NowTitle = string.IsNullOrWhiteSpace(c.Title) ? c.Label : c.Title;
             PresenterText = c.PresenterText ?? "";
-            NowSub = string.Join(" \u00b7 ", new[] { c.Artist, c.Category, s.Clock is null ? "" : $"klok {s.Clock}" }.Where(t => !string.IsNullOrWhiteSpace(t)));
+            NowSub = string.Join(" \u00b7 ", new[] { c.Artist, c.Category, s.Clock is null ? "" : Tr.F("klok {0}", s.Clock) }.Where(t => !string.IsNullOrWhiteSpace(t)));
             double Mark(double at) => Math.Clamp((at - c.From) / length * 100, 0, 100);
             NowPos = Mark(c.Position);
             IntroMark = c.Intro is double i && i > c.From ? Mark(i) : -1;
@@ -505,9 +506,9 @@ public sealed partial class MainWindowViewModel : ObservableObject
         }
         else
         {
-            NowLabel = AutoPlay ? "wachten op materiaal…" : "stil — start het volgende item (F5)";
+            NowLabel = AutoPlay ? Tr.T("wachten op materiaal…") : Tr.T("stil — start het volgende item (F5)");
             NowRemaining = ""; NowLeft = 0; EndState = "normal"; Flash = false; IntroText = "";
-            NowTitle = NowLabel; NowSub = s.Clock is null ? "" : $"klok {s.Clock}";
+            NowTitle = NowLabel; NowSub = s.Clock is null ? "" : Tr.F("klok {0}", s.Clock);
             PresenterText = "";
             NowPos = 0; IntroMark = -1; MixMark = -1; IntroState = ""; MixText = "";
         }
@@ -517,11 +518,11 @@ public sealed partial class MainWindowViewModel : ObservableObject
         {
             0 => "",
             1 => $"{s.Overlays[0].Label}  -{StudioHub.Time(s.Overlays[0].Length - s.Overlays[0].Position)}",
-            int n2 => $"{n2} overlays · {s.Overlays[0].Label}",
+            int n2 => Tr.F("{0} overlays · {1}", n2, s.Overlays[0].Label),
         };
-        OverlayTip = "Overlay speelt over het programma: " + string.Join(", ", s.Overlays.Select(o => o.Label)) + ". Klik om alle overlays te stoppen.";
-        NextLabel = s.Upcoming.FirstOrDefault() is { } n ? $"Straks: {n.Label}" : "";
-        NextEvent = s.Events.FirstOrDefault() is { } e ? $"{e.Name} over {StudioHub.Time((e.At - s.Time).TotalSeconds)}" : "";
+        OverlayTip = Tr.T("Overlay speelt over het programma: ") + string.Join(", ", s.Overlays.Select(o => o.Label)) + Tr.T(". Klik om alle overlays te stoppen.");
+        NextLabel = s.Upcoming.FirstOrDefault() is { } n ? Tr.F("Straks: {0}", n.Label) : "";
+        NextEvent = s.Events.FirstOrDefault() is { } e ? Tr.F("{0} over {1}", e.Name, StudioHub.Time((e.At - s.Time).TotalSeconds)) : "";
     }
 
     // ------------------------------------------------------------ transport (hotkeys in the window)
@@ -547,7 +548,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
     private async Task RunEngineCommand(string? text)
     {
         if (string.IsNullOrWhiteSpace(text)) return;
-        if (Session.Blocks) { Hub.Status = "De studio is vergrendeld: sneltoetsen werken na het ontgrendelen."; return; }
+        if (Session.Blocks) { Hub.Status = Tr.T("De studio is vergrendeld: sneltoetsen werken na het ontgrendelen."); return; }
         var r = await Hub.Client.RunCommandAsync(text);
         if (!r.Ok) Hub.Status = $"{text}: {r.Text}";
     }
@@ -558,7 +559,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
     private async Task StartEngine()
     {
         var error = EngineClient.StartLocalEngine(_settings);
-        Hub.Status = error ?? "engine wordt gestart…";
+        Hub.Status = error ?? Tr.T("engine wordt gestart…");
         await Task.CompletedTask;
     }
 
@@ -568,7 +569,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
         if (!Hub.Connected && Uri.TryCreate(_settings.EffectiveEngineUrl, UriKind.Absolute, out var u) && u.IsLoopback)
         {
             var error = EngineClient.StartLocalEngine(_settings);
-            Hub.Status = error ?? "engine gestart";
+            Hub.Status = error ?? Tr.T("engine gestart");
         }
     }
 
@@ -609,7 +610,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
         CloseFloating();
         _factory.Workspace = WorkspaceOf(CurrentLayout);
         Layout = NewDefaultLayout();
-        Hub.Status = "standaardindeling hersteld";
+        Hub.Status = Tr.T("standaardindeling hersteld");
     }
 
     /// <summary>
@@ -662,7 +663,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
             _settings.LastLayout = name;
             _settings.Save();
             RefreshLayoutNames();
-            Hub.Status = $"indeling '{name}' opgeslagen";
+            Hub.Status = Tr.F("indeling '{0}' opgeslagen", name);
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { Hub.Status = ex.Message; }
     }
@@ -672,7 +673,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
     {
         var layout = LoadLayoutFile(name);
         if (layout is null && name == "Standaard") { ResetLayout(); CurrentLayout = name; return; }
-        if (layout is null) { Hub.Status = $"indeling '{name}' niet te laden"; return; }
+        if (layout is null) { Hub.Status = Tr.F("indeling '{0}' niet te laden", name); return; }
         CloseFloating();
         Layout = layout;
         RestoreWindowsSoon();
@@ -737,9 +738,21 @@ public sealed partial class MainWindowViewModel : ObservableObject
     /// <summary>Tab titles that changed since a layout was saved.</summary>
     private static readonly Dictionary<string, string> RenamedTitles = new() { ["Stem (Higgs TTS 3)"] = "Stemmen" };
 
+    private static readonly Dictionary<string, string> WindowNames = DockFactory.Windows.ToDictionary(w => w.Id, w => w.Name);
+
+    /// <summary>
+    /// Gives every window the title of today's name and studio language: a layout file keeps the title it was saved
+    /// with, which may be an old name or another language.
+    /// </summary>
     private static void RenameOldTitles(IDockable dockable)
     {
         if (dockable.Title is { } t && RenamedTitles.TryGetValue(t, out var now)) dockable.Title = now;
+        if (dockable.Id is { } id)
+        {
+            if (WindowNames.TryGetValue(id, out var name)) dockable.Title = name;
+            else if (System.Text.RegularExpressions.Regex.Match(id, @"^werkblad(\d+)(-dock)?$") is { Success: true } m)
+                dockable.Title = Tr.F("Werkblad {0}", m.Groups[1].Value);
+        }
         if (dockable is IDock { VisibleDockables: { } children })
             foreach (var c in children) RenameOldTitles(c);
         if (dockable is IRootDock { Windows: { } windows })
@@ -776,7 +789,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
         for (int i = 0; i < screens.Count; i++)
         {
             var s = screens[i];
-            ScreenMenu.Add(new ScreenEntry(i, $"Nieuw werkblad op scherm {i + 1} ({s.Bounds.Width} × {s.Bounds.Height}{(s.IsPrimary ? ", hoofdscherm" : "")})"));
+            ScreenMenu.Add(new ScreenEntry(i, Tr.F("Nieuw werkblad op scherm {0} ({1} × {2}{3})", i + 1, s.Bounds.Width, s.Bounds.Height, s.IsPrimary ? Tr.T(", hoofdscherm") : "")));
         }
     }
 
@@ -805,15 +818,15 @@ public sealed partial class MainWindowViewModel : ObservableObject
         if (Layout is null) return;
         int n = 2;
         while (FindAnywhere(d => d.Id == $"werkblad{n}") is not null) n++;
-        var tool = new WorkbenchTool { Id = $"werkblad{n}", Title = $"Werkblad {n}" };
+        var tool = new WorkbenchTool { Id = $"werkblad{n}", Title = Tr.F("Werkblad {0}", n) };
         var dock = new Dock.Model.Mvvm.Controls.ToolDock
         {
-            Id = $"werkblad{n}-dock", Title = $"Werkblad {n}", VisibleDockables = _factory.CreateList<IDockable>(tool),
+            Id = $"werkblad{n}-dock", Title = Tr.F("Werkblad {0}", n), VisibleDockables = _factory.CreateList<IDockable>(tool),
             ActiveDockable = tool, Alignment = Alignment.Unset,
         };
         var window = _factory.CreateWindowFrom(dock, new DockWindowOptions { OwnerMode = DockWindowOwnerMode.None, ShowInTaskbar = true });
-        if (window is null) { Hub.Status = "werkblad niet te openen"; return; }
-        window.Title = $"Werkblad {n} – REA-Radio-DJ";
+        if (window is null) { Hub.Status = Tr.T("werkblad niet te openen"); return; }
+        window.Title = Tr.F("Werkblad {0}", n) + " – REA-Radio-DJ";
         var screens = SortedScreens();
         var screen = entry is not null && entry.Index < screens.Count ? screens[entry.Index] : screens.FirstOrDefault(s => s.IsPrimary);
         if (screen is not null) PlaceOnScreen(window, screen, maximize: false);
@@ -822,14 +835,14 @@ public sealed partial class MainWindowViewModel : ObservableObject
         window.Present(false);
         EnsureWindowFocus();
         if (screen is not null) PlaceOnScreen(window, screen, maximize: true);
-        Hub.Status = $"Werkblad {n} geopend{(entry is null ? "" : $" op scherm {entry.Index + 1}")}: sleep er vensters heen of kies ze op het werkblad";
+        Hub.Status = (entry is null ? Tr.F("Werkblad {0} geopend: sleep er vensters heen of kies ze op het werkblad", n) : Tr.F("Werkblad {0} geopend op scherm {1}: sleep er vensters heen of kies ze op het werkblad", n, entry.Index + 1));
     }
 
     [RelayCommand]
     private void CloseWorkbenches()
     {
         CloseFloating();
-        Hub.Status = "werkbladen en zwevende vensters gesloten; de vensters staan in het menu Vensters";
+        Hub.Status = Tr.T("werkbladen en zwevende vensters gesloten; de vensters staan in het menu Vensters");
     }
 
     private void OpenOnWorkbench(WorkbenchTool bench, string id)
@@ -921,7 +934,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
     private void RefreshLayoutNames()
     {
         LayoutNames.Clear();
-        LayoutNames.Add("Standaard");
+        LayoutNames.Add(Tr.T("Standaard"));
         if (Directory.Exists(StudioSettings.LayoutFolder))
             foreach (var f in Directory.EnumerateFiles(StudioSettings.LayoutFolder, "*.json").Select(Path.GetFileNameWithoutExtension).Order())
                 if (f is not null && f != "Standaard") LayoutNames.Add(f);

@@ -1,3 +1,4 @@
+using ReaRadioDj.Contracts.Localization;
 using System.Net.Http;
 using System.Reflection;
 using ReaRadioDj.Contracts;
@@ -34,15 +35,15 @@ public static class UpdateChecker
             req.Headers.Accept.ParseAdd("application/vnd.github+json");
             req.Headers.Add("X-GitHub-Api-Version", "2022-11-28");
             using var resp = await Http.SendAsync(req, ct);
-            if (resp.StatusCode == System.Net.HttpStatusCode.NotFound) return (null, "Er is nog geen uitgave gepubliceerd.");
-            if (!resp.IsSuccessStatusCode) return (null, $"GitHub antwoordde met {(int)resp.StatusCode}.");
+            if (resp.StatusCode == System.Net.HttpStatusCode.NotFound) return (null, Tr.T("Er is nog geen uitgave gepubliceerd."));
+            if (!resp.IsSuccessStatusCode) return (null, Tr.F("GitHub antwoordde met {0}.", (int)resp.StatusCode));
             var json = await resp.Content.ReadAsStringAsync(ct);
             var release = ReleaseInfo.Parse(json, Repo);
-            return release is null ? (null, "Het antwoord van GitHub was niet te lezen.") : (release, null);
+            return release is null ? (null, Tr.T("Het antwoord van GitHub was niet te lezen.")) : (release, null);
         }
         catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
         {
-            return (null, "Geen verbinding met GitHub.");
+            return (null, Tr.T("Geen verbinding met GitHub."));
         }
     }
 }
