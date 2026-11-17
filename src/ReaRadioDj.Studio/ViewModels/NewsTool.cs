@@ -21,10 +21,10 @@ public sealed partial class NewsTool : StudioTool
 {
     public NewsTool() : base("news", Tr.T("Nieuws")) { }
 
-    public static readonly string[] SourceNames = ["Nieuwste bestand in een map", Tr.T("Item uit een categorie"), Tr.T("Koppen uit RSS, letterlijk voorgelezen door de AI-stem"),
+    public static readonly string[] SourceNames = [Tr.T("Nieuwste bestand in een map"), Tr.T("Item uit een categorie"), Tr.T("Koppen uit RSS, letterlijk voorgelezen door de AI-stem"),
         Tr.T("AI-nieuws: landelijk en regionaal, herschreven door het taalmodel"), "Weerbericht voor een plaats (AI)"];
     private static readonly string[] SourceKeys = ["folder", "category", "headlines", "ainews", "weather"];
-    public static readonly string[] TimingNames = ["Hard (op de seconde, onderbreekt)", "Zacht (na het lopende item)"];
+    public static readonly string[] TimingNames = [Tr.T("Hard (op de seconde, onderbreekt)"), Tr.T("Zacht (na het lopende item)")];
     public IReadOnlyList<string> Sources => SourceNames;
     public IReadOnlyList<string> Timings => TimingNames;
 

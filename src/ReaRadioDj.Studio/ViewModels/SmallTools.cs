@@ -13,11 +13,11 @@ namespace ReaRadioDj.Studio.ViewModels;
 /// </summary>
 public sealed partial class ClockTool : StudioTool
 {
-    public static readonly string[] StyleNames = ["Studioklok", "Analoog", "Digitaal", Tr.T("Analoog + digitaal"), "LED-segmenten", "Uurklok (tot het hele uur)"];
+    public static readonly string[] StyleNames = [Tr.T("Studioklok"), Tr.T("Analoog"), Tr.T("Digitaal"), Tr.T("Analoog + digitaal"), Tr.T("LED-segmenten"), Tr.T("Uurklok (tot het hele uur)")];
     private static readonly string[] StyleKeys = ["studio", "analog", "digital", "combi", "led", "hour"];
-    public static readonly string[] SizeNames = ["Klein", "Normaal", "Groot", "Extra groot"];
+    public static readonly string[] SizeNames = [Tr.T("Klein"), Tr.T("Normaal"), Tr.T("Groot"), Tr.T("Extra groot")];
     private static readonly double[] CounterFonts = [22, 34, 52, 76];
-    public static readonly string[] FlashNames = ["Rood", "Oranje", "Wit", "Blauw"];
+    public static readonly string[] FlashNames = [Tr.T("Rood"), Tr.T("Oranje"), Tr.T("Wit"), Tr.T("Blauw")];
     private static readonly string[] FlashColors = ["#E5484D", "#F0B429", "#FFFFFF", "#3FA7FF"];
 
     private readonly Avalonia.Threading.DispatcherTimer _blink;

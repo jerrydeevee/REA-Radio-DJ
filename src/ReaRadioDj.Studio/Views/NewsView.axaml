@@ -15,7 +15,7 @@
             <StackPanel Opacity="{Binding Enabled, Converter={x:Static vm:Brushes.EnabledOpacity}}">
               <TextBlock Text="{Binding Name}" FontWeight="SemiBold" />
               <TextBlock Classes="muted" FontSize="11" Text="{Binding When}" TextWrapping="Wrap" />
-              <TextBlock Classes="muted" FontSize="11" Text="{Binding Next, StringFormat='volgende: {0:ddd HH:mm:ss}'}" />
+              <TextBlock Classes="muted" FontSize="11" Text="{Binding Next, Converter={StaticResource Tr}, ConverterParameter='volgende: {0:ddd HH:mm:ss}'}" />
             </StackPanel>
           </DataTemplate>
         </ListBox.ItemTemplate>

@@ -350,7 +350,7 @@
                         <TextBlock Text="Niet bereikbaar: de nummers van deze map blijven gewoon bewaard en komen terug zodra de map er weer is."
                                    Foreground="{DynamicResource WarnBrush}" FontSize="11" TextWrapping="Wrap" IsVisible="{Binding Offline}" />
                         <WrapPanel IsVisible="{Binding Editable}">
-                          <TextBlock Text="{Binding KindText, StringFormat='Soort: {0}'}" VerticalAlignment="Center" Margin="0,0,12,0" />
+                          <TextBlock Text="{Binding KindText, Converter={StaticResource Tr}, ConverterParameter='Soort: {0}'}" VerticalAlignment="Center" Margin="0,0,12,0" />
                           <TextBox Text="{Binding Category}" Watermark="categorie (leeg = submappen)" Width="200" Margin="0,0,4,0" />
                           <Button Classes="small" Content="Opslaan" Command="{Binding SaveCategoryCommand}" Margin="0,0,12,0" />
                           <CheckBox Content="Bewaken" IsChecked="{Binding Watch}" Margin="0,0,12,0" ToolTip.Tip="Nieuwe en gewijzigde bestanden direct verwerken" />

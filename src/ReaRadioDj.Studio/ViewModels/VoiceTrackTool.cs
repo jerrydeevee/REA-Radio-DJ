@@ -94,7 +94,7 @@ public sealed partial class VoiceTrackTool : StudioTool
         {
             if (up[i].Type == "voiceTrack" || (i > 0 && up[i - 1].Type == "voiceTrack")) continue;
             string before = i > 0 ? Name(up[i - 1]) : s.Engine.Current is { } c ? Tr.F("{0} (nu)", c.Label) : "—";
-            slots.Add(new VoiceSlot(up[i].Id, $"{up[i].StartsAt:HH:mm}  → {Short(Name(up[i]))}   (na {Short(before)})"));
+            slots.Add(new VoiceSlot(up[i].Id, Tr.F("{0:HH:mm}  → {1}   (na {2})", up[i].StartsAt, Short(Name(up[i])), Short(before))));
         }
         if (!slots.Select(x => x.Text).SequenceEqual(Slots.Select(x => x.Text)))
         {

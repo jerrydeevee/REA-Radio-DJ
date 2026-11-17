@@ -307,7 +307,7 @@
                       <Run Text="{Binding Name}" FontWeight="SemiBold" /><Run Text="  " /><Run Text="{Binding Timing}" Foreground="{DynamicResource WarnBrush}" />
                     </TextBlock>
                     <TextBlock Classes="muted" Text="{Binding Description}" />
-                    <TextBlock Classes="muted" Text="{Binding Next, StringFormat='volgende: {0:ddd HH:mm:ss}'}" />
+                    <TextBlock Classes="muted" Text="{Binding Next, Converter={StaticResource Tr}, ConverterParameter='volgende: {0:ddd HH:mm:ss}'}" />
                   </StackPanel>
                 </DataTemplate>
               </ListBox.ItemTemplate>

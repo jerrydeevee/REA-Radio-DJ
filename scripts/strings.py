@@ -26,6 +26,7 @@ spotify voip sip rtp asio midi bass mackie ember livewire wav mp3 ogg flac opus 
 
 ATTR = re.compile(r'\s(?:Content|Text|Header|ToolTip\.Tip|Watermark|PlaceholderText|Title|EmptyText)="([^"]*)"')
 ELEMENT = re.compile(r"<(TextBlock|Run|ToolTip\.Tip|SelectableTextBlock)(?:\s[^>]*)?>([^<]+)</\1>")
+FORMAT = re.compile(r"Converter=\{StaticResource Tr\}, ConverterParameter='([^']*)'")
 # A C# string literal (regular or verbatim) as the first argument of Tr.T / Tr.F.
 CALL = re.compile(r'(?:\bTr\.[TF]\(|\bTr\.In\([^,()]*,|\bOnAir\.(?:Say|Line)\(|(?<![\w.])L\()\s*(@?)"((?:[^"\\]|\\.|"")*)"')
 WEB = re.compile(r'(?:data-tr="([^"]*)"|\btr\(\s*"((?:[^"\\]|\\.)*)"|\btr\(\s*\'((?:[^\'\\]|\\.)*)\')')
@@ -85,6 +86,8 @@ def collect() -> dict[str, str]:
             add(html.unescape(m.group(1)), rel)
         for m in ELEMENT.finditer(src):
             add(html.unescape(m.group(2).strip()), rel)
+        for m in FORMAT.finditer(src):
+            add(html.unescape(m.group(1)), rel, code=True)
     for project in ["ReaRadioDj.Studio", "ReaRadioDj.Server", "ReaRadioDj.Core", "ReaRadioDj.Contracts", "ReaRadioDj.Cmd"]:
         for p in sorted((ROOT / "src" / project).rglob("*.cs")):
             if "obj" in p.parts or "bin" in p.parts:

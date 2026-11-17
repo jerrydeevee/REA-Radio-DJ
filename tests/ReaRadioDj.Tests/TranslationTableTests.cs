@@ -5,7 +5,8 @@ using ReaRadioDj.Contracts.Localization;
 namespace ReaRadioDj.Tests;
 
 /// <summary>
-/// Guards the translation table: every fixed text the code asks for (Tr.T, Tr.F, Tr.In, OnAir.Say/Line and the web pages' tr()) must be
+/// Guards the translation table: every fixed text the code asks for (Tr.T, Tr.F, Tr.In, OnAir.Say/Line, the views' translated
+/// StringFormats and the web pages' tr()) must be
 /// in strings.tsv with a translation in every language. When this fails, run  python scripts/strings.py  and fill in
 /// the new rows.
 /// </summary>
@@ -16,6 +17,9 @@ public sealed partial class TranslationTableTests
 
     [GeneratedRegex(@"\btr\(\s*""((?:[^""\\]|\\.)*)""|\btr\(\s*'((?:[^'\\]|\\.)*)'|data-tr=""([^""]*)""")]
     private static partial Regex WebCall();
+
+    [GeneratedRegex(@"Converter=\{StaticResource Tr\}, ConverterParameter='([^']*)'")]
+    private static partial Regex AxamlFormat();
 
     private static DirectoryInfo Root()
     {
@@ -47,6 +51,9 @@ public sealed partial class TranslationTableTests
             foreach (Match m in CsCall().Matches(code))
                 yield return (Unescape(m.Groups[1].Value), Path.GetRelativePath(src, file));
         }
+        foreach (var file in Directory.EnumerateFiles(Path.Combine(src, "ReaRadioDj.Studio", "Views"), "*.axaml"))
+            foreach (Match m in AxamlFormat().Matches(File.ReadAllText(file)))
+                yield return (System.Net.WebUtility.HtmlDecode(m.Groups[1].Value), Path.GetRelativePath(src, file));
         var web = Path.Combine(src, "ReaRadioDj.Server", "wwwroot");
         foreach (var file in Directory.EnumerateFiles(web, "*.*", SearchOption.AllDirectories).Where(f => f.EndsWith(".js") || f.EndsWith(".html")))
         {

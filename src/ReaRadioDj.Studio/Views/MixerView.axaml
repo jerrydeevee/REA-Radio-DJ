@@ -60,8 +60,8 @@
             <Button DockPanel.Dock="Right" Content="Sluiten" Command="{Binding $parent[UserControl].DataContext.CloseEditorCommand}" />
             <Button DockPanel.Dock="Right" Content="Alles neutraal" Command="{Binding FlatCommand}" Margin="0,0,6,0" />
             <StackPanel>
-              <TextBlock Classes="h" Text="{Binding Name, StringFormat='Kanaalstrip: {0}'}" />
-              <TextBlock Classes="muted" Text="{Binding SourceText, StringFormat='Bron: {0}'}" IsVisible="{Binding IsInput}" />
+              <TextBlock Classes="h" Text="{Binding Name, Converter={StaticResource Tr}, ConverterParameter='Kanaalstrip: {0}'}" />
+              <TextBlock Classes="muted" Text="{Binding SourceText, Converter={StaticResource Tr}, ConverterParameter='Bron: {0}'}" IsVisible="{Binding IsInput}" />
             </StackPanel>
           </DockPanel>
           <CheckBox Content="Naar de zender" IsChecked="{Binding OnAir}" />
@@ -181,9 +181,9 @@
           </ComboBox>
           <ComboBox ItemsSource="{Binding MicChannels}" SelectedIndex="{Binding MicChannel}" HorizontalAlignment="Stretch" IsEnabled="{Binding MicEnabled}"
                     ToolTip.Tip="Zit de microfoon op één ingang van een paar (bijvoorbeeld ingang 1 van IN 1-2), kies dan mono: anders klinkt hij alleen links of rechts." />
-          <TextBlock Text="{Binding MicDuck, StringFormat='Muziek onder de microfoon: {0:0}%'}" />
+          <TextBlock Text="{Binding MicDuck, Converter={StaticResource Tr}, ConverterParameter='Muziek onder de microfoon: {0:0}%'}" />
           <Slider Minimum="0" Maximum="100" Value="{Binding MicDuck}" />
-          <TextBlock Text="{Binding OverlayDuck, StringFormat='Muziek onder overlays: {0:0}%'}" />
+          <TextBlock Text="{Binding OverlayDuck, Converter={StaticResource Tr}, ConverterParameter='Muziek onder overlays: {0:0}%'}" />
           <Slider Minimum="0" Maximum="100" Value="{Binding OverlayDuck}" />
           <StackPanel Orientation="Horizontal" Spacing="6">
             <Button Content="Opslaan" Command="{Binding SaveRoutingCommand}" />

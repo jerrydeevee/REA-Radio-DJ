@@ -333,6 +333,7 @@ altijd een tikkie op het randje	always a little edgy	immer etwas grenzwertig	sie
 altijd grappig	always funny	immer lustig	siempre gracioso
 altijd luchtig en leuk	always light and fun	immer locker und lustig	siempre ligero y divertido
 altijd serieus	always serious	immer ernst	siempre serio
+Analoog	Analogue	Analog	Analógico
 Analoog + digitaal	Analogue + digital	Analog + digital	Analógico + digital
 Analyseren {0}/{1}: {2}	Analysing {0}/{1}: {2}	Analysiere {0}/{1}: {2}	Analizando {0}/{1}: {2}
 Andere gebruiker	Other user	Anderer Benutzer	Otro usuario
@@ -561,6 +562,7 @@ bron noemen (“meldt de NOS”)	name the source (“reports the BBC”)	Quelle 
 Bron, maar de engine staat niet op het netwerk (Op afstand › Engine op het netwerk).	Source, but the engine is not on the network (Remote › Engine on the network).	Quelle, aber die Engine ist nicht im Netzwerk (Fernzugriff › Engine im Netzwerk).	Fuente, pero el motor no está en la red (Remoto › Motor en la red).
 Bron, maar zonder bedieningswachtwoord kan geen studio de bibliotheek ophalen (Op afstand › Bedieningswachtwoord).	Source, but without a control password no studio can fetch the library (Remote › Control password).	Quelle, aber ohne Steuerpasswort kann kein Studio die Bibliothek abrufen (Fernzugriff › Steuerpasswort).	Fuente, pero sin contraseña de control ningún estudio puede obtener la biblioteca (Remoto › Contraseña de control).
 Bron: de studio's halen hier de bibliotheek op ({0} nummers, {1} jingles).	Source: the studios fetch the library here ({0} songs, {1} jingles).	Quelle: die Studios holen hier die Bibliothek ab ({0} Titel, {1} Jingles).	Fuente: los estudios obtienen aquí la biblioteca ({0} canciones, {1} jingles).
+Bron: {0}	Source: {0}	Quelle: {0}	Fuente: {0}
 Broncode op GitHub	Source code on GitHub	Quellcode auf GitHub	Código fuente en GitHub
 Bronnen (RSS/Atom), één per regel: adres | naam	Sources (RSS/Atom), one per line: address | name	Quellen (RSS/Atom), eine pro Zeile: Adresse | Name	Fuentes (RSS/Atom), una por línea: dirección | nombre
 bronwachtwoord	source password	Quellpasswort	contraseña de fuente
@@ -598,6 +600,7 @@ Centrale bibliotheek	Central library	Zentrale Bibliothek	Biblioteca central
 Centrale bibliotheek niet opgeslagen: 	Central library not saved: 	Zentrale Bibliothek nicht gespeichert: 	Biblioteca central no guardada: 
 Centrale bibliotheek voor meerdere studio's	Central library for several studios	Zentrale Bibliothek für mehrere Studios	Biblioteca central para varios estudios
 Centrale bibliotheek: 	Central library: 	Zentrale Bibliothek: 	Biblioteca central: 
+Certificaat: {0}	Certificate: {0}	Zertifikat: {0}	Certificado: {0}
 ch{0} note {1}	ch{0} note {1}	ch{0} note {1}	ch{0} note {1}
 Client ID	Client ID	Client ID	Client ID
 Client ID uit de engine:	Client ID from the engine:	Client ID aus der Engine:	Client ID del motor:
@@ -656,6 +659,8 @@ cues opgeslagen: {0}	cues saved: {0}	Cues gespeichert: {0}	cues guardados: {0}
 cues van {0}	cues of {0}	Cues von {0}	cues de {0}
 Cues, beat en BPM ook in de tags van het audiobestand zetten, zodat ze met het bestand meegaan	Also put cues, beat and BPM in the tags of the audio file, so they travel with the file	Cues, Beat und BPM auch in die Tags der Audiodatei schreiben, damit sie mit der Datei mitgehen	Guardar también cues, beat y BPM en las etiquetas del archivo de audio, para que viajen con el archivo
 Cues, beatgrid en BPM nu in de tags van dit bestand zetten	Put cues, beat grid and BPM in the tags of this file now	Cues, Beatgrid und BPM jetzt in die Tags dieser Datei schreiben	Escribir ahora cues, rejilla de beats y BPM en las etiquetas de este archivo
+Cursor {0}	Cursor {0}	Cursor {0}	Cursor {0}
+Cursor {0} · sleep de markers · scrollwiel = zoom, Shift+scroll = schuiven, dubbelklik = volledig	Cursor {0} · drag the markers · scroll wheel = zoom, Shift+scroll = move, double-click = everything	Cursor {0} · Marker ziehen · Mausrad = Zoom, Umschalt+Scrollen = verschieben, Doppelklick = alles	Cursor {0} · arrastra las marcas · rueda = zoom, Mayús+rueda = desplazar, doble clic = todo
 Cut	Cut	Ausschneiden	Cortar
 D:\\Muziek of \\\\server\\muziek	D:\\Music or \\\\server\\music	D:\\Musik oder \\\\server\\musik	D:\\Musica o \\\\server\\musica
 Daarna	Then	Danach	Después
@@ -889,6 +894,7 @@ DICHT	CLOSED	ZU	CERRADO
 dicht	closed	zu	cerrado
 die stem bestaat niet (meer)	that voice does not exist (any more)	diese Stimme gibt es nicht (mehr)	esa voz no existe (ya)
 Digest username="{0}", realm="{1}", nonce="{2}", uri="{3}"	Digest username="{0}", realm="{1}", nonce="{2}", uri="{3}"	Digest username="{0}", realm="{1}", nonce="{2}", uri="{3}"	Digest username="{0}", realm="{1}", nonce="{2}", uri="{3}"
+Digitaal	Digital	Digital	Digital
 Dit account liep tot en met {0:yyyy-MM-dd}; vraag een beheerder het te verlengen.	This account ran until {0:yyyy-MM-dd}; ask an administrator to extend it.	Dieses Konto lief bis einschließlich {0:yyyy-MM-dd}; bitte einen Administrator, es zu verlängern.	Esta cuenta era válida hasta el {0:yyyy-MM-dd}; pide a un administrador que la amplíe.
 Dit deck op de koptelefoon (PFL), ook met de fader dicht	This deck on the headphones (PFL), also with the fader closed	Dieses Deck auf den Kopfhörer (PFL), auch mit geschlossenem Fader	Este plato en los auriculares (PFL), también con el fader cerrado
 Dit is de eigen stem van {0}. Alleen {1} kan de opname en de toestemming wijzigen of intrekken (onder 'Mijn eigen stem').	This is the own voice of {0}. Only {1} can change or withdraw the recording and the consent (under 'My own voice').	Das ist die eigene Stimme von {0}. Nur {1} kann die Aufnahme und die Zustimmung ändern oder zurückziehen (unter 'Meine eigene Stimme').	Esta es la voz propia de {0}. Solo {1} puede cambiar o retirar la grabación y el consentimiento (en 'Mi propia voz').
@@ -1107,6 +1113,7 @@ externe stream (neemt over)	external stream (takes over)	externer Stream (übern
 externe stream (overlay)	external stream (overlay)	externer Stream (Overlay)	stream externo (overlay)
 externe stream OFF AIR gehaald	external stream taken OFF AIR	externer Stream OFF AIR genommen	stream externo sacado del aire
 Externe streams	External streams	Externe Streams	Streams externos
+Extra groot	Extra large	Extra groß	Extra grande
 Extra rond (pilvormige knoppen)	Extra round (pill-shaped buttons)	Extra rund (pillenförmige Tasten)	Extra redondo (botones en forma de píldora)
 Extra streamservers	Extra stream servers	Zusätzliche Streamserver	Servidores de stream adicionales
 Eén bestand met alle instellingen, klokken, planning, gebeurtenissen, cartwalls, hardware, reclame, nieuws, presentatoren en de cuepunten van de bibliotheek. De audiobestanden zelf zitten er niet in. Terugzetten vervangt alles; wat er stond, blijft bewaard in een map in de datamap.	One file with all settings, clocks, planning, events, cartwalls, hardware, adverts, news, presenters and the cue points of the library. The audio files themselves are not in it. Restoring replaces everything; what was there is kept in a folder in the data folder.	Eine Datei mit allen Einstellungen, Uhren, Planung, Ereignissen, Cartwalls, Hardware, Werbung, Nachrichten, Moderatoren und den Cuepunkten der Bibliothek. Die Audiodateien selbst sind nicht enthalten. Zurückspielen ersetzt alles; was vorher da war, bleibt in einem Ordner im Datenordner erhalten.	Un archivo con todos los ajustes, relojes, planificación, eventos, cartwalls, hardware, publicidad, noticias, presentadores y los puntos de cue de la biblioteca. Los archivos de audio no están incluidos. Restaurar lo sustituye todo; lo que había se guarda en una carpeta dentro de la carpeta de datos.
@@ -1294,6 +1301,7 @@ geplaatst: {0}	placed: {0}	platziert: {0}	colocado: {0}
 Gescheiden door een teken	Separated by a character	Durch ein Zeichen getrennt	Separado por un carácter
 geschreven door het taalmodel	written by the language model	vom Sprachmodell geschrieben	escrito por el modelo de lenguaje
 Gespeeld	Played	Gespielt	Sonado
+gespeeld {0}	played {0}	gespielt {0}	reproducido {0}
 Gesprek met {0} afgelopen	Call with {0} ended	Gespräch mit {0} beendet	Llamada con {0} finalizada
 Gesprek op {0}: geen audio ({1})	Call on {0}: no audio ({1})	Gespräch auf {0}: kein Audio ({1})	Llamada en {0}: sin audio ({1})
 Gesprekken	Calls	Gespräche	Llamadas
@@ -1327,6 +1335,7 @@ Grappig: een droge observatie, een woordspeling of een herkenbare overdrijving u
 Grijs	Grey	Grau	Gris
 Groen	Green	Grün	Verde
 groen = in de bibliotheek, grijs = ontbreekt nog	green = in the library, grey = still missing	grün = in der Bibliothek, grau = fehlt noch	verde = en la biblioteca, gris = aún falta
+Groot	Large	Groß	Grande
 Grootte	Size	Größe	Tamaño
 Grootte tellers	Size of counters	Größe der Zähler	Tamaño de los contadores
 Grootte van alles	Size of everything	Größe von allem	Tamaño de todo
@@ -1349,6 +1358,7 @@ handmatig gestopt	stopped by hand	von Hand gestoppt	detenido a mano
 Handmatige punten weggooien en opnieuw bepalen	Throw away manual points and determine them again	Manuelle Punkte verwerfen und neu bestimmen	Descartar los puntos manuales y volver a determinarlos
 hard	hard	hart	duro
 Hard (onderbreekt)	Hard (interrupts)	Hart (unterbricht)	Duro (interrumpe)
+Hard (op de seconde, onderbreekt)	Hard (to the second, interrupts)	Hart (auf die Sekunde, unterbricht)	Dura (al segundo, interrumpe)
 Hard: onderbreekt op de seconde. Zacht: na het lopende item. Overlay: eroverheen, de muziek dimt. Materiaal (en een AI-break) wordt 3 minuten vooraf klaargezet; te laat = overgeslagen, nooit later gespeeld.	Hard: interrupts on the second. Soft: after the current item. Overlay: on top, the music dims. Material (and an AI break) is prepared 3 minutes ahead; too late = skipped, never played later.	Hart: unterbricht auf die Sekunde. Weich: nach dem laufenden Element. Overlay: darüber, die Musik wird leiser. Material (und ein KI-Break) wird 3 Minuten vorher bereitgestellt; zu spät = übersprungen, nie später gespielt.	Duro: interrumpe al segundo. Suave: tras el elemento en curso. Overlay: por encima, la música se atenúa. El material (y un break de IA) se prepara 3 minutos antes; demasiado tarde = se salta, nunca suena más tarde.
 Harde wissel op de tel, zonder overlap	Hard cut on the beat, without overlap	Harter Wechsel auf dem Schlag, ohne Überlappung	Corte seco en el tiempo, sin solapamiento
 Hardware	Hardware	Hardware	Hardware
@@ -1529,6 +1539,7 @@ Ingang {0} niet beschikbaar: {1}	Input {0} not available: {1}	Eingang {0} nicht 
 Ingang {0} staat als kanaal in de mixer (nog niet naar de zender)	Input {0} is a channel in the mixer (not yet to the broadcast)	Eingang {0} ist ein Kanal im Mixer (noch nicht auf dem Sender)	La entrada {0} es un canal en el mezclador (aún no va a la emisión)
 Ingangen (lijn-in, tweede microfoon, testtoon)	Inputs (line-in, second microphone, test tone)	Eingänge (Line-In, zweites Mikrofon, Testton)	Entradas (entrada de línea, segundo micrófono, tono de prueba)
 Ingebouwde onderwerpen (passend bij dagdeel, weekdag en seizoen)	Built-in topics (fitting the time of day, weekday and season)	Eingebaute Themen (passend zu Tageszeit, Wochentag und Jahreszeit)	Temas integrados (según la franja del día, el día de la semana y la estación)
+ingelezen {0:ddd HH:mm}	imported {0:ddd HH:mm}	eingelesen {0:ddd HH:mm}	importado {0:ddd HH:mm}
 Inkomend gesprek op {0}: {1}	Incoming call on {0}: {1}	Eingehendes Gespräch auf {0}: {1}	Llamada entrante en {0}: {1}
 Inkomend gesprek van {0}	Incoming call from {0}	Eingehender Anruf von {0}	Llamada entrante de {0}
 inkomend kanaal: auto, voip1, voip2 of geen	incoming channel: auto, voip1, voip2 or none	eingehender Kanal: auto, voip1, voip2 oder keiner	canal entrante: auto, voip1, voip2 o ninguno
@@ -1607,6 +1618,7 @@ Kanaalfaders	Channel faders	Kanalfader	Faders de canal
 Kanaalinstelling niet gelukt: {0}	Channel setting failed: {0}	Kanaleinstellung fehlgeschlagen: {0}	Ajuste de canal fallido: {0}
 Kanaalinstellingen van {0} niet toegepast: {1}	Channel settings of {0} not applied: {1}	Kanaleinstellungen von {0} nicht angewendet: {1}	Ajustes de canal de {0} no aplicados: {1}
 Kanaalstrip: gain, balans, equalizer, compressor, automatische niveauregeling	Channel strip: gain, balance, equalizer, compressor, automatic level control	Kanalzug: Gain, Balance, Equalizer, Kompressor, automatische Pegelregelung	Tira de canal: ganancia, balance, ecualizador, compresor, control automático de nivel
+Kanaalstrip: {0}	Channel strip: {0}	Kanalzug: {0}	Tira de canal: {0}
 Kanalen die nu naar de zender gaan (aan, niet gedempt, fader open)	Channels going on air now (on, not muted, fader open)	Kanäle, die jetzt auf Sendung gehen (an, nicht stumm, Fader offen)	Canales que salen al aire ahora (activados, sin silenciar, fader abierto)
 kanalen {0}-{1}	channels {0}-{1}	Kanäle {0}-{1}	canales {0}-{1}
 Kant	Side	Seite	Lado
@@ -1662,6 +1674,7 @@ klaar · {0} · {1}	ready · {0} · {1}	bereit · {0} · {1}	listo · {0} · {1}
 Klaar: druk Start.	Ready: press Start.	Bereit: drücke Start.	Listo: pulsa Iniciar.
 Klaar: {0} nummers bekeken · {1} met aanvullingen · {2} al compleet · {3} niet gevonden	Done: {0} songs checked · {1} with additions · {2} already complete · {3} not found	Fertig: {0} Titel geprüft · {1} mit Ergänzungen · {2} schon vollständig · {3} nicht gefunden	Listo: {0} canciones revisadas · {1} con datos añadidos · {2} ya completas · {3} no encontradas
 klapt open als hij aan de beurt is	expands when its turn comes	klappt auf, wenn es an der Reihe ist	se despliega cuando le toca
+Klein	Small	Klein	Pequeño
 Kleiner reageert sneller, groter is veiliger. Hapert het geluid, maak de buffer dan groter.	Smaller reacts faster, larger is safer. If the sound stutters, make the buffer larger.	Kleiner reagiert schneller, größer ist sicherer. Stockt der Ton, mach den Puffer größer.	Más pequeño reacciona más rápido, más grande es más seguro. Si el sonido se entrecorta, aumenta el búfer.
 Klembord	Clipboard	Zwischenablage	Portapapeles
 Kleur	Colour	Farbe	Color
@@ -1751,6 +1764,7 @@ Langer	Longer	Länger	Más largo
 Langere overgang	Longer transition	Längerer Übergang	Transición más larga
 Langste overlap tussen twee items (seconden)	Longest overlap between two items (seconds)	Längste Überlappung zwischen zwei Elementen (Sekunden)	Solapamiento máximo entre dos elementos (segundos)
 Last	Load	Last	Carga
+LED-segmenten	LED segments	LED-Segmente	Segmentos LED
 LEEG	EMPTY	LEER	VACÍO
 Leeg	Empty	Leer	Vacío
 leeg	empty	leer	vacío
@@ -1977,8 +1991,10 @@ MusicBrainz, en Spotify als aanvulling	MusicBrainz, and Spotify as a supplement	
 MUZIEK	MUSIC	MUSIK	MÚSICA
 Muziek	Music	Musik	Música
 Muziek onder de microfoon (% van het volume)	Music under the microphone (% of the volume)	Musik unter dem Mikrofon (% der Lautstärke)	Música bajo el micrófono (% del volumen)
+Muziek onder de microfoon: {0:0}%	Music under the microphone: {0:0}%	Musik unter dem Mikrofon: {0:0}%	Música bajo el micrófono: {0:0}%
 Muziek onder een overlay (% van het volume)	Music under an overlay (% of the volume)	Musik unter einem Overlay (% der Lautstärke)	Música bajo un overlay (% del volumen)
 Muziek onder een stem die over het einde praat (% van het volume)	Music under a voice talking over the end (% of the volume)	Musik unter einer Stimme, die über das Ende spricht (% der Lautstärke)	Música bajo una voz que habla sobre el final (% del volumen)
+Muziek onder overlays: {0:0}%	Music under overlays: {0:0}%	Musik unter Overlays: {0:0}%	Música bajo los overlays: {0:0}%
 muziek {0} · spraak {1} · jingles {2}	music {0} · speech {1} · jingles {2}	Musik {0} · Sprache {1} · Jingles {2}	música {0} · voz {1} · jingles {2}
 Muziek ↔ jingle omzetten	Convert music ↔ jingle	Musik ↔ Jingle umwandeln	Convertir música ↔ jingle
 Muziekbed	Music bed	Musikbett	Cama musical
@@ -2130,6 +2146,7 @@ Nieuwskoppen	News headlines	Schlagzeilen	Titulares
 Nieuwskoppen noemen (RSS of Atom, elke kop één keer)	Mention news headlines (RSS or Atom, each headline once)	Schlagzeilen nennen (RSS oder Atom, jede Schlagzeile einmal)	Mencionar titulares (RSS o Atom, cada titular una vez)
 Nieuwslezer	Newsreader	Nachrichtensprecher	Locutor de noticias
 nieuwsmap {0} bestaat niet	news folder {0} does not exist	Nachrichtenordner {0} existiert nicht	la carpeta de noticias {0} no existe
+Nieuwste bestand in een map	Newest file in a folder	Neueste Datei in einem Ordner	Archivo más reciente de una carpeta
 nieuwste bestand {0} is {1} oud (maximaal {2} min)	newest file {0} is {1} old (at most {2} min)	neueste Datei {0} ist {1} alt (höchstens {2} min)	el archivo más reciente {0} tiene {1} de antigüedad (máximo {2} min)
 Nieuwste eerst	Newest first	Neueste zuerst	Más recientes primero
 Niveau links en rechts (dBFS)	Level left and right (dBFS)	Pegel links und rechts (dBFS)	Nivel izquierdo y derecho (dBFS)
@@ -2181,6 +2198,7 @@ nooit gespeeld	never played	nie gespielt	nunca sonado
 noorden	north	Norden	norte
 noordoosten	northeast	Nordosten	noreste
 noordwesten	northwest	Nordwesten	noroeste
+Normaal	Normal	Normal	Normal
 Normale uitgang (uitzending, of PFL)	Normal output (broadcast, or PFL)	Normaler Ausgang (Sendung oder PFL)	Salida normal (emisión o PFL)
 note {0}	note {0}	note {0}	note {0}
 notitie (mag leeg)	note (may be empty)	Notiz (darf leer sein)	nota (puede quedar vacía)
@@ -2349,6 +2367,7 @@ Opslaan mislukt: geef aan waar het bestand, het nummer, of artiest en titel staa
 Opslaan mislukt: staat het item nog in de log?	Saving failed: is the item still in the log?	Speichern fehlgeschlagen: steht das Element noch im Ablauf?	Error al guardar: ¿sigue el elemento en la pauta?
 Opslaan mislukt: vul in wat het apparaat stuurt.	Saving failed: fill in what the device sends.	Speichern fehlgeschlagen: trage ein, was das Gerät sendet.	Error al guardar: indica lo que envía el dispositivo.
 Opslaan niet gelukt: 	Saving did not work: 	Speichern hat nicht geklappt: 	No se pudo guardar: 
+Oranje	Orange	Orange	Naranja
 OSC <host:poort> </adres> [argumenten]	OSC <host:port> </address> [arguments]	OSC <Host:Port> </Adresse> [Argumente]	OSC <host:puerto> </dirección> [argumentos]
 osc {0}	osc {0}	osc {0}	osc {0}
 OSC {0} naar {1}	OSC {0} to {1}	OSC {0} an {1}	OSC {0} a {1}
@@ -2539,6 +2558,7 @@ Reliëf (met verloop en diepte)	Relief (with gradient and depth)	Relief (mit Ver
 Rem	Brake	Bremse	Freno
 Rem (uitlopen tot stilstand)	Brake (run down to a stop)	Bremse (bis zum Stillstand auslaufen)	Freno (frenar hasta parar)
 Rem: het deck loopt in anderhalve seconde uit tot stilstand, zoals een draaitafel die je uitzet, en pauzeert	Brake: the deck runs down to a standstill in a second and a half, like a turntable you switch off, and pauses	Bremse: das Deck läuft in anderthalb Sekunden bis zum Stillstand aus, wie ein Plattenspieler, den du ausschaltest, und pausiert	Freno: el plato se detiene en segundo y medio, como un tocadiscos que apagas, y se pausa
+Remote-app op een tablet of telefoon: {0}	Remote app on a tablet or phone: {0}	Remote-App auf Tablet oder Telefon: {0}	App remota en tableta o teléfono: {0}
 Rendert de tekst met de stem uit de editor en speelt hem af op PFL (niet ON AIR)	Renders the text with the voice from the editor and plays it on PFL (not ON AIR)	Rendert den Text mit der Stimme aus dem Editor und spielt ihn auf PFL ab (nicht ON AIR)	Genera el texto con la voz del editor y lo reproduce en PFL (no ON AIR)
 Reservekopie	Backup	Sicherung	Copia de seguridad
 Reservekopie gemaakt: {0}	Backup made: {0}	Sicherung erstellt: {0}	Copia de seguridad hecha: {0}
@@ -2704,6 +2724,7 @@ soloist.exe --device-name "REA ontwikkeltest" --api-key %SOLOIST_API_KEY% --ws 	
 soloist.log in de map van de studio-instellingen	soloist.log in the studio settings folder	soloist.log im Ordner der Studioeinstellungen	soloist.log en la carpeta de ajustes del estudio
 Soort	Kind	Art	Tipo
 soort item	kind of item	Art des Elements	tipo de elemento
+Soort: {0}	Type: {0}	Art: {0}	Tipo: {0}
 Sorteren	Sort	Sortieren	Ordenar
 Speel af	Play	Abspielen	Reproducir
 Speel selectie als overlay	Play selection as overlay	Auswahl als Overlay spielen	Reproducir la selección como overlay
@@ -2867,6 +2888,7 @@ Studio vergrendelen	Lock studio	Studio sperren	Bloquear estudio
 Studio wordt gestart…	Studio is starting…	Studio wird gestartet…	Iniciando el estudio…
 Studio ·	Studio ·	Studio ·	Estudio ·
 Studio · versie {0}	Studio · version {0}	Studio · Version {0}	Estudio · versión {0}
+Studioklok	Studio clock	Studiouhr	Reloj de estudio
 STUN-server	STUN server	STUN-Server	Servidor STUN
 Stuurtags (voor elke break)	Steering tags (for every break)	Steuertags (für jeden Break)	Etiquetas de guía (para cada break)
 Sweeper	Sweeper	Sweeper	Sweeper
@@ -2995,6 +3017,7 @@ Uit: alles van de programmalog speelt op het automatiseringskanaal. Werkt vanaf 
 Uit: deze engine gebruikt alleen zijn eigen mappen.	Off: this engine only uses its own folders.	Aus: diese Engine verwendet nur ihre eigenen Ordner.	Desactivado: este motor solo usa sus propias carpetas.
 Uit: deze engine let niet op een andere studio.	Off: this engine does not watch another studio.	Aus: diese Engine achtet nicht auf ein anderes Studio.	Desactivado: este motor no vigila otro estudio.
 Uit: vloeiende overgang. Aan: beide kanten blijven open tot vlak voor het einde (knippen, scratchen).	Off: smooth transition. On: both sides stay open until just before the end (cutting, scratching).	Aus: fließender Übergang. An: beide Seiten bleiben bis kurz vor dem Ende offen (Cutten, Scratchen).	Desactivado: transición suave. Activado: ambos lados siguen abiertos hasta justo antes del final (cortes, scratch).
+uit: {0}	from: {0}	aus: {0}	de: {0}
 Uitbreidingen staan links van het hoofdpaneel	Extensions are to the left of the main panel	Erweiterungen stehen links vom Hauptpanel	Las extensiones están a la izquierda del panel principal
 Uiterlijk	Appearance	Aussehen	Apariencia
 Uiterlijk van deze studiocomputer	Appearance of this studio computer	Aussehen dieses Studiocomputers	Apariencia de este ordenador de estudio
@@ -3034,6 +3057,7 @@ uur	hour	Stunde	hora
 uur oud	hours old	Stunden alt	horas de antigüedad
 Uur verwijderen	Delete hour	Stunde löschen	Borrar hora
 uur {0}	hour {0}	Stunde {0}	hora {0}
+Uurklok (tot het hele uur)	Hour clock (to the full hour)	Stundenuhr (bis zur vollen Stunde)	Reloj horario (hasta la hora en punto)
 Vaakst gespeeld	Most often played	Am häufigsten gespielt	Más sonadas
 vakantieplannen: dichtbij of ver weg	holiday plans: close by or far away	Urlaubspläne: nah oder fern	planes de vacaciones: cerca o lejos
 Valt deze stem uit (server weg, fout van de dienst), dan spreekt deze stem de break in.	If this voice fails (server gone, service error), this voice records the break.	Fällt diese Stimme aus (Server weg, Fehler des Dienstes), spricht diese Stimme den Break ein.	Si esta voz falla (servidor caído, error del servicio), esta voz locuta el break.
@@ -3152,6 +3176,8 @@ Volgende start op {0:0.00} s ({1}), overlap {2:0.0} s	Next start at {0:0.00} s (
 Volgende starten	Start next	Nächstes starten	Iniciar el siguiente
 Volgende week	Next week	Nächste Woche	Semana siguiente
 VOLGENDE · {0:HH:mm:ss}	NEXT · {0:HH:mm:ss}	ALS NÄCHSTES · {0:HH:mm:ss}	SIGUIENTE · {0:HH:mm:ss}
+volgende: {0:ddd HH:mm:ss}	next: {0:ddd HH:mm:ss}	nächste: {0:ddd HH:mm:ss}	siguiente: {0:ddd HH:mm:ss}
+volgende: {0:ddd HH:mm}	next: {0:ddd HH:mm}	nächste: {0:ddd HH:mm}	siguiente: {0:ddd HH:mm}
 Volume	Volume	Lautstärke	Volumen
 VOLUME <kanaal> <0-125>	VOLUME <channel> <0-125>	VOLUME <Kanal> <0-125>	VOLUME <canal> <0-125>
 volume niet uit te lezen	volume cannot be read	Lautstärke nicht auslesbar	no se puede leer el volumen
@@ -3299,10 +3325,12 @@ Wijzigingen zie je meteen, in alle vensters en werkbladen. Ze gelden alleen voor
 willekeurig (naar verhouding)	random (weighted)	zufällig (gewichtet)	aleatorio (ponderado)
 Willekeurig (rotatie)	Random (rotation)	Zufällig (Rotation)	Aleatorio (rotación)
 willekeurig uit de bibliotheek	random from the library	zufällig aus der Bibliothek	aleatorio de la biblioteca
+Windows-spraak	Windows speech	Windows-Sprachausgabe	Voz de Windows
 Windows-stem	Windows voice	Windows-Stimme	Voz de Windows
 Wissel tussen golfvorm (met cuepunten) en compact, voor alle spelers	Switch between waveform (with cue points) and compact, for all players	Zwischen Wellenform (mit Cuepunkten) und kompakt wechseln, für alle Player	Cambiar entre forma de onda (con puntos de cue) y compacto, para todos los reproductores
 wisselvallig	changeable	wechselhaft	variable
 Wissen	Clear	Löschen	Borrar
+Wit	White	Weiß	Blanco
 Woorden	Words	Wörter	Palabras
 woorden	words	Wörter	palabras
 woorden uit artiest, titel, album of categorie; accenten en kleine tikfouten mogen	words from artist, title, album or category; accents and small typos are fine	Wörter aus Interpret, Titel, Album oder Kategorie; Akzente und kleine Tippfehler sind erlaubt	palabras del artista, título, álbum o categoría; se admiten tildes y pequeñas erratas
@@ -3317,6 +3345,7 @@ wsl.exe	wsl.exe	wsl.exe	wsl.exe
 yyyy-MM-dd HH:mm:ss	yyyy-MM-dd HH:mm:ss	yyyy-MM-dd HH:mm:ss	yyyy-MM-dd HH:mm:ss
 zacht	soft	weich	suave
 Zacht (na het huidige item)	Soft (after the current item)	Weich (nach dem aktuellen Element)	Suave (tras el elemento actual)
+Zacht (na het lopende item)	Soft (after the current item)	Weich (nach dem laufenden Element)	Suave (tras el elemento actual)
 Zacht: het blok komt na het lopende nummer (aanbevolen voor reclame). Heeft geen enkele campagne een spot nodig, dan wordt het hele blok overgeslagen, dus ook geen opener of sluiter.	Soft: the break comes after the current song (recommended for adverts). If no campaign needs a spot, the whole break is skipped, so no opener or closer either.	Weich: der Block kommt nach dem laufenden Titel (empfohlen für Werbung). Braucht keine Kampagne einen Spot, wird der ganze Block übersprungen, also auch kein Opener oder Schlusselement.	Suave: la tanda llega tras la canción en curso (recomendado para publicidad). Si ninguna campaña necesita una cuña, se salta toda la tanda, así que tampoco cabecera ni cierre.
 Zachte start op een vaste tijd: wacht hoogstens (seconden, 0 = altijd uitspelen)	Soft start at a fixed time: wait at most (seconds, 0 = always play out)	Weicher Start zu einer festen Zeit: höchstens warten (Sekunden, 0 = immer ausspielen)	Inicio suave a una hora fija: esperar como mucho (segundos, 0 = siempre terminar de sonar)
 Zang	Vocals	Gesang	Voz
@@ -3379,6 +3408,7 @@ zware buien	heavy showers	starke Schauer	chubascos fuertes
 {0:0.0} s, speelt op PFL	{0:0.0} s, playing on PFL	{0:0.0} s, spielt auf PFL	{0:0.0} s, suena en PFL
 {0:0} minuten	{0:0} minutes	{0:0} Minuten	{0:0} minutos
 {0:0} tellen	{0:0} beats	{0:0} Schläge	{0:0} tiempos
+{0:HH:mm}  → {1}   (na {2})	{0:HH:mm}  → {1}   (after {2})	{0:HH:mm}  → {1}   (nach {2})	{0:HH:mm}  → {1}   (después de {2})
 {0}  (vaste {1}map uit de instellingen)	{0}  (fixed {1} folder from the settings)	{0}  (fester {1}-Ordner aus den Einstellungen)	{0}  (carpeta fija de {1} de los ajustes)
 {0}  leeg	{0}  empty	{0}  leer	{0}  vacío
 {0}  ·  periode {1} t/m {2}	{0}  ·  period {1} to {2}	{0}  ·  Zeitraum {1} bis {2}	{0}  ·  periodo del {1} al {2}

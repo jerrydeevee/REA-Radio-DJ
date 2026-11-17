@@ -13,7 +13,7 @@ namespace ReaRadioDj.Studio.ViewModels;
 /// </summary>
 public sealed partial class VoiceTool : StudioTool
 {
-    public static readonly string[] EngineNames = ["Higgs TTS 3 (GPU)", "Windows-spraak", Tr.T("ElevenLabs (online)"), "Azure (online)"];
+    public static readonly string[] EngineNames = ["Higgs TTS 3 (GPU)", Tr.T("Windows-spraak"), Tr.T("ElevenLabs (online)"), "Azure (online)"];
     private static readonly string[] EngineKeys = ["higgs", "sapi", "elevenlabs", "azure"];
     /// <summary>Quick tags for Higgs; the text field accepts any tag the server understands.</summary>
     public static readonly string[] QuickTags =

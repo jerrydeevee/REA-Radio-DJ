@@ -17,7 +17,7 @@
               <DataTemplate x:DataType="c:DbSourceDto">
                 <StackPanel Opacity="{Binding Enabled, Converter={x:Static vm:Brushes.EnabledOpacity}}">
                   <TextBlock Text="{Binding Name}" FontWeight="SemiBold" TextWrapping="Wrap" />
-                  <TextBlock Classes="muted" FontSize="11" Text="{Binding LastSync, StringFormat='ingelezen {0:ddd HH:mm}'}"
+                  <TextBlock Classes="muted" FontSize="11" Text="{Binding LastSync, Converter={StaticResource Tr}, ConverterParameter='ingelezen {0:ddd HH:mm}'}"
                              IsVisible="{Binding LastSync, Converter={x:Static ObjectConverters.IsNotNull}}" />
                 </StackPanel>
               </DataTemplate>
