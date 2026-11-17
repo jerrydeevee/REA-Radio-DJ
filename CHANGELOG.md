@@ -2,7 +2,13 @@
 
 ## 1.2.0 (in ontwikkeling)
 
+Release candidates: 1.2.0-rc.1 (16 november 2026) en 1.2.0-rc.3 (17 november 2026), met de vier talen en alles
+vanaf *Geplande opnames* tot en met *Database-controle* hieronder.
+
 ### Nieuw
+- **Vier talen**: de studio, de webpagina's en het menu van de engine in het Nederlands, Engels, Duits of Spaans
+  (*Instellingen › Uiterlijk*). Datums, dagnamen en getallen volgen de taal. De AI-presentator spreekt de taal van
+  de zender. README in vier talen en de handleiding ook in het Engels (`docs/MANUAL.en.md`).
 - **Geplande opnames** van een ingang of internetstream (bijv. elke werkdag om 12:00 het regionale nieuws), direct in
   de bibliotheek; met *Vorige vervangen* blijft het hetzelfde item met steeds de nieuwste opname. Venster *Opnames*.
 - **Noodopname**: één knop of `RECORD TOGGLE` neemt alles op wat binnenkomt, elk kanaal apart; stille kanalen vallen weg.

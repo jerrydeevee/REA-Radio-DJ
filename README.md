@@ -22,14 +22,16 @@ Hoe je ermee werkt, in de studio en als beheerder, staat in de [handleiding](doc
 
 | | |
 |---|---|
-| ![DJ-modus met twee decks, stems, mengpaneel en effecten](docs/screenshots/dj-modus.png) | ![Automatisering met de programmalog, klok en berichten](docs/screenshots/automatisering.png) |
-| **DJ-modus**: decks met golfvorm en beatstrepen, stems (zang, drums, bas, rest), mengpaneel en effecten | **Automatisering**: programmalog met AI-presentator, klok en berichten |
+| ![DJ-modus met twee decks, stems, mengpaneel en effecten](docs/screenshots/dj-modus.png) | ![Automatisering met as-run, klok en berichten](docs/screenshots/automatisering.png) |
+| **DJ-modus**: decks met golfvorm en beatstrepen, stems (zang, drums, bas, rest), mengpaneel en effecten | **Automatisering**: as-run met wat er gespeeld is, de klok met wat er komt, en de berichten |
 | ![Productie met bibliotheek, cue-editor en voicetracking](docs/screenshots/productie.png) | ![Planning met de planner, reclame en programmalog](docs/screenshots/planning.png) |
 | **Productie**: bibliotheek, cue-editor, voicetracking en PFL | **Planning**: dag, week, klokken en vaste tijden, reclamecampagnes |
 | ![Rapportage met as-run, muziekrapport, stream en regiekamer](docs/screenshots/rapportage.png) | ![Het venster Uitsturing met een grote meter en een open-lampje per kanaal](docs/screenshots/uitsturing.png) |
 | **Rapportage**: as-run, muziekrapport (CSV en PDF), stream en regiekamer | **Uitsturing**: programma met loudness en per kanaal een meter met OPEN/DICHT |
-| ![Verbindingen met twee VoIP-lijnen via Opus, met meting](docs/screenshots/verbindingen.png) | |
-| **Verbindingen**: twee VoIP-lijnen, hier met Opus, met verlies, jitter en buffer | |
+| ![Verbindingen met twee VoIP-lijnen via Opus, met meting](docs/screenshots/verbindingen.png) | ![Het venster Opnames met de noodopname en geplande opnames](docs/screenshots/opnames.png) |
+| **Verbindingen**: twee VoIP-lijnen, hier met Opus, met verlies, jitter en buffer | **Opnames**: de noodopname met één knop, en geplande opnames van een ingang of stream (bijv. het regionale nieuws) |
+| ![Plaatshouders: reclame inplannen terwijl het geluid nog moet komen](docs/screenshots/plaatshouders.png) | |
+| **Plaatshouders**: een spot alvast inplannen; een waarschuwing vooraf en een alarm als hij te laat is | |
 
 Elk venster is te verslepen, te docken of los te laten zweven, ook op een tweede scherm.
 

@@ -17,18 +17,20 @@ Cómo se trabaja con él, en el estudio y como administrador, está en el [manua
 
 ## Capturas de pantalla
 
-![El espacio de trabajo Live: barra en antena, biblioteca, platos en directo, pauta, cartwall y mezclador](docs/screenshots/live.png)
+![El espacio de trabajo Live: barra en antena, biblioteca, platos en directo, pauta, cartwall y mezclador](docs/screenshots/live-es.png)
 
 | | |
 |---|---|
-| ![Modo DJ con dos platos, stems, mezclador y efectos](docs/screenshots/dj-modus.png) | ![Automatización con la pauta, el reloj y los mensajes](docs/screenshots/automatisering.png) |
-| **Modo DJ**: platos con forma de onda y líneas de beat, stems (voz, batería, bajo, resto), mezclador y efectos | **Automatización**: pauta con presentador de IA, reloj y mensajes |
+| ![Modo DJ con dos platos, stems, mezclador y efectos](docs/screenshots/dj-modus.png) | ![Automatización con el as-run, el reloj y los mensajes](docs/screenshots/automatisering.png) |
+| **Modo DJ**: platos con forma de onda y líneas de beat, stems (voz, batería, bajo, resto), mezclador y efectos | **Automatización**: as-run con lo emitido, el reloj con lo que viene y los mensajes |
 | ![Producción con biblioteca, editor de cues y voicetracking](docs/screenshots/productie.png) | ![Planificación con el planificador, la publicidad y la pauta](docs/screenshots/planning.png) |
 | **Producción**: biblioteca, editor de cues, voicetracking y PFL | **Planificación**: día, semana, relojes y horas fijas, campañas publicitarias |
 | ![Informes con as-run, informe musical, stream y sala de control](docs/screenshots/rapportage.png) | ![La ventana Salidas con un medidor grande y una luz de abierto por canal](docs/screenshots/uitsturing.png) |
 | **Informes**: as-run, informe musical (CSV y PDF), stream y sala de control | **Salidas**: programa con loudness y por canal un medidor con ABIERTO/CERRADO |
-| ![Conexiones con dos líneas VoIP por Opus, con medición](docs/screenshots/verbindingen.png) | |
-| **Conexiones**: dos líneas VoIP, aquí con Opus, con pérdida, jitter y búfer | |
+| ![Conexiones con dos líneas VoIP por Opus, con medición](docs/screenshots/verbindingen.png) | ![La ventana Grabaciones con la grabación de emergencia y las grabaciones programadas](docs/screenshots/opnames.png) |
+| **Conexiones**: dos líneas VoIP, aquí con Opus, con pérdida, jitter y búfer | **Grabaciones**: la grabación de emergencia con un botón y grabaciones programadas de una entrada o stream (p. ej. las noticias regionales) |
+| ![Marcadores: programar publicidad mientras el audio aún tiene que llegar](docs/screenshots/plaatshouders.png) | |
+| **Marcadores**: programar una cuña ya; un aviso antes y una alarma si llega tarde | |
 
 Cada ventana se puede arrastrar, acoplar o dejar flotando, también en una segunda pantalla.
 

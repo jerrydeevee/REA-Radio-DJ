@@ -17,18 +17,20 @@ How to work with it, in the studio and as an administrator, is in the [manual](d
 
 ## Screenshots
 
-![The Live workspace: on-air bar, library, live decks, programme log, cart wall and mixer](docs/screenshots/live.png)
+![The Live workspace: on-air bar, library, live decks, programme log, cart wall and mixer](docs/screenshots/live-en.png)
 
 | | |
 |---|---|
-| ![DJ mode with two decks, stems, mixer and effects](docs/screenshots/dj-modus.png) | ![Automation with the programme log, clock and messages](docs/screenshots/automatisering.png) |
-| **DJ mode**: decks with waveform and beat lines, stems (vocals, drums, bass, other), mixer and effects | **Automation**: programme log with AI presenter, clock and messages |
+| ![DJ mode with two decks, stems, mixer and effects](docs/screenshots/dj-modus.png) | ![Automation with as-run, clock and messages](docs/screenshots/automatisering.png) |
+| **DJ mode**: decks with waveform and beat lines, stems (vocals, drums, bass, other), mixer and effects | **Automation**: as-run with what has played, the clock with what is coming, and the messages |
 | ![Production with library, cue editor and voice tracking](docs/screenshots/productie.png) | ![Planning with the planner, ads and programme log](docs/screenshots/planning.png) |
 | **Production**: library, cue editor, voice tracking and PFL | **Planning**: day, week, clocks and fixed times, ad campaigns |
 | ![Reports with as-run, music report, stream and control room](docs/screenshots/rapportage.png) | ![The Output window with a big meter and an open light per channel](docs/screenshots/uitsturing.png) |
 | **Reporting**: as-run, music report (CSV and PDF), stream and control room | **Outputs**: programme with loudness and per channel a meter with OPEN/CLOSED |
-| ![Connections with two VoIP lines over Opus, with measurements](docs/screenshots/verbindingen.png) | |
-| **Connections**: two VoIP lines, here with Opus, with loss, jitter and buffer | |
+| ![Connections with two VoIP lines over Opus, with measurements](docs/screenshots/verbindingen.png) | ![The Recordings window with the emergency recorder and scheduled recordings](docs/screenshots/opnames.png) |
+| **Connections**: two VoIP lines, here with Opus, with loss, jitter and buffer | **Recordings**: the one-button emergency recorder, and scheduled recordings of an input or stream (e.g. the regional news) |
+| ![Placeholders: plan an ad while the sound is still to come](docs/screenshots/plaatshouders.png) | |
+| **Placeholders**: plan a spot already; a warning beforehand and an alarm if it is late | |
 
 Every window can be dragged, docked or left floating, also on a second screen.
 

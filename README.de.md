@@ -17,18 +17,20 @@ Wie man damit arbeitet, im Studio und als Administrator, steht im [Handbuch](doc
 
 ## Bildschirmfotos
 
-![Der Arbeitsbereich Live: On-Air-Leiste, Bibliothek, Live-Decks, Sendeablauf, Cartwall und Mixer](docs/screenshots/live.png)
+![Der Arbeitsbereich Live: On-Air-Leiste, Bibliothek, Live-Decks, Sendeablauf, Cartwall und Mixer](docs/screenshots/live-de.png)
 
 | | |
 |---|---|
-| ![DJ-Modus mit zwei Decks, Stems, Mischpult und Effekten](docs/screenshots/dj-modus.png) | ![Automatisierung mit Sendeablauf, Uhr und Meldungen](docs/screenshots/automatisering.png) |
-| **DJ-Modus**: Decks mit Wellenform und Beatlinien, Stems (Gesang, Drums, Bass, Rest), Mischpult und Effekte | **Automatisierung**: Sendeablauf mit KI-Moderator, Uhr und Meldungen |
+| ![DJ-Modus mit zwei Decks, Stems, Mischpult und Effekten](docs/screenshots/dj-modus.png) | ![Automatisierung mit As-run, Uhr und Meldungen](docs/screenshots/automatisering.png) |
+| **DJ-Modus**: Decks mit Wellenform und Beatlinien, Stems (Gesang, Drums, Bass, Rest), Mischpult und Effekte | **Automatisierung**: As-run mit dem Gespielten, die Uhr mit dem, was kommt, und die Meldungen |
 | ![Produktion mit Bibliothek, Cue-Editor und Voicetracking](docs/screenshots/productie.png) | ![Planung mit Planer, Werbung und Sendeablauf](docs/screenshots/planning.png) |
 | **Produktion**: Bibliothek, Cue-Editor, Voicetracking und PFL | **Planung**: Tag, Woche, Uhren und feste Zeiten, Werbekampagnen |
 | ![Berichte mit As-run, Musikbericht, Stream und Regieraum](docs/screenshots/rapportage.png) | ![Das Fenster Ausgabe mit großem Meter und einer Offen-Lampe pro Kanal](docs/screenshots/uitsturing.png) |
 | **Berichte**: As-run, Musikbericht (CSV und PDF), Stream und Regieraum | **Ausgabe**: Programm mit Lautheit und pro Kanal ein Meter mit OFFEN/ZU |
-| ![Verbindungen mit zwei VoIP-Leitungen über Opus, mit Messung](docs/screenshots/verbindingen.png) | |
-| **Verbindungen**: zwei VoIP-Leitungen, hier mit Opus, mit Verlust, Jitter und Puffer | |
+| ![Verbindungen mit zwei VoIP-Leitungen über Opus, mit Messung](docs/screenshots/verbindingen.png) | ![Das Fenster Aufnahmen mit Notaufnahme und geplanten Aufnahmen](docs/screenshots/opnames.png) |
+| **Verbindungen**: zwei VoIP-Leitungen, hier mit Opus, mit Verlust, Jitter und Puffer | **Aufnahmen**: die Notaufnahme mit einem Knopf und geplante Aufnahmen eines Eingangs oder Streams (z. B. die Regionalnachrichten) |
+| ![Platzhalter: Werbung einplanen, während der Ton noch kommt](docs/screenshots/plaatshouders.png) | |
+| **Platzhalter**: einen Spot schon einplanen; eine Warnung vorab und ein Alarm, wenn er zu spät ist | |
 
 Jedes Fenster lässt sich verschieben, andocken oder schwebend lassen, auch auf einem zweiten Bildschirm.
 
