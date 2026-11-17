@@ -52,7 +52,9 @@ public sealed partial class GridCellVm(int day, int hour) : ObservableObject
 /// </summary>
 public sealed partial class PlannerTool : StudioTool
 {
-    public static readonly string[] DayNames = ["ma", "di", "wo", "do", "vr", "za", "zo"];
+    /// <summary>Monday to Sunday, short, in the chosen language (ma … zo, Mon … Sun).</summary>
+    public static readonly string[] DayNames = [.. Enumerable.Range(1, 7).Select(d =>
+        Contracts.Localization.Tr.Culture.DateTimeFormat.GetAbbreviatedDayName((DayOfWeek)(d % 7)).TrimEnd('.'))];
     public static readonly string[] Timings = [Tr.T("Hard (onderbreekt)"), Tr.T("Zacht (na het huidige item)"), Tr.T("Overlay (eroverheen)")];
     public static readonly string[] Actions = [Tr.T("Vast item"), Tr.T("Uit categorie"), Tr.T("AI-presentator"), Tr.T("Commando uitvoeren"), Tr.T("Herinnering tonen"), Tr.T("Alarm geven")];
     private static readonly string[] ActionKeys = ["playMedia", "playCategory", "aiBreak", "command", "reminder", "alert"];

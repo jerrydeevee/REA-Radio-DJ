@@ -97,7 +97,7 @@ public sealed partial class AirStatsTool : StudioTool
         PeriodText = Period switch
         {
             0 => f.ToString("dddd d MMMM yyyy", nl),
-            1 => $"week {ISOWeek.GetWeekOfYear(f.ToDateTime(TimeOnly.MinValue))} · {f.ToString("d MMM", nl)} t/m {t.ToString("d MMM yyyy", nl)}",
+            1 => Tr.F("week {0} · {1} t/m {2}", ISOWeek.GetWeekOfYear(f.ToDateTime(TimeOnly.MinValue)), f.ToString("d MMM", nl), t.ToString("d MMM yyyy", nl)),
             _ => f.ToString("MMMM yyyy", nl),
         };
         IdleTitle = Tr.F("Niet gedraaid in {0}", IdleNames[Math.Clamp(IdleIndex, 0, IdleNames.Length - 1)]);
@@ -125,7 +125,7 @@ public sealed partial class AirStatsTool : StudioTool
         foreach (var x in s.Idle)
             Idle.Add(new AirStatsRow((++i).ToString(CultureInfo.InvariantCulture), x.Title,
                 string.IsNullOrWhiteSpace(x.Category) ? x.Artist : $"{x.Artist} · {x.Category}",
-                x.LastPlayed is DateTime lp ? lp.ToString("d MMM yyyy", nl) : "nooit", 0));
+                x.LastPlayed is DateTime lp ? lp.ToString("d MMM yyyy", nl) : Tr.T("nooit"), 0));
 
         Hours.Clear();
         int max = Math.Max(1, s.SongsPerHour.DefaultIfEmpty(0).Max());

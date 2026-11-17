@@ -772,7 +772,7 @@ de maandag, en hoe je die zo goed mogelijk doorkomt	Monday, and how to get throu
 De map {0} is niet te gebruiken: {1}	The folder {0} cannot be used: {1}	Der Ordner {0} ist nicht verwendbar: {1}	La carpeta {0} no se puede usar: {1}
 De mappen moeten bereikbaar zijn voor de computer waar de engine draait.	The folders must be reachable for the computer the engine runs on.	Die Ordner müssen für den Computer erreichbar sein, auf dem die Engine läuft.	Las carpetas deben ser accesibles para el ordenador donde funciona el motor.
 De markt is een landcode van twee letters, bijv. NL of BE.	The market is a two-letter country code, e.g. NL or BE.	Der Markt ist ein Ländercode aus zwei Buchstaben, z. B. NL oder BE.	El mercado es un código de país de dos letras, p. ej. NL o BE.
-De microfoon is niet beschikbaar: 	The microphone is not available: 	Das Mikrofon ist nicht verfügbar: 	El micrófono no está disponible:
+De microfoon is niet beschikbaar: 	The microphone is not available: 	Das Mikrofon ist nicht verfügbar: 	El micrófono no está disponible: 
 De MIDI-controller waarop een voorinstelling wordt gezet	The MIDI controller a preset is put on	Der MIDI-Controller, auf den eine Voreinstellung gesetzt wird	El controlador MIDI al que se aplica un preajuste
 De MIDI-poort van je controller	The MIDI port of your controller	Der MIDI-Port deines Controllers	El puerto MIDI de tu controlador
 De mixer draait nog niet.	The mixer is not running yet.	Der Mixer läuft noch nicht.	El mezclador aún no está en marcha.
@@ -2146,6 +2146,7 @@ Nog {0} bestanden op te halen	{0} more files to fetch	Noch {0} Dateien zu holen	
 nog {0} tot het uur	{0} to the hour	noch {0} bis zur vollen Stunde	quedan {0} para la hora en punto
 Noodcategorie	Emergency category	Notfallkategorie	Categoría de emergencia
 Noodcategorie is leeg of niet gevonden; er wordt een willekeurig nummer uit de bibliotheek gespeeld	Emergency category is empty or not found; a random song from the library is played	Notfallkategorie ist leer oder nicht gefunden; ein zufälliger Titel aus der Bibliothek wird gespielt	La categoría de emergencia está vacía o no existe; se reproduce una canción aleatoria de la biblioteca
+nooit	never	nie	nunca
 Nooit gespeeld	Never played	Nie gespielt	Nunca sonado
 nooit gespeeld	never played	nie gespielt	nunca sonado
 Normale uitgang (uitzending, of PFL)	Normal output (broadcast, or PFL)	Normaler Ausgang (Sendung oder PFL)	Salida normal (emisión o PFL)
@@ -2831,6 +2832,7 @@ Sweeper	Sweeper	Sweeper	Sweeper
 Sync	Sync	Sync	Sync
 Systeem	System	System	Sistema
 Systeemlog van de engine	System log of the engine	Systemprotokoll der Engine	Registro del sistema del motor
+t/m	to	bis	hasta
 Taal	Language	Sprache	Idioma
 Taal ingesteld.	Language set.	Sprache eingestellt.	Idioma configurado.
 Taal · Language · Sprache · Idioma	Taal · Language · Sprache · Idioma	Taal · Language · Sprache · Idioma	Taal · Language · Sprache · Idioma
@@ -2994,7 +2996,7 @@ Vaakst gespeeld	Most often played	Am häufigsten gespielt	Más sonadas
 vakantieplannen: dichtbij of ver weg	holiday plans: close by or far away	Urlaubspläne: nah oder fern	planes de vacaciones: cerca o lejos
 Valt deze stem uit (server weg, fout van de dienst), dan spreekt deze stem de break in.	If this voice fails (server gone, service error), this voice records the break.	Fällt diese Stimme aus (Server weg, Fehler des Dienstes), spricht diese Stimme den Break ein.	Si esta voz falla (servidor caído, error del servicio), esta voz locuta el break.
 Van	From	Von	Desde
-van	of	von	de
+van	from	von	desde
 van de ruimte	of the room	des Raums	de la sala
 Van de stijl	From the style	Vom Stil	Del estilo
 Van de wensenlijst halen	Remove from the wish list	Von der Wunschliste nehmen	Quitar de la lista de deseos
@@ -3204,6 +3206,7 @@ webadres, bijv. http://rds.local/set?text={tekst} (leeg = uit)	web address, e.g.
 Website van het station	Station website	Website des Senders	Web de la emisora
 Week	Week	Woche	Semana
 week {0} · {1:d MMM} – {2:d MMM yyyy}	week {0} · {1:d MMM} – {2:d MMM yyyy}	KW {0} · {1:d MMM} – {2:d MMM yyyy}	semana {0} · {1:d MMM} – {2:d MMM yyyy}
+week {0} · {1} t/m {2}	week {0} · {1} to {2}	KW {0} · {1} bis {2}	semana {0} · {1} al {2}
 Weekgrid	Week grid	Wochenraster	Cuadrícula semanal
 Weer	Weather	Wetter	Tiempo
 Weer en nieuws nu opnieuw ophalen	Fetch weather and news again now	Wetter und Nachrichten jetzt neu abrufen	Volver a obtener ahora el tiempo y las noticias

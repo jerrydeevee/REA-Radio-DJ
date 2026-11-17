@@ -59,7 +59,7 @@ def cs_literal(verbatim: str, body: str) -> str:
 def is_text(s: str, code: bool = False) -> bool:
     """A translatable text: has letters; in a view, a {Binding ...} or other markup extension is not a text."""
     s = s.strip()
-    return len(s) > 0 and (code or not s.startswith("{")) and re.search(r"[A-Za-zÀ-ÿ]{2}", s) is not None
+    return len(s) > 0 and (code or not s.startswith("{")) and (re.search(r"[A-Za-zÀ-ÿ]{2}", s) is not None or s == "t/m")
 
 
 def same_edges(key: str, text: str) -> str:

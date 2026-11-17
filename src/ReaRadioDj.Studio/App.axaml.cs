@@ -28,6 +28,11 @@ public partial class App : Application
         int la = Array.IndexOf(args, "--lang");
         Contracts.Localization.Tr.Language = la >= 0 && la + 1 < args.Length ? args[la + 1] : Services.StudioSettings.Load().Language;
         Services.AutoTranslate.Install();
+        // Dates, day names and numbers follow the chosen language too, not the language of Windows.
+        System.Globalization.CultureInfo.DefaultThreadCurrentCulture = Contracts.Localization.Tr.Culture;
+        System.Globalization.CultureInfo.DefaultThreadCurrentUICulture = Contracts.Localization.Tr.Culture;
+        System.Globalization.CultureInfo.CurrentCulture = Contracts.Localization.Tr.Culture;
+        System.Globalization.CultureInfo.CurrentUICulture = Contracts.Localization.Tr.Culture;
 
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {

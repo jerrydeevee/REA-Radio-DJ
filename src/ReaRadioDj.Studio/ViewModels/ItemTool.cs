@@ -99,7 +99,7 @@ public sealed partial class ItemTool : StudioTool
             new(Tr.T("Gespeeld"), m.PlayCount == 0 ? Tr.T("nog nooit") : $"{m.PlayCount}×" + (m.LastPlayed is DateTime lp ? Tr.F(", laatst {0}", lp.ToLocalTime().ToString("d MMM yyyy HH:mm", nl)) : "")),
             new(Tr.T("Toegevoegd"), m.Added?.ToLocalTime().ToString("d MMM yyyy", nl) ?? ""),
             new(Tr.T("Geldig"), m.ValidFrom is null && m.ValidUntil is null ? "" :
-                $"{m.ValidFrom?.ToString("d MMM yyyy", nl) ?? "…"} t/m {m.ValidUntil?.ToString("d MMM yyyy", nl) ?? "…"}"),
+                Tr.F("{0} t/m {1}", m.ValidFrom?.ToString("d MMM yyyy", nl) ?? "…", m.ValidUntil?.ToString("d MMM yyyy", nl) ?? "…")),
             new(Tr.T("Kwaliteit"), m.Bitrate is int br ? Tr.F("{0} kbit/s", br) : ""),
             new(Tr.T("Let op"), m.Missing ? Tr.T("bestand niet gevonden") : m.Issues is { Count: > 0 } iss ? string.Join(", ", iss.Select(Tr.E)) : ""),
             new(Tr.T("Bestand"), m.Path),
