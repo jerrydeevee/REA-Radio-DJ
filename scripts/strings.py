@@ -27,7 +27,7 @@ spotify voip sip rtp asio midi bass mackie ember livewire wav mp3 ogg flac opus 
 ATTR = re.compile(r'\s(?:Content|Text|Header|ToolTip\.Tip|Watermark|PlaceholderText|Title|EmptyText)="([^"]*)"')
 ELEMENT = re.compile(r"<(TextBlock|Run|ToolTip\.Tip|SelectableTextBlock)(?:\s[^>]*)?>([^<]+)</\1>")
 # A C# string literal (regular or verbatim) as the first argument of Tr.T / Tr.F.
-CALL = re.compile(r'\bTr\.[TF]\(\s*(@?)"((?:[^"\\]|\\.|"")*)"')
+CALL = re.compile(r'(?:\bTr\.[TF]\(|\bTr\.In\([^,()]*,|(?<![\w.])L\()\s*(@?)"((?:[^"\\]|\\.|"")*)"')
 WEB = re.compile(r'(?:data-tr="([^"]*)"|\btr\(\s*"((?:[^"\\]|\\.)*)"|\btr\(\s*\'((?:[^\'\\]|\\.)*)\')')
 
 
@@ -59,7 +59,7 @@ def cs_literal(verbatim: str, body: str) -> str:
 def is_text(s: str, code: bool = False) -> bool:
     """A translatable text: has letters; in a view, a {Binding ...} or other markup extension is not a text."""
     s = s.strip()
-    return len(s) > 0 and (code or not s.startswith("{")) and (re.search(r"[A-Za-zÀ-ÿ]{2}", s) is not None or s == "t/m")
+    return len(s) > 0 and (code or not s.startswith("{")) and (re.search(r"[A-Za-zÀ-ÿ]{2}", s) is not None or "t/m" in s)
 
 
 def same_edges(key: str, text: str) -> str:
@@ -107,7 +107,7 @@ def collect() -> dict[str, str]:
             for m in re.finditer(r'\s(?:placeholder|title|aria-label)="([^"]*)"', page):
                 add(html.unescape(m.group(1).strip()), rel)
         for m in WEB.finditer(src):
-            add(html.unescape(m.group(1)) if m.group(1) is not None else cs_literal("", m.group(2) or m.group(3) or ""), rel)
+            add(html.unescape(m.group(1)) if m.group(1) is not None else cs_literal("", m.group(2) or m.group(3) or ""), rel, code=True)
     words = {w.lower() for k in found for w in re.findall(r"[A-Za-zÀ-ÿ]{3,}", k)} - ENGLISH
     for text, rel in engine_texts(words):
         add(text, rel, code=True)

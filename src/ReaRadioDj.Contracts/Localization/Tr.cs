@@ -62,6 +62,15 @@ public static class Tr
     /// <summary>The text in the chosen language with {0}, {1}… filled in.</summary>
     public static string F(string nl, params object?[] args) => string.Format(Culture, T(nl), args);
 
+    /// <summary>The text in a given language, without changing the chosen language (the engine itself stays Dutch: its
+    /// messages are translated by each studio or web page; only its own tray menu speaks the language of the PC).</summary>
+    public static string In(string language, string nl)
+    {
+        var code = Normalize(language);
+        if (code == "nl" || string.IsNullOrEmpty(nl)) return nl;
+        return Table(code).TryGetValue(nl, out var t) ? t : nl;
+    }
+
     /// <summary>For texts that may or may not be a fixed Dutch text (a label in a view): true when there is a translation.</summary>
     public static bool TryTranslate(string nl, out string translated)
     {

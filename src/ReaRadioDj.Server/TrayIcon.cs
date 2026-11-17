@@ -4,6 +4,7 @@ using System.Runtime.InteropServices;
 using System.Windows.Forms;
 using Microsoft.AspNetCore.Hosting.Server;
 using Microsoft.AspNetCore.Hosting.Server.Features;
+using ReaRadioDj.Core;
 using ReaRadioDj.Core.Audio;
 
 namespace ReaRadioDj.Server;
@@ -14,10 +15,13 @@ namespace ReaRadioDj.Server;
 /// engine. The icon turns grey when nothing is playing. Not shown when the engine runs without a desktop (as a
 /// service) or with --no-tray.
 /// </summary>
-public sealed class TrayIcon(PlayoutEngine engine, IHostApplicationLifetime lifetime, IServer server, ILogger<TrayIcon> log) : IHostedService
+public sealed class TrayIcon(PlayoutEngine engine, ReaRadioDjOptions options, IHostApplicationLifetime lifetime, IServer server, ILogger<TrayIcon> log) : IHostedService
 {
     private const string StudioExe = "REA-Radio-DJ-Studio.exe";
     private Thread? _thread;
+
+    /// <summary>The tray speaks the engine's language setting, else the language of Windows.</summary>
+    private string L(string nl) => Contracts.Localization.Tr.In(string.IsNullOrWhiteSpace(options.Language) ? System.Globalization.CultureInfo.CurrentUICulture.Name : options.Language, nl);
     private volatile bool _stopping;
 
     public Task StartAsync(CancellationToken cancellationToken)
@@ -47,17 +51,17 @@ public sealed class TrayIcon(PlayoutEngine engine, IHostApplicationLifetime life
 
             using var menu = new ContextMenuStrip();
             var status = new ToolStripMenuItem("REA-Radio-DJ") { Enabled = false };
-            var openStudio = new ToolStripMenuItem("Studio openen", null, (_, _) => OpenStudio()) { Font = new Font(SystemFonts.MenuFont ?? Control.DefaultFont, FontStyle.Bold) };
-            var openWeb = new ToolStripMenuItem("Webinterface openen", null, (_, _) => Open(EngineUrl()));
-            var next = new ToolStripMenuItem("Volgende starten", null, (_, _) => engine.Next());
-            var auto = new ToolStripMenuItem("Automatisch", null, (_, _) => engine.SetAutoPlay(!engine.AutoPlay));
-            var quit = new ToolStripMenuItem("Engine stoppen…", null, (_, _) => ConfirmStop());
+            var openStudio = new ToolStripMenuItem(L("Studio openen"), null, (_, _) => OpenStudio()) { Font = new Font(SystemFonts.MenuFont ?? Control.DefaultFont, FontStyle.Bold) };
+            var openWeb = new ToolStripMenuItem(L("Webinterface openen"), null, (_, _) => Open(EngineUrl()));
+            var next = new ToolStripMenuItem(L("Volgende starten"), null, (_, _) => engine.Next());
+            var auto = new ToolStripMenuItem(L("Automatisch"), null, (_, _) => engine.SetAutoPlay(!engine.AutoPlay));
+            var quit = new ToolStripMenuItem(L("Engine stoppen…"), null, (_, _) => ConfirmStop());
             menu.Items.AddRange([status, new ToolStripSeparator(), openStudio, openWeb, new ToolStripSeparator(), next, auto,
                 new ToolStripSeparator(), quit]);
 
             using var icon = new NotifyIcon { Icon = live, Text = "REA-Radio-DJ", ContextMenuStrip = menu, Visible = true };
             icon.DoubleClick += (_, _) => OpenStudio();
-            icon.ShowBalloonTip(4000, "REA-Radio-DJ draait", "De uitzending loopt ook zonder studio. Dubbelklik dit icoon om de studio te openen.", ToolTipIcon.Info);
+            icon.ShowBalloonTip(4000, L("REA-Radio-DJ draait"), L("De uitzending loopt ook zonder studio. Dubbelklik dit icoon om de studio te openen."), ToolTipIcon.Info);
 
             using var timer = new System.Windows.Forms.Timer { Interval = 1000 };
             timer.Tick += (_, _) =>
@@ -71,11 +75,11 @@ public sealed class TrayIcon(PlayoutEngine engine, IHostApplicationLifetime life
                 }
                 var state = engine.GetState();
                 var now = state.Current;
-                string line = now is null ? (state.AutoPlay ? "Wacht op muziek" : "Stil (live-assist)") : $"ON AIR: {now.Label}";
+                string line = now is null ? (state.AutoPlay ? L("Wacht op muziek") : L("Stil (live-assist)")) : $"ON AIR: {now.Label}";
                 status.Text = line.Length > 60 ? line[..57] + "…" : line;
                 auto.Checked = state.AutoPlay;
                 icon.Icon = now is null ? idle : live;
-                var tip = $"REA-Radio-DJ · {(state.AutoPlay ? "automatisch" : "live-assist")}\n{line}";
+                var tip = $"REA-Radio-DJ · {(state.AutoPlay ? L("automatisch") : L("live-assist"))}\n{line}";
                 icon.Text = tip.Length > 127 ? tip[..126] : tip;
             };
             timer.Start();
@@ -89,7 +93,7 @@ public sealed class TrayIcon(PlayoutEngine engine, IHostApplicationLifetime life
 
     private void ConfirmStop()
     {
-        var answer = MessageBox.Show("Als je de engine stopt, stopt ook de uitzending.\n\nEngine stoppen?", "REA-Radio-DJ",
+        var answer = MessageBox.Show(L("Als je de engine stopt, stopt ook de uitzending.\n\nEngine stoppen?"), "REA-Radio-DJ",
             MessageBoxButtons.YesNo, MessageBoxIcon.Warning, MessageBoxDefaultButton.Button2);
         if (answer == DialogResult.Yes) lifetime.StopApplication();
     }
@@ -114,7 +118,7 @@ public sealed class TrayIcon(PlayoutEngine engine, IHostApplicationLifetime life
         var exe = FindStudio();
         if (exe is null)
         {
-            MessageBox.Show($"{StudioExe} is niet gevonden naast de engine.", "REA-Radio-DJ", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            MessageBox.Show(string.Format(L("{0} is niet gevonden naast de engine."), StudioExe), "REA-Radio-DJ", MessageBoxButtons.OK, MessageBoxIcon.Information);
             return;
         }
         Process.Start(new ProcessStartInfo(exe, $"--engine {EngineUrl()} --no-engine") { WorkingDirectory = Path.GetDirectoryName(exe)!, UseShellExecute = true });

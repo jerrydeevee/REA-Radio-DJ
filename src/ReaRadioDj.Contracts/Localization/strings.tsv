@@ -160,6 +160,7 @@ _Werkbladen	_Workbenches	_Arbeitsblätter	_Hojas de trabajo
 _Zwevend	_Floating	_Schwebend	_Flotante
 A en B	A and B	A und B	A y B
 A snel uitfaden en door naar B	Fade A out quickly and go on to B	A schnell ausblenden und weiter zu B	Desvanecer A rápido y pasar a B
+A t/m D	A to D	A bis D	De A a D
 Aa en Hunze	Aa en Hunze	Aa en Hunze	Aa en Hunze
 Aan	On	An	Activado
 aan	on	an	activado
@@ -314,6 +315,7 @@ Alles wat de bibliotheek weet (tags, toonsoort, BPM, rechten, ReplayGain) in de 
 Als bron: stel een bedieningswachtwoord in (Op afstand) en zet Engine op het netwerk aan; de studio's gebruiken dat wachtwoord.	As source: set a control password (Remote) and switch on Engine on the network; the studios use that password.	Als Quelle: lege ein Steuerpasswort fest (Fernzugriff) und schalte Engine im Netzwerk ein; die Studios nutzen dieses Passwort.	Como fuente: pon una contraseña de control (Remoto) y activa Motor en la red; los estudios usan esa contraseña.
 Als container in de log	As a container in the log	Als Container im Ablauf	Como contenedor en la pauta
 Als de regel een item tegenhoudt	If the rule holds back an item	Wenn die Regel ein Element zurückhält	Si la regla retiene un elemento
+Als je de engine stopt, stopt ook de uitzending.\n\nEngine stoppen?	If you stop the engine, the broadcast stops too.\n\nStop the engine?	Wenn du die Engine stoppst, stoppt auch die Sendung.\n\nEngine stoppen?	Si detienes el motor, también se detiene la emisión.\n\n¿Detener el motor?
 Als knop	As button	Als Taste	Como botón
 Als lampje	As lamp	Als Lampe	Como piloto
 Als overlay over de muziek	As an overlay over the music	Als Overlay über der Musik	Como overlay sobre la música
@@ -360,6 +362,7 @@ AUTO: de programmalog loopt helemaal vanzelf	AUTO: the program log runs complete
 Automation	Automation	Automatisierung	Automatización
 AUTOMATISCH	AUTOMATIC	AUTOMATISCH	AUTOMÁTICO
 Automatisch	Automatic	Automatisch	Automático
+automatisch	automatic	automatisch	automático
 automatisch (gemeten mixpunt)	automatic (measured mix point)	automatisch (gemessener Mixpunkt)	automático (punto de mezcla medido)
 Automatisch aan en spelen	Automatic on and play	Automatik an und abspielen	Automático activado y reproducir
 Automatisch aanvullen als een nummer voor het eerst draait	Fill in automatically when a song plays for the first time	Automatisch ergänzen, wenn ein Titel zum ersten Mal läuft	Completar automáticamente cuando una canción suena por primera vez
@@ -814,6 +817,7 @@ de tijd tot overnemen moet minstens twee keer de vraagtijd zijn	the time until t
 de tuin die weer tot leven komt	the garden coming back to life	der Garten, der wieder zum Leben erwacht	el jardín que vuelve a la vida
 De uitzending echt stoppen?	Really stop the broadcast?	Die Sendung wirklich stoppen?	¿Detener de verdad la emisión?
 De uitzending gaat gewoon door. Meld je aan met je eigen naam en pincode.	The broadcast simply carries on. Sign in with your own name and PIN.	Die Sendung läuft einfach weiter. Melde dich mit deinem eigenen Namen und PIN an.	La emisión sigue sin más. Inicia sesión con tu propio nombre y PIN.
+De uitzending loopt ook zonder studio. Dubbelklik dit icoon om de studio te openen.	The broadcast also runs without the studio. Double-click this icon to open the studio.	Die Sendung läuft auch ohne Studio. Doppelklicke dieses Symbol, um das Studio zu öffnen.	La emisión también funciona sin el estudio. Haz doble clic en este icono para abrir el estudio.
 De volgende klaarstaande speler starten (handmatig: de log in speler A en B)	Start the next ready player (manual: the log in players A and B)	Den nächsten bereiten Player starten (von Hand: der Ablauf in Player A und B)	Iniciar el siguiente reproductor preparado (manual: la pauta en los reproductores A y B)
 De weerman of weervrouw	The weather presenter	Der Wettermoderator oder die Wettermoderatorin	El hombre o la mujer del tiempo
 De zoekopdracht, categorie en sortering van nu bewaren onder een eigen naam	Save the current search, category and sorting under a name of your own	Die aktuelle Suche, Kategorie und Sortierung unter einem eigenen Namen speichern	Guardar la búsqueda, categoría y orden actuales con un nombre propio
@@ -1040,6 +1044,7 @@ Engine opnieuw gestart (proces {0}): {1}	Engine restarted (process {0}): {1}	Eng
 Engine opnieuw starten	Restart engine	Engine neu starten	Reiniciar motor
 Engine starten	Start engine	Engine starten	Iniciar motor
 Engine starten mislukt.	Starting the engine failed.	Starten der Engine fehlgeschlagen.	No se pudo iniciar el motor.
+Engine stoppen…	Stop engine…	Engine stoppen…	Detener el motor…
 engine stopt	engine stopping	Engine stoppt	el motor se detiene
 engine wordt gestart…	engine is starting…	Engine wird gestartet…	iniciando el motor…
 Engine wordt opnieuw gestart	Engine is being restarted	Engine wird neu gestartet	El motor se está reiniciando
@@ -1780,6 +1785,7 @@ Live met de hand: fader open start de speler of (in HAND) het volgende item van 
 live naar {0} · {1:0.0} MB verzonden	live to {0} · {1:0.0} MB sent	live zu {0} · {1:0.0} MB gesendet	en directo a {0} · {1:0.0} MB enviados
 live naar {0} · {1} MB	live to {0} · {1} MB	live zu {0} · {1} MB	en directo a {0} · {1} MB
 Live stream stoppen	Stop live stream	Livestream stoppen	Detener stream en directo
+live-assist	live assist	Live-Assist	asistencia en directo
 Live-assist: start het volgende item	Live assist: start the next item	Live-Assist: starte das nächste Element	Asistencia en directo: inicia el siguiente elemento
 live-assist: wacht op F5	live assist: waiting for F5	Live-Assist: wartet auf F5	asistido en directo: esperando F5
 Live-decks (A · B · C)	Live decks (A · B · C)	Live-Decks (A · B · C)	Platos en directo (A · B · C)
@@ -2470,6 +2476,7 @@ Rapportage	Reporting	Berichte	Informes
 Rapportage en techniek: as-run, muziekrapport, stream, hardware en bediening	Reporting and technology: as-run, music report, stream, hardware and control	Berichte und Technik: As-Run, Musikbericht, Stream, Hardware und Steuerung	Informes y técnica: as-run, informe musical, stream, hardware y control
 REA ontwikkeltest	REA ontwikkeltest	REA ontwikkeltest	REA ontwikkeltest
 REA-Radio-DJ	REA-Radio-DJ	REA-Radio-DJ	REA-Radio-DJ
+REA-Radio-DJ draait	REA-Radio-DJ is running	REA-Radio-DJ läuft	REA-Radio-DJ está en marcha
 REA-Radio-DJ engine	REA-Radio-DJ engine	REA-Radio-DJ-Engine	Motor de REA-Radio-DJ
 REA-Radio-DJ engine events	REA-Radio-DJ engine events	REA-Radio-DJ engine events	REA-Radio-DJ engine events
 REA-Radio-DJ lokale CA	REA-Radio-DJ local CA	REA-Radio-DJ lokale CA	REA-Radio-DJ local CA
@@ -2782,6 +2789,7 @@ sterren en energie (1 tot 5) uit het detailpaneel of de tags	stars and energy (1
 Stijl	Style	Stil	Estilo
 STIL	SILENT	STILL	SILENCIO
 stil	silent	still	en silencio
+Stil (live-assist)	Silent (live assist)	Still (Live-Assist)	En silencio (asistencia en directo)
 Stil is: zachter dan (dB)	Silent is: softer than (dB)	Still ist: leiser als (dB)	Silencio es: más bajo que (dB)
 stil — start het volgende item (F5)	silent — start the next item (F5)	still — starte das nächste Element (F5)	silencio — inicia el siguiente elemento (F5)
 stilte aan het begin ({0:0.#} s)	silence at the start ({0:0.#} s)	Stille am Anfang ({0:0.#} s)	silencio al principio ({0:0.#} s)
@@ -2821,6 +2829,7 @@ stream.example.nl:8000/hoog	stream.example.com:8000/high	stream.beispiel.de:8000
 Studio (rood · amber · blauw)	Studio (red · amber · blue)	Studio (rot · bernstein · blau)	Estudio (rojo · ámbar · azul)
 Studio donker	Studio dark	Studio dunkel	Estudio oscuro
 Studio donker is het standaardontwerp. Nacht is gedimd voor een donkere studio, Licht is voor veel daglicht, Hoog contrast voor wie het scherp wil zien.	Studio dark is the default design. Night is dimmed for a dark studio, Light is for lots of daylight, High contrast for those who want to see it sharp.	Studio dunkel ist das Standarddesign. Nacht ist gedimmt für ein dunkles Studio, Hell für viel Tageslicht, Hoher Kontrast für alle, die es scharf sehen wollen.	Estudio oscuro es el diseño predeterminado. Noche está atenuado para un estudio oscuro, Claro es para mucha luz de día y Alto contraste para quien quiera verlo nítido.
+Studio openen	Open studio	Studio öffnen	Abrir el estudio
 Studio vergrendeld	Studio locked	Studio gesperrt	Estudio bloqueado
 Studio vergrendelen	Lock studio	Studio sperren	Bloquear estudio
 Studio wordt gestart…	Studio is starting…	Studio wird gestartet…	Iniciando el estudio…
@@ -3107,6 +3116,7 @@ Volgende dag	Next day	Nächster Tag	Día siguiente
 volgende over	next in	nächster in	siguiente en
 Volgende periode	Next period	Nächster Zeitraum	Periodo siguiente
 Volgende start op {0:0.00} s ({1}), overlap {2:0.0} s	Next start at {0:0.00} s ({1}), overlap {2:0.0} s	Nächster Start bei {0:0.00} s ({1}), Überlappung {2:0.0} s	Siguiente inicio en {0:0.00} s ({1}), solapamiento {2:0.0} s
+Volgende starten	Start next	Nächstes starten	Iniciar el siguiente
 Volgende week	Next week	Nächste Woche	Semana siguiente
 VOLGENDE · {0:HH:mm:ss}	NEXT · {0:HH:mm:ss}	ALS NÄCHSTES · {0:HH:mm:ss}	SIGUIENTE · {0:HH:mm:ss}
 Volume	Volume	Lautstärke	Volumen
@@ -3170,6 +3180,7 @@ waardering:>=4  energie:4-5	waardering:>=4  energie:4-5	waardering:>=4  energie:
 Waarom dit nu niet ingepland wordt	Why this is not scheduled now	Warum das jetzt nicht eingeplant wird	Por qué no se programa ahora
 wacht op audio	waiting for audio	wartet auf Audio	esperando audio
 wacht op de andere studio	waiting for the other studio	wartet auf das andere Studio	esperando al otro estudio
+Wacht op muziek	Waiting for music	Warte auf Musik	Esperando música
 wacht tot de overkant belt	waiting for the other side to call	wartet auf den Anruf der Gegenseite	esperando a que llame el otro lado
 WACHTEN	WAITING	WARTEN	ESPERANDO
 Wachten op materiaal…	Waiting for material…	Warte auf Material…	Esperando material…
@@ -3203,6 +3214,7 @@ Web Playback (ontwikkeltest)	Web Playback (development test)	Web Playback (Entwi
 Web Playback SDK	Web Playback SDK	Web Playback SDK	Web Playback SDK
 Webadres aanroepen (GET), bijv. voor een lamp, RDS-encoder of website	Call a web address (GET), e.g. for a lamp, RDS encoder or website	Webadresse aufrufen (GET), z. B. für eine Lampe, einen RDS-Encoder oder eine Website	Llamar a una dirección web (GET), p. ej. para una luz, un codificador RDS o una web
 webadres, bijv. http://rds.local/set?text={tekst} (leeg = uit)	web address, e.g. http://rds.local/set?text={tekst} (empty = off)	Webadresse, z. B. http://rds.local/set?text={tekst} (leer = aus)	dirección web, p. ej. http://rds.local/set?text={tekst} (vacío = desactivado)
+Webinterface openen	Open web interface	Weboberfläche öffnen	Abrir la interfaz web
 Website van het station	Station website	Website des Senders	Web de la emisora
 Week	Week	Woche	Semana
 week {0} · {1:d MMM} – {2:d MMM yyyy}	week {0} · {1:d MMM} – {2:d MMM yyyy}	KW {0} · {1:d MMM} – {2:d MMM yyyy}	semana {0} · {1:d MMM} – {2:d MMM yyyy}
@@ -3359,9 +3371,11 @@ Zoveel milliseconden houdt de jitterbuffer vast voordat hij speelt; meer = stabi
 {0} is geen VoIP-kanaal	{0} is not a VoIP channel	{0} ist kein VoIP-Kanal	{0} no es un canal VoIP
 {0} is leeg	{0} is empty	{0} ist leer	{0} está vacío
 {0} is niet af te spelen: {1}	{0} cannot be played: {1}	{0} lässt sich nicht abspielen: {1}	{0} no se puede reproducir: {1}
+{0} is niet gevonden naast de engine.	{0} was not found next to the engine.	{0} wurde neben der Engine nicht gefunden.	No se encontró {0} junto al motor.
 {0} is opgeslagen (pincode ongewijzigd).	{0} has been saved (PIN unchanged).	{0} wurde gespeichert (PIN unverändert).	{0} se ha guardado (PIN sin cambios).
 {0} is opgeslagen.	{0} has been saved.	{0} wurde gespeichert.	{0} se ha guardado.
 {0} is verwijderd.	{0} has been removed.	{0} wurde entfernt.	{0} se ha eliminado.
+{0} items	{0} items	{0} Elemente	{0} elementos
 {0} items in de centrale bibliotheek: {1} nieuw, {2} bijgewerkt, {3} weg; 	{0} items in the central library: {1} new, {2} updated, {3} gone; 	{0} Elemente in der zentralen Bibliothek: {1} neu, {2} aktualisiert, {3} weg; 	{0} elementos en la biblioteca central: {1} nuevos, {2} actualizados, {3} eliminados; 
 {0} items staan niet meer in de database en worden niet meer gespeeld	{0} items are no longer in the database and are no longer played	{0} Elemente stehen nicht mehr in der Datenbank und werden nicht mehr gespielt	{0} elementos ya no están en la base de datos y ya no se reproducen
 {0} items · {1}	{0} items · {1}	{0} Elemente · {1}	{0} elementos · {1}
@@ -3417,6 +3431,7 @@ Zoveel milliseconden houdt de jitterbuffer vast voordat hij speelt; meer = stabi
 {0} standaardstemmen toegevoegd	{0} standard voices added	{0} Standardstimmen hinzugefügt	{0} voces estándar añadidas
 {0} start na {1:0.0} s	{0} starts after {1:0.0} s	{0} startet nach {1:0.0} s	{0} empieza tras {1:0.0} s
 {0} stil	{0} silent	{0} still	{0} en silencio
+{0} t/m {1}	{0} to {1}	{0} bis {1}	{0} a {1}
 {0} t/m {1} ({2} uur)	{0} to {1} ({2} hours)	{0} bis {1} ({2} Stunden)	{0} a {1} ({2} horas)
 {0} thema's: 	{0} themes: 	{0} Themen: 	{0} temas: 
 {0} toegevoegd. De bestanden worden nu ingelezen en gemeten; bekende nummers worden herkend.	{0} added. The files are now being scanned and measured; known songs are recognised.	{0} hinzugefügt. Die Dateien werden jetzt eingelesen und gemessen; bekannte Titel werden erkannt.	{0} añadido. Los archivos se están escaneando y midiendo; las canciones conocidas se reconocen.
@@ -3437,6 +3452,7 @@ Zoveel milliseconden houdt de jitterbuffer vast voordat hij speelt; meer = stabi
 {0} weg na Opslaan.	{0} gone after Save.	{0} weg nach Speichern.	{0} desaparece tras Guardar.
 {0} · laatst {1}	{0} · last {1}	{0} · zuletzt {1}	{0} · último {1}
 {0} · lijst {1}	{0} · list {1}	{0} · Liste {1}	{0} · lista {1}
+{0} · op afstand	{0} · remote	{0} · aus der Ferne	{0} · en remoto
 {0} · uitgang {1}	{0} · output {1}	{0} · Ausgang {1}	{0} · salida {1}
 {0} · vaste lijn	{0} · fixed line	{0} · feste Leitung	{0} · línea fija
 {0}, uitgang {1}	{0}, output {1}	{0}, Ausgang {1}	{0}, salida {1}

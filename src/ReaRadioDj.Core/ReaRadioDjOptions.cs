@@ -4,6 +4,8 @@ namespace ReaRadioDj.Core;
 public sealed class ReaRadioDjOptions
 {
     public string StationName { get; set; } = "REA-Radio-DJ";
+    /// <summary>Language of the engine's own tray menu and of the AI presenter on air (nl, en, de, es); empty = the language of Windows.</summary>
+    public string Language { get; set; } = "";
     public string MusicFolder { get; set; } = "media/music";
     public string JingleFolder { get; set; } = "media/jingles";
     /// <summary>Watch the music and jingle folders: new, changed and removed files are processed without a button.</summary>
