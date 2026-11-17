@@ -58,6 +58,12 @@ Cada ventana se puede arrastrar, acoplar o dejar flotando, también en una segun
   disco o un NAS, con un plazo de conservación; una noche perdida se recupera (*Ajustes › Sistema*).
 - **Resumen de puertos**: qué puertos usa el motor (de entrada o salida, solo este PC o la red), con un comando de
   PowerShell para el firewall que abre solo los puertos necesarios (*Ajustes › Sistema*).
+- **Avisos por correo** (SMTP): silencio en antena, el estudio de reserva que toma el control, una copia de seguridad
+  fallida, una tarjeta ASIO que se cae o un marcador sin audio, también fuera del estudio. Como máximo un correo por
+  tema cada tantos minutos (*Ajustes › Avisos por correo*).
+- **Comprobación de la base de datos antes de actualizar**: el motor comprueba la base de datos y hace una copia
+  antes de actualizarla. Si está dañada, no se toca y el motor explica claramente qué pasa.
+  `REA-Radio-DJ.exe --check-db` lo comprueba de antemano.
 
 ### Playout y planificación
 - **Mezclador BASS** (coma flotante de 32 bits), crossfades en el punto de mezcla, normalización de loudness a −16 LUFS
@@ -129,6 +135,14 @@ Cada ventana se puede arrastrar, acoplar o dejar flotando, también en una segun
 - **Recortar de la emisión**: la entrevista de hace un momento como elemento en la biblioteca. Elige un día y una hora
   de inicio y de fin (o *últimos 10 min*); el fragmento puede pasar de la hora. Funciona con la grabación de la emisión
   (Ajustes › Grabar).
+- **Grabaciones programadas** de una entrada o un stream de internet, por ejemplo las noticias regionales a las 12:00
+  cada día laborable, listas en la biblioteca. Con *Sustituir la anterior* sigue siendo el mismo elemento, siempre con
+  la grabación más reciente (ventana *Grabaciones*).
+- **Grabación de emergencia**: un botón (o `RECORD TOGGLE`) graba todo lo que entra, cada canal por separado.
+- **A la carta y podcast**: tras cada emisión de un programa, un episodio de la grabación de la emisión, con un feed
+  RSS (`/podcast/<id>/feed.xml`) y, si quieres, una copia en una carpeta de tu web.
+- **Marcadores**: programar una cuña (u otro elemento) aunque el audio aún tenga que llegar, con un aviso un día antes
+  y una alarma si no está a tiempo.
 - **Streams** a varios servidores Icecast y SHOUTcast a la vez, con actualización de títulos en un formato propio.
 - **Imprimir o exportar la pauta** (PDF y CSV) con las horas de inicio previstas: *Pauta de emisión › Exportar*.
 - **As-run** y una pauta como archivo de texto por día; informes de derechos de autor (CSV y PDF), informes de emisión de

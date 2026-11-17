@@ -58,6 +58,12 @@ Every window can be dragged, docked or left floating, also on a second screen.
   retention period; a missed night is caught up (*Settings › System*).
 - **Port overview**: which ports the engine uses (in or out, this PC only or the network), with a PowerShell command for
   the firewall that opens only the ports needed (*Settings › System*).
+- **Messages by mail** (SMTP): silence on air, the backup studio taking over, a failed backup, an ASIO card that
+  drops out or a placeholder without sound, also outside the studio. At most one mail per topic per so many minutes
+  (*Settings › Messages by mail*).
+- **Database check before an upgrade**: the engine checks the database and makes a copy before it updates it. If it
+  is damaged it is left untouched and the engine says plainly what is wrong. `REA-Radio-DJ.exe --check-db` does it
+  beforehand.
 
 ### Playout and planning
 - **BASS mixer** (32-bit float), crossfades at the mix point, loudness normalisation to −16 LUFS (EBU R128),
@@ -126,6 +132,14 @@ Every window can be dragged, docked or left floating, also on a second screen.
 - **Cutting from the broadcast**: the interview of a moment ago as an item in the library. Choose a day and a start and
   end time (or *last 10 min*); the piece may run over the hour. Works with the broadcast recording (Settings ›
   Recording).
+- **Scheduled recordings** of an input or an internet stream, for instance the regional news at 12:00 every
+  weekday, ready in the library. With *Replace previous* it stays the same item, always with the latest recording
+  (*Recordings* window).
+- **Emergency recording**: one button (or `RECORD TOGGLE`) records everything that comes in, each channel separately.
+- **Catch-up and podcast**: after each broadcast of a programme an episode from the program recording, with an RSS
+  feed (`/podcast/<id>/feed.xml`) and optionally a copy to a folder of your website.
+- **Placeholders**: plan an ad (or another item) while the sound is still to come, with a warning a day before and
+  an alarm if it is not there in time.
 - **Streams** to several Icecast and SHOUTcast servers at once, with title updates in a format of your own.
 - **Printing or exporting the programme log** (PDF and CSV) with the expected start times: *Program log › Export*.
 - **As-run** and a programme log as a text file per day; copyright reports (CSV and PDF), ad play reports per advertiser

@@ -807,3 +807,46 @@ public sealed record CentralSettingsDto(string Mode, string Address, string Key,
 
 public sealed record CentralStatusDto(string Mode, string State, DateTime? LastSync, string? Result, string? Error, int Items, int Playable,
     int Fetching, string? Fetched, bool Busy);
+
+/// <summary>A recording at a fixed time (Source: "strip:mic", "strip:line1" … or a stream address); Days: bit 0 = Monday.</summary>
+public sealed record ScheduledRecordingDto(string Id, string Name, bool Enabled, int Days, string Start, int Minutes, string Source,
+    bool Replace, string Artist);
+
+public sealed record ScheduledRecordingStatusDto(ScheduledRecordingDto Item, DateTime? Next, bool Recording, DateTime? Until, double Seconds,
+    DateTime? LastTime, string? LastFile, double LastSeconds, string? LastError, string? Problem);
+
+public sealed record RecordingSourceDto(string Id, string Name);
+
+public sealed record EmergencyRecordingDto(bool Recording, DateTime? Started, double Seconds, IReadOnlyList<string> Channels);
+
+/// <summary>Everything of the Recordings window: the emergency recorder, the scheduled recordings and what they can record.</summary>
+public sealed record ExtraRecordingsDto(EmergencyRecordingDto Emergency, IReadOnlyList<ScheduledRecordingStatusDto> Scheduled,
+    IReadOnlyList<RecordingSourceDto> Sources, string Folder);
+
+/// <summary>A new placeholder: an item whose sound comes later; optionally straight into an ad campaign.</summary>
+public sealed record PlaceholderRequest(string? Artist, string? Title, double Seconds, DateTime Due, string? Note, bool Song = false,
+    long? CategoryId = null, long? CampaignId = null);
+
+public sealed record PlaceholderUpdate(DateTime Due, string? Note);
+
+public sealed record PlaceholderDto(long Id, string Artist, string Title, string FileName, double Seconds, DateTime Due, string Note,
+    bool Arrived, bool Late, bool Soon, IReadOnlyList<string> Campaigns);
+
+public sealed record PlaceholderCampaignDto(long Id, string Name);
+
+public sealed record PlaceholdersDto(IReadOnlyList<PlaceholderDto> Items, string Folder, IReadOnlyList<PlaceholderCampaignDto> Campaigns);
+
+/// <summary>Messages by mail. Password is write-only: null or empty keeps the stored one (ClearPassword removes it).</summary>
+public sealed record MailSettingsDto(bool Enabled, string Host, int Port, bool Tls, string User, string? Password, bool HasPassword, bool ClearPassword,
+    string From, string To, IReadOnlyList<string> Topics, int MinutesBetween, IReadOnlyList<MailTopicDto>? AllTopics = null,
+    DateTime? LastSent = null, string? LastError = null, string? Problem = null);
+
+public sealed record MailTopicDto(string Id, string Name);
+
+/// <summary>A programme published as "uitzending gemist" / podcast (Days: bit 0 = Monday; End before Start = past midnight).</summary>
+public sealed record PodcastDto(string Id, string Name, bool Enabled, int Days, string Start, string End, string Description, string Author,
+    int Keep, string CopyFolder, string PublicUrl);
+
+public sealed record PodcastStatusDto(PodcastDto Item, string? Problem, int Episodes, DateTime? Newest, string FeedUrl, string? LastResult);
+
+public sealed record PodcastsDto(IReadOnlyList<PodcastStatusDto> Items, string Folder, bool ProgramRecording);

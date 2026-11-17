@@ -8,15 +8,30 @@ namespace ReaRadioDj.Core.Data;
 /// week grid, timed events, cartwalls, as-run log and settings. Every call opens its own short-lived connection,
 /// so the class is safe to use from any thread. The schema is versioned with PRAGMA user_version.
 /// </summary>
+/// <summary>The outcome of <see cref="StationDb.Check"/>: Exists, its schema version, whether SQLite found it sound, and what it found.</summary>
+public sealed record DatabaseCheck(bool Exists, long Version, bool Ok, IReadOnlyList<string> Problems)
+{
+    public bool NeedsUpgrade => Exists && Version is > 0 and < StationDb.SchemaVersion;
+    public bool Newer => Version > StationDb.SchemaVersion;
+}
+
+/// <summary>The database cannot be used or upgraded safely; the message says what to do, nothing was changed.</summary>
+public sealed class DatabaseProblemException(string message, IReadOnlyList<string> problems) : Exception(message)
+{
+    public IReadOnlyList<string> Problems { get; } = problems;
+}
+
 public sealed class StationDb
 {
-    public const int SchemaVersion = 25;
+    public const int SchemaVersion = 26;
     private readonly string _connectionString;
 
-    public StationDb(string path)
+    public StationDb(string path, bool upgradeAnyway = false)
     {
         Path = System.IO.Path.GetFullPath(path);
         Directory.CreateDirectory(System.IO.Path.GetDirectoryName(Path)!);
+        // Only the version on a normal start; the full check only when an upgrade is coming.
+        var before = File.Exists(Path) ? Check(Path, integrity: false) : null;
         _connectionString = new SqliteConnectionStringBuilder
         {
             DataSource = Path,
@@ -26,7 +41,87 @@ public sealed class StationDb
             Cache = SqliteCacheMode.Private,
             ForeignKeys = true,
         }.ToString();
-        Migrate();
+        if (before is { Version: > 0 } v && v.Version < SchemaVersion)
+        {
+            var b = Check(Path);
+            // An upgrade: first check the database and keep a copy, so a failed upgrade never costs the station its data.
+            if (!b.Ok && !upgradeAnyway)
+                throw new DatabaseProblemException(
+                    $"De database {Path} is beschadigd en wordt daarom niet bijgewerkt (van versie {b.Version} naar {SchemaVersion}). Er is niets veranderd.",
+                    b.Problems);
+            BackupBeforeUpgrade = CopyBeforeUpgrade(b.Version);
+        }
+        try { Migrate(); }
+        catch (SqliteException ex)
+        {
+            throw new DatabaseProblemException($"Het bijwerken van de database {Path} naar versie {SchemaVersion} is mislukt; er is niets veranderd."
+                + (BackupBeforeUpgrade is { } copy ? $" Een kopie van vóór het bijwerken staat in {copy}." : ""), [ex.Message]);
+        }
+        if (before is { } now && now.Version > SchemaVersion)
+            StartNote = $"De database komt van een nieuwere versie van REA-Radio-DJ (versie {now.Version}; dit programma kent versie {SchemaVersion}). Werk dit programma bij: wat nieuwer is, werkt hier niet.";
+        else if (before is { Version: > 0 } old && old.Version < SchemaVersion)
+            StartNote = $"De database is bijgewerkt van versie {old.Version} naar {SchemaVersion}. De controle vooraf was in orde{(BackupBeforeUpgrade is { } c ? $"; de kopie van daarvoor staat in {c}" : "")}.";
+    }
+
+    /// <summary>A note for the operator about this start (the database was upgraded, or is newer than this program); null when nothing happened.</summary>
+    public string? StartNote { get; }
+
+    /// <summary>The copy made before the last upgrade, or null.</summary>
+    public string? BackupBeforeUpgrade { get; }
+
+    /// <summary>
+    /// Checks a database file without changing it: can it be opened, which version is it, and does SQLite find damage
+    /// (quick_check; with <paramref name="full"/> the slower integrity_check that also checks the indexes' contents).
+    /// </summary>
+    public static DatabaseCheck Check(string path, bool full = false, bool integrity = true)
+    {
+        if (!File.Exists(path)) return new DatabaseCheck(false, 0, true, []);
+        try
+        {
+            var cs = new SqliteConnectionStringBuilder { DataSource = path, Mode = SqliteOpenMode.ReadOnly, Pooling = false }.ToString();
+            using var c = new SqliteConnection(cs);
+            c.Open();
+            using var v = c.CreateCommand();
+            v.CommandText = "PRAGMA user_version;";
+            long version = (long)v.ExecuteScalar()!;
+            if (!integrity) return new DatabaseCheck(true, version, true, []);
+            using var q = c.CreateCommand();
+            q.CommandText = full ? "PRAGMA integrity_check(20);" : "PRAGMA quick_check(20);";
+            var lines = new List<string>();
+            using (var r = q.ExecuteReader()) while (r.Read()) lines.Add(r.GetString(0));
+            bool ok = lines is ["ok"];
+            return new DatabaseCheck(true, version, ok, ok ? [] : lines);
+        }
+        catch (SqliteException ex)
+        {
+            return new DatabaseCheck(true, 0, false, [ex.Message]);
+        }
+    }
+
+    /// <summary>A consistent copy of the database (VACUUM INTO) next to it, before an upgrade; the last three are kept.</summary>
+    private string? CopyBeforeUpgrade(long version)
+    {
+        try
+        {
+            var folder = System.IO.Path.Combine(System.IO.Path.GetDirectoryName(Path)!, "Database voor upgrade");
+            Directory.CreateDirectory(folder);
+            var target = System.IO.Path.Combine(folder, $"station-v{version}-{DateTime.Now:yyyyMMdd-HHmmss}.db");
+            using (var c = new SqliteConnection(_connectionString))
+            {
+                c.Open();
+                using var cmd = c.CreateCommand();
+                cmd.CommandText = "VACUUM INTO $t;";
+                cmd.Parameters.AddWithValue("$t", target);
+                cmd.ExecuteNonQuery();
+            }
+            foreach (var old in Directory.GetFiles(folder, "station-v*.db").OrderByDescending(File.GetCreationTimeUtc).Skip(3))
+                try { File.Delete(old); } catch (IOException) { }
+            return target;
+        }
+        catch (Exception ex) when (ex is SqliteException or IOException or UnauthorizedAccessException)
+        {
+            throw new DatabaseProblemException($"Vóór het bijwerken kon er geen kopie van de database {Path} worden gemaakt; er is niets veranderd.", [ex.Message]);
+        }
     }
 
     public string Path { get; }
@@ -110,7 +205,7 @@ public sealed class StationDb
         {
             cmd.Transaction = tx;
             // Each step brings the database one version further; a new database runs them all.
-            cmd.CommandText = (version < 1 ? SchemaV1 : "") + (version < 2 ? SchemaV2 : "") + (version < 3 ? SchemaV3 : "") + (version < 4 ? SchemaV4 : "") + (version < 5 ? SchemaV5 : "") + (version < 6 ? SchemaV6 : "") + (version < 7 ? SchemaV7 : "") + (version < 8 ? SchemaV8 : "") + (version < 9 ? SchemaV9 : "") + (version < 10 ? SchemaV10 : "") + (version < 11 ? SchemaV11 : "") + (version < 12 ? SchemaV12 : "") + (version < 13 ? SchemaV13 : "") + (version < 14 ? SchemaV14 : "") + (version < 15 ? SchemaV15 : "") + (version < 16 ? SchemaV16 : "") + (version < 17 ? SchemaV17 : "") + (version < 18 ? SchemaV18 : "") + (version < 19 ? SchemaV19 : "") + (version < 20 ? SchemaV20 : "") + (version < 21 ? SchemaV21 : "") + (version < 22 ? SchemaV22 : "") + (version < 23 ? SchemaV23 : "") + (version < 24 ? SchemaV24 : "") + (version < 25 ? SchemaV25 : "") + $"PRAGMA user_version = {SchemaVersion};";
+            cmd.CommandText = (version < 1 ? SchemaV1 : "") + (version < 2 ? SchemaV2 : "") + (version < 3 ? SchemaV3 : "") + (version < 4 ? SchemaV4 : "") + (version < 5 ? SchemaV5 : "") + (version < 6 ? SchemaV6 : "") + (version < 7 ? SchemaV7 : "") + (version < 8 ? SchemaV8 : "") + (version < 9 ? SchemaV9 : "") + (version < 10 ? SchemaV10 : "") + (version < 11 ? SchemaV11 : "") + (version < 12 ? SchemaV12 : "") + (version < 13 ? SchemaV13 : "") + (version < 14 ? SchemaV14 : "") + (version < 15 ? SchemaV15 : "") + (version < 16 ? SchemaV16 : "") + (version < 17 ? SchemaV17 : "") + (version < 18 ? SchemaV18 : "") + (version < 19 ? SchemaV19 : "") + (version < 20 ? SchemaV20 : "") + (version < 21 ? SchemaV21 : "") + (version < 22 ? SchemaV22 : "") + (version < 23 ? SchemaV23 : "") + (version < 24 ? SchemaV24 : "") + (version < 25 ? SchemaV25 : "") + (version < 26 ? SchemaV26 : "") + $"PRAGMA user_version = {SchemaVersion};";
             cmd.ExecuteNonQuery();
         }
         tx.Commit();
@@ -142,6 +237,16 @@ public sealed class StationDb
     // a clock position that plays from a playlist file
     private const string SchemaV24 = """
         ALTER TABLE clock_items ADD COLUMN source TEXT NOT NULL DEFAULT '';
+        """;
+
+    // placeholders: items whose sound is still to come, with the time it must be there
+    private const string SchemaV26 = """
+        CREATE TABLE IF NOT EXISTS placeholders(
+            media_id INTEGER PRIMARY KEY REFERENCES media(id) ON DELETE CASCADE,
+            due TEXT NOT NULL,
+            note TEXT NOT NULL DEFAULT '',
+            warned INTEGER NOT NULL DEFAULT 0,
+            created TEXT NOT NULL);
         """;
 
     // items taken over from a central library: which item of the source, and its stamp when taken over

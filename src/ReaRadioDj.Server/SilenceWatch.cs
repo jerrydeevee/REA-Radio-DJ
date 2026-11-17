@@ -41,7 +41,7 @@ public sealed class SilenceWatch(ReaRadioDjOptions options, AudioRouter router, 
         if (!s.Enabled || !router.IsStarted || standby.Standby) { _detector.Reset(); return; }
         var (left, right) = router.Program.Levels();
         bool alarm = _detector.Update(SilenceDetector.ToDb(Math.Max(left, right)), s.ThresholdDb, s.Seconds, now, out bool returned);
-        if (returned) messages.Info("Er is weer geluid op de zender");
+        if (returned) messages.Add("info", "Er is weer geluid op de zender", "stilte");
         if (!alarm) return;
         int quiet = (int)Math.Round(_detector.QuietFor(now).TotalSeconds);
         var item = s.Action switch
@@ -53,16 +53,16 @@ public sealed class SilenceWatch(ReaRadioDjOptions options, AudioRouter router, 
         if (item is not null)
         {
             string from = item.Origin == EmergencyOrigin ? "noodcategorie" : "willekeurig uit de bibliotheek";
-            messages.Add("alarm", $"Stilte op de zender ({quiet} s): {from}, {item.Media!.DisplayName}");
+            messages.Add("alarm", $"Stilte op de zender ({quiet} s): {from}, {item.Media!.DisplayName}", "stilte");
             engine.PlayNow(item, 0.3);
             engine.Play();
         }
         else if (s.Action is AutoPlay or Category or Random)
         {
-            messages.Add("alarm", $"Stilte op de zender ({quiet} s): de automatisering wordt gestart");
+            messages.Add("alarm", $"Stilte op de zender ({quiet} s): de automatisering wordt gestart", "stilte");
             engine.Play();
         }
-        else messages.Add("alarm", $"Stilte op de zender ({quiet} s)");
+        else messages.Add("alarm", $"Stilte op de zender ({quiet} s)", "stilte");
     }
 
     private const string EmergencyOrigin = "stilte: noodcategorie", RandomOrigin = "stilte: willekeurig";

@@ -1,0 +1,61 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:ReaRadioDj.Studio.ViewModels"
+             xmlns:c="using:ReaRadioDj.Contracts"
+             x:Class="ReaRadioDj.Studio.Views.PlaceholdersView"
+             x:DataType="vm:PlaceholdersTool">
+  <!-- Items whose sound is still to come. -->
+  <ScrollViewer>
+    <StackPanel Margin="10" Spacing="6" MaxWidth="900" HorizontalAlignment="Left">
+      <TextBlock Classes="muted" TextWrapping="Wrap"
+                 Text="Plan een item al in terwijl het geluid nog moet komen, bijvoorbeeld een reclamespot die later wordt aangeleverd. Zolang het geluid er niet is, wordt het item overgeslagen. Een dag van tevoren komt er een waarschuwing, en een alarm als het er niet op tijd is." />
+
+      <WrapPanel ItemSpacing="8" LineSpacing="4">
+        <TextBox Text="{Binding Artist}" Width="200" Watermark="adverteerder of artiest" />
+        <TextBox Text="{Binding Title}" Width="240" Watermark="titel, bijv. Kerstactie 30 sec" />
+        <NumericUpDown Value="{Binding Seconds}" Minimum="1" Maximum="3600" Increment="5" FormatString="0" Width="110" />
+        <TextBlock Text="seconden" VerticalAlignment="Center" />
+      </WrapPanel>
+      <WrapPanel ItemSpacing="8" LineSpacing="4">
+        <TextBlock Text="Geluid uiterlijk" VerticalAlignment="Center" />
+        <CalendarDatePicker SelectedDate="{Binding DueDay}" FirstDayOfWeek="Monday" Width="150" />
+        <TextBox Text="{Binding DueTime}" Width="70" FontFamily="Consolas" Watermark="12:00" />
+        <TextBlock Text="Campagne" VerticalAlignment="Center" />
+        <ComboBox ItemsSource="{Binding Campaigns}" SelectedItem="{Binding Campaign}" Width="260">
+          <ComboBox.ItemTemplate>
+            <DataTemplate x:DataType="c:PlaceholderCampaignDto"><TextBlock Text="{Binding Name}" /></DataTemplate>
+          </ComboBox.ItemTemplate>
+        </ComboBox>
+      </WrapPanel>
+      <TextBox Text="{Binding Note}" Watermark="notitie, bijv. wie het aanlevert" />
+      <StackPanel Orientation="Horizontal" Spacing="8">
+        <Button Classes="bar" Content="Plaatshouder maken" Command="{Binding AddCommand}" />
+        <Button Classes="bar" Content="Ververs" Command="{Binding LoadCommand}" />
+      </StackPanel>
+      <TextBlock Text="{Binding Status}" TextWrapping="Wrap" />
+
+      <ItemsControl ItemsSource="{Binding Items}" Margin="0,6,0,0">
+        <ItemsControl.ItemTemplate>
+          <DataTemplate x:DataType="vm:PlaceholderVm">
+            <Border BorderBrush="#40808080" BorderThickness="1" CornerRadius="4" Padding="8" Margin="0,0,0,6">
+              <StackPanel Spacing="3">
+                <DockPanel>
+                  <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="6">
+                    <Button Classes="small" Content="Geluid kiezen…" Click="OnDeliver" IsVisible="{Binding Waiting}" />
+                    <Button Classes="small" Content="Verwijderen" Command="{Binding DeleteCommand}" IsVisible="{Binding Waiting}" />
+                  </StackPanel>
+                  <TextBlock Text="{Binding Name}" FontWeight="SemiBold" VerticalAlignment="Center" />
+                </DockPanel>
+                <TextBlock Text="{Binding StateText}" Foreground="{DynamicResource WarnBrush}" IsVisible="{Binding Late}" FontWeight="Bold" />
+                <TextBlock Text="{Binding StateText}" IsVisible="{Binding !Late}" />
+                <TextBlock Classes="muted" Text="{Binding Details}" TextWrapping="Wrap" />
+              </StackPanel>
+            </Border>
+          </DataTemplate>
+        </ItemsControl.ItemTemplate>
+      </ItemsControl>
+      <TextBlock Classes="muted" TextWrapping="Wrap"
+                 Text="{Binding Folder, Converter={StaticResource Tr}, ConverterParameter='Het geluid kan ook in deze map, onder de bestandsnaam die erbij staat: {0}'}" />
+    </StackPanel>
+  </ScrollViewer>
+</UserControl>

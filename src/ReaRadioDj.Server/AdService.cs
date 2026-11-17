@@ -15,8 +15,9 @@ public sealed class AdService(AdStore store, MediaLibrary library, MessageCenter
     public IReadOnlyList<TimedEvent> Events => store.Events;
 
     /// <summary>Playing length of a spot: the whole spot, cue-in to cue-out.</summary>
-    private double? Length(long mediaId) => library.Get(mediaId) is { } m && !m.Path.StartsWith("http", StringComparison.OrdinalIgnoreCase)
-        ? Math.Round(m.CueOut - m.CueIn, 2) : null;
+    /// <summary>A placeholder whose sound has not come yet (or a spot whose file is gone) gives null: it is skipped.</summary>
+    private double? Length(long mediaId) => library.GetDetails(mediaId) is { Missing: false } d && !d.Media.Path.StartsWith("http", StringComparison.OrdinalIgnoreCase)
+        ? Math.Round(d.Media.CueOut - d.Media.CueIn, 2) : null;
 
     private IReadOnlyList<AdPick> Pick(AdBreak b, DateTime at) => AdPlanner.Fill(store.Campaigns(), at, b.MaxSeconds,
         c => store.Counts(c, at), c => AdPlanner.BreaksLeftToday(store.Breaks(), c, at), Length);
@@ -27,6 +28,9 @@ public sealed class AdService(AdStore store, MediaLibrary library, MessageCenter
         if (store.Break(breakId) is not { } b) return null;
         store.ForgetMissed(DateTime.Now);
         var picks = Pick(b, at);
+        // A campaign that needs a spot but has only spots without sound: say so, it costs the advertiser a play.
+        foreach (var camp in store.Campaigns().Where(x => x.Runs(at) && x.Spots.Count > 0 && x.Spots.All(id => Length(id) is null)))
+            messages.Add("waarschuwing", $"{b.Name} om {at:HH:mm}: {camp.Advertiser} ({camp.Name}) heeft nog geen geluid (plaatshouder of bestand weg) en is overgeslagen.", "plaatshouder");
         if (picks.Count == 0)
         {
             messages.Info($"{b.Name} om {at:HH:mm}: geen spots nodig, blok overgeslagen");

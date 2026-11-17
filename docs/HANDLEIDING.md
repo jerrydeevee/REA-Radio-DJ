@@ -371,6 +371,14 @@ over het hele uur heen lopen.
 
 Dit werkt alleen als de uitzending wordt opgenomen (Instellingen › Opnemen).
 
+### Noodopname
+
+Gebeurt er iets onverwachts (een beller, een live optreden, een verslaggever die inbelt), klik dan in het venster
+**Opnames** op **● Noodopname**. Alles wat binnenkomt wordt opgenomen, elk kanaal apart: de microfoon, de ingangen en
+de VoIP-kanalen. Klik nogmaals om te stoppen. Wat geluid had, komt in de bibliotheek (jingles, categorie Opnamen);
+kanalen die stil bleven, vallen weg. Hetzelfde kan met het commando `RECORD TOGGLE`, dus ook met een sneltoets, een
+eigen knop of een knop op de hardware. Na drie uur stopt de noodopname vanzelf.
+
 ## 12. Klok, berichten en alarmen
 
 - Het venster **Tijd** toont de studioklok en tellers: ON AIR, INTRO, VOLGENDE, KLOK en VASTE TIJD. Met ⚙ kies je
@@ -518,6 +526,37 @@ gebruikers ingeschakeld is dit venster alleen voor beheerders.
   helft. De bewaartermijn geldt ook voor de gespreksopnamen.
 - Een los kanaal opnemen kan met **REC** in de mixer.
 
+### Geplande opnames
+
+Venster **Opnames › Geplande opnames**: neem op vaste tijden een ingang of een internetstream op, bijvoorbeeld elke
+werkdag om 12:00 het regionale nieuws.
+
+- Naam, begintijd, aantal minuten en de dagen.
+- **Bron**: een kanaal van de mixer (microfoon, een ingang, VoIP) of **Internetstream** met een adres (`http://…`).
+  Van een MP3-stream blijft het geluid zoals het binnenkomt; een kanaal wordt opgenomen vóór de fader, dus ook als
+  het niet op de zender staat.
+- **Vorige vervangen**: elke nieuwe opname krijgt dezelfde naam. Het item in de bibliotheek blijft hetzelfde, dus in
+  een klok, de planner of de cartwall staat altijd de nieuwste uitzending klaar. Zonder deze keuze krijgt elke opname
+  de datum voor de naam.
+- **Nu opnemen** start de opname meteen (om te proberen). Startte de engine midden in een opnametijd, dan neemt hij
+  de rest nog op.
+- De opname komt bij de jingles, categorie Opnamen. Een mislukte opname komt in Berichten (en per mail als je dat
+  kiest). Met het commando `RECORD START <naam>` of `RECORD STOP <naam>` gaat het ook van buitenaf.
+
+### Uitzending gemist en podcast
+
+Venster **Opnames › Uitzending gemist en podcast**: na elke uitzending van een programma knipt de engine die uit de
+uitzendopname (die moet dus aan staan).
+
+- Naam, van en tot (een einde vóór het begin loopt over middernacht), de dagen en hoeveel afleveringen blijven staan.
+- Twee minuten na het einde staat de aflevering klaar, met een podcastfeed. De engine zelf geeft de feed op
+  `http://<engine>:8600/podcast/<id>/feed.xml`; het adres staat bij het programma.
+- **Kopieermap** en **webadres**: zet de afleveringen en de feed ook in een map van je webserver (bijvoorbeeld een
+  share). Oude afleveringen verdwijnen daar ook, maar alleen die van dit programma.
+- **Laatste uitzending nu publiceren** maakt de aflevering van de laatste uitzending meteen (opnieuw).
+- Let op de rechten: muziek in een podcast of op aanvraag valt meestal niet onder de licentie voor uitzenden. Vraag
+  het na bij Buma/Stemra en Sena, of publiceer alleen programma's met gesproken woord.
+
 ### Bewaking
 
 - **Stilte op de zender**: drempel, hoe lang, en wat er dan gebeurt: melden, de automatisering starten, of iets uit
@@ -526,6 +565,19 @@ gebruikers ingeschakeld is dit venster alleen voor beheerders.
 - **Volume van de geluidskaart**: de engine kijkt elke twee seconden of Windows of een ander programma een kaart
   zachter zette of dempte. Met **Een veranderde kaart meteen terugzetten** zet hij hem zelf terug. Heb je bewust iets
   veranderd, klik dan **Huidige stand is normaal**. ASIO telt niet mee.
+
+### Meldingen per mail
+
+**Instellingen › Meldingen per mail**: belangrijke meldingen ook buiten de studio.
+
+- Mailserver, poort (587 met STARTTLS, of 25), gebruikersnaam en wachtwoord. Het wachtwoord wordt versleuteld bewaard
+  en nooit teruggestuurd. Poort 465 werkt niet.
+- Afzender en ontvangers (gescheiden door een komma).
+- **Mailen over**: stilte op de zender (en weer geluid), de reservestudio die overneemt of teruggeeft, een mislukte
+  reservekopie, een ASIO-kaart die wegvalt, een plaatshouder zonder geluid, een mislukte geplande opname en elk ander
+  alarm.
+- **Hoogstens één mail per onderwerp per … minuten**: wat er tussendoor gebeurt, gaat mee in de volgende mail.
+- **Testmail sturen** slaat eerst op en stuurt dan één mail naar de ontvangers.
 
 ### Rotatie
 
@@ -704,6 +756,13 @@ Venster **Reclame**:
   Heeft geen enkele campagne een spot nodig, dan valt het hele blok weg, ook opener en sluiter.
 - **Uitzendbewijs**: CSV per uitzending, een overzicht per adverteerder en campagne, of JSON om te koppelen.
 
+**Plaatshouders** (venster **Plaatshouders**): plan een spot al in terwijl het geluid nog moet komen. Geef adverteerder,
+titel, lengte, wanneer het geluid er uiterlijk moet zijn en eventueel de campagne. De plaatshouder staat als item in
+de bibliotheek en kan ook in een klok of de cartwall. Zolang het geluid er niet is, wordt hij overgeslagen; een
+reclameblok meldt dat. Een dag van tevoren komt er een waarschuwing, en een alarm als het er niet op tijd is. Het
+geluid komt binnen met **Geluid kiezen…**, of door het bestand onder de getoonde naam in de map voor plaatshouders te
+zetten. Daarna is het een gewoon item, overal waar het al stond.
+
 Een reclameblok staat het best op **Zacht**: het komt dan na het lopende nummer.
 
 ## 7. Nieuws en weer
@@ -854,6 +913,17 @@ niet in; die bewaar je apart.
 - **Elke dag automatisch een reservekopie maken**: op een vaste tijd, in een map (bij voorkeur een andere schijf of
   een NAS), met een bewaartermijn. Stond de pc uit, dan volgt de kopie zodra de engine weer draait.
 
+### Database bij een upgrade
+
+Start een nieuwe versie voor het eerst, dan controleert de engine de database voordat hij hem bijwerkt, en maakt hij
+een kopie in `data\Database voor upgrade` (de laatste drie blijven staan). In Berichten staat daarna dat het gelukt
+is. Is de database beschadigd, dan raakt de engine hem niet aan en start hij niet: er verschijnt een venster met wat
+er aan de hand is, en dezelfde tekst staat in `data\DATABASE-PROBLEEM.txt`. Laat dan de vorige versie draaien of
+zet een reservekopie terug.
+
+Vooraf controleren kan ook: `REA-Radio-DJ.exe --check-db` in de map van de engine. Wil je een beschadigde database
+toch bijwerken, start dan eenmaal met `--db-upgrade-anyway` (op eigen risico; er wordt eerst een kopie gemaakt).
+
 ### Reservestudio
 
 **Instellingen › Reservestudio**: twee engines die op elkaar letten, elk met een eigen geluidskaart naar de zender of
@@ -993,4 +1063,7 @@ voor dezelfde controller op een andere plek.
 | Stems: "het scheidingsmodel ontbreekt" | Zet `htdemucs.onnx` in `engine\data\models` en start de engine opnieuw |
 | Een beller is slecht te verstaan | Kijk naar de meting bij het kanaal (verlies, buffer). Maak de buffer groter, of kies een andere codec |
 | Pincode kwijt en geen beheerder meer | Start de engine met `--users-off` en maak een nieuwe pincode |
+| De engine start niet na een upgrade | Lees `data\DATABASE-PROBLEEM.txt`. Laat de vorige versie draaien of zet een reservekopie terug |
+| Er komt geen mail | **Testmail sturen** in Instellingen › Meldingen per mail; kijk ook in de map ongewenst. Poort 465 werkt niet: gebruik 587 |
+| Een geplande opname is leeg | Kijk of de bron geluid geeft (het kanaal in de mixer, of het streamadres in een browser) |
 | Een venster is zoek | **Indeling › Venster plaatsen…**, of **Standaardindeling herstellen** |

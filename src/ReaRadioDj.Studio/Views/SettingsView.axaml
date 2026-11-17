@@ -315,6 +315,46 @@
         </StackPanel></ScrollViewer>
       </TabItem>
 
+      <TabItem Header="Meldingen per mail">
+        <ScrollViewer><StackPanel Classes="page" DataContext="{Binding Mail}" x:DataType="vm:MailVm">
+          <TextBlock Classes="title" Text="Meldingen per mail" />
+          <TextBlock Classes="help" Text="Belangrijke meldingen ook buiten de studio: de engine mailt ze via je eigen mailserver (SMTP). Meldingen over hetzelfde onderwerp worden een tijdje bij elkaar gehouden, zodat een alarm dat steeds terugkomt de mailbox niet vult." />
+          <CheckBox Content="Meldingen per mail versturen" IsChecked="{Binding Enabled}" Margin="0,12,0,0" IsEnabled="{Binding Loaded}" />
+          <TextBlock Classes="field" Text="Mailserver" />
+          <TextBox Text="{Binding Host}" Watermark="smtp.voorbeeld.nl" />
+          <TextBlock Classes="field" Text="Poort" />
+          <NumericUpDown Value="{Binding Port}" Minimum="1" Maximum="65535" Increment="1" FormatString="0" />
+          <CheckBox Content="Versleuteld (STARTTLS)" IsChecked="{Binding Tls}" Margin="0,6,0,0" />
+          <TextBlock Classes="help" Text="Gebruik poort 587 met STARTTLS (of 25 zonder). Poort 465 (TLS vanaf het begin) werkt hier niet." />
+          <TextBlock Classes="field" Text="Gebruikersnaam" />
+          <TextBox Text="{Binding User}" Watermark="leeg als de server geen aanmelding vraagt" />
+          <TextBlock Classes="field" Text="Wachtwoord" />
+          <StackPanel Orientation="Horizontal" Spacing="6">
+            <TextBox Text="{Binding Password}" PasswordChar="•" Watermark="{Binding PasswordWatermark}" Width="280" />
+            <Button Content="Wissen" Command="{Binding ClearPasswordCommand}" IsVisible="{Binding HasPassword}" />
+          </StackPanel>
+          <TextBlock Classes="help" Text="Het wachtwoord wordt versleuteld bewaard voor het Windows-account van de engine en nooit teruggestuurd." />
+          <TextBlock Classes="field" Text="Afzender" />
+          <TextBox Text="{Binding From}" Watermark="studio@voorbeeld.nl" />
+          <TextBlock Classes="field" Text="Ontvangers (gescheiden door een komma)" />
+          <TextBox Text="{Binding To}" Watermark="techniek@voorbeeld.nl, eindredactie@voorbeeld.nl" />
+          <TextBlock Classes="field" Text="Mailen over" />
+          <ItemsControl ItemsSource="{Binding Topics}">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="vm:MailTopicChoice"><CheckBox Content="{Binding Name}" IsChecked="{Binding On}" /></DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+          <TextBlock Classes="field" Text="Hoogstens één mail per onderwerp per (minuten)" />
+          <NumericUpDown Value="{Binding MinutesBetween}" Minimum="1" Maximum="1440" Increment="1" FormatString="0" />
+          <StackPanel Orientation="Horizontal" Spacing="6" Margin="0,12,0,0">
+            <Button Content="Opslaan" Command="{Binding SaveCommand}" IsEnabled="{Binding Loaded}" />
+            <Button Content="Testmail sturen" Command="{Binding TestCommand}" IsEnabled="{Binding Loaded}" />
+          </StackPanel>
+          <TextBlock Classes="help" Text="{Binding Result}" />
+          <TextBlock Classes="help" Text="{Binding State}" />
+        </StackPanel></ScrollViewer>
+      </TabItem>
+
       <TabItem Header="Rotatie">
         <ScrollViewer><StackPanel Classes="page">
           <TextBlock Classes="title" Text="Rotatie" />

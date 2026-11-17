@@ -59,6 +59,12 @@ Jedes Fenster lässt sich verschieben, andocken oder schwebend lassen, auch auf 
   Festplatte oder einem NAS, mit Aufbewahrungsfrist; eine verpasste Nacht wird nachgeholt (*Einstellungen › System*).
 - **Portübersicht**: welche Ports die Engine benutzt (ein oder aus, nur dieser PC oder das Netzwerk), mit einem
   PowerShell-Befehl für die Firewall, der nur die nötigen Ports öffnet (*Einstellungen › System*).
+- **Meldungen per Mail** (SMTP): Stille auf dem Sender, das Reservestudio übernimmt, eine fehlgeschlagene Sicherung,
+  eine ASIO-Karte fällt aus oder ein Platzhalter ohne Ton, auch außerhalb des Studios. Pro Thema höchstens eine Mail
+  in so vielen Minuten (*Einstellungen › Meldungen per Mail*).
+- **Datenbankprüfung vor einem Update**: die Engine prüft die Datenbank und macht eine Kopie, bevor sie sie
+  aktualisiert. Ist sie beschädigt, bleibt sie unberührt und die Engine sagt deutlich, was los ist.
+  `REA-Radio-DJ.exe --check-db` prüft vorab.
 
 ### Playout und Planung
 - **BASS-Mixer** (32-Bit-Float), Crossfades am Mixpunkt, Lautheitsnormalisierung auf −16 LUFS (EBU R128), Übergänge
@@ -131,6 +137,14 @@ Jedes Fenster lässt sich verschieben, andocken oder schwebend lassen, auch auf 
 - **Aus der Sendung schneiden**: das Interview von eben als Element in der Bibliothek. Wähle einen Tag und eine
   Anfangs- und Endzeit (oder *letzte 10 Min*); das Stück darf über die volle Stunde gehen. Funktioniert mit dem
   Sendemitschnitt (Einstellungen › Aufnehmen).
+- **Geplante Aufnahmen** eines Eingangs oder Internetstreams, zum Beispiel werktags um 12:00 die
+  Regionalnachrichten, gleich bereit in der Bibliothek. Mit *Vorige ersetzen* bleibt es dasselbe Element, immer mit
+  der neuesten Aufnahme (Fenster *Aufnahmen*).
+- **Notaufnahme**: eine Taste (oder `RECORD TOGGLE`) nimmt alles auf, was hereinkommt, jeden Kanal einzeln.
+- **Mediathek und Podcast**: nach jeder Sendung eines Programms eine Folge aus der Sendeaufnahme, mit RSS-Feed
+  (`/podcast/<id>/feed.xml`) und auf Wunsch einer Kopie in einen Ordner Ihrer Website.
+- **Platzhalter**: Werbung (oder ein anderes Element) schon einplanen, während der Ton noch kommen muss, mit einer
+  Warnung einen Tag vorher und einem Alarm, wenn er nicht rechtzeitig da ist.
 - **Streams** zu mehreren Icecast- und SHOUTcast-Servern gleichzeitig, mit Titelaktualisierung in eigenem Format.
 - **Sendeablauf drucken oder exportieren** (PDF und CSV) mit den erwarteten Startzeiten: *Sendeablauf › Exportieren*.
 - **As-run** und ein Sendeablauf als Textdatei pro Tag; Urheberrechtsberichte (CSV und PDF), Werbe-Sendeberichte pro

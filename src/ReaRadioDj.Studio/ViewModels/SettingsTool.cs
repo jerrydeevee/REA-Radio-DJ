@@ -527,6 +527,7 @@ public sealed partial class SettingsTool : StudioTool
 
     /// <summary>Settings › Reservestudio.</summary>
     public FailoverVm Failover { get; } = new();
+    public MailVm Mail { get; } = new();
 
     /// <summary>Settings › Centrale bibliotheek.</summary>
     public CentralVm Central { get; } = new();
@@ -551,6 +552,7 @@ public sealed partial class SettingsTool : StudioTool
         await LoadDeviceWatchAsync();
         await LoadSystemAsync();
         await Failover.LoadAsync();
+        await Mail.LoadAsync();
         await Central.LoadAsync();
         await LoadOutputsAsync();
         await LoadDeskModeAsync();
@@ -786,6 +788,7 @@ public sealed partial class SettingsTool : StudioTool
         StoreSoloist();
 
         string? failoverError = await Failover.SaveAsync();
+        await Mail.SaveAsync();
         string? centralError = await Central.SaveAsync();
 
         if (SystemLoaded)

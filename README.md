@@ -59,6 +59,12 @@ Elk venster is te verslepen, te docken of los te laten zweven, ook op een tweede
   een NAS, met een bewaartermijn; een gemiste nacht wordt ingehaald (*Instellingen › Systeem*).
 - **Poortenoverzicht**: welke poorten de engine gebruikt (in of uit, alleen deze pc of het netwerk), met een
   PowerShell-opdracht voor de firewall die alleen de nodige poorten opent (*Instellingen › Systeem*).
+- **Meldingen per mail** (SMTP): stilte op de zender, de reservestudio die overneemt, een mislukte reservekopie, een
+  ASIO-kaart die wegvalt of een plaatshouder zonder geluid, ook buiten de studio. Per onderwerp hoogstens één mail per
+  zoveel minuten (*Instellingen › Meldingen per mail*).
+- **Database-controle vóór een upgrade**: de engine controleert de database en maakt een kopie voordat hij hem
+  bijwerkt. Is hij beschadigd, dan blijft hij onaangeroerd en zegt de engine duidelijk wat er aan de hand is.
+  Met `REA-Radio-DJ.exe --check-db` kan het ook vooraf.
 
 ### Playout en planning
 - **BASS-mixer** (32-bit float), crossfades op het mixpunt, loudness-normalisatie naar −16 LUFS (EBU R128),
@@ -129,6 +135,14 @@ Elk venster is te verslepen, te docken of los te laten zweven, ook op een tweede
 - **Uit de uitzending knippen**: het interview van net als item in de bibliotheek. Kies een dag en een begin- en
   eindtijd (of *laatste 10 min*); het stuk mag over het uur heen lopen. Werkt met de uitzendopname (Instellingen ›
   Opnemen).
+- **Geplande opnames** van een ingang of een internetstream, bijvoorbeeld elke werkdag om 12:00 het regionale
+  nieuws, direct klaar in de bibliotheek. Met *Vorige vervangen* blijft het hetzelfde item, met steeds de nieuwste
+  opname (venster *Opnames*).
+- **Noodopname**: één knop (of `RECORD TOGGLE`) neemt alles op wat binnenkomt, elk kanaal apart.
+- **Uitzending gemist en podcast**: na elke uitzending van een programma een aflevering uit de uitzendopname, met een
+  RSS-feed (`/podcast/<id>/feed.xml`) en desgewenst een kopie naar een map van je website.
+- **Plaatshouders**: reclame (of een ander item) alvast inplannen terwijl het geluid nog moet komen, met een
+  waarschuwing een dag van tevoren en een alarm als het er niet op tijd is.
 - **Streams** naar meerdere Icecast- en SHOUTcast-servers tegelijk, met titelupdates in een eigen opmaak.
 - **Programmalog afdrukken of exporteren** (PDF en CSV) met de verwachte begintijden: *Programmalog › Exporteren*.
 - **As-run** en een programmalog als tekstbestand per dag; rapportage auteursrechten (CSV en PDF),

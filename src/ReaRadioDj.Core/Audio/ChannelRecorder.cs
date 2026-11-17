@@ -34,6 +34,9 @@ public sealed unsafe partial class ChannelRecorder
     public string? FilePath { get; private set; }
     public DateTime StartedUtc { get; private set; }
     public double Seconds => Interlocked.Read(ref _frames) / (double)BassRuntime.SampleRate;
+    private float _peak;
+    /// <summary>The loudest sample since the start (0..1): tells a channel that only recorded silence.</summary>
+    public float Peak => Volatile.Read(ref _peak);
 
     /// <summary>Starts recording into the folder; the file name is the channel id and the start time.</summary>
     public string Start(string folder, string channelId)
@@ -48,6 +51,7 @@ public sealed unsafe partial class ChannelRecorder
             var wav = new WavWriter(file, BassRuntime.SampleRate, 2);
             var queue = new BlockingCollection<float[]>(new ConcurrentQueue<float[]>(), 2000);
             Interlocked.Exchange(ref _frames, 0);
+            Volatile.Write(ref _peak, 0f);
             _writer = Task.Run(() =>
             {
                 using (wav) foreach (var block in queue.GetConsumingEnumerable()) wav.Write(block);
@@ -91,6 +95,9 @@ public sealed unsafe partial class ChannelRecorder
         var q = _queue;
         if (q is null || q.IsAddingCompleted) return;
         // When the disk cannot keep up the block is dropped rather than holding up the audio.
+        float peak = _peak;
+        foreach (var v in samples) { float a = Math.Abs(v); if (a > peak) peak = a; }
+        if (peak > _peak) Volatile.Write(ref _peak, peak);
         try { if (q.TryAdd(samples.ToArray())) Interlocked.Add(ref _frames, samples.Length / 2); }
         catch (InvalidOperationException) { }
     }

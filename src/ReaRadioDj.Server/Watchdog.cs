@@ -15,6 +15,8 @@ public static class Watchdog
 
     /// <summary>Exit code of an engine that asks to be started again (after restoring a backup, for example).</summary>
     public const int RestartExitCode = 75;
+    /// <summary>The engine stopped because its database is damaged or could not be upgraded: restarting will not help.</summary>
+    public const int DatabaseProblemExitCode = 78;
 
     private static readonly TimeSpan StartGrace = TimeSpan.FromSeconds(45);
     private static readonly TimeSpan Poll = TimeSpan.FromSeconds(2);
@@ -91,6 +93,7 @@ public static class Watchdog
                 {
                     int code = engine.ExitCode;
                     if (code == 0) { Write("Engine netjes afgesloten; de bewaking stopt ook."); return 0; }
+                    if (code == DatabaseProblemExitCode) { Write("De database is niet in orde (zie DATABASE-PROBLEEM.txt in de datamap); de bewaking stopt."); return code; }
                     reason = code == RestartExitCode ? "herstart gevraagd" : $"de engine stopte onverwacht (code {code})";
                     break;
                 }

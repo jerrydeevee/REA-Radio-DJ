@@ -25,7 +25,7 @@ if (args.Contains("--watchdog")) return Watchdog.Run(args.Where(a => a != "--wat
 // working directory. "--demo" is our own switch and is kept away from the configuration parser.
 var builder = WebApplication.CreateBuilder(new WebApplicationOptions
 {
-    Args = args.Where(a => a is not "--demo" and not "--no-tray" and not "--users-off").ToArray(),
+    Args = args.Where(a => a is not "--demo" and not "--no-tray" and not "--users-off" and not "--check-db" and not "--db-upgrade-anyway").ToArray(),
     ContentRootPath = AppContext.BaseDirectory,
 });
 var options = builder.Configuration.GetSection("ReaRadioDj").Get<ReaRadioDjOptions>() ?? new ReaRadioDjOptions();
@@ -53,7 +53,17 @@ catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or I
 {
     Console.Error.WriteLine($"Terugzetten van de reservekopie mislukt: {ex.Message}");
 }
-var db = new StationDb(Path.Combine(options.DataFolder, "station.db"));
+// "--check-db": check the database (for instance before an upgrade) and stop; exit code 0 = in order.
+var dbPath = Path.Combine(options.DataFolder, "station.db");
+if (args.Contains("--check-db")) return DatabaseReport.CheckAndPrint(dbPath);
+StationDb db;
+try { db = new StationDb(dbPath, upgradeAnyway: args.Contains("--db-upgrade-anyway")); }
+catch (DatabaseProblemException ex)
+{
+    DatabaseReport.Refuse(dbPath, ex, interactive: Environment.UserInteractive && !args.Contains("--no-tray"));
+    return Watchdog.DatabaseProblemExitCode;
+}
+try { File.Delete(Path.Combine(options.DataFolder, DatabaseReport.FileName)); } catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { }
 SystemApi.Load(db);
 OutputsApi.Load(db, options);
 ChannelsApi.Load(db, options);
@@ -209,6 +219,15 @@ builder.Services.AddHostedService(sp => sp.GetRequiredService<AutomationService>
 builder.Services.AddSingleton<AirRecorder>();
 builder.Services.AddSingleton<RecordingService>();
 builder.Services.AddHostedService(sp => sp.GetRequiredService<RecordingService>());
+builder.Services.AddSingleton<MailNotifier>();
+builder.Services.AddHostedService(sp => sp.GetRequiredService<MailNotifier>());
+builder.Services.AddSingleton<PodcastService>();
+builder.Services.AddHostedService(sp => sp.GetRequiredService<PodcastService>());
+builder.Services.AddSingleton<ScheduledRecordingService>();
+builder.Services.AddSingleton<ReaRadioDj.Core.Library.PlaceholderStore>();
+builder.Services.AddSingleton<PlaceholderService>();
+builder.Services.AddHostedService(sp => sp.GetRequiredService<PlaceholderService>());
+builder.Services.AddHostedService(sp => sp.GetRequiredService<ScheduledRecordingService>());
 // Remote control: one command list for TCP, OSC, HTTP, hotkeys and the planner.
 builder.Services.AddSingleton<CommandBus>();
 builder.Services.AddHostedService<TcpControlService>();
@@ -243,6 +262,7 @@ app.Use(async (http, next) =>
 });
 // Users and rights: changes to the sound, the programming and the settings need a signed-in user with that role.
 UsersApi.UseAccessCheck(app, args.Contains("--users-off"));
+if (db.StartNote is { } dbNote) app.Services.GetRequiredService<MessageCenter>().Add(db.BackupBeforeUpgrade is null && dbNote.Contains("nieuwere") ? "waarschuwing" : "info", dbNote);
 if (args.Contains("--users-off"))
     app.Services.GetRequiredService<MessageCenter>().Warning("Gestart met --users-off: aanmelden en rechten worden niet gecontroleerd.");
 {
@@ -309,6 +329,10 @@ api.MapPost("/recordings/cut", async (ReaRadioDj.Contracts.RecordingCutRequest r
     var (file, seconds, error) = await service.CutToLibraryAsync(req.From, req.To, req.Title ?? "", req.Artist ?? "", DateTime.Now);
     return error is null ? Results.Ok(new ReaRadioDj.Contracts.RecordingCutDto(Path.GetFileName(file!), seconds)) : Results.BadRequest(error);
 });
+ExtraRecordingsApi.Map(api);
+PlaceholderService.Map(api);
+MailNotifier.Map(api);
+PodcastService.Map(app, api);
 ChannelsApi.Map(api, options);
 VoiceApi.Map(api);
 VoiceLibraryApi.Map(api, options);

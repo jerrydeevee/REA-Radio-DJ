@@ -373,6 +373,14 @@ may run over the whole hour.
 
 This only works when the broadcast is being recorded (Settings › Recording).
 
+### Emergency recording
+
+When something unexpected happens (a caller, a live performance, a reporter calling in), click **● Emergency
+recording** in the **Recordings** window. Everything that comes in is recorded, each channel separately: the
+microphone, the inputs and the VoIP channels. Click again to stop. What had sound goes into the library (jingles,
+category Opnamen); channels that stayed silent are dropped. The command `RECORD TOGGLE` does the same, so a hotkey,
+an own button or a hardware button works too. After three hours the emergency recording stops by itself.
+
 ## 12. Clock, messages and alarms
 
 - The **Time** window shows the studio clock and counters: ON AIR, INTRO, NEXT, CLOCK and FIXED TIME. With ⚙ you choose
@@ -518,6 +526,35 @@ this window is for administrators only.
   half. The retention period also applies to the call recordings.
 - A single channel can be recorded with **REC** in the mixer.
 
+### Scheduled recordings
+
+**Recordings › Scheduled recordings** window: record an input or an internet stream at fixed times, for instance the
+regional news at 12:00 every weekday.
+
+- Name, start time, number of minutes and the days.
+- **Source**: a mixer channel (microphone, an input, VoIP) or **Internet stream** with an address (`http://…`). An
+  MP3 stream is kept as it comes in; a channel is recorded before the fader, so also when it is not on air.
+- **Replace previous**: every new recording gets the same name. The item in the library stays the same, so a clock,
+  the planner or the cart wall always has the latest edition ready. Without it every recording gets the date in front.
+- **Record now** starts it at once (to try it). If the engine started in the middle of a recording time, it records
+  the rest.
+- The recording goes to the jingles, category Opnamen. A failed recording is reported in Messages (and by mail if you
+  choose). The commands `RECORD START <name>` and `RECORD STOP <name>` work from outside.
+
+### Catch-up and podcast
+
+**Recordings › Catch-up and podcast** window: after each broadcast of a programme the engine cuts it from the
+program recording (which must be on).
+
+- Name, from and to (an end before the start runs past midnight), the days and how many episodes are kept.
+- Two minutes after the end the episode is ready, with a podcast feed. The engine serves the feed itself at
+  `http://<engine>:8600/podcast/<id>/feed.xml`; the address is shown with the programme.
+- **Copy folder** and **web address**: also put the episodes and the feed in a folder of your web server (a share,
+  for instance). Old episodes disappear there too, but only those of this programme.
+- **Publish the last broadcast now** makes the episode of the last broadcast at once (again).
+- Mind the rights: music in a podcast or on demand is usually not covered by the licence for broadcasting. Check with
+  your collecting societies, or only publish spoken-word programmes.
+
 ### Monitoring
 
 - **Silence on air**: threshold, how long, and what happens then: notify, start automation, or play something from an
@@ -526,6 +563,18 @@ this window is for administrators only.
 - **Sound card volume**: every two seconds the engine checks whether Windows or another program turned a card down or
   muted it. With **Put a changed card back at once** it puts it back itself. If you changed something on purpose, click
   **Current state is normal**. ASIO does not count.
+
+### Messages by mail
+
+**Settings › Messages by mail**: important messages outside the studio too.
+
+- Mail server, port (587 with STARTTLS, or 25), user name and password. The password is stored encrypted and never
+  sent back. Port 465 does not work.
+- Sender and recipients (separated by a comma).
+- **Mail about**: silence on air (and sound again), the backup studio taking over or handing back, a failed backup,
+  an ASIO card that drops out, a placeholder without sound, a failed scheduled recording and any other alarm.
+- **At most one mail per topic per … minutes**: what happens in between goes along in the next mail.
+- **Send test mail** saves first and then sends one mail to the recipients.
 
 ### Rotation
 
@@ -696,6 +745,13 @@ stream off at once.
   If no campaign needs a spot, the whole break drops out, opener and closer too.
 - **Proof of broadcast**: CSV per broadcast, an overview per advertiser and campaign, or JSON for linking.
 
+**Placeholders** (**Placeholders** window): plan a spot while the sound is still to come. Give the advertiser,
+title, length, when the sound must be there at the latest and optionally the campaign. The placeholder is an item in
+the library and can also go in a clock or the cart wall. As long as the sound is not there it is skipped; an ad break
+reports that. A day before you get a warning, and an alarm if it is not there in time. The sound comes in with
+**Choose sound…**, or by putting the file under the name shown in the placeholder folder. From then on it is an
+ordinary item, everywhere it was already planned.
+
 An ad break is best set to **Soft**: it then comes after the current song.
 
 ## 7. News and weather
@@ -849,6 +905,16 @@ presenters and the cue points of the library. The audio files are not in it; kee
 - **Make a backup automatically every day**: at a fixed time, into a folder (preferably another disk or a NAS), with a
   retention period. If the PC was off, the backup follows as soon as the engine runs again.
 
+### The database on an upgrade
+
+When a new version starts for the first time, the engine checks the database before it updates it, and makes a copy
+in `data\Database voor upgrade` (the last three are kept). Messages then says it worked. If the database is damaged,
+the engine does not touch it and does not start: a window says what is wrong, and the same text is in
+`data\DATABASE-PROBLEEM.txt`. Keep the previous version running or restore a backup.
+
+You can also check beforehand: `REA-Radio-DJ.exe --check-db` in the engine's folder. To update a damaged database
+anyway, start once with `--db-upgrade-anyway` (at your own risk; a copy is made first).
+
 ### Backup studio
 
 **Settings › Backup studio**: two engines that keep an eye on each other, each with its own sound card to the
@@ -987,4 +1053,7 @@ another place.
 | Stems: "the separation model is missing" | Put `htdemucs.onnx` in `engine\data\models` and restart the engine |
 | A caller is hard to understand | Look at the measurements at the channel (loss, buffer). Make the buffer larger, or choose another codec |
 | PIN lost and no administrator left | Start the engine with `--users-off` and make a new PIN |
+| The engine does not start after an upgrade | Read `data\DATABASE-PROBLEEM.txt`. Keep the previous version running or restore a backup |
+| No mail arrives | **Send test mail** in Settings › Messages by mail; also look in the junk folder. Port 465 does not work: use 587 |
+| A scheduled recording is empty | Check that the source gives sound (the channel in the mixer, or the stream address in a browser) |
 | A window is lost | **Layout › Place window…**, or **Restore default layout** |

@@ -31,6 +31,7 @@ public sealed class DockFactory : Factory
         ("library", Tr.T("Bibliotheek"), () => new LibraryTool()),
         ("clipboard", Tr.T("Klembord"), () => new ClipboardTool()),
         ("aircut", Tr.T("Uit de uitzending knippen"), () => new AirCutTool()),
+        ("recordings", Tr.T("Opnames"), () => new RecordingsTool()),
         ("cues", Tr.T("Cue-editor"), () => new CueEditorTool()),
         ("mixer", Tr.T("Mixer en routing"), () => new MixerTool()),
         ("output", Tr.T("Uitsturing"), () => new OutputTool()),
@@ -50,6 +51,7 @@ public sealed class DockFactory : Factory
         ("transition", Tr.T("Overgangen"), () => new TransitionTool()),
         ("news", Tr.T("Nieuws"), () => new NewsTool()),
         ("ads", Tr.T("Reclame"), () => new AdsTool()),
+        ("placeholders", Tr.T("Plaatshouders"), () => new PlaceholdersTool()),
         ("import", Tr.T("Log-import"), () => new ImportTool()),
         ("sources", Tr.T("Databronnen"), () => new SourcesTool()),
         ("hardware", Tr.T("Hardware"), () => new HardwareTool()),
@@ -66,8 +68,8 @@ public sealed class DockFactory : Factory
     public static readonly IReadOnlyList<(string Name, string[] Ids)> Groups =
     [
         (Tr.T("Uitzending"), ["regie", "decks", "log", "standby", "pfl", "cart1", "cart2", "overlays", "clock", "item"]),
-        (Tr.T("Bibliotheek en productie"), ["library", "clipboard", "explorer", "cues", "transition", "voicetrack", "aircut"]),
-        (Tr.T("Planning"), ["planner", "ads", "news", "import", "sources", "wishlist"]),
+        (Tr.T("Bibliotheek en productie"), ["library", "clipboard", "explorer", "cues", "transition", "voicetrack", "aircut", "recordings"]),
+        (Tr.T("Planning"), ["planner", "ads", "placeholders", "news", "import", "sources", "wishlist"]),
         (Tr.T("AI-presentator en stemmen"), ["presenter", "voice"]),
         (Tr.T("DJ"), ["dj", "sampler", "automix", "djmidi", "soloist"]),
         (Tr.T("Geluid, verbindingen en hardware"), ["mixer", "output", "connections", "stream", "hardware", "buttons", "control"]),
